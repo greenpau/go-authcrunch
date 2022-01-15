@@ -1,2 +1,3 @@
-# aaasf
-Authentication, Authorization, and Accounting (AAA) Security Functions (SF)
+# Authentication, Authorization, and Accounting (AAA) Security Functions (SF)
+
+This code base contains the functions implementing AAA.
