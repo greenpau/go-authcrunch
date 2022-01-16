@@ -1,4 +1,4 @@
-// Copyright 2022 Paul Greenberg greenpau@outlook.com
+// Copyright 2020 Paul Greenberg greenpau@outlook.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,10 +16,17 @@ package tests
 
 import (
 	"fmt"
+
 	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
 	"os"
+	"regexp"
+	"runtime"
 	"testing"
+)
+
+var (
+	pr = regexp.MustCompile(".*(github.com/greenpau/aaasf/.*)$")
 )
 
 // EvalErr evaluates whether there is an error. If there is, was it the
@@ -56,6 +63,11 @@ func WriteLog(t *testing.T, msgs []string) {
 
 // EvalErrWithLog evaluates the error.
 func EvalErrWithLog(t *testing.T, err error, data interface{}, shouldErr bool, expErr error, msgs []string) bool {
+	_, fileName, lineNum, ok := runtime.Caller(1)
+	if ok {
+		fileName = pr.ReplaceAllString(fileName, "$1")
+		msgs = append([]string{fmt.Sprintf("source: %s:%d", fileName, lineNum)}, msgs...)
+	}
 	if !shouldErr {
 		if err == nil {
 			return false
@@ -86,9 +98,28 @@ func EvalObjects(t *testing.T, name string, want, got interface{}) {
 }
 
 // EvalObjectsWithLog compares two objects and logs extra output when
-// detects an error
+// detects an error.
 func EvalObjectsWithLog(t *testing.T, name string, want, got interface{}, msgs []string) {
+	_, fileName, lineNum, ok := runtime.Caller(1)
+	if ok {
+		fileName = pr.ReplaceAllString(fileName, "$1")
+		msgs = append([]string{fmt.Sprintf("source: %s:%d", fileName, lineNum)}, msgs...)
+	}
 	if diff := cmp.Diff(want, got); diff != "" {
+		WriteLog(t, msgs)
+		t.Fatalf("%s mismatch (-want +got):\n%s", name, diff)
+	}
+}
+
+// CustomEvalObjectsWithLog compares two objects and logs extra output when
+// detects an error.
+func CustomEvalObjectsWithLog(t *testing.T, name string, want, got interface{}, msgs []string, typs interface{}) {
+	_, fileName, lineNum, ok := runtime.Caller(1)
+	if ok {
+		fileName = pr.ReplaceAllString(fileName, "$1")
+		msgs = append([]string{fmt.Sprintf("source: %s:%d", fileName, lineNum)}, msgs...)
+	}
+	if diff := cmp.Diff(want, got, cmp.AllowUnexported(typs)); diff != "" {
 		WriteLog(t, msgs)
 		t.Fatalf("%s mismatch (-want +got):\n%s", name, diff)
 	}
@@ -96,7 +127,7 @@ func EvalObjectsWithLog(t *testing.T, name string, want, got interface{}, msgs [
 
 // TempDir creates temporary directory.
 func TempDir(s string) (string, error) {
-	rootDir := os.TempDir() + "/testdata/go-identity/" + s
+	rootDir := os.TempDir() + "/testdata/aaasf/" + s
 	if err := os.MkdirAll(rootDir, 0700); err != nil {
 		return "", err
 	}

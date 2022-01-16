@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>{{ .Title }}</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Authentication Portal">
+    <meta name="author" content="Paul Greenberg github.com/greenpau">
+    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
+
+    <!-- Matrialize CSS -->
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/materialize-css/css/materialize.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/styles.css" }}" />
+    {{ if eq .Data.ui_options.custom_css_required "yes" }}
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
+    {{ end }}
+  </head>
+  <body class="app-body">
+    <div class="container">
+      <div class="row">
+        <div class="col s12 m12 l6 offset-l3">
+          <div class="card card-large app-card">
+            <div class="card-content">
+              <span class="card-title center-align">
+                <div class="section app-header">
+                  {{ if .LogoURL }}
+                  <a href="{{ pathjoin .ActionEndpoint }}">
+                    <img class="d-block mx-auto mb-2" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" width="72" height="72">
+                  </a>
+                  {{ end }}
+                  <h4>{{ .Title }}</h4>
+                </div>
+              </span>
+            </div>
+            <div class="card-action right-align">
+              {{ if .Data.go_back_url }}
+              <a href="{{ .Data.go_back_url }}" class="navbtn-last">
+                <button type="button" class="btn waves-effect waves-light navbtn active navbtn-last app-btn">
+                  <i class="las la-undo left app-btn-icon"></i>
+                  <span class="app-btn-text">Go Back</span>
+                </button>
+              </a>
+              {{ end }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Optional JavaScript -->
+    <script src="{{ pathjoin .ActionEndpoint "/assets/materialize-css/js/materialize.js" }}"></script>
+    {{ if eq .Data.ui_options.custom_js_required "yes" }}
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
+    {{ end }}
+  </body>
+</html>

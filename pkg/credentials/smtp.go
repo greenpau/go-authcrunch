@@ -16,7 +16,9 @@ package credentials
 
 // SMTP represents SMTP credentials.
 type SMTP struct {
+	Name     string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	Username string `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
 	Password string `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
 	Address  string `json:"address,omitempty" xml:"address,omitempty" yaml:"address,omitempty"`
+	Protocol string `json:"protocol,omitempty" xml:"protocol,omitempty" yaml:"protocol,omitempty"`
 }

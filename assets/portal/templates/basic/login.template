@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>{{ .Title }}</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Authentication Portal">
+    <meta name="author" content="Paul Greenberg github.com/greenpau">
+    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
+
+    <!-- Matrialize CSS -->
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/materialize-css/css/materialize.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/styles.css" }}" />
+    {{ if eq .Data.ui_options.custom_css_required "yes" }}
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
+    {{ end }}
+  </head>
+  <body class="app-body">
+    <div class="container">
+      <div class="row">
+        <div class="col s12 m8 offset-m2 l6 offset-l3 xl4 offset-xl4 app-card-container">
+          <div class="row app-header center">
+            {{ if .LogoURL }}
+            <div class="col s4">
+              <img class="d-block mx-auto mb-2" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" width="72" height="72">
+            </div>
+            <div class="col s8">
+              <h4>{{ .Title }}</h4>
+            </div>
+            {{ else }}
+              <h4>{{ .Title }}</h4>
+            {{ end }}
+          </div>
+          {{ if eq .Data.login_options.form_required "yes" }}
+          <form action="{{ pathjoin .ActionEndpoint "/login" }}" method="POST">
+            <div class="row app-form">
+              {{ if eq .Data.login_options.identity_required "yes" }}
+              <div class="row app-input-row valign-wrapper">
+                <div class="input-field app-input-field">
+                  <i class="lar la-user-circle"></i>
+                  <input id="username" name="username" type="text" class="validate"
+                    autocorrect="off" autocapitalize="off" spellcheck="false"
+                    placeholder="username or email" required />
+                </div>
+              </div>
+              {{ end }}
+              {{ if eq .Data.login_options.realm_dropdown_required "yes" }}
+              <div class="row app-input-row valign-wrapper">
+                <div class="input-field app-input-field">
+                  <i class="lar la-address-book"></i>
+                  <select id="realm" name="realm" class="browser-default">
+                  {{ range .Data.login_options.realms }}
+                    {{ if eq .default "yes" }}
+                    <option value="{{ .realm }}" selected>{{ .label }}</option>
+                    {{ else }}
+                    <option value="{{ .realm }}">{{ .label }}</option>
+                    {{ end }}
+                  {{ end }}
+                  </select>
+                </div>
+	            </div>
+              {{ else }}
+                {{ range .Data.login_options.realms }}
+                  <input type="hidden" id="realm" name="realm" value="{{ .realm }}" />
+                {{ end }}
+              {{ end }}
+            </div>
+            <div class="row app-control valign-wrapper">
+              <div class="col s6">
+                {{ if eq .Data.login_options.registration_required "yes" }}
+                <span class="app-link"><a href="{{ pathjoin .ActionEndpoint "/register" }}">Register</a></span>
+                {{ end }}
+                {{ if eq .Data.login_options.password_recovery_required "yes" }}
+                <span class="app-link"><a href="{{ pathjoin .ActionEndpoint "/forgot" }}">Forgot Password?</a></span>
+                {{ end }}
+              </div>
+              <div class="col s6 right-align">
+                <button type="submit" name="submit" class="waves-effect waves-light btn app-btn">
+                  <i class="las la-sign-in-alt left app-btn-icon"></i>
+                  <span class="app-btn-text">Login</span>
+                </button>
+              </div>
+            </div>
+          </form>
+          {{ end }}
+          {{ if eq .Data.login_options.external_providers_required "yes" }}
+          <div class="row">
+            {{ if eq .Data.login_options.identity_required "yes" }}
+            <p class="app-text">Additional Sign In Options:</p>
+            {{end}}
+            {{ range .Data.login_options.external_providers }}
+            <a class="waves-effect waves-light {{ .color }} app-btn btn" href="{{ .endpoint }}">
+              <i class="lab la-{{ .icon }} app-btn-icon"></i><span class="app-btn-text">{{ .text }}</span>
+            </a>
+            {{ end }}
+          </div>
+          {{ end }}
+        </div>
+      </div>
+    </div>
+    <!-- Optional JavaScript -->
+    <script src="{{ pathjoin .ActionEndpoint "/assets/materialize-css/js/materialize.js" }}"></script>
+    {{ if eq .Data.ui_options.custom_js_required "yes" }}
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
+    {{ end }}
+    {{ if .Message }}
+    <script>
+    var toastHTML = '<span class="app-error-text">{{ .Message }}</span><button class="btn-flat toast-action" onclick="M.Toast.dismissAll();">Close</button>';
+    toastElement = M.toast({
+      html: toastHTML,
+      classes: 'toast-error'
+    });
+    const appContainer = document.querySelector('.app-card-container')
+    appContainer.prepend(toastElement.el)
+    </script>
+    {{ end }}
+  </body>
+</html>

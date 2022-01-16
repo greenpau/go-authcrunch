@@ -16,5 +16,6 @@ package errors
 
 // Global security config errors.
 const (
-	ErrSecurityConfig StandardError = "security config error: %v"
+	ErrSecurityConfig     StandardError = "security config error: %v"
+	ErrMalformedDirective StandardError = "malformed %q directive: %v"
 )

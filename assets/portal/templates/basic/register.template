@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>{{ .Title }}</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Authentication Portal">
+    <meta name="author" content="Paul Greenberg github.com/greenpau">
+    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
+
+		<!-- Matrialize CSS -->
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/materialize-css/css/materialize.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/styles.css" }}" />
+    {{ if eq .Data.ui_options.custom_css_required "yes" }}
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
+    {{ end }}
+  </head>
+  <body class="app-body">
+    <div class="container">
+      <div class="row">
+        <div class="col s12 m12 l6 offset-l3 registration-container">
+          {{ if not .Data.registered }}
+          <form action="{{ pathjoin .ActionEndpoint "/register" }}" method="POST">
+          {{ end }}
+          <div class="card card-large app-card">
+            <div class="card-content">
+              <span class="card-title center-align">
+                <div class="section app-header">
+                  {{ if .LogoURL }}
+                  <img class="d-block mx-auto mb-2" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" width="72" height="72">
+                  {{ end }}
+                  <h4>{{ .Title }}</h4>
+                </div>
+              </span>
+              {{ if not .Data.registered }}
+              <div class="input-field">
+                <input id="username" name="username" type="text" class="validate"
+                  pattern="{{ .Data.username_validate_pattern }}"
+                  title="{{ .Data.username_validate_title }}"
+                  required />
+                <label for="username">Username</label>
+              </div>
+              <div class="input-field">
+                <input id="email" name="email" type="email" class="validate"
+                  required />
+                <label for="email">Email Address</label>
+              </div>
+              <div class="input-field">
+                <input id="password" name="password" type="password" class="validate"
+                  pattern="{{ .Data.password_validate_pattern }}"
+                  title="{{ .Data.password_validate_title }}"
+                  required />
+                <label for="password">Password</label>
+              </div>
+              <div class="input-field">
+                <input id="password_confirm" name="password_confirm" type="password" class="validate"
+                  pattern="{{ .Data.password_validate_pattern }}"
+                  title="{{ .Data.password_validate_title }}"
+                  required />
+                <label for="password_confirm">Confirm Password</label>
+              </div>
+              {{ if .Data.require_registration_code }}
+              <div class="input-field">
+                <input id="code" name="code" type="text" class="validate" required />
+                <label for="code">Registration Code</label>
+              </div>
+              {{ end }}
+              {{ if .Data.require_accept_terms }}
+              <p>
+                <label>
+                  <input type="checkbox" id="accept_terms" name="accept_terms" required />
+                  <span>I agree to
+                    <a href="{{ .Data.terms_conditions_link }}" target="_blank">Terms and Conditions</a> and
+                    <a href="{{ .Data.privacy_policy_link }}" target="_blank">Privacy Policy</a>.
+                  </span>
+                </label>
+              </p>
+              {{ end }}
+              {{ else }}
+              <p class="app-text">Thank you for registering and we hope you enjoy the experience!</p>
+              <p class="app-text">Here are a few things to keep in mind:</p>
+              <ol class="app-text">
+                <li>You should receive your confirmation email within the next 15 minutes.</li>
+                <li>If you still don't see it, please email support so we can resend it to you.</li>
+              </ol>
+              {{ end }}
+            </div>
+            <div class="card-action right-align">
+              {{ if not .Data.registered }}
+              <a href="{{ .ActionEndpoint }}" class="navbtn-last">
+                <button type="button" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
+                  <i class="las la-undo left app-btn-icon"></i>
+                  <span class="app-btn-text">Back</span>
+                </button>
+              </a>
+              <button type="submit" name="submit" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
+                <i class="las la-chevron-circle-right app-btn-icon"></i>
+                <span class="app-btn-text">Submit</span>
+              </button>
+              {{ else }}
+              <a href="{{ .ActionEndpoint }}" class="navbtn-last">
+                <button type="button" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
+                  <i class="las la-home left app-btn-icon"></i>
+                  <span class="app-btn-text">Portal</span>
+                </button>
+              </a>
+              {{ end }}
+            </div>
+          </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Optional JavaScript -->
+    <script src="{{ pathjoin .ActionEndpoint "/assets/materialize-css/js/materialize.js" }}"></script>
+    {{ if eq .Data.ui_options.custom_js_required "yes" }}
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
+    {{ end }}
+    {{ if .Message }}
+    <script>
+    var toastHTML = '<span>{{ .Message }}</span><button class="btn-flat toast-action" onclick="M.Toast.dismissAll();">Close</button>';
+    toastElement = M.toast({
+      html: toastHTML,
+      classes: 'toast-error',
+      displayLength: 10000
+    });
+    const appContainer = document.querySelector('.registration-container')
+    appContainer.prepend(toastElement.el)
+    </script>
+    {{ end }}
+  </body>
+</html>

@@ -28,6 +28,8 @@ type Options struct {
 	DisableTagPresent  bool
 	DisableTagMismatch bool
 	DisableTagOnEmpty  bool
+	AllowFieldMismatch bool
+	AllowedFields      map[string]interface{}
 }
 
 // GetTagCompliance performs struct tag compliance checks.
@@ -97,6 +99,12 @@ func GetTagCompliance(resource interface{}, opts *Options) ([]string, error) {
 			//	tagValue = strings.Replace(tagValue, ",omitempty", "", -1)
 			//}
 			if (tagValue != expTagValue) && !opts.DisableTagMismatch {
+				if opts.AllowFieldMismatch && opts.AllowedFields != nil {
+					fieldName := strings.Split(tagValue, ",")[0]
+					if _, exists := opts.AllowedFields[fieldName]; exists {
+						continue
+					}
+				}
 				output = append(output, fmt.Sprintf(
 					"tag %q mismatch found in %s.%s (%v): %s (actual) vs. %s (expected)",
 					tagName,
@@ -108,7 +116,6 @@ func GetTagCompliance(resource interface{}, opts *Options) ([]string, error) {
 					expTagValue,
 				))
 				continue
-
 			}
 		}
 	}
@@ -132,6 +139,8 @@ func convertFieldToTag(s string) string {
 	s = strcase.ToSnake(s)
 	s = strings.ReplaceAll(s, "_md_5", "_md5")
 	s = strings.ReplaceAll(s, "open_ssh", "openssh")
+	s = strings.ReplaceAll(s, "o_auth_2", "oauth2")
+	s = strings.ReplaceAll(s, "_ur_ls", "_urls")
 	return s
 }
 

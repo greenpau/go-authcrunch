@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>{{ .Title }}</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Authentication Portal">
+    <meta name="author" content="Paul Greenberg github.com/greenpau">
+    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
+    <!-- Matrialize CSS -->
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/materialize-css/css/materialize.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/montserrat.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/styles.css" }}" />
+    {{ if eq .Data.ui_options.custom_css_required "yes" }}
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
+    {{ end }}
+    {{ if or (eq .Data.view "mfa_app_auth") (eq .Data.view "mfa_app_register") }}
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/mfa_app.css" }}" />
+    {{ end }}
+    {{ if or (eq .Data.view "password_auth") (eq .Data.view "password_recovery") }}
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/password.css" }}" />
+    {{ end }}
+  </head>
+  <body class="app-body">
+    <div class="container">
+      <div class="row">
+        <div class="col s12 m8 offset-m2 l4 offset-l4 app-card-container">
+          <div class="row app-header center">
+            {{ if .LogoURL }}
+            <div class"row center">
+              <a href="{{ pathjoin .ActionEndpoint }}">
+                <img class="d-block mx-auto mb-2" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" width="72" height="72">
+              </a>
+            </div>
+            {{ end }}
+            <div class"row center">
+              <h5>{{ .Title }}</h5>
+            </div>
+          </div>
+          {{ if or (eq .Data.view "mfa_mixed_auth") (eq .Data.view "mfa_mixed_register") }}
+          <div class="row center">
+            <p>
+              Your session requires multi-factor authentication.
+            </p>
+              {{ if eq .Data.view "mfa_mixed_register" }}
+              <p>
+              However, you do not have second factor authentication method configured.
+              </p>
+              <p>
+              Please click the authentication methods below to proceed with the configuration.
+              </p>
+              {{ else }}
+              <p>
+              Please click the appropriate second factor authentication method to proceed further.
+              </p>
+              {{ end }}
+            </p>
+          </div>
+          <div class="row">
+            <ul class="collection">
+              <li class="collection-item">
+                <i class="las la-mobile la-lg"></i>
+                {{ if eq .Data.view "mfa_mixed_register" }}
+                <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-register" }}">Authenticator App</a>
+                {{ else }}
+                <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-auth" }}">Authenticator App</a>
+                {{ end }}
+              </li>
+              <li class="collection-item">
+                <i class="las la-microchip la-lg"></i>
+                {{ if eq .Data.view "mfa_mixed_register" }}
+                <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-register" }}">Hardware Token</a>
+                {{ else }}
+                <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-auth" }}">Hardware Token</a>
+                {{ end }}
+              </li>
+            </ul>
+          </div>
+          {{ else if eq .Data.view "password_auth" }}
+          <div class="row">
+            <form class="password-auth-form"
+                  action="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "password-auth" }}"
+                  method="POST"
+                  autocomplete="off"
+                  >
+              <div class="password-auth-ctrl row app-input-row valign-wrapper">
+                <div class="input-field app-input-field">
+                  <i class="las la-key"></i>
+                  <input id="secret" name="secret" type="password" class="validate"
+                       autocorrect="off" autocapitalize="off" autocomplete="off"
+                       required />
+                </div>
+              </div>
+              <input id="sandbox_id" name="sandbox_id" type="hidden" value="{{ .Data.id }}" />
+              <div class="password-auth-btn">
+                <button type="reset" name="reset" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1">
+                  <i class="las la-redo-alt left app-btn-icon"></i>
+                </button>
+                <button type="submit" name="submit" class="btn waves-effect waves-light navbtn active navbtn-last">
+                  <i class="las la-check-square left app-btn-icon"></i>
+                  <span class="app-btn-text">Authenticate</span>
+                </button>
+              </div>
+            </form>
+            <div class="password-auth-help-menu">
+              <p>Having issues?</p>
+              <ul>
+                <li>
+                  <i class="las la-lock-open"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "password-recovery" }}">
+                    Reset password
+                  </a>
+                </li>
+                <li>
+                  <i class="las la-question"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "help" }}">
+                    Contact support
+                  </a>
+                </li>
+                <li>
+                  <i class="las la-home"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
+                    Login page
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          {{ else if eq .Data.view "password_recovery" }}
+          <div class="row">
+            <form class="password-auth-form"
+                  action="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "password-recovery" }}"
+                  method="POST"
+                  autocomplete="off"
+                  >
+              <div class="password-auth-ctrl">
+                <input class="password-auth-email" id="email" name="email" type="email" class="validate"
+                       autocorrect="off" autocapitalize="off" autocomplete="off"
+                       required />
+              </div>
+              <input id="sandbox_id" name="sandbox_id" type="hidden" value="{{ .Data.id }}" />
+              <div class="password-auth-btn">
+                <button type="reset" name="reset" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1">
+                  <i class="las la-redo-alt left app-btn-icon"></i>
+                </button>
+                <button type="submit" name="submit" class="btn waves-effect waves-light navbtn active navbtn-last">
+                  <i class="las la-check-square left app-btn-icon"></i>
+                  <span class="app-btn-text">Recover</span>
+                </button>
+              </div>
+            </form>
+            <div class="password-auth-help-menu">
+              <p>Having issues?</p>
+              <ul>
+                <li>
+                  <i class="las la-question"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "help" }}">
+                    Contact support
+                  </a>
+                </li>
+                <li>
+                  <i class="las la-home"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "login" }}">
+                    Login page
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          {{ else if eq .Data.view "mfa_app_auth" }}
+          <div class="row">
+            <form class="mfa-app-auth-form"
+                  action="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-auth" }}"
+                  method="POST"
+                  autocomplete="off"
+                  >
+              <div class="mfa-app-auth-ctrl">
+                <input class="mfa-app-auth-passcode" id="passcode" name="passcode" type="text" class="validate" pattern="[0-9]{4,8}"
+                       title="Passcode should contain 4, 6, or 8 characters and consists of 0-9 characters."
+                       maxlength="8"
+                       placeholder="______"
+                       autocorrect="off" autocapitalize="off" autocomplete="off"
+                       required />
+              </div>
+              <input id="sandbox_id" name="sandbox_id" type="hidden" value="{{ .Data.id }}" />
+              <div class="mfa-app-auth-btn">
+                <button type="reset" name="reset" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1">
+                  <i class="las la-redo-alt left app-btn-icon"></i>
+                </button>
+                <button type="submit" name="submit" class="btn waves-effect waves-light navbtn active navbtn-last">
+                  <i class="las la-check-square left app-btn-icon"></i>
+                  <span class="app-btn-text">Verify</span>
+                </button>
+              </div>
+            </form>
+            <div class="mfa-auth-help-text">
+              <p>
+                Open the two-factor authentication app on your device to view your
+                authentication code and verify your identity.
+              </p>
+            </div>
+            <div class="mfa-auth-help-menu">
+              <p>Having issues?</p>
+              <ul>
+                <li>
+                  <i class="las la-lock-open"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-recovery" }}">
+                    Enter a two-factor recovery code
+                  </a>
+                </li>
+                <li>
+                  <i class="las la-question"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "help" }}">
+                    Contact support
+                  </a>
+                </li>
+                <li>
+                  <i class="las la-home"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
+                    Login page
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          {{ else if eq .Data.view "mfa_u2f_auth" }}
+          <div class="row">
+            <form id="mfa-u2f-auth-form" class="mfa-u2f-auth-form"
+                  action="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-auth" }}"
+                  method="POST"
+                  autocomplete="off"
+                  >
+              <input id="webauthn_request" name="webauthn_request" type="hidden" value="" />
+              <input id="sandbox_id" name="sandbox_id" type="hidden" value="{{ .Data.id }}" />
+              <p>
+                Insert your hardware token into a USB port. When prompted, touch,
+                or otherwise trigger the hardware token.
+              </p>
+            </form>
+            <div id="mfa-u2f-auth-form-rst" class="row center hide">
+              <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id }}">
+                <button type="button" name="button" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1">
+                  <i class="las la-redo-alt left app-btn-icon"></i>
+                  <span class="app-btn-text">Try Again</span>
+                </button>
+              </a>
+            </div>
+            <div class="mfa-auth-help-menu">
+              <p>Having issues?</p>
+              <ul>
+                <li>
+                  <i class="las la-question"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "help" }}">
+                    Contact support
+                  </a>
+                </li>
+                <li>
+                  <i class="las la-home"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
+                    Login page
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          {{ else if eq .Data.view "mfa_app_register" }}
+          <div class="row">
+            <form class="mfa-add-app-form"
+                  action="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-register" }}"
+                  method="POST"
+                  autocomplete="off"
+                  >
+              <div class="row">
+                <div class="col s12 m12 l12">
+                  <div id="token-params">
+                    <h6 id="token-params-mode" class="hide">Token Parameters</h6>
+                    <p><b>Step 1</b>: If necessary, amend the label and comment associated with the authenticator.
+                      The label is what you would see in your authenticator app.
+                      The comment is what you would see in this portal.
+                    </p>
+                    <div class="input-field">
+                      <input id="label" name="label" type="text" class="validate" pattern="[A-Za-z0-9 -@]{4,25}"
+                        title="Authentication code should contain 4-25 characters and consists of A-Z, a-z, 0-9, space, and dash characters."
+                        maxlength="25"
+                        autocorrect="off" autocapitalize="off" autocomplete="off"
+                        value="{{ .Data.mfa_label }}"
+                        required />
+                      <label for="label">Label</label>
+                    </div>
+                    <div class="input-field">
+                      <input id="comment" name="comment" type="text" class="validate" pattern="[A-Za-z0-9 -@]{4,25}"
+                        title="Authentication code should contain 4-25 characters and consists of A-Z, a-z, 0-9, space, and dash characters."
+                        maxlength="25"
+                        autocorrect="off" autocapitalize="off" autocomplete="off"
+                        value="{{ .Data.mfa_comment }}"
+                        required />
+                      <label for="comment">Comment</label>
+                    </div>
+                    <p><b>Step 1a</b> (<i>optional</i>): If necessary, click
+                      <a href="#advanced-setup-mode" onclick="toggleAdvancedSetupMode()">here</a> to customize default values.
+                    </p>
+                    <div id="advanced-setup-all" class="hide">
+                      <h6 id="advanced-setup-mode" class="hide">Advanced Setup Mode</h6>
+                      <div id="advanced-setup-secret" class="input-field">
+                        <input id="secret" name="secret" type="text" class="validate" pattern="[A-Za-z0-9]{10,100}"
+                          title="Token secret should contain 10-200 characters and consists of A-Z and 0-9 characters only."
+                          autocorrect="off" autocapitalize="off" autocomplete="off"
+                          maxlength="100"
+                          value="{{ .Data.mfa_secret }}"
+                          required />
+                        <label for="secret">Token Secret</label>
+                      </div>
+                      <div id="advanced-setup-period" class="input-field">
+                        <select id="period" name="period" class="browser-default">
+                          <option value="15" {{ if eq .Data.mfa_period "15" }} selected{{ end }}>15 Seconds Lifetime</option>
+                          <option value="30" {{ if eq .Data.mfa_period "30" }} selected{{ end }}>30 Seconds Lifetime</option>
+                          <option value="60" {{ if eq .Data.mfa_period "60" }} selected{{ end }}>60 Seconds Lifetime</option>
+                          <option value="90" {{ if eq .Data.mfa_period "90" }} selected{{ end }}>90 Seconds Lifetime</option>
+                        </select>
+                      </div>
+                      <div id="advanced-setup-digits" class="input-field">
+                        <select id="digits" name="digits" class="browser-default">
+                          <option value="4" {{ if eq .Data.mfa_digits "4" }} selected{{ end }}>4 Digit Code</option>
+                          <option value="6" {{ if eq .Data.mfa_digits "6" }} selected{{ end }}>6 Digit Code</option>
+                          <option value="8" {{ if eq .Data.mfa_digits "8" }} selected{{ end }}>8 Digit Code</option>
+                        </select>
+                      </div>
+                    </div>
+                    <p><b>Step 2</b>: Open your MFA authenticator application, e.g. Microsoft/Google Authenticator, Authy, etc.,
+                      add new entry and click the "Get QR" link.
+                    </p>
+                    <div id="mfa-get-qr-code" class="center-align">
+                      <a href="#qr-code-mode" onclick="getQRCode()">Get QR Code</a>
+                    </div>
+                  </div>
+                  <div id="mfa-qr-code" class="hide">
+                    <h6 id="qr-code-mode" class="hide">QR Code Mode</h6>
+                    <div class="center-align">
+                      <p>&raquo; Scan the QR code image.</p>
+                    </div>
+                    <div id="mfa-qr-code-image" class="center-align">
+                      <img src="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-barcode" .Data.code_uri_encoded }}.png" alt="QR Code" />
+                    </div>
+                    <div class="center-align">
+                      <p>&raquo; Can't scan? Click or copy the link below.</p>
+                    </div>
+                    <div id="mfa-no-camera-link" class="center-align">
+                      <a href="{{ .Data.code_uri }}">No Camera Link</a>
+                    </div>
+                    <p><b>Step 3</b>: Enter the authentication code you see in the app and click "Add".</p>
+                    <div class="input-field mfa-app-auth-ctrl mfa-app-auth-form">
+                      <input class="mfa-app-auth-passcode" id="passcode" name="passcode" type="text" class="validate" pattern="[0-9]{4,8}"
+                        title="Authentication code should contain 4-8 characters and consists of 0-9 characters."
+                        autocorrect="off" autocapitalize="off" autocomplete="off"
+                        placeholder="______"
+                        required />
+                    </div>
+                    <input id="email" name="email" type="hidden" value="{{ .Data.mfa_email }}" />
+                    <input id="type" name="type" type="hidden" value="{{ .Data.mfa_type }}" />
+                    <input id="barcode_uri" name "barcode_uri" type="hidden" value="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-barcode" }}" />
+                    <div class="mfa-app-auth-btn">
+                      <button type="reset" name="reset" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1">
+                        <i class="las la-redo-alt left app-btn-icon"></i>
+                      </button>
+                      <button type="submit" name="submit" class="btn waves-effect waves-light navbtn active navbtn-last">
+                        <i class="las la-plus-circle left app-btn-icon"></i>
+                        <span class="app-btn-text">Add</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          {{ else if eq .Data.view "mfa_u2f_register" }}
+          <div class="row">
+            <form id="mfa-add-u2f-form" class="mfa-add-u2f-form"
+                  action="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-register" }}"
+                  method="POST"
+                  autocomplete="off"
+                  >
+              <div class="row">
+                <div class="col s12 m12 l12">
+                  <p>Please insert your U2F (USB, NFC, or Bluetooth) Security Key, e.g. Yubikey.</p>
+                  <p>Then, please click "Register" button below.</p>
+                  <div class="input-field">
+                    <input id="comment" name="comment" type="text" class="validate" pattern="[A-Za-z0-9 -]{4,25}"
+                      title="A comment should contain 4-25 characters and consists of A-Z, a-z, 0-9, space, and dash characters."
+                      autocorrect="off" autocapitalize="off" autocomplete="off"
+                      required />
+                    <label for="comment">Comment</label>
+                  </div>
+                  <input class="hide" id="webauthn_register" name="webauthn_register" type="text" />
+                  <input class="hide" id="webauthn_challenge" name="webauthn_challenge" type="text" value="{{ .Data.webauthn_challenge }}" />
+                  <button id="mfa-add-u2f-button"
+                    type="button" name="action"
+                    onclick="u2f_token_register('mfa-add-u2f-form', 'mfa-add-u2f-button');"
+                    class="btn waves-effect waves-light  navbtn active navbtn-last app-btn">
+                    <i class="las la-plus-circle left app-btn-icon"></i>
+                    <span class="app-btn-text">Register</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+            <div id="mfa-add-u2f-form-rst" class="row center hide">
+              <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id }}">
+                <button type="button" name="button" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1">
+                  <i class="las la-redo-alt left app-btn-icon"></i>
+                  <span class="app-btn-text">Try Again</span>
+                </button>
+              </a>
+            </div>
+
+            <div class="mfa-auth-help-menu">
+              <p>Having issues?</p>
+              <ul>
+                <li>
+                  <i class="las la-question"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "help" }}">
+                    Contact support
+                  </a>
+                </li>
+                <li>
+                  <i class="las la-home"></i>
+                  <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
+                    Login page
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+
+          </div>
+          {{ else if eq .Data.view "terminate" }}
+          <div class="row center">
+            <p>{{ .Data.error }}.</p>
+            <a href="{{ pathjoin .ActionEndpoint "login" }}">
+              <button type="button" name="button" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1">
+                <i class="las la-redo-alt left app-btn-icon"></i>
+                <span class="app-btn-text">Start Over</span>
+              </button>
+            </a>
+          </div>
+          {{ else if eq .Data.view "error" }}
+          <div class="row center">
+            <p>Your session failed to meet authorization requirements.</p>
+            <p>{{ .Data.error }}.</p>
+            <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id }}">
+              <button type="button" name="button" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1">
+                <i class="las la-redo-alt left app-btn-icon"></i>
+                <span class="app-btn-text">Try Again</span>
+              </button>
+            </a>
+          </div>
+          {{ else }}
+          <div class="row">
+            <p>The {{ .Data.view }} view is unsupported.</p>
+          </div>
+          {{ end }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Optional JavaScript -->
+    <script src="{{ pathjoin .ActionEndpoint "/assets/materialize-css/js/materialize.js" }}"></script>
+    {{ if eq .Data.ui_options.custom_js_required "yes" }}
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
+    {{ end }}
+    {{ if eq .Data.view "mfa_app_register" }}
+    <!-- App Authentication Registration Scripts -->
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/mfa_add_app.js" }}"></script>
+    {{ end }}
+    {{ if or (eq .Data.view "mfa_u2f_register") (eq .Data.view "mfa_u2f_auth") }}
+    <!-- U2F Authentication Scripts -->
+    <script src="{{ pathjoin .ActionEndpoint "/assets/cbor/cbor.js" }}"></script>
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/mfa_u2f.js" }}"></script>
+    {{ end }}
+
+    {{ if eq .Data.view "mfa_u2f_register" }}
+    <script>
+    function u2f_token_register(formID, btnID) {
+      const params = {
+        challenge: "{{ .Data.webauthn_challenge }}",
+        rp_name: "{{ .Data.webauthn_rp_name }}",
+        user_id: "{{ .Data.webauthn_user_id }}",
+        user_name: "{{ .Data.webauthn_user_email }}",
+        user_display_name: "{{ .Data.webauthn_user_display_name }}",
+        user_verification: "{{ .Data.webauthn_user_verification }}",
+        attestation: "{{ .Data.webauthn_attestation }}",
+        pubkey_cred_params: [
+          {
+            type: "public-key",
+            alg: -7,
+          },
+        ]
+      };
+      register_u2f_token(formID, btnID, params);
+    }
+    </script>
+    {{ end }}
+    {{ if eq .Data.view "mfa_u2f_auth" }}
+    <script>
+    function u2f_token_authenticate(formID) {
+      const params = {
+        challenge: "{{ .Data.webauthn_challenge }}",
+        timeout: {{ .Data.webauthn_timeout }},
+        rp_name: "{{ .Data.webauthn_rp_name }}",
+        user_verification: "{{ .Data.webauthn_user_verification }}",
+        {{- if .Data.webauthn_credentials }}
+        allowed_credentials: [
+        {{- range .Data.webauthn_credentials }}
+          {
+            id: "{{ .id }}",
+            type: "{{ .type }}",
+            transports: [{{ range .transports }}"{{ . }}",{{ end }}],
+          },
+        {{- end }}
+        ],
+        {{ else }}
+        allowed_credentials: [],
+        {{end -}}
+        ext_uvm: {{ .Data.webauthn_ext_uvm }},
+        ext_loc: {{ .Data.webauthn_ext_loc }},
+        ext_tx_auth_simple: "{{ .Data.webauthn_tx_auth_simple }}",
+      };
+      authenticate_u2f_token(formID, params);
+    }
+
+    window.addEventListener("load", u2f_token_authenticate('mfa-u2f-auth-form'));
+    </script>
+    {{ end }}
+    {{ if .Message }}
+    <script>
+    var toastHTML = '<span>{{ .Message }}</span><button class="btn-flat toast-action" onclick="M.Toast.dismissAll();">Close</button>';
+    toastElement = M.toast({
+      html: toastHTML,
+      classes: 'toast-error'
+    });
+    const appContainer = document.querySelector('.app-card-container')
+    appContainer.prepend(toastElement.el)
+    </script>
+    {{ end }}
+  </body>
+</html>
