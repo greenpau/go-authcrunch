@@ -27,15 +27,36 @@ jobs:
       id: go
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
-    - name: Install Go modules
+    - name: Amend Environment Path
+      run: |
+        mkdir -p /home/runner/.local/bin
+        echo "/home/runner/.local/bin" >> $GITHUB_PATH
+    - name: Install prerequisites
+      run: |
+        sudo apt-get --assume-yes update
+        sudo apt-get --assume-yes install make
+        sudo apt-get --assume-yes install libnss3-tools
+        sudo apt-get update
+    - name: Setup Environment
       run: |
         mkdir -p .coverage
+        echo "*** Current Directory ***"
+        pwd
+        echo "*** Executable Path ***"
+        echo "$PATH" | tr ':' '\n'
+        echo "*** Workspace Files ***"
+        find .
+    - name: Install Go modules
+      run: |
+        make dep
     - name: Run tests
       run: |
-        go test -v -coverprofile=.coverage/coverage.out ./*.go
-        go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
-        go test -covermode=count -coverprofile=.coverage/coverage.out ./*.go
-        go tool cover -func=.coverage/coverage.out | grep -v 100
+        make test
+    - name: Run build
+      run: |
+        make
+    - name: Generate coverage report
+      run: make coverage
     - name: Upload coverage report
       uses: actions/upload-artifact@v1
       with:
