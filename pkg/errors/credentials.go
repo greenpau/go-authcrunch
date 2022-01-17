@@ -17,4 +17,5 @@ package errors
 // Credentials Errors
 const (
 	ErrCredAddConfigType StandardError = "credential config %T is unsupported"
+	ErrCredKeyValueEmpty StandardError = "credential config %q key is empty"
 )

@@ -14,9 +14,27 @@
 
 package credentials
 
+import (
+	"github.com/greenpau/aaasf/pkg/errors"
+)
+
 // Generic represents username and password credentials.
 type Generic struct {
 	Name     string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	Username string `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
 	Password string `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
+}
+
+// Validate validates Generic credentials.
+func (c *Generic) Validate() error {
+	if c.Name == "" {
+		return errors.ErrCredKeyValueEmpty.WithArgs("name")
+	}
+	if c.Username == "" {
+		return errors.ErrCredKeyValueEmpty.WithArgs("username")
+	}
+	if c.Password == "" {
+		return errors.ErrCredKeyValueEmpty.WithArgs("password")
+	}
+	return nil
 }

@@ -36,7 +36,7 @@ func NewConfig() *Config {
 }
 
 // AddCredential adds a credential configuration.
-func (cfg *Config) AddCredential(c interface{}) error {
+func (cfg *Config) AddCredential(c credentials.Credential) error {
 	if cfg.Credentials == nil {
 		cfg.Credentials = &credentials.Config{}
 	}
@@ -50,5 +50,10 @@ func (cfg *Config) AddAuthenticationPortal(c *authn.PortalConfig) error {
 
 // AddAuthorizationPolicy adds an authorization policy configuration.
 func (cfg *Config) AddAuthorizationPolicy(c *authz.PolicyConfig) error {
+	return nil
+}
+
+// Validate validates Config.
+func (cfg *Config) Validate() error {
 	return nil
 }

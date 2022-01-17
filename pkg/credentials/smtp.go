@@ -14,6 +14,10 @@
 
 package credentials
 
+import (
+	"github.com/greenpau/aaasf/pkg/errors"
+)
+
 // SMTP represents SMTP credentials.
 type SMTP struct {
 	Name     string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
@@ -21,4 +25,24 @@ type SMTP struct {
 	Password string `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
 	Address  string `json:"address,omitempty" xml:"address,omitempty" yaml:"address,omitempty"`
 	Protocol string `json:"protocol,omitempty" xml:"protocol,omitempty" yaml:"protocol,omitempty"`
+}
+
+// Validate validates SMTP credentials.
+func (c *SMTP) Validate() error {
+	if c.Name == "" {
+		return errors.ErrCredKeyValueEmpty.WithArgs("name")
+	}
+	if c.Username == "" {
+		return errors.ErrCredKeyValueEmpty.WithArgs("username")
+	}
+	if c.Password == "" {
+		return errors.ErrCredKeyValueEmpty.WithArgs("password")
+	}
+	if c.Address == "" {
+		return errors.ErrCredKeyValueEmpty.WithArgs("address")
+	}
+	if c.Protocol == "" {
+		return errors.ErrCredKeyValueEmpty.WithArgs("protocol")
+	}
+	return nil
 }

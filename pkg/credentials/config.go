@@ -24,9 +24,25 @@ type Config struct {
 	Generic []*Generic `json:"generic,omitempty" xml:"generic,omitempty" yaml:"generic,omitempty"`
 }
 
+// Credential is an interface to work with credentials.
+type Credential interface {
+	Validate() error
+}
+
 // Add adds a credential to Config.
-func (cfg *Config) Add(i interface{}) error {
-	switch v := i.(type) {
+func (cfg *Config) Add(c Credential) error {
+	switch v := c.(type) {
+	case *SMTP:
+	case *Generic:
+	default:
+		return errors.ErrCredAddConfigType.WithArgs(v)
+	}
+
+	if err := c.Validate(); err != nil {
+		return err
+	}
+
+	switch v := c.(type) {
 	case *SMTP:
 		cfg.Email = append(cfg.Email, v)
 	case *Generic:
