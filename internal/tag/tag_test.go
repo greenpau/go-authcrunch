@@ -22,16 +22,6 @@ import (
 	"github.com/greenpau/aaasf/internal/testutils"
 	"github.com/greenpau/aaasf/pkg/acl"
 	"github.com/greenpau/aaasf/pkg/authn"
-	"github.com/greenpau/aaasf/pkg/authn/registration"
-	"github.com/greenpau/aaasf/pkg/credentials"
-	"github.com/greenpau/aaasf/pkg/identity"
-	"github.com/greenpau/aaasf/pkg/identity/qr"
-	"github.com/greenpau/aaasf/pkg/kms"
-	"github.com/greenpau/aaasf/pkg/requests"
-	"github.com/greenpau/aaasf/pkg/util/cfg"
-	"strings"
-	"unicode"
-	// "github.com/greenpau/aaasf/pkg/shared"
 	"github.com/greenpau/aaasf/pkg/authn/backends"
 	"github.com/greenpau/aaasf/pkg/authn/backends/ldap"
 	"github.com/greenpau/aaasf/pkg/authn/backends/local"
@@ -39,13 +29,23 @@ import (
 	"github.com/greenpau/aaasf/pkg/authn/backends/saml"
 	authncache "github.com/greenpau/aaasf/pkg/authn/cache"
 	"github.com/greenpau/aaasf/pkg/authn/cookie"
+	"github.com/greenpau/aaasf/pkg/authn/registration"
 	"github.com/greenpau/aaasf/pkg/authn/transformer"
 	"github.com/greenpau/aaasf/pkg/authn/ui"
+	"github.com/greenpau/aaasf/pkg/authz"
 	"github.com/greenpau/aaasf/pkg/authz/cache"
 	"github.com/greenpau/aaasf/pkg/authz/options"
 	"github.com/greenpau/aaasf/pkg/authz/validator"
+	"github.com/greenpau/aaasf/pkg/credentials"
+	"github.com/greenpau/aaasf/pkg/identity"
+	"github.com/greenpau/aaasf/pkg/identity/qr"
+	"github.com/greenpau/aaasf/pkg/kms"
+	"github.com/greenpau/aaasf/pkg/requests"
 	"github.com/greenpau/aaasf/pkg/shared/idp"
 	"github.com/greenpau/aaasf/pkg/user"
+	"github.com/greenpau/aaasf/pkg/util/cfg"
+	"strings"
+	"unicode"
 
 	"os"
 	"path/filepath"
@@ -529,7 +529,13 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test aaasf.Config struct",
 			entry: &aaasf.Config{},
-			opts:  &Options{},
+			opts: &Options{
+				AllowFieldMismatch: true,
+				AllowedFields: map[string]interface{}{
+					"auth_portal_config":  true,
+					"authz_policy_config": true,
+				},
+			},
 		},
 		{
 			name:  "test cache.TokenCache struct",
@@ -636,6 +642,11 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test acl.AccessList struct",
 			entry: &acl.AccessList{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test authz.PolicyConfig struct",
+			entry: &authz.PolicyConfig{},
 			opts:  &Options{},
 		},
 	}
