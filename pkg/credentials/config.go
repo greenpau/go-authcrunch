@@ -14,8 +14,25 @@
 
 package credentials
 
+import (
+	"github.com/greenpau/aaasf/pkg/errors"
+)
+
 // Config represents a collection of various credentials.
 type Config struct {
 	Email   []*SMTP    `json:"email,omitempty" xml:"email,omitempty" yaml:"email,omitempty"`
 	Generic []*Generic `json:"generic,omitempty" xml:"generic,omitempty" yaml:"generic,omitempty"`
+}
+
+// Add adds a credential to Config.
+func (cfg *Config) Add(i interface{}) error {
+	switch v := i.(type) {
+	case *SMTP:
+		cfg.Email = append(cfg.Email, v)
+	case *Generic:
+		cfg.Generic = append(cfg.Generic, v)
+	default:
+		return errors.ErrCredAddConfigType.WithArgs(v)
+	}
+	return nil
 }
