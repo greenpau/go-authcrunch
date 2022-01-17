@@ -36,9 +36,9 @@ func init() {
 	app = versioned.NewPackageManager("aaasfcli")
 	app.Description = "AAA SF management client"
 	app.Documentation = "https://github.com/greenpau/aaasf/"
-	app.SetVersion(appVersion, "1.0.0")
-	app.SetGitBranch(gitBranch, "")
-	app.SetGitCommit(gitCommit, "")
+	app.SetVersion(appVersion, "1.0.1")
+	app.SetGitBranch(gitBranch, "main")
+	app.SetGitCommit(gitCommit, "ebdee32")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 
