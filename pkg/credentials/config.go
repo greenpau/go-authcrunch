@@ -47,8 +47,6 @@ func (cfg *Config) Add(c Credential) error {
 		cfg.Email = append(cfg.Email, v)
 	case *Generic:
 		cfg.Generic = append(cfg.Generic, v)
-	default:
-		return errors.ErrCredAddConfigType.WithArgs(v)
 	}
 	return nil
 }
