@@ -50,7 +50,7 @@ type Config struct {
 // Upon successful authentation for the combination, a user gets
 // assigned the roles associated with the binding.
 type UserGroup struct {
-	GroupDN string   `json:"group_dn,omitempty" xml:"group_dn,omitempty" yaml:"group_dn,omitempty"`
+	GroupDN string   `json:"dn,omitempty" xml:"dn,omitempty" yaml:"dn,omitempty"`
 	Roles   []string `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
 }
 

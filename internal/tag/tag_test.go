@@ -627,7 +627,12 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test ldap.UserGroup struct",
 			entry: &ldap.UserGroup{},
-			opts:  &Options{},
+			opts: &Options{
+				AllowFieldMismatch: true,
+				AllowedFields: map[string]interface{}{
+					"dn": true,
+				},
+			},
 		},
 		{
 			name:  "test idp.APIKeyAuthConfig struct",
