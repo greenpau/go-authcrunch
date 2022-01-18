@@ -16,6 +16,10 @@ package errors
 
 // Global security config errors.
 const (
-	ErrSecurityConfig     StandardError = "security config error: %v"
-	ErrMalformedDirective StandardError = "malformed %q directive: %v"
+	ErrSecurityConfig       StandardError = "security config error: %v"
+	ErrMalformedDirective   StandardError = "malformed %q directive: %v"
+	ErrConfigDirectiveShort StandardError = "the %q directive is too short: %v"
+	// ErrConfigDirectiveLong StandardError = "the %q directive is too long: %v"
+	ErrConfigDirectiveValueUnsupported StandardError = "the %q directive value of %q is unsupported"
+	ErrConfigDirectiveFail             StandardError = "the %q directive with value of %q failed: %v"
 )

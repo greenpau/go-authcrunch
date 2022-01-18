@@ -23,8 +23,8 @@ import (
 // Config is a configuration of Server.
 type Config struct {
 	Credentials *credentials.Config   `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
-	Portals     []*authn.PortalConfig `json:"auth_portal_config,omitempty" xml:"auth_portal_config,omitempty" yaml:"auth_portal_config,omitempty"`
-	Policies    []*authz.PolicyConfig `json:"authz_policy_config,omitempty" xml:"authz_policy_config,omitempty" yaml:"authz_policy_config,omitempty"`
+	Portals     []*authn.PortalConfig `json:"auth_portal_configs,omitempty" xml:"auth_portal_configs,omitempty" yaml:"auth_portal_configs,omitempty"`
+	Policies    []*authz.PolicyConfig `json:"authz_policy_configs,omitempty" xml:"authz_policy_configs,omitempty" yaml:"authz_policy_configs,omitempty"`
 	credMap     map[string]*credentials.Config
 }
 
@@ -44,12 +44,14 @@ func (cfg *Config) AddCredential(c credentials.Credential) error {
 }
 
 // AddAuthenticationPortal adds an authentication portal configuration.
-func (cfg *Config) AddAuthenticationPortal(c *authn.PortalConfig) error {
+func (cfg *Config) AddAuthenticationPortal(p *authn.PortalConfig) error {
+	cfg.Portals = append(cfg.Portals, p)
 	return nil
 }
 
 // AddAuthorizationPolicy adds an authorization policy configuration.
-func (cfg *Config) AddAuthorizationPolicy(c *authz.PolicyConfig) error {
+func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
+	cfg.Policies = append(cfg.Policies, p)
 	return nil
 }
 

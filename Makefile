@@ -76,7 +76,7 @@ clean:
 
 qtest:
 	@echo "Perform quick tests ..."
-	@#time richgo test -v -coverprofile=.coverage/coverage.out internal/tag/*.go
+	@time richgo test -v -coverprofile=.coverage/coverage.out internal/tag/*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out -run TestTagCompliance 
 	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/credentials/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/errors/...

@@ -532,8 +532,8 @@ func TestTagCompliance(t *testing.T) {
 			opts: &Options{
 				AllowFieldMismatch: true,
 				AllowedFields: map[string]interface{}{
-					"auth_portal_config":  true,
-					"authz_policy_config": true,
+					"auth_portal_configs":  true,
+					"authz_policy_configs": true,
 				},
 			},
 		},

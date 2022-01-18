@@ -26,8 +26,11 @@ import (
 	"github.com/greenpau/aaasf/pkg/authn/ui"
 	"github.com/greenpau/aaasf/pkg/authz/options"
 	// "github.com/greenpau/aaasf/pkg/authz/validator"
+	"github.com/greenpau/aaasf/pkg/errors"
 	"github.com/greenpau/aaasf/pkg/kms"
+	cfgutil "github.com/greenpau/aaasf/pkg/util/cfg"
 	// "go.uber.org/zap"
+	"strings"
 )
 
 // PortalConfig TODO
@@ -53,4 +56,55 @@ type PortalConfig struct {
 	CryptoKeyStoreConfig map[string]interface{} `json:"crypto_key_store_config,omitempty" xml:"crypto_key_store_config,omitempty" yaml:"crypto_key_store_config,omitempty"`
 	// TokenGrantorOptions holds the configuration for the tokens issues by Authenticator.
 	TokenGrantorOptions *options.TokenGrantorOptions `json:"token_grantor_options,omitempty" xml:"token_grantor_options,omitempty" yaml:"token_grantor_options,omitempty"`
+
+	// Holds raw crypto configuration
+	cryptoRawConfigs []string
+}
+
+// AddRawCryptoConfigs adds raw crypto configs.
+func (cfg *PortalConfig) AddRawCryptoConfigs(s string) {
+	cfg.cryptoRawConfigs = append(cfg.cryptoRawConfigs, s)
+}
+
+// ParseRawCryptoConfigs parses raw crypto configs into CryptoKeyConfigs
+// and CryptoKeyStoreConfig.
+func (cfg *PortalConfig) ParseRawCryptoConfigs() error {
+	var cryptoKeyConfig, cryptoKeyStoreConfig []string
+	var cryptoKeyConfigFound, cryptoKeyStoreConfigFound bool
+	for _, encodedArgs := range cfg.cryptoRawConfigs {
+		args, err := cfgutil.DecodeArgs(encodedArgs)
+		if err != nil {
+			return errors.ErrConfigDirectiveFail.WithArgs("crypto", encodedArgs, err)
+		}
+		if len(args) < 3 {
+			return errors.ErrConfigDirectiveShort.WithArgs("crypto", args)
+		}
+		cryptoKeyConfig = append(cryptoKeyConfig, encodedArgs)
+		switch args[0] {
+		case "key":
+			cryptoKeyConfigFound = true
+		case "default":
+			cryptoKeyStoreConfig = append(cryptoKeyStoreConfig, encodedArgs)
+			cryptoKeyStoreConfigFound = true
+		default:
+			return errors.ErrConfigDirectiveValueUnsupported.WithArgs("crypto", args)
+		}
+	}
+
+	if cryptoKeyConfigFound {
+		configs, err := kms.ParseCryptoKeyConfigs(strings.Join(cryptoKeyConfig, "\n"))
+		if err != nil {
+			return errors.ErrConfigDirectiveFail.WithArgs("crypto.key", cryptoKeyConfig, err)
+		}
+		cfg.CryptoKeyConfigs = configs
+	}
+
+	if cryptoKeyStoreConfigFound {
+		configs, err := kms.ParseCryptoKeyStoreConfig(strings.Join(cryptoKeyStoreConfig, "\n"))
+		if err != nil {
+			return errors.ErrConfigDirectiveFail.WithArgs("crypto.keystore", cryptoKeyStoreConfig, err)
+		}
+		cfg.CryptoKeyStoreConfig = configs
+	}
+	return nil
 }
