@@ -51,6 +51,9 @@ func (cfg *Config) AddAuthenticationPortal(p *authn.PortalConfig) error {
 
 // AddAuthorizationPolicy adds an authorization policy configuration.
 func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
 	cfg.Policies = append(cfg.Policies, p)
 	return nil
 }
@@ -59,6 +62,11 @@ func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
 func (cfg *Config) Validate() error {
 	for _, portal := range cfg.Portals {
 		if err := portal.Validate(); err != nil {
+			return err
+		}
+	}
+	for _, policy := range cfg.Policies {
+		if err := policy.Validate(); err != nil {
 			return err
 		}
 	}
