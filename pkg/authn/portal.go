@@ -77,6 +77,11 @@ func NewPortal(cfg *PortalConfig, logger *zap.Logger) (*Portal, error) {
 	return p, nil
 }
 
+// Register registers the Portal with PortalRegistry.
+func (p *Portal) Register() error {
+	return portalRegistry.Register(p.config.Name, p)
+}
+
 func (p *Portal) configure() error {
 	if err := p.configureEssentials(); err != nil {
 		return err

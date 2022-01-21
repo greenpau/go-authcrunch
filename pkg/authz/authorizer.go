@@ -15,6 +15,7 @@
 package authz
 
 import (
+	"github.com/greenpau/aaasf/pkg/errors"
 	"github.com/greenpau/aaasf/pkg/requests"
 	"go.uber.org/zap"
 	"net/http"
@@ -58,5 +59,13 @@ func (m *Authorizer) Validate() error {
 
 // Authenticate authorizes HTTP requests.
 func (m *Authorizer) Authenticate(w http.ResponseWriter, r *http.Request, rr *requests.AuthorizationRequest) error {
+	if m.gatekeeper == nil {
+		m.logger.Warn(
+			"Authenticate failed",
+			zap.String("gatekeeper_name", m.GatekeeperName),
+			zap.Error(errors.ErrGatekeeperUnavailable),
+		)
+		return errors.ErrGatekeeperUnavailable
+	}
 	return m.gatekeeper.Authenticate(w, r, rr)
 }

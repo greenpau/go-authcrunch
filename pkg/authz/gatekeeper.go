@@ -60,6 +60,11 @@ func NewGatekeeper(cfg *PolicyConfig, logger *zap.Logger) (*Gatekeeper, error) {
 	return p, nil
 }
 
+// Register registers the Gatekeeper with GatekeeperRegistry.
+func (g *Gatekeeper) Register() error {
+	return gatekeeperRegistry.Register(g.config.Name, g)
+}
+
 func (g *Gatekeeper) configure() error {
 	ctx := context.Background()
 

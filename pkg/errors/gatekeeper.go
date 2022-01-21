@@ -21,4 +21,5 @@ const (
 	ErrNewGatekeeper                   StandardError = "failed initializing gatekeeper: %v"
 	ErrGatekeeperRegistryEntryNotFound StandardError = "gatekeeper %q not found in registry"
 	ErrGatekeeperRegistryEntryExists   StandardError = "gatekeeper %q already registered"
+	ErrGatekeeperUnavailable           StandardError = "gatekeeper unavailable"
 )

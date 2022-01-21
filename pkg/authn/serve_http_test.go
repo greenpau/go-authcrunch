@@ -94,7 +94,7 @@ func TestServeHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := portalRegistry.Register(cfg.Name, portal); err != nil {
+	if err := portal.Register(); err != nil {
 		t.Fatal(err)
 	}
 

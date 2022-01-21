@@ -16,6 +16,7 @@ package authn
 
 import (
 	"context"
+	"github.com/greenpau/aaasf/pkg/errors"
 	"github.com/greenpau/aaasf/pkg/requests"
 	"go.uber.org/zap"
 	"net/http"
@@ -59,5 +60,13 @@ func (m *Authenticator) Validate() error {
 
 // ServeHTTP is a gateway for the authentication portal.
 func (m *Authenticator) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
+	if m.portal == nil {
+		m.logger.Warn(
+			"ServeHTTP failed",
+			zap.String("portal_name", m.PortalName),
+			zap.Error(errors.ErrPortalUnavailable),
+		)
+		return errors.ErrPortalUnavailable
+	}
 	return m.portal.ServeHTTP(ctx, w, r, rr)
 }

@@ -69,7 +69,8 @@ func TestAuthenticate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := gatekeeperRegistry.Register(cfg.Name, gatekeeper); err != nil {
+
+	if err := gatekeeper.Register(); err != nil {
 		t.Fatal(err)
 	}
 

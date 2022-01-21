@@ -21,4 +21,5 @@ const (
 	ErrNewPortal                   StandardError = "failed initializing portal: %v"
 	ErrPortalRegistryEntryNotFound StandardError = "authentication portal %q not found in registry"
 	ErrPortalRegistryEntryExists   StandardError = "authentication portal %q already registered"
+	ErrPortalUnavailable           StandardError = "portal unavailable"
 )
