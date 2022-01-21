@@ -12,26 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authn
+package sanitizer
 
-import (
-	"fmt"
-	"github.com/greenpau/aaasf/pkg/requests"
-	"net/http"
-	"strings"
-)
-
-func validateAPIKeyInputForm(r *http.Request, rr *requests.Request) error {
-	if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
-		return fmt.Errorf("Unsupported content type")
-	}
-	if err := r.ParseForm(); err != nil {
-		return fmt.Errorf("Failed parsing submitted form")
-	}
-	comment := r.PostFormValue("comment1")
-	comment = strings.TrimSpace(comment)
-	if comment != "" {
-		rr.Key.Comment = comment
-	}
-	return nil
+func Run(s string) string {
+	return s
 }

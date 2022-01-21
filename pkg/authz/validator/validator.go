@@ -24,6 +24,7 @@ import (
 	"github.com/greenpau/aaasf/pkg/authz/options"
 	"github.com/greenpau/aaasf/pkg/errors"
 	"github.com/greenpau/aaasf/pkg/kms"
+	"github.com/greenpau/aaasf/pkg/sanitizer"
 	"github.com/greenpau/aaasf/pkg/shared/idp"
 	"github.com/greenpau/aaasf/pkg/user"
 	addrutil "github.com/greenpau/aaasf/pkg/util/addr"
@@ -222,7 +223,7 @@ func (g *guardianWithMethodPath) authorize(ctx context.Context, r *http.Request,
 		kv[k] = v
 	}
 	kv["method"] = r.Method
-	kv["path"] = r.URL.Path
+	kv["path"] = sanitizer.Run(r.URL.Path)
 	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
@@ -235,7 +236,7 @@ func (g *guardianWithMethodPathSrcAddr) authorize(ctx context.Context, r *http.R
 		kv[k] = v
 	}
 	kv["method"] = r.Method
-	kv["path"] = r.URL.Path
+	kv["path"] = sanitizer.Run(r.URL.Path)
 	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
@@ -255,7 +256,7 @@ func (g *guardianWithMethodPathPathClaim) authorize(ctx context.Context, r *http
 		kv[k] = v
 	}
 	kv["method"] = r.Method
-	kv["path"] = r.URL.Path
+	kv["path"] = sanitizer.Run(r.URL.Path)
 	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
@@ -276,7 +277,7 @@ func (g *guardianWithMethodPathSrcAddrPathClaim) authorize(ctx context.Context, 
 		kv[k] = v
 	}
 	kv["method"] = r.Method
-	kv["path"] = r.URL.Path
+	kv["path"] = sanitizer.Run(r.URL.Path)
 	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}

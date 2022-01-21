@@ -108,6 +108,7 @@ dep:
 license:
 	@versioned || go get -u github.com/greenpau/versioned/cmd/versioned
 	@for f in `find ./ -type f -name '*.go'`; do versioned -addlicense -copyright="Paul Greenberg greenpau@outlook.com" -year=2022 -filepath=$$f; done
+	@#for f in `find ./ -type f -name '*.go'`; do versioned -striplicense -filepath=$$f; done
 	@echo "$@: complete"
 
 release:
