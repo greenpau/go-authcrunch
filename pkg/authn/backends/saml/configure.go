@@ -44,6 +44,8 @@ type Config struct {
 	IdpMetadataLocation string `json:"idp_metadata_location,omitempty" xml:"idp_metadata_location,omitempty" yaml:"idp_metadata_location,omitempty"`
 	// IdpSignCertLocation is the path to the Identity Provider signing certificate.
 	IdpSignCertLocation string `json:"idp_sign_cert_location,omitempty" xml:"idp_sign_cert_location,omitempty" yaml:"idp_sign_cert_location,omitempty"`
+	// IdpLoginURL is the SAML authentication endpoint with the Identity Provider.
+	IdpLoginURL string `json:"idp_login_url,omitempty" xml:"idp_login_url,omitempty" yaml:"idp_login_url,omitempty"`
 	// TenantID is the tenant ID associated with the Backend.
 	TenantID string `json:"tenant_id,omitempty" xml:"tenant_id,omitempty" yaml:"tenant_id,omitempty"`
 	// ApplicationID is the application ID associated with the Backend.
@@ -60,6 +62,7 @@ type Config struct {
 	// same time the users may access it by IP, e.g. http://10.10.10.10. or
 	// by name, i.e. app. Each of the URLs is a separate endpoint.
 	AssertionConsumerServiceURLs []string `json:"acs_urls,omitempty" xml:"acs_urls,omitempty" yaml:"acs_urls,omitempty"`
+	LoginURL                     string   `json:"login_url,omitempty" xml:"login_url,omitempty" yaml:"login_url,omitempty"`
 }
 
 // Configure configures Backend.
@@ -95,10 +98,16 @@ func (b *Backend) Configure() error {
 			"https://account.activedirectory.windowsazure.com/applications/signin/%s/%s?tenantId=%s",
 			b.Config.ApplicationName, b.Config.ApplicationID, b.Config.TenantID,
 		)
+	case "generic":
+		b.loginURL = b.Config.IdpLoginURL
 	case "":
 		return fmt.Errorf("no SAML provider found")
 	default:
 		return fmt.Errorf("unsupported SAML provider %s", b.Config.Provider)
+	}
+
+	if b.loginURL == "" {
+		return fmt.Errorf("IdP Loging URL not found")
 	}
 
 	if len(b.Config.AssertionConsumerServiceURLs) < 1 {

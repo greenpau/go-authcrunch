@@ -86,13 +86,14 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 	}
 
 	m := make(map[string]interface{})
-
 	for _, attrStatement := range samlAssertions.AttributeStatements {
+
 		for _, attrEntry := range attrStatement.Attributes {
 			if len(attrEntry.Values) == 0 {
 				continue
 			}
-			if strings.HasSuffix(attrEntry.Name, "Attributes/MaxSessionDuration") {
+			switch {
+			case strings.HasSuffix(attrEntry.Name, "Attributes/MaxSessionDuration"):
 				multiplier, err := strconv.Atoi(attrEntry.Values[0].Value)
 				if err != nil {
 					b.logger.Error(
@@ -103,30 +104,23 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 					continue
 				}
 				m["exp"] = time.Now().Add(time.Duration(multiplier) * time.Second).Unix()
-				continue
-			}
-
-			if strings.HasSuffix(attrEntry.Name, "identity/claims/displayname") {
-				m["name"] = attrEntry.Values[0].Value
-				continue
-			}
-
-			if strings.HasSuffix(attrEntry.Name, "identity/claims/emailaddress") {
-				m["email"] = attrEntry.Values[0].Value
-				continue
-			}
-
-			if strings.HasSuffix(attrEntry.Name, "identity/claims/identityprovider") {
-				m["origin"] = attrEntry.Values[0].Value
-				continue
-			}
-
-			if strings.HasSuffix(attrEntry.Name, "identity/claims/name") {
-				m["sub"] = attrEntry.Values[0].Value
-				continue
-			}
-
-			if strings.HasSuffix(attrEntry.Name, "Attributes/Role") {
+			case strings.HasSuffix(attrEntry.Name, "identity/claims/displayname"):
+				if attrEntry.Values[0].Value != "" {
+					m["name"] = attrEntry.Values[0].Value
+				}
+			case strings.HasSuffix(attrEntry.Name, "identity/claims/emailaddress"):
+				if attrEntry.Values[0].Value != "" {
+					m["email"] = attrEntry.Values[0].Value
+				}
+			case strings.HasSuffix(attrEntry.Name, "identity/claims/identityprovider"):
+				if attrEntry.Values[0].Value != "" {
+					m["origin"] = attrEntry.Values[0].Value
+				}
+			case strings.HasSuffix(attrEntry.Name, "identity/claims/name"):
+				if attrEntry.Values[0].Value != "" {
+					m["sub"] = attrEntry.Values[0].Value
+				}
+			case strings.HasSuffix(attrEntry.Name, "Attributes/Role"):
 				roles := []string{}
 				for _, attrEntryElement := range attrEntry.Values {
 					roles = append(roles, attrEntryElement.Value)
@@ -134,7 +128,6 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 				if len(roles) > 0 {
 					m["roles"] = roles
 				}
-				continue
 			}
 		}
 	}
