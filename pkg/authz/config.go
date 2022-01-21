@@ -16,15 +16,12 @@ package authz
 
 import (
 	"github.com/greenpau/aaasf/pkg/acl"
-	// "github.com/greenpau/aaasf/pkg/authz/options"
-	// "github.com/greenpau/aaasf/pkg/authz/validator"
 	"github.com/greenpau/aaasf/pkg/authz/bypass"
 	"github.com/greenpau/aaasf/pkg/authz/injector"
 	"github.com/greenpau/aaasf/pkg/errors"
 	"github.com/greenpau/aaasf/pkg/kms"
 	"github.com/greenpau/aaasf/pkg/shared/idp"
 	cfgutil "github.com/greenpau/aaasf/pkg/util/cfg"
-	// "go.uber.org/zap"
 	"strings"
 )
 

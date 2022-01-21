@@ -180,9 +180,10 @@ func (g *Gatekeeper) handleAuthorizeWithRedirect(w http.ResponseWriter, r *http.
 			rr.Redirect.AuthURL = usr.Authenticator.URL
 		}
 	}
-	if rr.Redirect.AuthURL != "" {
+	if rr.Redirect.AuthURL == "" {
 		rr.Redirect.AuthURL = g.config.AuthURLPath
 	}
+
 	rr.Redirect.QueryDisabled = g.config.AuthRedirectQueryDisabled
 	rr.Redirect.QueryParameter = g.config.AuthRedirectQueryParameter
 	if g.config.AuthRedirectStatusCode > 0 {
