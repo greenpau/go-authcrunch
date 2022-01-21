@@ -120,8 +120,9 @@ release:
 	@versioned -patch
 	@echo "Patched version"
 	@git add VERSION
-	@versioned -sync cmd/aaasfcli/main.go
-	@git add cmd/aaasfcli/main.go
+	@versioned -sync ./cmd/aaasfcli/main.go
+	@versioned -sync ./pkg/identity/database.go
+	@git add cmd/aaasfcli/main.go ./pkg/identity/database.go
 	@git commit -m "released v`cat VERSION | head -1`"
 	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
 	@git push
