@@ -8,3 +8,10 @@ standalone library, i.e. it can be used with Gin, Beego, Echo,
 Mux (Gorilla). Originally, the library was a part of the development
 of Caddy v2 `caddy-auth-portal`, `caddy-auth-jwt`, and
 `caddy-authorize` plugins.
+
+**Documentation**: [authp.github.io](https://authp.github.io/)
+
+**Issues**:
+
+* Caddy-specific: [Open](https://github.com/greenpau/caddy-security/issues/new/choose)
+* Other Go-frameworks: [Open](https://github.com/greenpau/aaasf/issues/new/choose)
