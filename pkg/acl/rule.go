@@ -4558,10 +4558,10 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAnyStop) eval(ctx context.Context, d
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4574,10 +4574,10 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAnyStop) eval(ctx context.Context, da
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4590,10 +4590,10 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAnyStop) eval(ctx context.Context, da
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4606,10 +4606,10 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAnyStop) eval(ctx context.Context, d
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4621,16 +4621,16 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAllStop) eval(ctx context.Context, d
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4642,16 +4642,16 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAllStop) eval(ctx context.Context, da
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4663,16 +4663,16 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAllStop) eval(ctx context.Context, da
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4684,16 +4684,16 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAllStop) eval(ctx context.Context, d
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4705,7 +4705,7 @@ func (rule *aclRuleAllowWithDebugLoggerStop) eval(ctx context.Context, data map[
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -4717,7 +4717,7 @@ func (rule *aclRuleAllowWithInfoLoggerStop) eval(ctx context.Context, data map[s
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -4729,7 +4729,7 @@ func (rule *aclRuleAllowWithWarnLoggerStop) eval(ctx context.Context, data map[s
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -4741,7 +4741,7 @@ func (rule *aclRuleAllowWithErrorLoggerStop) eval(ctx context.Context, data map[
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -4754,10 +4754,10 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAny) eval(ctx context.Context, data 
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4770,10 +4770,10 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAny) eval(ctx context.Context, data m
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4786,10 +4786,10 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAny) eval(ctx context.Context, data m
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4802,10 +4802,10 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAny) eval(ctx context.Context, data 
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4817,16 +4817,16 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAll) eval(ctx context.Context, data 
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4838,16 +4838,16 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAll) eval(ctx context.Context, data m
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4859,16 +4859,16 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAll) eval(ctx context.Context, data m
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4880,16 +4880,16 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAll) eval(ctx context.Context, data 
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4901,7 +4901,7 @@ func (rule *aclRuleAllowWithDebugLogger) eval(ctx context.Context, data map[stri
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -4913,7 +4913,7 @@ func (rule *aclRuleAllowWithInfoLogger) eval(ctx context.Context, data map[strin
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -4925,7 +4925,7 @@ func (rule *aclRuleAllowWithWarnLogger) eval(ctx context.Context, data map[strin
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -4937,7 +4937,7 @@ func (rule *aclRuleAllowWithErrorLogger) eval(ctx context.Context, data map[stri
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -5051,11 +5051,11 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAnyStop) eval(ctx context.Con
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5069,11 +5069,11 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAnyStop) eval(ctx context.Cont
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5087,11 +5087,11 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAnyStop) eval(ctx context.Cont
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5105,11 +5105,11 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAnyStop) eval(ctx context.Con
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5122,18 +5122,18 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAllStop) eval(ctx context.Con
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5146,18 +5146,18 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAllStop) eval(ctx context.Cont
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5170,18 +5170,18 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAllStop) eval(ctx context.Cont
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5194,18 +5194,18 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAllStop) eval(ctx context.Con
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5219,7 +5219,7 @@ func (rule *aclRuleAllowWithDebugLoggerCounterStop) eval(ctx context.Context, da
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -5233,7 +5233,7 @@ func (rule *aclRuleAllowWithInfoLoggerCounterStop) eval(ctx context.Context, dat
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -5247,7 +5247,7 @@ func (rule *aclRuleAllowWithWarnLoggerCounterStop) eval(ctx context.Context, dat
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -5261,7 +5261,7 @@ func (rule *aclRuleAllowWithErrorLoggerCounterStop) eval(ctx context.Context, da
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -5275,11 +5275,11 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAny) eval(ctx context.Context
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5293,11 +5293,11 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAny) eval(ctx context.Context,
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5311,11 +5311,11 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAny) eval(ctx context.Context,
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5329,11 +5329,11 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAny) eval(ctx context.Context
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5346,18 +5346,18 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAll) eval(ctx context.Context
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5370,18 +5370,18 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAll) eval(ctx context.Context,
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5394,18 +5394,18 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAll) eval(ctx context.Context,
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5418,18 +5418,18 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAll) eval(ctx context.Context
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5443,7 +5443,7 @@ func (rule *aclRuleAllowWithDebugLoggerCounter) eval(ctx context.Context, data m
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -5457,7 +5457,7 @@ func (rule *aclRuleAllowWithInfoLoggerCounter) eval(ctx context.Context, data ma
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -5471,7 +5471,7 @@ func (rule *aclRuleAllowWithWarnLoggerCounter) eval(ctx context.Context, data ma
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -5485,7 +5485,7 @@ func (rule *aclRuleAllowWithErrorLoggerCounter) eval(ctx context.Context, data m
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -5584,10 +5584,10 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAnyStop) eval(ctx context.Context, da
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5600,10 +5600,10 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAnyStop) eval(ctx context.Context, dat
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5616,10 +5616,10 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAnyStop) eval(ctx context.Context, dat
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5632,10 +5632,10 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAnyStop) eval(ctx context.Context, da
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5647,16 +5647,16 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAllStop) eval(ctx context.Context, da
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5668,16 +5668,16 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAllStop) eval(ctx context.Context, dat
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5689,16 +5689,16 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAllStop) eval(ctx context.Context, dat
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5710,16 +5710,16 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAllStop) eval(ctx context.Context, da
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5731,7 +5731,7 @@ func (rule *aclRuleDenyWithDebugLoggerStop) eval(ctx context.Context, data map[s
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -5743,7 +5743,7 @@ func (rule *aclRuleDenyWithInfoLoggerStop) eval(ctx context.Context, data map[st
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -5755,7 +5755,7 @@ func (rule *aclRuleDenyWithWarnLoggerStop) eval(ctx context.Context, data map[st
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -5767,7 +5767,7 @@ func (rule *aclRuleDenyWithErrorLoggerStop) eval(ctx context.Context, data map[s
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -5780,10 +5780,10 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAny) eval(ctx context.Context, data m
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5796,10 +5796,10 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAny) eval(ctx context.Context, data ma
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5812,10 +5812,10 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAny) eval(ctx context.Context, data ma
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5828,10 +5828,10 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAny) eval(ctx context.Context, data m
 		if !rule.conditions[i].match(ctx, v) {
 			continue
 		}
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5843,16 +5843,16 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAll) eval(ctx context.Context, data m
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5864,16 +5864,16 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAll) eval(ctx context.Context, data ma
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5885,16 +5885,16 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAll) eval(ctx context.Context, data ma
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5906,16 +5906,16 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAll) eval(ctx context.Context, data m
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5927,7 +5927,7 @@ func (rule *aclRuleDenyWithDebugLogger) eval(ctx context.Context, data map[strin
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 
@@ -5939,7 +5939,7 @@ func (rule *aclRuleDenyWithInfoLogger) eval(ctx context.Context, data map[string
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 
@@ -5951,7 +5951,7 @@ func (rule *aclRuleDenyWithWarnLogger) eval(ctx context.Context, data map[string
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 
@@ -5963,7 +5963,7 @@ func (rule *aclRuleDenyWithErrorLogger) eval(ctx context.Context, data map[strin
 	if !rule.condition.match(ctx, v) {
 		return ruleVerdictContinue
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 
@@ -6077,11 +6077,11 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAnyStop) eval(ctx context.Cont
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6095,11 +6095,11 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAnyStop) eval(ctx context.Conte
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6113,11 +6113,11 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAnyStop) eval(ctx context.Conte
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6131,11 +6131,11 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAnyStop) eval(ctx context.Cont
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6148,18 +6148,18 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAllStop) eval(ctx context.Cont
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6172,18 +6172,18 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAllStop) eval(ctx context.Conte
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6196,18 +6196,18 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAllStop) eval(ctx context.Conte
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6220,18 +6220,18 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAllStop) eval(ctx context.Cont
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6245,7 +6245,7 @@ func (rule *aclRuleDenyWithDebugLoggerCounterStop) eval(ctx context.Context, dat
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -6259,7 +6259,7 @@ func (rule *aclRuleDenyWithInfoLoggerCounterStop) eval(ctx context.Context, data
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -6273,7 +6273,7 @@ func (rule *aclRuleDenyWithWarnLoggerCounterStop) eval(ctx context.Context, data
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -6287,7 +6287,7 @@ func (rule *aclRuleDenyWithErrorLoggerCounterStop) eval(ctx context.Context, dat
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -6301,11 +6301,11 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAny) eval(ctx context.Context,
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6319,11 +6319,11 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAny) eval(ctx context.Context, 
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6337,11 +6337,11 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAny) eval(ctx context.Context, 
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6355,11 +6355,11 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAny) eval(ctx context.Context,
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6372,18 +6372,18 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAll) eval(ctx context.Context,
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6396,18 +6396,18 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAll) eval(ctx context.Context, 
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6420,18 +6420,18 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAll) eval(ctx context.Context, 
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6444,18 +6444,18 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAll) eval(ctx context.Context,
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6469,7 +6469,7 @@ func (rule *aclRuleDenyWithDebugLoggerCounter) eval(ctx context.Context, data ma
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 
@@ -6483,7 +6483,7 @@ func (rule *aclRuleDenyWithInfoLoggerCounter) eval(ctx context.Context, data map
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 
@@ -6497,7 +6497,7 @@ func (rule *aclRuleDenyWithWarnLoggerCounter) eval(ctx context.Context, data map
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 
@@ -6511,7 +6511,7 @@ func (rule *aclRuleDenyWithErrorLoggerCounter) eval(ctx context.Context, data ma
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", data))
+	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 

@@ -12,8 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sanitizer
+package acl
 
-func Run(s string) string {
-	return s
+import (
+	"strings"
+)
+
+func sanitize(m map[string]interface{}) map[string]interface{} {
+	i, exists := m["path"]
+	if !exists {
+		return m
+	}
+
+	out := make(map[string]interface{})
+	for k, v := range m {
+		switch k {
+		case "path":
+			switch v := i.(type) {
+			case string:
+				s := strings.ReplaceAll(v, "\n", "")
+				s = strings.ReplaceAll(s, "\r", "")
+				if len(s) > 255 {
+					s = s[:254]
+				}
+				out[k] = s
+			}
+		default:
+			out[k] = v
+		}
+	}
+	return out
 }
