@@ -16,15 +16,12 @@ package errors
 
 // Portal errors.
 const (
-	ErrStaticAssetAddFailed                  StandardError = "failed adding custom static asset %s (%s) from %s for %s instance in %s context failed to load: %v"
-	ErrUserRegistrationSetupFailed           StandardError = "user registration setup for %s instance in %s context failed: %v"
-	ErrUserRegistrationMetadataReadFailed    StandardError = "user registration metadata read for %s instance in %s context failed: %v"
-	ErrUserRegistrationDropboxBadPath        StandardError = "user registration dropbox for %s instance in %s is a directory"
-	ErrUserRegistrationDropboxLoadFailed     StandardError = "user registration dropbox for %s instance in %s context failed to load: %v"
-	ErrUserInterfaceThemeNotFound            StandardError = "user interface validation for %s instance in %s context failed: %s theme not found"
-	ErrUserInterfaceBuiltinTemplateAddFailed StandardError = "user interface validation for %s instance in %s context failed for built-in template %s in %s theme: %v"
-	ErrUserInterfaceCustomTemplateAddFailed  StandardError = "user interface validation for %s instance in %s context failed for custom template %s in %s: %v"
-	ErrUserRegistrationConfig                StandardError = "user registration configuration for %q instance failed: %v"
-	ErrCryptoKeyStoreConfig                  StandardError = "crypto key store configuration for %q instance failed: %v"
-	ErrGeneric                               StandardError = "%s: %v"
+	ErrStaticAssetAddFailed                  StandardError = "failed adding custom static asset %s (%s) from %s for %s portal: %v"
+	ErrUserInterfaceThemeNotFound            StandardError = "user interface validation for %s portal failed: %s theme not found"
+	ErrUserInterfaceBuiltinTemplateAddFailed StandardError = "user interface validation for %s portal failed for built-in template %s in %s theme: %v"
+	ErrUserInterfaceCustomTemplateAddFailed  StandardError = "user interface validation for %s portal failed for custom template %s in %s: %v"
+
+	ErrUserRegistrationConfig StandardError = "user registration configuration for %q instance failed: %v"
+	ErrCryptoKeyStoreConfig   StandardError = "crypto key store configuration for %q instance failed: %v"
+	ErrGeneric                StandardError = "%s: %v"
 )

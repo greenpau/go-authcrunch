@@ -33,7 +33,9 @@ import (
 	"github.com/greenpau/aaasf/pkg/authn/transformer"
 	"github.com/greenpau/aaasf/pkg/authn/ui"
 	"github.com/greenpau/aaasf/pkg/authz"
+	"github.com/greenpau/aaasf/pkg/authz/bypass"
 	"github.com/greenpau/aaasf/pkg/authz/cache"
+	"github.com/greenpau/aaasf/pkg/authz/injector"
 	"github.com/greenpau/aaasf/pkg/authz/options"
 	"github.com/greenpau/aaasf/pkg/authz/validator"
 	"github.com/greenpau/aaasf/pkg/credentials"
@@ -320,7 +322,9 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test requests.AuthorizationResponse struct",
 			entry: &requests.AuthorizationResponse{},
-			opts:  &Options{},
+			opts: &Options{
+				Disabled: true,
+			},
 		},
 		{
 			name:  "test cache.SessionCache struct",
@@ -652,6 +656,79 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test authz.PolicyConfig struct",
 			entry: &authz.PolicyConfig{},
+			opts: &Options{
+				AllowFieldMismatch: true,
+				AllowedFields: map[string]interface{}{
+					"disable_auth_redirect":       true,
+					"disable_auth_redirect_query": true,
+					"auth_redirect_query_param":   true,
+				},
+			},
+		},
+		{
+			name:  "test bypass.Config struct",
+			entry: &bypass.Config{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test injector.Config struct",
+			entry: &injector.Config{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test authn.AuthRequest struct",
+			entry: &authn.AuthRequest{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test authn.AccessDeniedResponse struct",
+			entry: &authn.AccessDeniedResponse{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test authn.Portal struct",
+			entry: &authn.Portal{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test authn.Authenticator struct",
+			entry: &authn.Authenticator{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test authn.AuthResponse struct",
+			entry: &authn.AuthResponse{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test aaasf.Server struct",
+			entry: &aaasf.Server{},
+			opts:  &Options{},
+		},
+
+		{
+			name:  "test authz.GatekeeperRegistry struct",
+			entry: &authz.GatekeeperRegistry{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test requests.RedirectResponse struct",
+			entry: &requests.RedirectResponse{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test authz.Authorizer struct",
+			entry: &authz.Authorizer{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test authz.Gatekeeper struct",
+			entry: &authz.Gatekeeper{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test authn.PortalRegistry struct",
+			entry: &authn.PortalRegistry{},
 			opts:  &Options{},
 		},
 	}

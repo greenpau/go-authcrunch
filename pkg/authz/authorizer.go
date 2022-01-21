@@ -13,3 +13,50 @@
 // limitations under the License.
 
 package authz
+
+import (
+	"github.com/greenpau/aaasf/pkg/requests"
+	"go.uber.org/zap"
+	"net/http"
+)
+
+// Authorizer is an authentication endpoint.
+type Authorizer struct {
+	Path           string `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
+	GatekeeperName string `json:"gatekeeper_name,omitempty" xml:"gatekeeper_name,omitempty" yaml:"gatekeeper_name,omitempty"`
+	logger         *zap.Logger
+	gatekeeper     *Gatekeeper
+}
+
+// Provision configures the instance of Authorizer.
+func (m *Authorizer) Provision(logger *zap.Logger) error {
+	m.logger = logger
+
+	gatekeeper, err := gatekeeperRegistry.Lookup(m.GatekeeperName)
+	if err != nil {
+		return err
+	}
+	m.gatekeeper = gatekeeper
+
+	m.logger.Info(
+		"provisioned authenticator",
+		zap.String("gatekeeper_name", m.GatekeeperName),
+		zap.String("path", m.Path),
+	)
+	return nil
+}
+
+// Validate validates the provisioning.
+func (m *Authorizer) Validate() error {
+	m.logger.Info(
+		"validated authenticator",
+		zap.String("gatekeeper_name", m.GatekeeperName),
+		zap.String("path", m.Path),
+	)
+	return nil
+}
+
+// Authenticate authorizes HTTP requests.
+func (m *Authorizer) Authenticate(w http.ResponseWriter, r *http.Request, rr *requests.AuthorizationRequest) error {
+	return m.gatekeeper.Authenticate(w, r, rr)
+}

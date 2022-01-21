@@ -59,6 +59,9 @@ type PortalConfig struct {
 
 	// Holds raw crypto configuration
 	cryptoRawConfigs []string
+
+	// Indicated that the config was successfully validated.
+	validated bool
 }
 
 // AddRawCryptoConfigs adds raw crypto configs.
@@ -66,9 +69,9 @@ func (cfg *PortalConfig) AddRawCryptoConfigs(s string) {
 	cfg.cryptoRawConfigs = append(cfg.cryptoRawConfigs, s)
 }
 
-// ParseRawCryptoConfigs parses raw crypto configs into CryptoKeyConfigs
+// parseRawCryptoConfigs parses raw crypto configs into CryptoKeyConfigs
 // and CryptoKeyStoreConfig.
-func (cfg *PortalConfig) ParseRawCryptoConfigs() error {
+func (cfg *PortalConfig) parseRawCryptoConfigs() error {
 	var cryptoKeyConfig, cryptoKeyStoreConfig []string
 	var cryptoKeyConfigFound, cryptoKeyStoreConfigFound bool
 	for _, encodedArgs := range cfg.cryptoRawConfigs {
@@ -106,5 +109,34 @@ func (cfg *PortalConfig) ParseRawCryptoConfigs() error {
 		}
 		cfg.CryptoKeyStoreConfig = configs
 	}
+	return nil
+}
+
+// Validate validates PortalConfig.
+func (cfg *PortalConfig) Validate() error {
+	if cfg.validated {
+		return nil
+	}
+	if cfg.Name == "" {
+		return errors.ErrPortalConfigNameNotFound
+	}
+	if len(cfg.BackendConfigs) == 0 {
+		return errors.ErrPortalConfigBackendsNotFound
+	}
+
+	if err := cfg.parseRawCryptoConfigs(); err != nil {
+		return err
+	}
+
+	// Inialize user interface settings
+	if cfg.UI == nil {
+		cfg.UI = &ui.Parameters{}
+	}
+
+	if cfg.UI.Templates == nil {
+		cfg.UI.Templates = make(map[string]string)
+	}
+
+	cfg.validated = true
 	return nil
 }

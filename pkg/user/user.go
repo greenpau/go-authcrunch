@@ -217,6 +217,44 @@ func (u *User) GetRequestIdentity() map[string]interface{} {
 	return u.requestIdentity
 }
 
+// BuildRequestIdentity builds request identity associated with the user.
+func (u *User) BuildRequestIdentity(s string) map[string]interface{} {
+	m := make(map[string]interface{})
+	m["roles"] = strings.Join(u.Claims.Roles, " ")
+	if u.Claims.ID != "" {
+		m["claim_id"] = u.Claims.ID
+	}
+	if u.Claims.Subject != "" {
+		m["sub"] = u.Claims.Subject
+	}
+	if u.Claims.Email != "" {
+		m["email"] = u.Claims.Email
+	}
+
+	switch s {
+	case "sub", "subject":
+		m["id"] = u.Claims.Subject
+	case "id":
+		m["id"] = u.Claims.ID
+	default:
+		if u.Claims.Email == "" {
+			m["id"] = u.Claims.Subject
+		} else {
+			m["id"] = u.Claims.Email
+		}
+	}
+
+	if u.Claims.Name != "" {
+		m["name"] = u.Claims.Name
+	}
+	if u.Claims.Email != "" {
+		m["email"] = u.Claims.Email
+	}
+
+	u.SetRequestIdentity(m)
+	return m
+}
+
 // SetExpiresAtClaim sets ExpiresAt claim.
 func (u *User) SetExpiresAtClaim(i int64) {
 	u.Claims.ExpiresAt = i

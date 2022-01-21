@@ -22,4 +22,8 @@ const (
 	// ErrConfigDirectiveLong StandardError = "the %q directive is too long: %v"
 	ErrConfigDirectiveValueUnsupported StandardError = "the %q directive value of %q is unsupported"
 	ErrConfigDirectiveFail             StandardError = "the %q directive with value of %q failed: %v"
+	ErrPortalConfigBackendsNotFound    StandardError = "portal config has no backends"
+	ErrPortalConfigNameNotFound        StandardError = "portal config name not found"
+
+	ErrPolicyConfigNameNotFound StandardError = "gatekeeper policy config name not found"
 )

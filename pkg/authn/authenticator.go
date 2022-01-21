@@ -13,3 +13,51 @@
 // limitations under the License.
 
 package authn
+
+import (
+	"context"
+	"github.com/greenpau/aaasf/pkg/requests"
+	"go.uber.org/zap"
+	"net/http"
+)
+
+// Authenticator is an authentication endpoint.
+type Authenticator struct {
+	Path       string `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
+	PortalName string `json:"portal_name,omitempty" xml:"portal_name,omitempty" yaml:"portal_name,omitempty"`
+	logger     *zap.Logger
+	portal     *Portal
+}
+
+// Provision configures the instance of Authenticator.
+func (m *Authenticator) Provision(logger *zap.Logger) error {
+	m.logger = logger
+
+	portal, err := portalRegistry.Lookup(m.PortalName)
+	if err != nil {
+		return err
+	}
+	m.portal = portal
+
+	m.logger.Info(
+		"provisioned authenticator",
+		zap.String("portal_name", m.PortalName),
+		zap.String("path", m.Path),
+	)
+	return nil
+}
+
+// Validate validates the provisioning.
+func (m *Authenticator) Validate() error {
+	m.logger.Info(
+		"validated authenticator",
+		zap.String("portal_name", m.PortalName),
+		zap.String("path", m.Path),
+	)
+	return nil
+}
+
+// ServeHTTP is a gateway for the authentication portal.
+func (m *Authenticator) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
+	return m.portal.ServeHTTP(ctx, w, r, rr)
+}

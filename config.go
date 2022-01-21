@@ -25,14 +25,11 @@ type Config struct {
 	Credentials *credentials.Config   `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
 	Portals     []*authn.PortalConfig `json:"auth_portal_configs,omitempty" xml:"auth_portal_configs,omitempty" yaml:"auth_portal_configs,omitempty"`
 	Policies    []*authz.PolicyConfig `json:"authz_policy_configs,omitempty" xml:"authz_policy_configs,omitempty" yaml:"authz_policy_configs,omitempty"`
-	credMap     map[string]*credentials.Config
 }
 
 // NewConfig returns an instance of Config.
 func NewConfig() *Config {
-	return &Config{
-		credMap: make(map[string]*credentials.Config),
-	}
+	return &Config{}
 }
 
 // AddCredential adds a credential configuration.
@@ -45,6 +42,9 @@ func (cfg *Config) AddCredential(c credentials.Credential) error {
 
 // AddAuthenticationPortal adds an authentication portal configuration.
 func (cfg *Config) AddAuthenticationPortal(p *authn.PortalConfig) error {
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
 	cfg.Portals = append(cfg.Portals, p)
 	return nil
 }
@@ -57,5 +57,10 @@ func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
 
 // Validate validates Config.
 func (cfg *Config) Validate() error {
+	for _, portal := range cfg.Portals {
+		if err := portal.Validate(); err != nil {
+			return err
+		}
+	}
 	return nil
 }

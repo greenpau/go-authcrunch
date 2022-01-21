@@ -48,11 +48,11 @@ const (
 	ErrBackendOauthGetAccessTokenFailed                StandardError = "failed obtaining OAuth 2.0 access token, error: %v"
 	ErrBackendAuthorizationServerResponseFieldNotFound StandardError = "authorization server response has no %q field"
 	ErrBackendOauthJwksKeysTooManyAttempts             StandardError = "too many attemps to fetch jwks keys"
-	ErrBackendNameNotFound                             StandardError = "backend name is required but missing for %q instance in %q context"
-	ErrNoBackendsFound                                 StandardError = "no backends found for %q instance in %q context"
-	ErrDuplicateBackendName                            StandardError = "backend name %q is duplicate for %q instance in %q context"
-	ErrBackendConfigurationFailed                      StandardError = "backend configuration for %q instance in %q context failed: %v"
-	ErrBackendValidationFailed                         StandardError = "backend validation for %q instance in %q context failed: %v"
+	ErrBackendNameNotFound                             StandardError = "backend name is required but missing for %q portal"
+	ErrNoBackendsFound                                 StandardError = "no backends found for %q portal"
+	ErrDuplicateBackendName                            StandardError = "backend name %q is duplicate for %q portal"
+	ErrBackendConfigurationFailed                      StandardError = "backend configuration for %q portal failed: %v"
+	ErrBackendValidationFailed                         StandardError = "backend validation for %q portal failed: %v"
 
 	// OAuth 2.0 backend errors.
 	ErrBackendOAuthAccessTokenNotFound               StandardError = "OAuth 2.0 %s not found"

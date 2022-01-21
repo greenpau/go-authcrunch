@@ -37,3 +37,12 @@ func Unpack(t *testing.T, i interface{}) (m map[string]interface{}) {
 	}
 	return m
 }
+
+// UnpackJSON converts a map to a JSON string.
+func UnpackJSON(t *testing.T, m map[string]interface{}) string {
+	b, err := json.Marshal(m)
+	if err != nil {
+		t.Fatalf("failed to marshal %v: %v", m, err)
+	}
+	return string(b)
+}

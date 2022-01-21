@@ -16,14 +16,29 @@ package requests
 
 // AuthorizationRequest hold the data associated with request authorization.
 type AuthorizationRequest struct {
-	ID       string                `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
-	Response AuthorizationResponse `json:"response,omitempty" xml:"response,omitempty" yaml:"response,omitempty"`
+	ID        string                `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
+	SessionID string                `json:"session_id,omitempty" xml:"session_id,omitempty" yaml:"session_id,omitempty"`
+	Response  AuthorizationResponse `json:"response,omitempty" xml:"response,omitempty" yaml:"response,omitempty"`
+	Redirect  RedirectResponse      `json:"-"`
 }
 
-// AuthorizationResponse hold the response associated with AuthorizationRequest.
+// AuthorizationResponse holds the response associated with AuthorizationRequest.
 type AuthorizationResponse struct {
-	Authorized bool  `json:"authorized,omitempty" xml:"authorized,omitempty" yaml:"authorized,omitempty"`
-	Error      error `json:"error,omitempty" xml:"error,omitempty" yaml:"error,omitempty"`
+	User       map[string]interface{} `json:"-"`
+	Authorized bool                   `json:"authorized" xml:"authorized" yaml:"authorized"`
+	Error      error                  `json:"error,omitempty" xml:"error,omitempty" yaml:"error,omitempty"`
+}
+
+// RedirectResponse holds the redirect parameters associated with the
+// response to AuthorizationRequest.
+type RedirectResponse struct {
+	Enabled        bool   `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
+	AuthURL        string `json:"auth_url,omitempty" xml:"auth_url,omitempty" yaml:"auth_url,omitempty"`
+	Separator      string `json:"separator,omitempty" xml:"separator,omitempty" yaml:"separator,omitempty"`
+	QueryParameter string `json:"query_parameter,omitempty" xml:"query_parameter,omitempty" yaml:"query_parameter,omitempty"`
+	QueryDisabled  bool   `json:"query_disabled,omitempty" xml:"query_disabled,omitempty" yaml:"query_disabled,omitempty"`
+	URL            string `json:"url,omitempty" xml:"url,omitempty" yaml:"url,omitempty"`
+	StatusCode     int    `json:"status_code,omitempty" xml:"status_code,omitempty" yaml:"status_code,omitempty"`
 }
 
 // NewAuthorizationRequest returns an instance of AuthorizationRequest.
