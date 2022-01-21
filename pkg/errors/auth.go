@@ -24,4 +24,6 @@ const (
 	ErrUserRegistrationConfig StandardError = "user registration configuration for %q instance failed: %v"
 	ErrCryptoKeyStoreConfig   StandardError = "crypto key store configuration for %q instance failed: %v"
 	ErrGeneric                StandardError = "%s: %v"
+
+	ErrAuthorizationFailed StandardError = "user authorization failed"
 )
