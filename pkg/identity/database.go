@@ -61,9 +61,9 @@ func init() {
 	app = versioned.NewPackageManager("aaasf")
 	app.Description = "aaasf"
 	app.Documentation = "https://github.com/greenpau/aaasf"
-	app.SetVersion(appVersion, "1.0.2")
+	app.SetVersion(appVersion, "1.0.3")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.0.1-12-g281ef14")
+	app.SetGitCommit(gitCommit, "v1.0.2-3-g730321d")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
