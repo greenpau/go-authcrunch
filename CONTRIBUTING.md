@@ -1,13 +1,5 @@
 # Contributing Guidelines
 
-## Pull Request Checklist
-
-Before sending your pull requests, make sure you followed this list.
-
-1. Open an issue to discuss your PR
-2. Ensure you read appropriate Contributor License Agreement (CLA)
-3. Run unit tests
-
 ## Contributor License Agreements
 
 I'd love to accept your pull request! Before I can take them, we have to jump a
@@ -22,15 +14,36 @@ Please fill out either the individual or corporate Contributor License Agreement
 * If you work for a company that wants to allow you to contribute your work, then
   you'll need to sign a [corporate CLA](/assets/cla/corporate_cla.md).
 
-Follow either of the two links above to access the appropriate CLA. Next, if you are
-ready to accept, add the following text in the body your first commit message.
+Follow either of the two links above to access the appropriate CLA. Next,
+accept the CLA in the following way.
 
-* For Individual CLA:
+For Individual CLA:
+1. Review the Individual CLA provided in `assets/cla/individual_cla.md`
+2. Consent to the CLA by adding your name and email address to
+  the `assets/cla/individual_consent.yaml` file.
 
-      I hereby consent to the Individual CLA provided in assets/cla/individual_cla.md
+For Corporate CLA:
+1. Review the Corporate CLA provided in `assets/cla/corporate_cla.md`
+2. Consent to the CLA by adding your name and email address to
+  the `assets/cla/corporate_consent.yaml` file.
 
-* For Corporate CLA:
+## Pull Request Checklist
 
-      I hereby consent to the Corporate CLA provided in assets/cla/corporate_cla.md
+Before sending your pull requests, make sure you followed this list.
 
+1. Open an issue to discuss your PR
+2. Ensure you read appropriate Contributor License Agreement (CLA)
+3. Run unit tests
 
+## Development Environment
+
+The contribution to this project requires setting up a development
+environment. The following steps allow developers to test their
+code changes.
+
+```bash
+git clone git@github.com:greenpau/aaasf.git
+cd aaasf/
+make dep
+make ctest
+```
