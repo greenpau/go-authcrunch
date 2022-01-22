@@ -15,7 +15,7 @@
 package credentials
 
 import (
-	"github.com/greenpau/aaasf/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
 // SMTP represents SMTP credentials.

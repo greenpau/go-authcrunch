@@ -19,7 +19,7 @@ envvar:
 build:
 	@mkdir -p bin/
 	@rm -rf ./bin/*
-	@CGO_ENABLED=0 go build -o ./bin/aaasfcli $(VERBOSE) \
+	@CGO_ENABLED=0 go build -o ./bin/authdbctl $(VERBOSE) \
 		-ldflags="-w -s \
 		-X main.appVersion=$(APP_VERSION) \
 		-X main.gitBranch=$(GIT_BRANCH) \
@@ -28,9 +28,9 @@ build:
 		-X main.buildDate=$(BUILD_DATE)" \
 		-gcflags="all=-trimpath=$(GOPATH)/src" \
 		-asmflags="all=-trimpath $(GOPATH)/src" \
-		cmd/aaasfcli/*.go
-	@./bin/aaasfcli --version
-	@./bin/aaasfcli --help
+		cmd/authdbctl/*.go
+	@./bin/authdbctl --version
+	@./bin/authdbctl --help
 	@echo "$@: complete"
 
 linter:
@@ -120,9 +120,9 @@ release:
 	@versioned -patch
 	@echo "Patched version"
 	@git add VERSION
-	@versioned -sync ./cmd/aaasfcli/main.go
+	@versioned -sync ./cmd/authdbctl/main.go
 	@versioned -sync ./pkg/identity/database.go
-	@git add cmd/aaasfcli/main.go ./pkg/identity/database.go
+	@git add cmd/authdbctl/main.go ./pkg/identity/database.go
 	@git commit -m "released v`cat VERSION | head -1`"
 	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
 	@git push

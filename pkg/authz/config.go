@@ -15,13 +15,13 @@
 package authz
 
 import (
-	"github.com/greenpau/aaasf/pkg/acl"
-	"github.com/greenpau/aaasf/pkg/authz/bypass"
-	"github.com/greenpau/aaasf/pkg/authz/injector"
-	"github.com/greenpau/aaasf/pkg/errors"
-	"github.com/greenpau/aaasf/pkg/kms"
-	"github.com/greenpau/aaasf/pkg/shared/idp"
-	cfgutil "github.com/greenpau/aaasf/pkg/util/cfg"
+	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
+	"github.com/greenpau/go-authcrunch/pkg/authz/injector"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"strings"
 )
 

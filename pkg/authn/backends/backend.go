@@ -18,13 +18,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/greenpau/aaasf/pkg/authn/backends/ldap"
-	"github.com/greenpau/aaasf/pkg/authn/backends/local"
-	"github.com/greenpau/aaasf/pkg/authn/backends/oauth2"
-	"github.com/greenpau/aaasf/pkg/authn/backends/saml"
-	"github.com/greenpau/aaasf/pkg/authn/enums/operator"
-	"github.com/greenpau/aaasf/pkg/errors"
-	"github.com/greenpau/aaasf/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/authn/backends/ldap"
+	"github.com/greenpau/go-authcrunch/pkg/authn/backends/local"
+	"github.com/greenpau/go-authcrunch/pkg/authn/backends/oauth2"
+	"github.com/greenpau/go-authcrunch/pkg/authn/backends/saml"
+	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
 )
 

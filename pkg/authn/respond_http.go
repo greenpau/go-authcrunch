@@ -16,10 +16,10 @@ package authn
 
 import (
 	"context"
-	"github.com/greenpau/aaasf/pkg/requests"
-	"github.com/greenpau/aaasf/pkg/user"
-	"github.com/greenpau/aaasf/pkg/util"
-	addrutil "github.com/greenpau/aaasf/pkg/util/addr"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/user"
+	"github.com/greenpau/go-authcrunch/pkg/util"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
 	"net/http"
 	"net/url"

@@ -18,9 +18,9 @@ import (
 	"crypto/rsa"
 	"regexp"
 
-	"github.com/greenpau/aaasf/pkg/authn/enums/operator"
-	"github.com/greenpau/aaasf/pkg/errors"
-	"github.com/greenpau/aaasf/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
 	"time"
 )

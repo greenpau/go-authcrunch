@@ -16,8 +16,8 @@ package validator
 
 import (
 	"context"
-	"github.com/greenpau/aaasf/pkg/errors"
-	"github.com/greenpau/aaasf/pkg/user"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/user"
 	"net/http"
 	"strings"
 )

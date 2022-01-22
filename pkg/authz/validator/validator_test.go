@@ -22,14 +22,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/greenpau/aaasf/internal/tests"
-	"github.com/greenpau/aaasf/internal/testutils"
-	"github.com/greenpau/aaasf/pkg/acl"
-	"github.com/greenpau/aaasf/pkg/authz/options"
-	"github.com/greenpau/aaasf/pkg/errors"
-	"github.com/greenpau/aaasf/pkg/kms"
-	"github.com/greenpau/aaasf/pkg/user"
-	logutil "github.com/greenpau/aaasf/pkg/util/log"
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/internal/testutils"
+	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authz/options"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/user"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 
 	"github.com/google/go-cmp/cmp"
 )

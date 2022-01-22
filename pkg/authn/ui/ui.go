@@ -17,7 +17,7 @@ package ui
 import (
 	"bytes"
 	"fmt"
-	cfgutil "github.com/greenpau/aaasf/pkg/util/cfg"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"io/ioutil"
 	"path"
 	"strings"

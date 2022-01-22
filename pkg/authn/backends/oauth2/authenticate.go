@@ -26,9 +26,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/greenpau/aaasf/pkg/errors"
-	"github.com/greenpau/aaasf/pkg/requests"
-	"github.com/greenpau/aaasf/pkg/util"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 
 	uuid "github.com/satori/go.uuid"
 	"go.uber.org/zap"

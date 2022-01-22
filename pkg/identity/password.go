@@ -15,7 +15,7 @@
 package identity
 
 import (
-	"github.com/greenpau/aaasf/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 	"strings"
 	"time"

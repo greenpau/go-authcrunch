@@ -15,7 +15,7 @@
 package authz
 
 import (
-	"github.com/greenpau/aaasf/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"sync"
 )
 

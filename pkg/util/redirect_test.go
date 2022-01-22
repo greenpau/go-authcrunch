@@ -15,7 +15,7 @@
 package util
 
 import (
-	"github.com/greenpau/aaasf/internal/tests"
+	"github.com/greenpau/go-authcrunch/internal/tests"
 	"testing"
 )
 

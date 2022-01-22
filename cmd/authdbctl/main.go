@@ -33,9 +33,9 @@ var (
 )
 
 func init() {
-	app = versioned.NewPackageManager("aaasfcli")
-	app.Description = "AAA SF management client"
-	app.Documentation = "https://github.com/greenpau/aaasf/"
+	app = versioned.NewPackageManager("authdbctl")
+	app.Description = "AuthDB management client"
+	app.Documentation = "https://github.com/greenpau/go-authcrunch/"
 	app.SetVersion(appVersion, "1.0.4")
 	app.SetGitBranch(gitBranch, "main")
 	app.SetGitCommit(gitCommit, "v1.0.3-1-g324448b")
@@ -56,7 +56,7 @@ func init() {
 	sh.Flags = append(sh.Flags, &cli.StringFlag{
 		Name:    "config",
 		Aliases: []string{"c"},
-		Usage:   "Sets path to configuration from `CONFIG_PATH` (default: ~/.config/aaasfcli/config.json)",
+		Usage:   "Sets path to configuration from `CONFIG_PATH` (default: ~/.config/authdbctl/config.json)",
 		EnvVars: []string{"AUTHDBCTL_CONFIG_PATH"},
 	})
 }

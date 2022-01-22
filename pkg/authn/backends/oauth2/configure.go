@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/greenpau/aaasf/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"go.uber.org/zap"
 )
 

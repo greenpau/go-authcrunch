@@ -21,9 +21,9 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	jwtlib "github.com/golang-jwt/jwt/v4"
-	"github.com/greenpau/aaasf/pkg/errors"
-	"github.com/greenpau/aaasf/pkg/shared"
-	"github.com/greenpau/aaasf/pkg/user"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/shared"
+	"github.com/greenpau/go-authcrunch/pkg/user"
 	"go.uber.org/zap"
 	"strings"
 )

@@ -17,7 +17,7 @@ package identity
 import (
 	"encoding/base64"
 	"encoding/json"
-	"github.com/greenpau/aaasf/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
 // WebAuthnAuthenticateRequest represents Webauthn Authentication request.

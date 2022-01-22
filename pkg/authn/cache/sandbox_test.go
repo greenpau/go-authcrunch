@@ -21,8 +21,8 @@ import (
 	"testing"
 	// "time"
 
-	"github.com/greenpau/aaasf/internal/tests"
-	"github.com/greenpau/aaasf/pkg/util"
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
 func TestParseSandboxID(t *testing.T) {

@@ -22,10 +22,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/greenpau/aaasf/internal/tests"
-	"github.com/greenpau/aaasf/internal/testutils"
-	"github.com/greenpau/aaasf/pkg/authz/options"
-	"github.com/greenpau/aaasf/pkg/errors"
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/internal/testutils"
+	"github.com/greenpau/go-authcrunch/pkg/authz/options"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
 func TestAuthorizationSources(t *testing.T) {

@@ -17,35 +17,35 @@ package tag
 import (
 	"bufio"
 	"fmt"
-	"github.com/greenpau/aaasf"
-	"github.com/greenpau/aaasf/internal/tests"
-	"github.com/greenpau/aaasf/internal/testutils"
-	"github.com/greenpau/aaasf/pkg/acl"
-	"github.com/greenpau/aaasf/pkg/authn"
-	"github.com/greenpau/aaasf/pkg/authn/backends"
-	"github.com/greenpau/aaasf/pkg/authn/backends/ldap"
-	"github.com/greenpau/aaasf/pkg/authn/backends/local"
-	"github.com/greenpau/aaasf/pkg/authn/backends/oauth2"
-	"github.com/greenpau/aaasf/pkg/authn/backends/saml"
-	authncache "github.com/greenpau/aaasf/pkg/authn/cache"
-	"github.com/greenpau/aaasf/pkg/authn/cookie"
-	"github.com/greenpau/aaasf/pkg/authn/registration"
-	"github.com/greenpau/aaasf/pkg/authn/transformer"
-	"github.com/greenpau/aaasf/pkg/authn/ui"
-	"github.com/greenpau/aaasf/pkg/authz"
-	"github.com/greenpau/aaasf/pkg/authz/bypass"
-	"github.com/greenpau/aaasf/pkg/authz/cache"
-	"github.com/greenpau/aaasf/pkg/authz/injector"
-	"github.com/greenpau/aaasf/pkg/authz/options"
-	"github.com/greenpau/aaasf/pkg/authz/validator"
-	"github.com/greenpau/aaasf/pkg/credentials"
-	"github.com/greenpau/aaasf/pkg/identity"
-	"github.com/greenpau/aaasf/pkg/identity/qr"
-	"github.com/greenpau/aaasf/pkg/kms"
-	"github.com/greenpau/aaasf/pkg/requests"
-	"github.com/greenpau/aaasf/pkg/shared/idp"
-	"github.com/greenpau/aaasf/pkg/user"
-	"github.com/greenpau/aaasf/pkg/util/cfg"
+	"github.com/greenpau/go-authcrunch"
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/internal/testutils"
+	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
+	"github.com/greenpau/go-authcrunch/pkg/authn/backends/ldap"
+	"github.com/greenpau/go-authcrunch/pkg/authn/backends/local"
+	"github.com/greenpau/go-authcrunch/pkg/authn/backends/oauth2"
+	"github.com/greenpau/go-authcrunch/pkg/authn/backends/saml"
+	authncache "github.com/greenpau/go-authcrunch/pkg/authn/cache"
+	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/registration"
+	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
+	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
+	"github.com/greenpau/go-authcrunch/pkg/authz"
+	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
+	"github.com/greenpau/go-authcrunch/pkg/authz/cache"
+	"github.com/greenpau/go-authcrunch/pkg/authz/injector"
+	"github.com/greenpau/go-authcrunch/pkg/authz/options"
+	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
+	"github.com/greenpau/go-authcrunch/pkg/credentials"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
+	"github.com/greenpau/go-authcrunch/pkg/user"
+	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"strings"
 	"unicode"
 
@@ -531,8 +531,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test aaasf.Config struct",
-			entry: &aaasf.Config{},
+			name:  "test authcrunch.Config struct",
+			entry: &authcrunch.Config{},
 			opts: &Options{
 				AllowFieldMismatch: true,
 				AllowedFields: map[string]interface{}{
@@ -701,8 +701,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test aaasf.Server struct",
-			entry: &aaasf.Server{},
+			name:  "test authcrunch.Server struct",
+			entry: &authcrunch.Server{},
 			opts:  &Options{},
 		},
 

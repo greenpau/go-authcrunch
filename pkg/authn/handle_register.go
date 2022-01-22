@@ -16,8 +16,8 @@ package authn
 
 import (
 	"context"
-	"github.com/greenpau/aaasf/pkg/authn/validators"
-	"github.com/greenpau/aaasf/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/authn/validators"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
 	"net/http"
 	"path"

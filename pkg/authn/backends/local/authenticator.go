@@ -15,8 +15,8 @@
 package local
 
 import (
-	"github.com/greenpau/aaasf/pkg/identity"
-	"github.com/greenpau/aaasf/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/satori/go.uuid"
 	"go.uber.org/zap"
 	"sync"

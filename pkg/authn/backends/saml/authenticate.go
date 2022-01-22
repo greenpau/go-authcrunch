@@ -17,7 +17,7 @@ package saml
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/greenpau/aaasf/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"strconv"
 	"strings"
 	"time"

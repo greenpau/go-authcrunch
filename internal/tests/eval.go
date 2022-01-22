@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	pr = regexp.MustCompile(".*(github.com/greenpau/aaasf/.*)$")
+	pr = regexp.MustCompile(".*(github.com/greenpau/go-authcrunch/.*)$")
 )
 
 // EvalErr evaluates whether there is an error. If there is, was it the
@@ -127,7 +127,7 @@ func CustomEvalObjectsWithLog(t *testing.T, name string, want, got interface{}, 
 
 // TempDir creates temporary directory.
 func TempDir(s string) (string, error) {
-	rootDir := os.TempDir() + "/testdata/aaasf/" + s
+	rootDir := os.TempDir() + "/testdata/go-authcrunch/" + s
 	if err := os.MkdirAll(rootDir, 0700); err != nil {
 		return "", err
 	}

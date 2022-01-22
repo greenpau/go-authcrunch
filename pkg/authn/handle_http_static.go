@@ -16,8 +16,8 @@ package authn
 
 import (
 	"context"
-	"github.com/greenpau/aaasf/pkg/authn/ui"
-	"github.com/greenpau/aaasf/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"io"
 	"net/http"
 	"path"

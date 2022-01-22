@@ -42,8 +42,8 @@ environment. The following steps allow developers to test their
 code changes.
 
 ```bash
-git clone git@github.com:greenpau/aaasf.git
-cd aaasf/
+git clone git@github.com:greenpau/go-authcrunch.git
+cd go-authcrunch/
 make dep
 make ctest
 ```

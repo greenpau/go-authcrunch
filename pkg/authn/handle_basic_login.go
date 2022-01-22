@@ -18,7 +18,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/greenpau/aaasf/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"net/http"
 	"strings"
 )

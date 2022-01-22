@@ -17,7 +17,7 @@ package authn
 import (
 	"context"
 	"encoding/json"
-	"github.com/greenpau/aaasf/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"net/http"
 )
 

@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aaasf
+package authcrunch
 
 import (
-	"github.com/greenpau/aaasf/pkg/authn"
-	// "github.com/greenpau/aaasf/pkg/authz"
+	"github.com/greenpau/go-authcrunch/pkg/authn"
+	// "github.com/greenpau/go-authcrunch/pkg/authz"
 )
 
 // Server represents AAA SF server.

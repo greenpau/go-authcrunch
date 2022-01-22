@@ -16,10 +16,10 @@ package ldap
 
 import (
 	"fmt"
-	"github.com/greenpau/aaasf/internal/tests"
-	"github.com/greenpau/aaasf/pkg/authn/enums/operator"
-	"github.com/greenpau/aaasf/pkg/requests"
-	logutil "github.com/greenpau/aaasf/pkg/util/log"
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"strings"
 	"testing"
 )

@@ -16,11 +16,11 @@ package authz
 
 import (
 	"context"
-	"github.com/greenpau/aaasf/pkg/acl"
-	"github.com/greenpau/aaasf/pkg/authz/options"
-	"github.com/greenpau/aaasf/pkg/authz/validator"
-	"github.com/greenpau/aaasf/pkg/errors"
-	"github.com/greenpau/aaasf/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authz/options"
+	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
 
 	"go.uber.org/zap"
 	"strings"

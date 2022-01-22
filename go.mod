@@ -1,4 +1,4 @@
-module github.com/greenpau/aaasf
+module github.com/greenpau/go-authcrunch
 
 go 1.16
 
@@ -6,7 +6,7 @@ require (
 	github.com/crewjam/saml v0.4.6
 	github.com/go-ldap/ldap/v3 v3.4.1
 	github.com/golang-jwt/jwt/v4 v4.2.0
-	github.com/google/go-cmp v0.5.6
+	github.com/google/go-cmp v0.5.7
 	github.com/greenpau/versioned v1.0.27
 	github.com/iancoleman/strcase v0.2.0
 	github.com/satori/go.uuid v1.2.0

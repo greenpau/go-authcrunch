@@ -17,7 +17,7 @@ package acl
 import (
 	"context"
 	"fmt"
-	"github.com/greenpau/aaasf/internal/tests"
+	"github.com/greenpau/go-authcrunch/internal/tests"
 	"reflect"
 	"strings"
 	"testing"

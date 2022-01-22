@@ -17,8 +17,8 @@ package user
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/greenpau/aaasf/internal/tests"
-	"github.com/greenpau/aaasf/pkg/errors"
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"testing"
 	"time"
 )

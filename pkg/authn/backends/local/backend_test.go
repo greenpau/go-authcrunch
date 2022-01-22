@@ -16,16 +16,16 @@ package local
 
 import (
 	"fmt"
-	"github.com/greenpau/aaasf/pkg/authn/enums/operator"
-	"github.com/greenpau/aaasf/pkg/errors"
-	"github.com/greenpau/aaasf/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/greenpau/aaasf/internal/tests"
-	"github.com/greenpau/aaasf/internal/testutils"
-	logutil "github.com/greenpau/aaasf/pkg/util/log"
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/internal/testutils"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"testing"
 )
 

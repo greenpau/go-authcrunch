@@ -16,7 +16,7 @@ package oauth2
 
 import (
 	jwtlib "github.com/golang-jwt/jwt/v4"
-	"github.com/greenpau/aaasf/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
 var (

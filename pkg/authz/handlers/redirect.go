@@ -15,7 +15,7 @@
 package handlers
 
 import (
-	"github.com/greenpau/aaasf/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"html/template"
 	"net/http"
 	"net/url"
