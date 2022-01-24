@@ -190,6 +190,19 @@ func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *req
 	}
 
 	if err := v.guardian.authorize(ctx, r, usr); err != nil {
+		ar.Response.User = make(map[string]interface{})
+		if usr.Claims.ID != "" {
+			ar.Response.User["jti"] = usr.Claims.ID
+		}
+		if usr.Claims.Subject != "" {
+			ar.Response.User["sub"] = usr.Claims.Subject
+		}
+		if usr.Claims.Email != "" {
+			ar.Response.User["email"] = usr.Claims.Email
+		}
+		if usr.Claims.Name != "" {
+			ar.Response.User["name"] = usr.Claims.Name
+		}
 		return usr, err
 	}
 	usr.TokenSource = ar.Token.Source
