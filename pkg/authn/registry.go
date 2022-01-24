@@ -25,44 +25,73 @@ var (
 
 func init() {
 	portalRegistry = &PortalRegistry{
-		mu:      &sync.RWMutex{},
-		entries: make(map[string]*Portal),
+		mu:             &sync.RWMutex{},
+		portals:        make(map[string]*Portal),
+		authenticators: make(map[string]*Authenticator),
 	}
 }
 
 // PortalRegistry is a registry of authentication portals.
 type PortalRegistry struct {
-	mu      *sync.RWMutex
-	entries map[string]*Portal
+	mu             *sync.RWMutex
+	portals        map[string]*Portal
+	authenticators map[string]*Authenticator
 }
 
-// Lookup returns Portal entry from the PortalRegistry.
-func (r *PortalRegistry) Lookup(s string) (*Portal, error) {
+// LookupPortal returns Portal entry from the PortalRegistry.
+func (r *PortalRegistry) LookupPortal(s string) (*Portal, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	if p, exists := r.entries[s]; exists {
+	if p, exists := r.portals[s]; exists {
 		return p, nil
 	}
 	return nil, errors.ErrPortalRegistryEntryNotFound.WithArgs(s)
 }
 
-// Register registers Portal with the PortalRegistry.
-func (r *PortalRegistry) Register(s string, p *Portal) error {
+// RegisterPortal registers Portal with the PortalRegistry.
+func (r *PortalRegistry) RegisterPortal(s string, p *Portal) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, exists := r.entries[s]; exists {
+	existingPortal, exists := r.portals[s]
+	if !exists {
+		r.portals[s] = p
+		return nil
+	}
+	if existingPortal.id == p.id {
 		return errors.ErrPortalRegistryEntryExists.WithArgs(s)
 	}
-	r.entries[s] = p
+	r.portals[s] = p
+
+	for _, a := range r.authenticators {
+		if a.portalID != existingPortal.id {
+			continue
+		}
+		a.portalID = p.id
+		a.portal = p
+	}
+
 	return nil
 }
 
-// Unregister unregisters Portal from the PortalRegistry.
-func (r *PortalRegistry) Unregister(s string) {
+// UnregisterPortal unregisters Portal from the PortalRegistry.
+func (r *PortalRegistry) UnregisterPortal(s string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, exists := r.entries[s]; !exists {
+	if _, exists := r.portals[s]; !exists {
 		return
 	}
-	delete(r.entries, s)
+	delete(r.portals, s)
+}
+
+// RegisterAuthenticator registers Authenticator with the PortalRegistry.
+func (r *PortalRegistry) RegisterAuthenticator(a *Authenticator) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	portal, exists := r.portals[a.PortalName]
+	if !exists {
+		return errors.ErrPortalRegistryEntryExists.WithArgs(a.PortalName)
+	}
+	a.portalID = portal.id
+	r.authenticators[a.id] = a
+	return nil
 }

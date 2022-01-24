@@ -17,6 +17,8 @@ package authz
 import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+
+	"github.com/satori/go.uuid"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -26,23 +28,33 @@ type Authorizer struct {
 	Path           string `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
 	GatekeeperName string `json:"gatekeeper_name,omitempty" xml:"gatekeeper_name,omitempty" yaml:"gatekeeper_name,omitempty"`
 	logger         *zap.Logger
+	id             string
+	gatekeeperID   string
 	gatekeeper     *Gatekeeper
 }
 
 // Provision configures the instance of Authorizer.
 func (m *Authorizer) Provision(logger *zap.Logger) error {
 	m.logger = logger
+	m.id = uuid.NewV4().String()
 
-	gatekeeper, err := gatekeeperRegistry.Lookup(m.GatekeeperName)
+	gatekeeper, err := gatekeeperRegistry.LookupGatekeeper(m.GatekeeperName)
 	if err != nil {
 		return err
 	}
+
+	if err := gatekeeperRegistry.RegisterAuthorizer(m); err != nil {
+		return err
+	}
+
 	m.gatekeeper = gatekeeper
 
 	m.logger.Info(
 		"provisioned authenticator",
 		zap.String("gatekeeper_name", m.GatekeeperName),
+		zap.String("gatekeeper_id", m.gatekeeperID),
 		zap.String("path", m.Path),
+		zap.String("id", m.id),
 	)
 	return nil
 }
@@ -52,7 +64,9 @@ func (m *Authorizer) Validate() error {
 	m.logger.Info(
 		"validated authenticator",
 		zap.String("gatekeeper_name", m.GatekeeperName),
+		zap.String("gatekeeper_id", m.gatekeeperID),
 		zap.String("path", m.Path),
+		zap.String("id", m.id),
 	)
 	return nil
 }
@@ -63,6 +77,8 @@ func (m *Authorizer) Authenticate(w http.ResponseWriter, r *http.Request, rr *re
 		m.logger.Warn(
 			"Authenticate failed",
 			zap.String("gatekeeper_name", m.GatekeeperName),
+			zap.String("gatekeeper_id", m.gatekeeperID),
+			zap.String("id", m.id),
 			zap.Error(errors.ErrGatekeeperUnavailable),
 		)
 		return errors.ErrGatekeeperUnavailable

@@ -18,6 +18,8 @@ import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+
+	"github.com/satori/go.uuid"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -27,23 +29,33 @@ type Authenticator struct {
 	Path       string `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
 	PortalName string `json:"portal_name,omitempty" xml:"portal_name,omitempty" yaml:"portal_name,omitempty"`
 	logger     *zap.Logger
+	id         string
+	portalID   string
 	portal     *Portal
 }
 
 // Provision configures the instance of Authenticator.
 func (m *Authenticator) Provision(logger *zap.Logger) error {
 	m.logger = logger
+	m.id = uuid.NewV4().String()
 
-	portal, err := portalRegistry.Lookup(m.PortalName)
+	portal, err := portalRegistry.LookupPortal(m.PortalName)
 	if err != nil {
 		return err
 	}
+
+	if err := portalRegistry.RegisterAuthenticator(m); err != nil {
+		return err
+	}
+
 	m.portal = portal
 
 	m.logger.Info(
 		"provisioned authenticator",
 		zap.String("portal_name", m.PortalName),
+		zap.String("portal_id", m.portalID),
 		zap.String("path", m.Path),
+		zap.String("id", m.id),
 	)
 	return nil
 }
@@ -53,7 +65,9 @@ func (m *Authenticator) Validate() error {
 	m.logger.Info(
 		"validated authenticator",
 		zap.String("portal_name", m.PortalName),
+		zap.String("portal_id", m.portalID),
 		zap.String("path", m.Path),
+		zap.String("id", m.id),
 	)
 	return nil
 }
@@ -64,6 +78,8 @@ func (m *Authenticator) ServeHTTP(ctx context.Context, w http.ResponseWriter, r 
 		m.logger.Warn(
 			"ServeHTTP failed",
 			zap.String("portal_name", m.PortalName),
+			zap.String("portal_id", m.portalID),
+			zap.String("id", m.id),
 			zap.Error(errors.ErrPortalUnavailable),
 		)
 		return errors.ErrPortalUnavailable

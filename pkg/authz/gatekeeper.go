@@ -22,12 +22,14 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 
+	"github.com/satori/go.uuid"
 	"go.uber.org/zap"
 	"strings"
 )
 
 // Gatekeeper is an auth.
 type Gatekeeper struct {
+	id             string
 	config         *PolicyConfig
 	tokenValidator *validator.TokenValidator
 	opts           *options.TokenValidatorOptions
@@ -51,6 +53,7 @@ func NewGatekeeper(cfg *PolicyConfig, logger *zap.Logger) (*Gatekeeper, error) {
 		return nil, errors.ErrNewGatekeeper.WithArgs(err)
 	}
 	p := &Gatekeeper{
+		id:     uuid.NewV4().String(),
 		config: cfg,
 		logger: logger,
 	}
@@ -62,7 +65,7 @@ func NewGatekeeper(cfg *PolicyConfig, logger *zap.Logger) (*Gatekeeper, error) {
 
 // Register registers the Gatekeeper with GatekeeperRegistry.
 func (g *Gatekeeper) Register() error {
-	return gatekeeperRegistry.Register(g.config.Name, g)
+	return gatekeeperRegistry.RegisterGatekeeper(g.config.Name, g)
 }
 
 func (g *Gatekeeper) configure() error {
@@ -151,6 +154,7 @@ func (g *Gatekeeper) configure() error {
 	g.logger.Debug(
 		"Configured gatekeeper",
 		zap.String("gatekeeper_name", g.config.Name),
+		zap.String("gatekeeper_id", g.id),
 		zap.String("auth_url_path", g.config.AuthURLPath),
 		zap.String("token_sources", strings.Join(g.tokenValidator.GetSourcePriority(), " ")),
 		zap.Any("token_validator_options", g.opts),

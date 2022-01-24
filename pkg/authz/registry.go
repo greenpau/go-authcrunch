@@ -25,44 +25,73 @@ var (
 
 func init() {
 	gatekeeperRegistry = &GatekeeperRegistry{
-		mu:      &sync.RWMutex{},
-		entries: make(map[string]*Gatekeeper),
+		mu:          &sync.RWMutex{},
+		gatekeepers: make(map[string]*Gatekeeper),
+		authorizers: make(map[string]*Authorizer),
 	}
 }
 
 // GatekeeperRegistry is a registry of authorization gateways.
 type GatekeeperRegistry struct {
-	mu      *sync.RWMutex
-	entries map[string]*Gatekeeper
+	mu          *sync.RWMutex
+	gatekeepers map[string]*Gatekeeper
+	authorizers map[string]*Authorizer
 }
 
-// Lookup returns Gatekeeper entry from the GatekeeperRegistry.
-func (r *GatekeeperRegistry) Lookup(s string) (*Gatekeeper, error) {
+// LookupGatekeeper returns Gatekeeper entry from the GatekeeperRegistry.
+func (r *GatekeeperRegistry) LookupGatekeeper(s string) (*Gatekeeper, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	if p, exists := r.entries[s]; exists {
+	if p, exists := r.gatekeepers[s]; exists {
 		return p, nil
 	}
 	return nil, errors.ErrGatekeeperRegistryEntryNotFound.WithArgs(s)
 }
 
-// Register registers Gatekeeper with the GatekeeperRegistry.
-func (r *GatekeeperRegistry) Register(s string, p *Gatekeeper) error {
+// RegisterGatekeeper registers Gatekeeper with the GatekeeperRegistry.
+func (r *GatekeeperRegistry) RegisterGatekeeper(s string, p *Gatekeeper) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, exists := r.entries[s]; exists {
+
+	existingGatekeeper, exists := r.gatekeepers[s]
+	if !exists {
+		r.gatekeepers[s] = p
+		return nil
+	}
+	if existingGatekeeper.id == p.id {
 		return errors.ErrGatekeeperRegistryEntryExists.WithArgs(s)
 	}
-	r.entries[s] = p
+	r.gatekeepers[s] = p
+
+	for _, a := range r.authorizers {
+		if a.gatekeeperID != existingGatekeeper.id {
+			continue
+		}
+		a.gatekeeperID = p.id
+		a.gatekeeper = p
+	}
 	return nil
 }
 
-// Unregister unregisters Gatekeeper from the GatekeeperRegistry.
-func (r *GatekeeperRegistry) Unregister(s string) {
+// UnregisterGatekeeper unregisters Gatekeeper from the GatekeeperRegistry.
+func (r *GatekeeperRegistry) UnregisterGatekeeper(s string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, exists := r.entries[s]; !exists {
+	if _, exists := r.gatekeepers[s]; !exists {
 		return
 	}
-	delete(r.entries, s)
+	delete(r.gatekeepers, s)
+}
+
+// RegisterAuthorizer registers Authorizer with the GatekeeperRegistry.
+func (r *GatekeeperRegistry) RegisterAuthorizer(a *Authorizer) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	gatekeeper, exists := r.gatekeepers[a.GatekeeperName]
+	if !exists {
+		return errors.ErrGatekeeperRegistryEntryExists.WithArgs(a.GatekeeperName)
+	}
+	a.gatekeeperID = gatekeeper.id
+	r.authorizers[a.id] = a
+	return nil
 }

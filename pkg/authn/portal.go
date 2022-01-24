@@ -28,6 +28,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 
+	"github.com/satori/go.uuid"
 	"go.uber.org/zap"
 	"path"
 	"strings"
@@ -41,6 +42,7 @@ const (
 
 // Portal is an authentication portal.
 type Portal struct {
+	id           string
 	config       *PortalConfig
 	registrar    *identity.Database
 	validator    *validator.TokenValidator
@@ -68,6 +70,7 @@ func NewPortal(cfg *PortalConfig, logger *zap.Logger) (*Portal, error) {
 		return nil, errors.ErrNewPortal.WithArgs(err)
 	}
 	p := &Portal{
+		id:     uuid.NewV4().String(),
 		config: cfg,
 		logger: logger,
 	}
@@ -79,7 +82,7 @@ func NewPortal(cfg *PortalConfig, logger *zap.Logger) (*Portal, error) {
 
 // Register registers the Portal with PortalRegistry.
 func (p *Portal) Register() error {
-	return portalRegistry.Register(p.config.Name, p)
+	return portalRegistry.RegisterPortal(p.config.Name, p)
 }
 
 func (p *Portal) configure() error {
@@ -108,6 +111,7 @@ func (p *Portal) configureEssentials() error {
 	p.logger.Debug(
 		"Configuring caching",
 		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 	)
 
 	p.sessions = cache.NewSessionCache()
@@ -142,6 +146,7 @@ func (p *Portal) configureCryptoKeyStore() error {
 	p.logger.Debug(
 		"Configuring authentication ACL",
 		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 		zap.Any("access_list_configs", p.config.AccessListConfigs),
 	)
 
@@ -193,7 +198,8 @@ func (p *Portal) configureCryptoKeyStore() error {
 
 	p.logger.Debug(
 		"Configured validator ACL",
-		zap.String("instance_name", p.config.Name),
+		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 		zap.Any("token_validator_options", p.config.TokenValidatorOptions),
 		zap.Any("token_grantor_options", p.config.TokenGrantorOptions),
 	)
@@ -204,6 +210,7 @@ func (p *Portal) configureBackends() error {
 	p.logger.Debug(
 		"Configuring authentication backends",
 		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 		zap.Int("backend_count", len(p.config.BackendConfigs)),
 	)
 
@@ -303,6 +310,7 @@ func (p *Portal) configureBackends() error {
 		p.logger.Debug(
 			"Provisioned authentication backend",
 			zap.String("portal_name", p.config.Name),
+			zap.String("portal_id", p.id),
 			zap.String("backend_name", backendName),
 			zap.String("backend_type", backendMethod),
 			zap.String("backend_realm", backendRealm),
@@ -325,6 +333,7 @@ func (p *Portal) configureBackends() error {
 	p.logger.Debug(
 		"Provisioned login options",
 		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 		zap.Any("options", p.loginOptions),
 	)
 	return nil
@@ -341,6 +350,7 @@ func (p *Portal) configureUserRegistration() error {
 	p.logger.Debug(
 		"Configuring user registration",
 		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 		zap.Int("backend_count", len(p.config.BackendConfigs)),
 	)
 
@@ -359,6 +369,7 @@ func (p *Portal) configureUserRegistration() error {
 	p.logger.Debug(
 		"Configured user registration",
 		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 		zap.String("dropbox", p.config.UserRegistrationConfig.Dropbox),
 	)
 	return nil
@@ -368,6 +379,7 @@ func (p *Portal) configureUserInterface() error {
 	p.logger.Debug(
 		"Configuring user interface",
 		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 	)
 
 	p.ui = ui.NewFactory()
@@ -420,6 +432,7 @@ func (p *Portal) configureUserInterface() error {
 	p.logger.Debug(
 		"Configured user interface",
 		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 		zap.String("title", p.ui.Title),
 		zap.String("logo_url", p.ui.LogoURL),
 		zap.String("logo_description", p.ui.LogoDescription),
@@ -455,6 +468,7 @@ func (p *Portal) configureUserInterface() error {
 		p.logger.Debug(
 			"Configuring non-default authentication user interface templates",
 			zap.String("portal_name", p.config.Name),
+			zap.String("portal_id", p.id),
 			zap.String("template_name", tmplName),
 			zap.String("template_path", tmplPath),
 		)
@@ -466,6 +480,7 @@ func (p *Portal) configureUserInterface() error {
 	p.logger.Debug(
 		"Configured user interface",
 		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 		zap.String("title", p.ui.Title),
 		zap.String("logo_url", p.ui.LogoURL),
 		zap.String("logo_description", p.ui.LogoDescription),
@@ -486,6 +501,7 @@ func (p *Portal) configureUserTransformer() error {
 	p.logger.Debug(
 		"Configuring user transforms",
 		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 	)
 
 	tr, err := transformer.NewFactory(p.config.UserTransformerConfigs)
@@ -497,6 +513,7 @@ func (p *Portal) configureUserTransformer() error {
 	p.logger.Debug(
 		"Configured user transforms",
 		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
 		zap.Any("transforms", p.config.UserTransformerConfigs),
 	)
 	return nil
