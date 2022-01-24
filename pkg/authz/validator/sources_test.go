@@ -26,6 +26,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 func TestAuthorizationSources(t *testing.T) {
@@ -206,7 +207,10 @@ func TestAuthorizationSources(t *testing.T) {
 				for i, tkn := range tc.entries {
 					msgs = append(msgs, fmt.Sprintf("token %d, name: %s, location: %s", i, tkn.Name, tkn.Location))
 				}
-				usr, err := validator.Authorize(ctx, r)
+				ar := requests.NewAuthorizationRequest()
+				ar.ID = "TEST_REQUEST_ID"
+				ar.SessionID = "TEST_SESSION_ID"
+				usr, err := validator.Authorize(ctx, r, ar)
 				if tests.EvalErrWithLog(t, err, tc.want, tc.shouldErr, tc.err, msgs) {
 					return
 				}

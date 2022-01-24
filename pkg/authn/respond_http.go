@@ -237,7 +237,10 @@ func (p *Portal) injectRedirectURL(ctx context.Context, w http.ResponseWriter, r
 
 func (p *Portal) authorizeRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) (*user.User, error) {
 	extractBasePath(ctx, r, rr)
-	usr, err := p.validator.Authorize(ctx, r)
+	ar := requests.NewAuthorizationRequest()
+	ar.ID = rr.ID
+	ar.SessionID = rr.Upstream.SessionID
+	usr, err := p.validator.Authorize(ctx, r, ar)
 	if err != nil {
 		switch err.Error() {
 		case "no token found":

@@ -25,5 +25,5 @@ const (
 	ErrCryptoKeyStoreConfig   StandardError = "crypto key store configuration for %q instance failed: %v"
 	ErrGeneric                StandardError = "%s: %v"
 
-	ErrAuthorizationFailed StandardError = "user authorization failed"
+	ErrAuthorizationFailed StandardError = "user authorization failed: %s, reason: %v"
 )

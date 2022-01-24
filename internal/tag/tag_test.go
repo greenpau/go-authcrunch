@@ -731,6 +731,11 @@ func TestTagCompliance(t *testing.T) {
 			entry: &authn.PortalRegistry{},
 			opts:  &Options{},
 		},
+		{
+			name:  "test requests.AuthorizationToken struct",
+			entry: &requests.AuthorizationToken{},
+			opts:  &Options{},
+		},
 	}
 
 	for _, tc := range testcases {

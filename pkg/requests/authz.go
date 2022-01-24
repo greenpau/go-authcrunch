@@ -20,6 +20,7 @@ type AuthorizationRequest struct {
 	SessionID string                `json:"session_id,omitempty" xml:"session_id,omitempty" yaml:"session_id,omitempty"`
 	Response  AuthorizationResponse `json:"response,omitempty" xml:"response,omitempty" yaml:"response,omitempty"`
 	Redirect  RedirectResponse      `json:"-"`
+	Token     AuthorizationToken    `json:"-"`
 }
 
 // AuthorizationResponse holds the response associated with AuthorizationRequest.
@@ -27,6 +28,14 @@ type AuthorizationResponse struct {
 	User       map[string]interface{} `json:"-"`
 	Authorized bool                   `json:"authorized" xml:"authorized" yaml:"authorized"`
 	Error      error                  `json:"error,omitempty" xml:"error,omitempty" yaml:"error,omitempty"`
+}
+
+// AuthorizationToken holds the token found in an authorization request.
+type AuthorizationToken struct {
+	Found   bool   `json:"found,omitempty" xml:"found,omitempty" yaml:"found,omitempty"`
+	Payload string `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
+	Name    string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Source  string `json:"source,omitempty" xml:"source,omitempty" yaml:"source,omitempty"`
 }
 
 // RedirectResponse holds the redirect parameters associated with the
@@ -39,6 +48,7 @@ type RedirectResponse struct {
 	QueryDisabled  bool   `json:"query_disabled,omitempty" xml:"query_disabled,omitempty" yaml:"query_disabled,omitempty"`
 	URL            string `json:"url,omitempty" xml:"url,omitempty" yaml:"url,omitempty"`
 	StatusCode     int    `json:"status_code,omitempty" xml:"status_code,omitempty" yaml:"status_code,omitempty"`
+	LoginHint      string `json:"login_hint,omitempty" xml:"login_hint,omitempty" yaml:"login_hint,omitempty"`
 }
 
 // NewAuthorizationRequest returns an instance of AuthorizationRequest.

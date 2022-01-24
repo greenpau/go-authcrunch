@@ -19,6 +19,7 @@ import (
 	jwtlib "github.com/golang-jwt/jwt/v4"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"testing"
 	"time"
@@ -129,7 +130,7 @@ func TestKeystoreOperators(t *testing.T) {
 			roles:     []string{"admin", "editor", "viewer"},
 			addr:      "127.0.0.1",
 			shouldErr: true,
-			err:       errors.ErrCryptoKeyStoreParseTokenFailed,
+			err:       errors.ErrCryptoKeyStoreParseTokenExpired,
 		},
 		{
 			name:   "user with not yet ready token",
@@ -153,7 +154,7 @@ func TestKeystoreOperators(t *testing.T) {
 			roles:     []string{"admin", "editor", "viewer"},
 			addr:      "127.0.0.1",
 			shouldErr: true,
-			err:       errors.ErrCryptoKeyStoreParseTokenFailed,
+			err:       errors.ErrCryptoKeyStoreTokenData,
 		},
 		{
 			name:      "nil keys",
@@ -274,7 +275,13 @@ func TestKeystoreOperators(t *testing.T) {
 			if tc.verifyTokenName == "" {
 				tc.verifyTokenName = privKey.Sign.Token.Name
 			}
-			usr, err := ks.ParseToken(tc.verifyTokenName, signedToken)
+
+			ar := requests.NewAuthorizationRequest()
+			ar.ID = "TEST_REQUEST_ID"
+			ar.SessionID = "TEST_SESSION_ID"
+			ar.Token.Name = tc.verifyTokenName
+			ar.Token.Payload = signedToken
+			usr, err := ks.ParseToken(ar)
 			if tests.EvalErrWithLog(t, err, "parse token", tc.shouldErr, tc.err, msgs) {
 				return
 			}

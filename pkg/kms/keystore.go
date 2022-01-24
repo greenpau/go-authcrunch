@@ -22,6 +22,7 @@ import (
 	"encoding/pem"
 	jwtlib "github.com/golang-jwt/jwt/v4"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/shared"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"go.uber.org/zap"
@@ -245,41 +246,45 @@ func (ks *CryptoKeyStore) AddKey(k *CryptoKey) error {
 }
 
 // ParseToken parses JWT token and returns User instance.
-func (ks *CryptoKeyStore) ParseToken(tokenName, token string) (*user.User, error) {
-	var usr *user.User
+func (ks *CryptoKeyStore) ParseToken(ar *requests.AuthorizationRequest) (*user.User, error) {
 	for _, k := range ks.verifyKeys {
-		if _, exists := reservedTokenNames[tokenName]; !exists {
-			if tokenName != k.Verify.Token.Name {
+		if _, exists := reservedTokenNames[ar.Token.Name]; !exists {
+			if ar.Token.Name != k.Verify.Token.Name {
 				continue
 			}
 		}
-		parsedToken, err := jwtlib.Parse(token, k.ProvideKey)
-		if err != nil {
-			if strings.Contains(err.Error(), "is expired") {
-				usr = &user.User{}
-				for k, v := range parsedToken.Claims.(jwtlib.MapClaims) {
-					switch k {
-					case "iss":
-						usr.Authenticator.URL = v.(string)
-					case "mail", "email":
-						usr.Authenticator.LoginHint = v.(string)
-					}
-				}
-			}
+		parsedToken, err := jwtlib.Parse(ar.Token.Payload, k.ProvideKey)
+		if err != nil && !strings.Contains(err.Error(), "is expired") {
 			continue
 		}
+
 		userData := make(map[string]interface{})
+		errData := make(map[string]interface{})
 		for k, v := range parsedToken.Claims.(jwtlib.MapClaims) {
+			switch k {
+			case "iss":
+				if strings.HasPrefix(v.(string), "http") {
+					ar.Redirect.AuthURL = strings.TrimSuffix(v.(string), "authorization-code-callback")
+				}
+			case "mail", "email":
+				errData["email"] = v.(string)
+				ar.Redirect.LoginHint = v.(string)
+			case "sub", "name", "jti":
+				errData[k] = v.(string)
+			}
 			userData[k] = v
 		}
+
+		if err != nil {
+			ar.Response.User = errData
+			return nil, errors.ErrCryptoKeyStoreParseTokenExpired
+		}
+
 		usr, err := user.NewUser(userData)
 		if err != nil {
-			continue
+			return usr, errors.ErrCryptoKeyStoreTokenData
 		}
 		return usr, nil
-	}
-	if usr != nil {
-		return usr, errors.ErrCryptoKeyStoreParseTokenFailed
 	}
 	return nil, errors.ErrCryptoKeyStoreParseTokenFailed
 }

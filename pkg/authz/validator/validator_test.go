@@ -28,6 +28,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 
@@ -786,8 +787,7 @@ func TestAuthorize(t *testing.T) {
 			path:               "/app/page3/allowed",
 			validateMethodPath: true,
 			shouldErr:          true,
-			err:                errors.ErrNoTokenFound,
-			// ErrValidatorInvalidToken.WithArgs(errors.ErrCryptoKeyStoreParseTokenFailed),
+			err:                errors.ErrCryptoKeyStoreParseTokenFailed,
 		},
 		{
 			name:               "bad token",
@@ -796,8 +796,7 @@ func TestAuthorize(t *testing.T) {
 			path:               "/app/page3/allowed",
 			validateMethodPath: true,
 			shouldErr:          true,
-			// err:       errors.ErrNoTokenFound,
-			err: errors.ErrValidatorInvalidToken.WithArgs(errors.ErrCryptoKeyStoreParseTokenFailed),
+			err:                errors.ErrCryptoKeyStoreParseTokenFailed,
 		},
 		{
 			name:               "no acl rules",
@@ -1044,7 +1043,12 @@ func TestAuthorize(t *testing.T) {
 				msgs = append(msgs, fmt.Sprintf("path: %s", r.URL.Path))
 				msgs = append(msgs, fmt.Sprintf("method: %s", r.Method))
 				msgs = append(msgs, fmt.Sprintf("key\n%s", cmp.Diff(nil, keys[0])))
-				usr, err := validator.Authorize(ctx, r)
+
+				ar := requests.NewAuthorizationRequest()
+				ar.ID = "TEST_REQUEST_ID"
+				ar.SessionID = "TEST_SESSION_ID"
+
+				usr, err := validator.Authorize(ctx, r, ar)
 				if tests.EvalErrWithLog(t, err, tc.config, tc.shouldErr, tc.err, msgs) {
 					return
 				}
@@ -1063,7 +1067,7 @@ func TestAuthorize(t *testing.T) {
 							return
 						}
 					}
-					usr, err = validator.Authorize(ctx, r)
+					usr, err = validator.Authorize(ctx, r, ar)
 					if tests.EvalErrWithLog(t, err, "cached auth", tc.shouldErr, tc.err, msgs) {
 						return
 					}

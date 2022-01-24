@@ -38,6 +38,8 @@ const (
 	ErrKeystoreAddKeyNil                      StandardError = "keystore: failed adding nil key to keystore"
 	ErrCryptoKeyStoreAddKeyNil                StandardError = "keystore: failed adding nil key to keystore"
 	ErrCryptoKeyStoreParseTokenFailed         StandardError = "keystore: failed to parse token"
+	ErrCryptoKeyStoreTokenData                StandardError = "keystore: failed creating user from a parsed token"
+	ErrCryptoKeyStoreParseTokenExpired        StandardError = "keystore: parsed token has expired"
 	ErrCryptoKeyStoreSignTokenFailed          StandardError = "keystore: failed to sign token"
 	ErrCryptoKeyStoreNoVerifyKeysFound        StandardError = "keystore: no verification keys found"
 	ErrCryptoKeyStoreNoSignKeysFound          StandardError = "keystore: no signing keys found"

@@ -36,47 +36,46 @@ var (
 )
 
 // Authenticate authorizes HTTP requests.
-func (g *Gatekeeper) Authenticate(w http.ResponseWriter, r *http.Request, rr *requests.AuthorizationRequest) error {
-	// rr.Response.User       = map[string]interface{}
-	// rr.Response.Authorized = bool
-	// rr.Response.Error      = error
+func (g *Gatekeeper) Authenticate(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
+	// ar.Response.User       = map[string]interface{}
+	// ar.Response.Authorized = bool
+	// ar.Response.Error      = error
 
 	// Perform authorization bypass checks
 	if g.bypassEnabled && bypass.Match(r, g.config.BypassConfigs) {
-		rr.Response.Authorized = false
+		ar.Response.Authorized = false
 		return nil
 	}
 
-	g.parseSessionID(r, rr)
+	g.parseSessionID(r, ar)
 
-	usr, err := g.tokenValidator.Authorize(context.Background(), r)
+	usr, err := g.tokenValidator.Authorize(context.Background(), r, ar)
 	if err != nil {
-		rr.Response.Error = err
-		return g.handleAuthorizeWithError(w, r, rr, usr)
+		ar.Response.Error = err
+		return g.handleUnauthorizedUser(w, r, ar)
 	}
-
-	return g.handleAuthorizedUser(w, r, rr, usr)
+	return g.handleAuthorizedUser(w, r, ar, usr)
 }
 
 // handleAuthorizedUser handles authorized requests.
-func (g *Gatekeeper) handleAuthorizedUser(w http.ResponseWriter, r *http.Request, rr *requests.AuthorizationRequest, usr *user.User) error {
+func (g *Gatekeeper) handleAuthorizedUser(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest, usr *user.User) error {
 	g.injectHeaders(r, usr)
 	g.stripAuthToken(r, usr)
 
-	rr.Response.Authorized = true
+	ar.Response.Authorized = true
 
 	if usr.Cached {
-		rr.Response.User = usr.GetRequestIdentity()
+		ar.Response.User = usr.GetRequestIdentity()
 		return nil
 	}
 
-	rr.Response.User = usr.BuildRequestIdentity(g.config.UserIdentityField)
+	ar.Response.User = usr.BuildRequestIdentity(g.config.UserIdentityField)
 
 	if err := g.tokenValidator.CacheUser(usr); err != nil {
 		g.logger.Error(
 			"token caching error",
-			zap.String("session_id", rr.SessionID),
-			zap.String("request_id", rr.ID),
+			zap.String("session_id", ar.SessionID),
+			zap.String("request_id", ar.ID),
 			zap.Error(err),
 		)
 	}
@@ -84,36 +83,38 @@ func (g *Gatekeeper) handleAuthorizedUser(w http.ResponseWriter, r *http.Request
 }
 
 // parseSessionID extracts Session ID from HTTP request.
-func (g *Gatekeeper) parseSessionID(r *http.Request, rr *requests.AuthorizationRequest) {
+func (g *Gatekeeper) parseSessionID(r *http.Request, ar *requests.AuthorizationRequest) {
 	if cookie, err := r.Cookie("AUTHP_SESSION_ID"); err == nil {
 		v, err := url.Parse(cookie.Value)
 		if err == nil && v.String() != "" {
-			rr.SessionID = v.String()
+			ar.SessionID = v.String()
 		}
 	}
 }
 
-// handleAuthorizeWithError handles failed authorization requests.
-func (g *Gatekeeper) handleAuthorizeWithError(w http.ResponseWriter, r *http.Request, rr *requests.AuthorizationRequest, usr *user.User) error {
-	err := rr.Response.Error
+// handleUnauthorizedUser handles failed authorization requests.
+func (g *Gatekeeper) handleUnauthorizedUser(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
+	err := ar.Response.Error
 	g.logger.Debug(
 		"token validation error",
-		zap.String("session_id", rr.SessionID),
-		zap.String("request_id", rr.ID),
+		zap.String("session_id", ar.SessionID),
+		zap.String("request_id", ar.ID),
 		zap.Error(err),
 	)
 
 	switch {
-	case strings.Contains(err.Error(), "user role is valid, but not allowed by"):
-		return g.handleAuthorizeWithForbidden(w, r, rr)
+	case (err == errors.ErrAccessNotAllowed) || (err == errors.ErrAccessNotAllowedByPathACL):
+		return g.handleAuthorizeWithForbidden(w, r, ar)
 	case (err == errors.ErrBasicAuthFailed) || (err == errors.ErrAPIKeyAuthFailed):
-		return g.handleAuthorizeWithAuthFailed(w, r, rr)
+		return g.handleAuthorizeWithAuthFailed(w, r, ar)
+	case err == errors.ErrCryptoKeyStoreTokenData:
+		return g.handleAuthorizeWithBadRequest(w, r, ar)
 	}
 
 	g.expireAuthCookies(w, r)
 
 	if !g.config.AuthRedirectDisabled {
-		return g.handleAuthorizeWithRedirect(w, r, rr, usr)
+		return g.handleAuthorizeWithRedirect(w, r, ar)
 	}
 
 	return err
@@ -137,19 +138,28 @@ func (g *Gatekeeper) expireAuthCookies(w http.ResponseWriter, r *http.Request) {
 
 // handleAuthorizeWithAuthFailed handles failed authorization requests based on
 // basic authentication and API keys.
-func (g *Gatekeeper) handleAuthorizeWithAuthFailed(w http.ResponseWriter, r *http.Request, rr *requests.AuthorizationRequest) error {
+func (g *Gatekeeper) handleAuthorizeWithAuthFailed(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
 	g.expireAuthCookies(w, r)
 	w.WriteHeader(401)
 	w.Write([]byte(`401 Unauthorized`))
-	return rr.Response.Error
+	return ar.Response.Error
+}
+
+// handleAuthorizeWithBadRequest handles failed authorization requests where
+// user data was insufficient to establish a user.
+func (g *Gatekeeper) handleAuthorizeWithBadRequest(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
+	g.expireAuthCookies(w, r)
+	w.WriteHeader(400)
+	w.Write([]byte(`400 Bad Request`))
+	return ar.Response.Error
 }
 
 // handleAuthorizeWithForbidden handles forbidden responses.
-func (g *Gatekeeper) handleAuthorizeWithForbidden(w http.ResponseWriter, r *http.Request, rr *requests.AuthorizationRequest) error {
+func (g *Gatekeeper) handleAuthorizeWithForbidden(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
 	if g.config.ForbiddenURL == "" {
 		w.WriteHeader(403)
 		w.Write([]byte(`Forbidden`))
-		return rr.Response.Error
+		return ar.Response.Error
 	}
 
 	if strings.Contains(g.config.ForbiddenURL, "{") && strings.Contains(g.config.ForbiddenURL, "}") {
@@ -169,45 +179,38 @@ func (g *Gatekeeper) handleAuthorizeWithForbidden(w http.ResponseWriter, r *http
 	}
 	w.WriteHeader(303)
 	w.Write([]byte(`Forbidden`))
-	return rr.Response.Error
+	return ar.Response.Error
 }
 
-func (g *Gatekeeper) handleAuthorizeWithRedirect(w http.ResponseWriter, r *http.Request, rr *requests.AuthorizationRequest, usr *user.User) error {
-	if usr != nil {
-		// If the issuer URL contains callback URL, then redirect to it.
-		if usr.Authenticator.URL != "" && strings.HasPrefix(usr.Authenticator.URL, "http") {
-			usr.Authenticator.URL = strings.TrimSuffix(usr.Authenticator.URL, "authorization-code-callback")
-			rr.Redirect.AuthURL = usr.Authenticator.URL
-		}
-	}
-	if rr.Redirect.AuthURL == "" {
-		rr.Redirect.AuthURL = g.config.AuthURLPath
+func (g *Gatekeeper) handleAuthorizeWithRedirect(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
+	if ar.Redirect.AuthURL == "" {
+		ar.Redirect.AuthURL = g.config.AuthURLPath
 	}
 
-	rr.Redirect.QueryDisabled = g.config.AuthRedirectQueryDisabled
-	rr.Redirect.QueryParameter = g.config.AuthRedirectQueryParameter
+	ar.Redirect.QueryDisabled = g.config.AuthRedirectQueryDisabled
+	ar.Redirect.QueryParameter = g.config.AuthRedirectQueryParameter
 	if g.config.AuthRedirectStatusCode > 0 {
-		rr.Redirect.StatusCode = g.config.AuthRedirectStatusCode
+		ar.Redirect.StatusCode = g.config.AuthRedirectStatusCode
 	}
 
 	if g.config.RedirectWithJavascript {
 		g.logger.Debug(
 			"redirecting unauthorized user",
-			zap.String("session_id", rr.SessionID),
-			zap.String("request_id", rr.ID),
+			zap.String("session_id", ar.SessionID),
+			zap.String("request_id", ar.ID),
 			zap.String("method", "js"),
 		)
-		handlers.HandleJavascriptRedirect(w, r, rr)
+		handlers.HandleJavascriptRedirect(w, r, ar)
 	} else {
 		g.logger.Debug(
 			"redirecting unauthorized user",
-			zap.String("session_id", rr.SessionID),
-			zap.String("request_id", rr.ID),
+			zap.String("session_id", ar.SessionID),
+			zap.String("request_id", ar.ID),
 			zap.String("method", "location"),
 		)
-		handlers.HandleLocationHeaderRedirect(w, r, rr)
+		handlers.HandleLocationHeaderRedirect(w, r, ar)
 	}
-	return rr.Response.Error
+	return ar.Response.Error
 }
 
 func (g *Gatekeeper) stripAuthToken(r *http.Request, usr *user.User) {

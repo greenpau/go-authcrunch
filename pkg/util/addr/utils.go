@@ -54,6 +54,32 @@ func GetSourceAddress(r *http.Request) string {
 	return addr
 }
 
+// GetSourceConnAddress returns the IP address of the HTTP connection.
+func GetSourceConnAddress(r *http.Request) string {
+	addr := r.RemoteAddr
+	if strings.Contains(addr, ",") {
+		addr = strings.TrimSpace(addr)
+		addr = strings.SplitN(addr, ",", 2)[0]
+	}
+	switch {
+	case strings.Contains(addr, "["):
+		// Handle IPv6 "[host]:port" address.
+		return parseAddr6(addr)
+	case strings.Contains(addr, "::"):
+		// Handle IPv6 address.
+		return addr
+	}
+	if strings.Contains(addr, ":") {
+		parts := strings.Split(addr, ":")
+		if len(parts) > 2 {
+			// Handle IPv6 address.
+			return parts[0]
+		}
+		return parts[0]
+	}
+	return addr
+}
+
 func parseAddr6(s string) string {
 	i := strings.IndexByte(s, '[')
 	if i < 0 {

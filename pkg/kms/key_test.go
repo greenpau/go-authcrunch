@@ -19,6 +19,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"os"
 	"strings"
@@ -472,7 +473,12 @@ func TestGetKeysFromConfig(t *testing.T) {
 				t.Logf("token %v: %s", privKey.Sign.Token.Name, usr.Token)
 			}
 
-			tokenUser, err := ks.ParseToken(pubKey.Verify.Token.Name, usr.Token)
+			ar := requests.NewAuthorizationRequest()
+			ar.ID = "TEST_REQUEST_ID"
+			ar.SessionID = "TEST_SESSION_ID"
+			ar.Token.Name = pubKey.Verify.Token.Name
+			ar.Token.Payload = usr.Token
+			tokenUser, err := ks.ParseToken(ar)
 			if err != nil {
 				t.Fatal(err)
 			}

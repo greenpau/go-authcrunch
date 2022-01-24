@@ -17,39 +17,32 @@ package validator
 import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"net/http"
 	"strings"
 )
 
-type authToken struct {
-	Secret string
-	Realm  string
-	Source string
-	Name   string
-	Value  string
-	Found  bool
-	Error  error
-}
-
 // parseCustomAuthHeader authorizes HTTP requests based on the presence and the
 // content of HTTP Authorization or X-API-Key headers.
-func (v *TokenValidator) parseCustomAuthHeader(ctx context.Context, r *http.Request) *authToken {
-	token := &authToken{}
+func (v *TokenValidator) parseCustomAuthHeader(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
 	if v.basicAuthEnabled {
-		v.parseCustomBasicAuthHeader(ctx, r, token)
+		if err := v.parseCustomBasicAuthHeader(ctx, r, ar); err != nil {
+			return err
+		}
 	}
-	if !token.Found && v.apiKeyAuthEnabled {
-		v.parseCustomAPIKeyAuthHeader(ctx, r, token)
+	if !ar.Token.Found && v.apiKeyAuthEnabled {
+		return v.parseCustomAPIKeyAuthHeader(ctx, r, ar)
 	}
-	return token
+	return nil
 }
 
-func (v *TokenValidator) parseCustomBasicAuthHeader(ctx context.Context, r *http.Request, token *authToken) {
+func (v *TokenValidator) parseCustomBasicAuthHeader(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
+	var tokenSecret, tokenRealm string
 	hdr := r.Header.Get("Authorization")
 	if hdr == "" {
-		return
+		return nil
 	}
 	entries := strings.Split(hdr, ",")
 	for _, entry := range entries {
@@ -59,89 +52,94 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(ctx context.Context, r *http
 		}
 		entry = strings.TrimPrefix(entry, "Basic")
 		entry = strings.TrimSpace(entry)
-		token.Source = "basicauth"
-		token.Name = "Basic"
-		token.Found = true
+
+		ar.Token.Source = "basicauth"
+		ar.Token.Name = "Basic"
+		ar.Token.Found = true
+
 		sep := strings.Index(entry, " ")
 		if sep < 0 {
-			token.Secret = entry
+			tokenSecret = entry
 		} else {
-			token.Secret = entry[:sep]
+			tokenSecret = entry[:sep]
 			directives := parseAuthHeaderDirectives(entry[sep+1:])
 			if directives != nil {
 				if realm, exists := directives["realm"]; exists {
-					token.Realm = realm
+					tokenRealm = realm
 				}
 			}
 		}
 		break
 	}
 
-	if token.Found {
-		if token.Realm != "" {
+	if ar.Token.Found {
+		if tokenRealm != "" {
 			// Check if the realm is registered.
-			if _, exists := v.idpConfig.BasicAuth.Realms[token.Realm]; !exists {
-				token.Error = errors.ErrBasicAuthFailed
-				return
+			if _, exists := v.idpConfig.BasicAuth.Realms[tokenRealm]; !exists {
+				return errors.ErrBasicAuthFailed
 			}
 		}
 
 		idpr := &idp.ProviderRequest{
 			Address: addrutil.GetSourceAddress(r),
 			Context: v.idpConfig.Context,
-			Realm:   token.Realm,
-			Secret:  token.Secret,
+			Realm:   tokenRealm,
+			Secret:  tokenSecret,
 		}
 		if err := idp.Catalog.BasicAuth(idpr); err != nil {
-			token.Error = err
+			return err
 		}
-		token.Name = idpr.Response.Name
-		token.Value = idpr.Response.Payload
+		ar.Token.Name = idpr.Response.Name
+		ar.Token.Payload = idpr.Response.Payload
 	}
+
+	return nil
 }
 
-func (v *TokenValidator) parseCustomAPIKeyAuthHeader(ctx context.Context, r *http.Request, token *authToken) {
+func (v *TokenValidator) parseCustomAPIKeyAuthHeader(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
+	var tokenSecret, tokenRealm string
 	hdr := r.Header.Get("X-API-Key")
 	if hdr == "" {
-		return
+		return nil
 	}
 	entry := strings.TrimSpace(hdr)
-	token.Source = "apikey"
-	token.Name = "X-API-Key"
-	token.Found = true
+
+	ar.Token.Source = "apikey"
+	ar.Token.Name = "X-API-Key"
+	ar.Token.Found = true
+
 	sep := strings.Index(entry, " ")
 	if sep < 0 {
-		token.Secret = entry
+		tokenSecret = entry
 	} else {
-		token.Secret = entry[:sep]
+		tokenSecret = entry[:sep]
 		directives := parseAuthHeaderDirectives(entry[sep+1:])
 		if directives != nil {
 			if realm, exists := directives["realm"]; exists {
-				token.Realm = realm
+				tokenRealm = realm
 			}
 		}
 	}
 
-	if token.Realm != "" {
+	if tokenRealm != "" {
 		// Check if the realm is registered.
-		if _, exists := v.idpConfig.APIKeyAuth.Realms[token.Realm]; !exists {
-			token.Error = errors.ErrAPIKeyAuthFailed
-			return
+		if _, exists := v.idpConfig.APIKeyAuth.Realms[tokenRealm]; !exists {
+			return errors.ErrAPIKeyAuthFailed
 		}
 	}
 
 	idpr := &idp.ProviderRequest{
 		Address: addrutil.GetSourceAddress(r),
 		Context: v.idpConfig.Context,
-		Realm:   token.Realm,
-		Secret:  token.Secret,
+		Realm:   tokenRealm,
+		Secret:  tokenSecret,
 	}
 	if err := idp.Catalog.APIKeyAuth(idpr); err != nil {
-		token.Error = err
-		return
+		return err
 	}
-	token.Name = idpr.Response.Name
-	token.Value = idpr.Response.Payload
+	ar.Token.Name = idpr.Response.Name
+	ar.Token.Payload = idpr.Response.Payload
+	return nil
 }
 
 func parseAuthHeaderDirectives(s string) map[string]string {

@@ -17,6 +17,7 @@ package validator
 import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"net/http"
 	"strings"
@@ -71,26 +72,30 @@ func (v *TokenValidator) clearAuthCookies() {
 
 // parseQueryParams authorizes HTTP requests based on the presence and the
 // content of the tokens in HTTP query parameters.
-func (v *TokenValidator) parseQueryParams(ctx context.Context, r *http.Request) (string, string) {
+func (v *TokenValidator) parseQueryParams(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) {
 	values := r.URL.Query()
 	if len(values) == 0 {
-		return "", ""
+		return
 	}
 	for k := range v.authQueryParams {
 		value := values.Get(k)
 		if len(value) > 32 {
-			return k, value
+			ar.Token.Found = true
+			ar.Token.Name = k
+			ar.Token.Payload = value
+			ar.Token.Source = tokenSourceQuery
+			return
 		}
 	}
-	return "", ""
+	return
 }
 
 // AuthorizeAuthorizationHeader authorizes HTTP requests based on the presence and the
 // content of the tokens in HTTP Authorization header.
-func (v *TokenValidator) parseAuthHeader(ctx context.Context, r *http.Request) (string, string) {
+func (v *TokenValidator) parseAuthHeader(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) {
 	hdr := r.Header.Get("Authorization")
 	if hdr == "" {
-		return "", ""
+		return
 	}
 	entries := strings.Split(hdr, ",")
 	for _, entry := range entries {
@@ -101,7 +106,11 @@ func (v *TokenValidator) parseAuthHeader(ctx context.Context, r *http.Request) (
 			if len(kv) != 2 {
 				continue
 			}
-			return "bearer", strings.TrimSpace(kv[1])
+			ar.Token.Found = true
+			ar.Token.Name = "bearer"
+			ar.Token.Payload = strings.TrimSpace(kv[1])
+			ar.Token.Source = tokenSourceHeader
+			return
 		}
 		kv := strings.SplitN(entry, "=", 2)
 		if len(kv) != 2 {
@@ -109,15 +118,19 @@ func (v *TokenValidator) parseAuthHeader(ctx context.Context, r *http.Request) (
 		}
 		k := strings.TrimSpace(kv[0])
 		if _, exists := v.authHeaders[k]; exists {
-			return k, strings.TrimSpace(kv[1])
+			ar.Token.Found = true
+			ar.Token.Name = k
+			ar.Token.Payload = strings.TrimSpace(kv[1])
+			ar.Token.Source = tokenSourceHeader
+			return
 		}
 	}
-	return "", ""
+	return
 }
 
 // AuthorizeCookies authorizes HTTP requests based on the presence and the
 // content of the tokens in HTTP cookies.
-func (v *TokenValidator) parseCookies(ctx context.Context, r *http.Request) (string, string) {
+func (v *TokenValidator) parseCookies(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) {
 	for _, cookie := range r.Cookies() {
 		if _, exists := v.authCookies[cookie.Name]; !exists {
 			continue
@@ -126,68 +139,61 @@ func (v *TokenValidator) parseCookies(ctx context.Context, r *http.Request) (str
 			continue
 		}
 		parts := strings.Split(strings.TrimSpace(cookie.Value), " ")
-		return cookie.Name, strings.TrimSpace(parts[0])
-
+		ar.Token.Found = true
+		ar.Token.Name = cookie.Name
+		ar.Token.Payload = strings.TrimSpace(parts[0])
+		ar.Token.Source = tokenSourceCookie
+		return
 	}
-	return "", ""
+	return
 }
 
 // Authorize authorizes HTTP requests based on the presence and the content of
 // the tokens in the requests.
-func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request) (usr *user.User, err error) {
-	var token, tokenName, tokenSource string
-	var found bool
+func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) (usr *user.User, err error) {
+	// var token, tokenName, tokenSource string
+	// var found bool
 	for _, sourceName := range v.tokenSources {
 		switch sourceName {
 		case tokenSourceHeader:
-			tokenName, token = v.parseAuthHeader(ctx, r)
-			tokenSource = tokenSourceHeader
+			v.parseAuthHeader(ctx, r, ar)
 		case tokenSourceCookie:
-			tokenName, token = v.parseCookies(ctx, r)
-			tokenSource = tokenSourceCookie
+			v.parseCookies(ctx, r, ar)
 		case tokenSourceQuery:
-			tokenName, token = v.parseQueryParams(ctx, r)
-			tokenSource = tokenSourceQuery
+			v.parseQueryParams(ctx, r, ar)
 		}
-		if token != "" {
-			found = true
+		if ar.Token.Found {
 			break
 		}
 	}
 
-	if !found && v.customAuthEnabled {
+	if !ar.Token.Found && v.customAuthEnabled {
 		// Search for credentials (basic, api key, etc.) in HTTP headers.
-		customAuthToken := v.parseCustomAuthHeader(ctx, r)
-		switch {
-		case customAuthToken.Found && customAuthToken.Error == nil:
-			found = true
-			tokenSource = customAuthToken.Source
-			tokenName = customAuthToken.Name
-			token = customAuthToken.Value
-		case customAuthToken.Found && customAuthToken.Error != nil:
-			return nil, customAuthToken.Error
+		if err := v.parseCustomAuthHeader(ctx, r, ar); err != nil {
+			return nil, err
 		}
 	}
 
-	if !found {
+	if !ar.Token.Found {
 		return nil, errors.ErrNoTokenFound
 	}
 
 	// Perform cache lookup for the previously obtained credentials.
-	usr = v.cache.Get(token)
+	usr = v.cache.Get(ar.Token.Payload)
 	if usr == nil {
 		// The user is not in the cache.
-		usr, err = v.keystore.ParseToken(tokenName, token)
+		usr, err = v.keystore.ParseToken(ar)
 		if err != nil {
-			return usr, errors.ErrValidatorInvalidToken.WithArgs(err)
+			// return usr, err
+			return nil, err
 		}
 	}
 
 	if err := v.guardian.authorize(ctx, r, usr); err != nil {
 		return usr, err
 	}
-	usr.TokenSource = tokenSource
-	usr.TokenName = tokenName
-	usr.Token = token
+	usr.TokenSource = ar.Token.Source
+	usr.TokenName = ar.Token.Name
+	usr.Token = ar.Token.Payload
 	return usr, nil
 }
