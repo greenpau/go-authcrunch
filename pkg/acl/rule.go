@@ -17,6 +17,7 @@ package acl
 import (
 	"context"
 	"fmt"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"go.uber.org/zap"
 	"strings"
@@ -54,6 +55,28 @@ type ruleConfig struct {
 	logLevel       string
 	counterEnabled bool
 	matchAll       bool
+}
+
+func (cfg *ruleConfig) AsMap() map[string]interface{} {
+	m := make(map[string]interface{})
+	m["rule_type"] = cfg.ruleType
+	m["comment"] = cfg.comment
+	m["fields"] = cfg.fields
+	m["index"] = cfg.index
+	m["action"] = getRuleActionName(cfg.action)
+	m["log_enabled"] = cfg.logEnabled
+	m["tag"] = cfg.tag
+	m["log_level"] = cfg.logLevel
+	m["counter_enabled"] = cfg.counterEnabled
+	m["match_all"] = cfg.matchAll
+	conditions := []map[string]interface{}{}
+	for _, c := range cfg.conditions {
+		conditions = append(conditions, c.AsMap())
+	}
+	if len(conditions) > 0 {
+		m["conditions"] = conditions
+	}
+	return m
 }
 
 // RuleConfiguration consists of a list of conditions and and actions
@@ -2073,17 +2096,17 @@ func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger 
 	for i, c := range cfg.Conditions {
 		tokens, err := cfgutil.DecodeArgs(c)
 		if err != nil {
-			return nil, fmt.Errorf("invalid rule syntax, failed to extract condition tokens: %s", err)
+			return nil, errors.ErrACLRuleSyntaxExtractCondToken.WithArgs(err)
 		}
 		parsedACLRuleCondition, err := newACLRuleCondition(ctx, tokens)
 		if err != nil {
-			return nil, fmt.Errorf("invalid rule syntax, %v", err)
+			return nil, errors.ErrACLRuleSyntax.WithArgs(err)
 		}
 		conditions = append(conditions, parsedACLRuleCondition)
 		condConfig := parsedACLRuleCondition.getConfig(ctx)
 		condConfigs = append(condConfigs, condConfig)
 		if _, exists := fieldIndex[condConfig.field]; exists {
-			return nil, fmt.Errorf("invalid rule syntax, duplicate field: %s", condConfig.field)
+			return nil, errors.ErrACLRuleSyntaxDuplicateField.WithArgs(condConfig.field)
 		}
 		fieldIndex[condConfig.field] = i
 		fields = append(fields, condConfig.field)
@@ -2091,7 +2114,7 @@ func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger 
 
 	tokens, err := cfgutil.DecodeArgs(cfg.Action)
 	if err != nil {
-		return nil, fmt.Errorf("invalid rule syntax, failed to extract action tokens: %s", err)
+		return nil, errors.ErrACLRuleSyntaxExtractActionToken.WithArgs(err)
 	}
 	for i, token := range tokens {
 		if len(tokens) == (i + 1) {
@@ -2104,7 +2127,7 @@ func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger 
 		switch token {
 		case "allow", "deny", "reserved":
 			if i != 0 {
-				return nil, fmt.Errorf("invalid rule syntax, %s must preceed stop/counter/log directives", token)
+				return nil, errors.ErrACLRuleSyntaxAllowPreceed.WithArgs(token)
 			}
 			action = token
 			if !lastToken {
@@ -2132,13 +2155,13 @@ func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger 
 			}
 		case "tag":
 			if lastToken {
-				return nil, fmt.Errorf("invalid rule syntax, %s must be followed by value", token)
+				return nil, errors.ErrACLRuleSyntaxTagFollowedByValue.WithArgs(token)
 			}
 			tag = tokens[i+1]
 			skipNext = true
 		case "and", "with":
 		default:
-			return nil, fmt.Errorf("invalid rule syntax, invalid %q token", token)
+			return nil, errors.ErrACLRuleSyntaxInvalidToken.WithArgs(token)
 		}
 	}
 
@@ -2160,7 +2183,7 @@ func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger 
 	if logEnabled {
 		ruleTypeName += strings.Title(logLevel) + "Logger"
 		if logger == nil {
-			return nil, fmt.Errorf("invalid rule syntax, no logger found for log enabled rule: %s", ruleTypeName)
+			return nil, errors.ErrACLRuleSyntaxLoggerNotFound.WithArgs(ruleTypeName)
 		}
 	}
 	if counterEnabled {
@@ -2169,7 +2192,7 @@ func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger 
 
 	switch len(conditions) {
 	case 0:
-		return nil, fmt.Errorf("invalid rule syntax, no match conditions found")
+		return nil, errors.ErrACLRuleSyntaxCondNotFound
 	case 1:
 	default:
 		// Matching all or any conditions.
@@ -4458,7 +4481,7 @@ func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger 
 		}
 		r = rule
 	default:
-		return nil, fmt.Errorf("invalid rule syntax, type %q is unsupported", ruleTypeName)
+		return nil, errors.ErrACLRuleSyntaxTypeUnsupported.WithArgs(ruleTypeName)
 	}
 	return r, nil
 }

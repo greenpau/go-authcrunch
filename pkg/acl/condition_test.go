@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -3131,32 +3132,32 @@ func TestNewAclRuleCondition(t *testing.T) {
 			name:      "invalid condition syntax match not found",
 			condition: `exact`,
 			shouldErr: true,
-			err:       fmt.Errorf("invalid condition syntax, match not found: exact"),
+			err:       errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact"),
 		}, {
 			name:      "invalid condition syntax field name not found",
 			condition: `exact match`,
 			shouldErr: true,
-			err:       fmt.Errorf("invalid condition syntax, field name not found: exact match"),
+			err:       errors.ErrACLRuleConditionSyntaxMatchFieldNotFound.WithArgs("exact match"),
 		}, {
 			name:      "invalid condition syntax not matching field values",
 			condition: `exact match roles`,
 			shouldErr: true,
-			err:       fmt.Errorf("invalid condition syntax, not matching field values: exact match roles"),
+			err:       errors.ErrACLRuleConditionSyntaxMatchValueNotFound.WithArgs("exact match roles"),
 		}, {
 			name:      "invalid condition syntax use of reserved keyword",
-			condition: `exact match partial`,
+			condition: `exact match roles partial`,
 			shouldErr: true,
-			err:       fmt.Errorf("invalid condition syntax, use of reserved \"partial\" keyword: exact match partial"),
+			err:       errors.ErrACLRuleConditionSyntaxReservedWordUsage.WithArgs("partial", "exact match roles partial"),
 		}, {
 			name:      "invalid condition syntax unsupported field",
 			condition: `exact match bootstrap yes`,
 			shouldErr: true,
-			err:       fmt.Errorf("invalid condition syntax, unsupported field: bootstrap, condition: exact match bootstrap yes"),
+			err:       errors.ErrACLRuleConditionSyntaxCondDataType.WithArgs("exact match bootstrap yes"),
 		}, {
 			name:      "invalid condition syntax use of reserved type",
 			condition: `reserved match roles anonymous`,
 			shouldErr: true,
-			err:       fmt.Errorf("invalid condition syntax: reserved match roles anonymous"),
+			err:       errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("reserved match roles anonymous"),
 		},
 	}
 	for _, tc := range testcases {

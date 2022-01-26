@@ -71,6 +71,21 @@ func (acl *AccessList) AddRule(ctx context.Context, cfg *RuleConfiguration) erro
 	return nil
 }
 
+// AsMap returns acl configuration as map.
+func (acl *AccessList) AsMap() map[string]interface{} {
+	m := make(map[string]interface{})
+	rules := []map[string]interface{}{}
+	for _, rule := range acl.rules {
+		ruleConfig := rule.getConfig(context.Background())
+		rules = append(rules, ruleConfig.AsMap())
+	}
+	if len(rules) > 0 {
+		m["rules"] = rules
+	}
+	m["count"] = len(rules)
+	return m
+}
+
 // Allow takes in client identity and metadata and returns an error when
 // denied access.
 func (acl *AccessList) Allow(ctx context.Context, data map[string]interface{}) bool {

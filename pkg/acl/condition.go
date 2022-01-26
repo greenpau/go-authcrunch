@@ -16,7 +16,8 @@ package acl
 
 import (
 	"context"
-	"fmt"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"log"
 	"regexp"
 	"strings"
 )
@@ -25,6 +26,8 @@ type dataType int
 type fieldMatchStrategy int
 
 var (
+	matchWithStrategyRgx *regexp.Regexp
+
 	inputDataTypes = map[string]dataType{
 		"roles":  dataTypeListStr,
 		"mail":   dataTypeStr,
@@ -67,6 +70,7 @@ const (
 	dataTypeUnknown dataType = 0
 	dataTypeListStr dataType = 1
 	dataTypeStr     dataType = 2
+	dataTypeAny     dataType = 3
 
 	fieldMatchUnknown  fieldMatchStrategy = 0
 	fieldMatchReserved fieldMatchStrategy = 1
@@ -600,78 +604,157 @@ func (c *ruleStrCondAlwaysMatchStrInput) getConfig(ctx context.Context) *config 
 	return c.config
 }
 
-func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition, error) {
-	var matchStrategy fieldMatchStrategy
-	var condDataType, inputDataType dataType
-	var fieldName string
-	var values []string
+func init() {
+	matchWithStrategyRgx = regexp.MustCompile(`^\s*((?P<negative_match>no)\s)?((?P<match_strategy>exact|partial|prefix|suffix|regex|always)\s)?match`)
+}
+
+func (cfg *config) AsMap() map[string]interface{} {
+	m := make(map[string]interface{})
+	m["field"] = cfg.field
+	m["match_strategy"] = getMatchStrategyName(cfg.matchStrategy)
+	m["values"] = cfg.values
+	m["regex_enabled"] = cfg.regexEnabled
+	m["always_true"] = cfg.alwaysTrue
+	m["expr_data_type"] = getDataTypeName(cfg.exprDataType)
+	m["input_data_type"] = getDataTypeName(cfg.inputDataType)
+	m["condition_type"] = cfg.conditionType
+	return m
+}
+
+func extractMatchStrategy(s string) fieldMatchStrategy {
+	switch s {
+	case "", "exact":
+		return fieldMatchExact
+	case "partial":
+		return fieldMatchPartial
+	case "prefix":
+		return fieldMatchPrefix
+	case "suffix":
+		return fieldMatchSuffix
+	case "regex":
+		return fieldMatchRegex
+	case "always":
+		return fieldMatchAlways
+	}
+	return fieldMatchUnknown
+}
+
+func extractFieldNameValues(arr []string) (string, []string) {
+	var k string
+	var v []string
 	var matchFound, fieldFound bool
-	condInput := strings.Join(tokens, " ")
-	for _, s := range tokens {
-		s = strings.TrimSpace(s)
-		if s == "" {
+	for _, a := range arr {
+		if a == "match" {
+			matchFound = true
 			continue
 		}
 		if !matchFound {
-			switch s {
-			case "match":
-				matchFound = true
-				if matchStrategy == fieldMatchUnknown {
-					matchStrategy = fieldMatchExact
-				}
-			case "reserved":
-				matchStrategy = fieldMatchReserved
-			case "exact":
-				matchStrategy = fieldMatchExact
-			case "partial":
-				matchStrategy = fieldMatchPartial
-			case "prefix":
-				matchStrategy = fieldMatchPrefix
-			case "suffix":
-				matchStrategy = fieldMatchSuffix
-			case "regex":
-				matchStrategy = fieldMatchRegex
-			case "always":
-				matchStrategy = fieldMatchAlways
-			}
-		} else {
-			switch s {
-			case "exact", "partial", "prefix", "suffix", "regex", "always":
-				return nil, fmt.Errorf("invalid condition syntax, use of reserved %q keyword: %s", s, condInput)
-			}
-			if !fieldFound {
-				fieldName = s
-				if v, exists := inputDataAliases[s]; exists {
-					fieldName = v
-				}
-				tp, exists := inputDataTypes[fieldName]
-				if !exists {
-					return nil, fmt.Errorf("invalid condition syntax, unsupported field: %s, condition: %s", s, condInput)
-				}
-				inputDataType = tp
-				fieldFound = true
-			} else {
-				values = append(values, s)
-			}
+			continue
+		}
+		if !fieldFound {
+			k = a
+			fieldFound = true
+			continue
+		}
+		v = append(v, a)
+	}
+	if fieldFound {
+		if alias, exists := inputDataAliases[k]; exists {
+			k = alias
 		}
 	}
+	return k, v
+}
+
+func validateFieldNameValues(line, k string, v []string) error {
+	if k == "" {
+		return errors.ErrACLRuleConditionSyntaxMatchFieldNotFound.WithArgs(line)
+	}
+	if len(v) == 0 {
+		return errors.ErrACLRuleConditionSyntaxMatchValueNotFound.WithArgs(line)
+	}
+	for _, s := range v {
+		switch s {
+		case "exact", "partial", "prefix", "suffix", "regex", "always":
+			return errors.ErrACLRuleConditionSyntaxReservedWordUsage.WithArgs(s, line)
+		}
+	}
+	return nil
+}
+
+func extractCondDataType(line string, inputDataType dataType, values []string) (dataType, error) {
+	switch inputDataType {
+	case dataTypeListStr, dataTypeStr:
+		if len(values) == 1 {
+			return dataTypeStr, nil
+		}
+		return dataTypeListStr, nil
+	}
+	return dataTypeUnknown, errors.ErrACLRuleConditionSyntaxCondDataType.WithArgs(line)
+}
+
+func extractInputDataType(fieldName string) dataType {
+	if tp, exists := inputDataTypes[fieldName]; exists {
+		return tp
+	}
+	return dataTypeAny
+}
+
+func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition, error) {
+	// log.Printf("TOKENS: %v", tokens)
+	var matchStrategy fieldMatchStrategy
+	var negativeMatch bool
+	var fieldName string
+	var values []string
+
+	line := strings.Join(tokens, " ")
+
 	switch {
-	case !matchFound:
-		return nil, fmt.Errorf("invalid condition syntax, match not found: %s", condInput)
-	case !fieldFound:
-		return nil, fmt.Errorf("invalid condition syntax, field name not found: %s", condInput)
-	case len(values) == 0:
-		return nil, fmt.Errorf("invalid condition syntax, not matching field values: %s", condInput)
+	case line == "match any":
+		matchStrategy = fieldMatchAlways
+		fieldName = "iss"
+		values = []string{"any"}
+	case matchWithStrategyRgx.Match([]byte(line)):
+		matched := matchWithStrategyRgx.FindStringSubmatch(line)
+		for i, k := range matchWithStrategyRgx.SubexpNames() {
+			if i > 0 && i <= len(matched) {
+				switch k {
+				case "match_strategy":
+					matchStrategy = extractMatchStrategy(matched[i])
+					if matchStrategy == fieldMatchUnknown {
+						matchStrategy = fieldMatchExact
+					}
+				case "negative_match":
+					if matched[i] == "no" {
+						negativeMatch = true
+					}
+				}
+			}
+		}
+		fieldName, values = extractFieldNameValues(tokens)
+	default:
+		return nil, errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs(line)
 	}
 
-	if len(values) == 1 {
-		condDataType = dataTypeStr
-	} else {
-		condDataType = dataTypeListStr
+	if matchStrategy == fieldMatchUnknown {
+		return nil, errors.ErrACLRuleConditionSyntaxStrategyNotFound.WithArgs(line)
+	}
+
+	if err := validateFieldNameValues(line, fieldName, values); err != nil {
+		return nil, err
+	}
+
+	inputDataType := extractInputDataType(fieldName)
+	condDataType, err := extractCondDataType(line, inputDataType, values)
+	if err != nil {
+		return nil, err
+	}
+
+	if negativeMatch {
+		log.Printf("found negative match")
 	}
 
 	switch {
-
 	case matchStrategy == fieldMatchExact && condDataType == dataTypeListStr && inputDataType == dataTypeListStr:
 		// Match: Exact, Condition Type: ListStr, Input Type: ListStr
 		c := &ruleListStrCondExactMatchListStrInput{
@@ -1246,7 +1329,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 		return c, nil
 
 	}
-	return nil, fmt.Errorf("invalid condition syntax: %s", condInput)
+	return nil, errors.ErrACLRuleConditionSyntaxUnsupported.WithArgs(line)
 }
 
 func getMatchStrategyName(s fieldMatchStrategy) string {

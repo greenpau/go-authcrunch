@@ -16,8 +16,8 @@ package acl
 
 import (
 	"context"
-	"fmt"
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"reflect"
 	"strings"
@@ -62,7 +62,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any stop`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all and stop processing without counter and logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -92,7 +92,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow stop`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow and stop processing without counter and logging",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -116,7 +116,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow stop`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow any without counter and logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -146,7 +146,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all without counter and logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -176,7 +176,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow without counter and logging",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -200,7 +200,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow any and stop processing with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -231,7 +231,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any stop log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any and stop processing with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -262,7 +262,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any stop log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any and stop processing with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -293,7 +293,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any stop log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any and stop processing with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -324,7 +324,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any stop log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all and stop processing with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -355,7 +355,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow stop log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all and stop processing with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -386,7 +386,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow stop log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all and stop processing with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -417,7 +417,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow stop log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all and stop processing with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -448,7 +448,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow stop log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow and stop processing with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -473,7 +473,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow stop log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow and stop processing with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -498,7 +498,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow stop log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow and stop processing with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -523,7 +523,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow stop log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow and stop processing with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -548,7 +548,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow stop log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow any with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -579,7 +579,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -610,7 +610,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -641,7 +641,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -672,7 +672,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -703,7 +703,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -734,7 +734,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -765,7 +765,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -796,7 +796,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -821,7 +821,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -846,7 +846,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -871,7 +871,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -896,7 +896,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow any and stop processing with counter and without logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -926,7 +926,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any stop counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all and stop processing with counter and without logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -956,7 +956,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow stop counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow and stop processing with counter and without logging",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -980,7 +980,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow stop counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow any with counter and without logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1010,7 +1010,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all with counter and without logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1040,7 +1040,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow with counter and without logging",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -1064,7 +1064,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow any and stop processing with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1095,7 +1095,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any stop counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any and stop processing with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1126,7 +1126,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any stop counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any and stop processing with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1157,7 +1157,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any stop counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any and stop processing with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1188,7 +1188,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any stop counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all and stop processing with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1219,7 +1219,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow stop counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all and stop processing with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1250,7 +1250,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow stop counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all and stop processing with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1281,7 +1281,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow stop counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all and stop processing with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1312,7 +1312,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow stop counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow and stop processing with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -1337,7 +1337,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow stop counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow and stop processing with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -1362,7 +1362,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow stop counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow and stop processing with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -1387,7 +1387,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow stop counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow and stop processing with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -1412,7 +1412,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow stop counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow any with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1443,7 +1443,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1474,7 +1474,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1505,7 +1505,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow any with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1536,7 +1536,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow any counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1567,7 +1567,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1598,7 +1598,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1629,7 +1629,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow all with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1660,7 +1660,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `allow counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "allow with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -1685,7 +1685,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -1710,7 +1710,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -1735,7 +1735,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "allow with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -1760,7 +1760,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `allow counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny any and stop processing without counter and logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1790,7 +1790,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any stop`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all and stop processing without counter and logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1820,7 +1820,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny stop`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny and stop processing without counter and logging",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -1844,7 +1844,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny stop`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny any without counter and logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1874,7 +1874,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all without counter and logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1904,7 +1904,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny without counter and logging",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -1928,7 +1928,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny any and stop processing with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1959,7 +1959,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any stop log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any and stop processing with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -1990,7 +1990,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any stop log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any and stop processing with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2021,7 +2021,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any stop log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any and stop processing with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2052,7 +2052,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any stop log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all and stop processing with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2083,7 +2083,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny stop log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all and stop processing with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2114,7 +2114,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny stop log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all and stop processing with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2145,7 +2145,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny stop log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all and stop processing with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2176,7 +2176,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny stop log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny and stop processing with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -2201,7 +2201,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny stop log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny and stop processing with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -2227,7 +2227,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny stop log tag foobar`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny and stop processing with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -2252,7 +2252,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny stop log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny and stop processing with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -2277,7 +2277,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny stop log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny any with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2308,7 +2308,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2339,7 +2339,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2370,7 +2370,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2401,7 +2401,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2432,7 +2432,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2463,7 +2463,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2494,7 +2494,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2525,7 +2525,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny with debug logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -2550,7 +2550,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny with info logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -2575,7 +2575,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny with warn logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -2600,7 +2600,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny with error logging and without counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -2625,7 +2625,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny any and stop processing with counter and without logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2655,7 +2655,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any stop counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all and stop processing with counter and without logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2685,7 +2685,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny stop counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny and stop processing with counter and without logging",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -2709,7 +2709,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny stop counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny any with counter and without logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2739,7 +2739,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all with counter and without logging",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2769,7 +2769,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny with counter and without logging",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -2793,7 +2793,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny counter`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny any and stop processing with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2824,7 +2824,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any stop counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any and stop processing with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2855,7 +2855,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any stop counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any and stop processing with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2886,7 +2886,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any stop counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any and stop processing with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2917,7 +2917,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any stop counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all and stop processing with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2948,7 +2948,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny stop counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all and stop processing with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -2979,7 +2979,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny stop counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all and stop processing with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -3010,7 +3010,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny stop counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all and stop processing with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -3041,7 +3041,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny stop counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny and stop processing with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -3066,7 +3066,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny stop counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny and stop processing with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -3091,7 +3091,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny stop counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny and stop processing with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -3116,7 +3116,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny stop counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny and stop processing with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -3141,7 +3141,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny stop counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny any with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -3172,7 +3172,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -3203,7 +3203,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -3234,7 +3234,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny any with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -3265,7 +3265,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny any counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -3296,7 +3296,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -3327,7 +3327,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -3358,7 +3358,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny all with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment: "foobar barfoo",
@@ -3389,7 +3389,7 @@ func TestNewAclRule(t *testing.T) {
 				Action: `deny counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: foo org nyc"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("foo org nyc")),
 		}, {name: "deny with debug logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -3414,7 +3414,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny counter log debug`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny with info logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -3439,7 +3439,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny counter log info`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny with warn logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -3464,7 +3464,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny counter log warn`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {name: "deny with error logging and with counter",
 			config: &RuleConfiguration{
 				Comment:    "foobar barfoo",
@@ -3489,7 +3489,7 @@ func TestNewAclRule(t *testing.T) {
 				Action:     `deny counter log error`,
 			},
 			shouldErr: true,
-			err:       fmt.Errorf("invalid rule syntax, invalid condition syntax, match not found: exact roles foobar"),
+			err:       errors.ErrACLRuleSyntax.WithArgs(errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("exact roles foobar")),
 		}, {
 			name: "invalid rule syntax failed to extract condition tokens",
 			config: &RuleConfiguration{
@@ -3499,7 +3499,7 @@ func TestNewAclRule(t *testing.T) {
 			},
 			loggerDisabled: false,
 			shouldErr:      true,
-			err:            fmt.Errorf("invalid rule syntax, failed to extract condition tokens: EOF"),
+			err:            errors.ErrACLRuleSyntaxExtractCondToken.WithArgs("EOF"),
 		}, {
 			name: "invalid rule syntax duplicate field in conditions",
 			config: &RuleConfiguration{
@@ -3510,7 +3510,7 @@ func TestNewAclRule(t *testing.T) {
 			},
 			loggerDisabled: false,
 			shouldErr:      true,
-			err:            fmt.Errorf("invalid rule syntax, duplicate field: roles"),
+			err:            errors.ErrACLRuleSyntaxDuplicateField.WithArgs("roles"),
 		}, {
 			name: "invalid rule syntax failed to extract action tokens",
 			config: &RuleConfiguration{
@@ -3520,7 +3520,7 @@ func TestNewAclRule(t *testing.T) {
 			},
 			loggerDisabled: false,
 			shouldErr:      true,
-			err:            fmt.Errorf("invalid rule syntax, failed to extract action tokens: EOF"),
+			err:            errors.ErrACLRuleSyntaxExtractActionToken.WithArgs("EOF"),
 		}, {
 			name: "invalid rule syntax, allow misplaced in action",
 			config: &RuleConfiguration{
@@ -3530,7 +3530,7 @@ func TestNewAclRule(t *testing.T) {
 			},
 			loggerDisabled: false,
 			shouldErr:      true,
-			err:            fmt.Errorf("invalid rule syntax, allow must preceed stop/counter/log directives"),
+			err:            errors.ErrACLRuleSyntaxAllowPreceed.WithArgs("allow"),
 		}, {
 			name: "invalid rule syntax, tag without value",
 			config: &RuleConfiguration{
@@ -3540,7 +3540,7 @@ func TestNewAclRule(t *testing.T) {
 			},
 			loggerDisabled: false,
 			shouldErr:      true,
-			err:            fmt.Errorf("invalid rule syntax, tag must be followed by value"),
+			err:            errors.ErrACLRuleSyntaxTagFollowedByValue.WithArgs("tag"),
 		}, {
 			name: "invalid rule syntax, unsupported keyword",
 			config: &RuleConfiguration{
@@ -3550,7 +3550,7 @@ func TestNewAclRule(t *testing.T) {
 			},
 			loggerDisabled: false,
 			shouldErr:      true,
-			err:            fmt.Errorf(`invalid rule syntax, invalid "foobar" token`),
+			err:            errors.ErrACLRuleSyntaxInvalidToken.WithArgs("foobar"),
 		}, {
 			name: "invalid rule syntax, log with no logger available",
 			config: &RuleConfiguration{
@@ -3560,7 +3560,7 @@ func TestNewAclRule(t *testing.T) {
 			},
 			loggerDisabled: true,
 			shouldErr:      true,
-			err:            fmt.Errorf("invalid rule syntax, no logger found for log enabled rule: aclRuleAllowWithInfoLogger"),
+			err:            errors.ErrACLRuleSyntaxLoggerNotFound.WithArgs("aclRuleAllowWithInfoLogger"),
 		}, {
 			name: "invalid rule syntax, no conditions",
 			config: &RuleConfiguration{
@@ -3568,7 +3568,7 @@ func TestNewAclRule(t *testing.T) {
 			},
 			loggerDisabled: false,
 			shouldErr:      true,
-			err:            fmt.Errorf("invalid rule syntax, no match conditions found"),
+			err:            errors.ErrACLRuleSyntaxCondNotFound,
 		}, {
 			name: "invalid rule syntax, reserved action",
 			config: &RuleConfiguration{
@@ -3578,7 +3578,7 @@ func TestNewAclRule(t *testing.T) {
 			},
 			loggerDisabled: false,
 			shouldErr:      true,
-			err:            fmt.Errorf(`invalid rule syntax, type "aclRuleReservedWithInfoLogger" is unsupported`),
+			err:            errors.ErrACLRuleSyntaxTypeUnsupported.WithArgs("aclRuleReservedWithInfoLogger"),
 		},
 	}
 	for _, tc := range testcases {
