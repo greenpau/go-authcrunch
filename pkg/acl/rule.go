@@ -48,6 +48,7 @@ type ruleConfig struct {
 	comment        string
 	fields         []string
 	index          map[string]int
+	checkFields    map[string]bool
 	conditions     []*config
 	action         ruleAction
 	logEnabled     bool
@@ -60,13 +61,21 @@ type ruleConfig struct {
 func (cfg *ruleConfig) AsMap() map[string]interface{} {
 	m := make(map[string]interface{})
 	m["rule_type"] = cfg.ruleType
-	m["comment"] = cfg.comment
+	if cfg.comment != "" {
+		m["comment"] = cfg.comment
+	}
 	m["fields"] = cfg.fields
-	m["index"] = cfg.index
+	if cfg.index != nil {
+		m["index"] = cfg.index
+	}
 	m["action"] = getRuleActionName(cfg.action)
 	m["log_enabled"] = cfg.logEnabled
-	m["tag"] = cfg.tag
-	m["log_level"] = cfg.logLevel
+	if cfg.tag != "" {
+		m["tag"] = cfg.tag
+	}
+	if cfg.logLevel != "" {
+		m["log_level"] = cfg.logLevel
+	}
 	m["counter_enabled"] = cfg.counterEnabled
 	m["match_all"] = cfg.matchAll
 	conditions := []map[string]interface{}{}
@@ -75,6 +84,13 @@ func (cfg *ruleConfig) AsMap() map[string]interface{} {
 	}
 	if len(conditions) > 0 {
 		m["conditions"] = conditions
+	}
+	if cfg.checkFields != nil && len(cfg.checkFields) > 0 {
+		checkedFields := make(map[string]bool)
+		for k, v := range cfg.checkFields {
+			checkedFields[k] = v
+		}
+		m["check_fields"] = checkedFields
 	}
 	return m
 }
@@ -1124,6 +1140,1158 @@ type aclRuleDenyWithErrorLoggerCounter struct {
 	counterMatch uint64
 }
 
+type aclRuleFieldCheckAllowMatchAnyStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckAllowMatchAllStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckAllowStop struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckAllowMatchAny struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckAllowMatchAll struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckAllow struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckAllowWithDebugLoggerMatchAnyStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithInfoLoggerMatchAnyStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithWarnLoggerMatchAnyStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithErrorLoggerMatchAnyStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithDebugLoggerMatchAllStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithInfoLoggerMatchAllStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithWarnLoggerMatchAllStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithErrorLoggerMatchAllStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithDebugLoggerStop struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithInfoLoggerStop struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithWarnLoggerStop struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithErrorLoggerStop struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithDebugLoggerMatchAny struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithInfoLoggerMatchAny struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithWarnLoggerMatchAny struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithErrorLoggerMatchAny struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithDebugLoggerMatchAll struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithInfoLoggerMatchAll struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithWarnLoggerMatchAll struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithErrorLoggerMatchAll struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithDebugLogger struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithInfoLogger struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithWarnLogger struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithErrorLogger struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckAllowWithCounterMatchAnyStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithCounterMatchAllStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithCounterStop struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithCounterMatchAny struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithCounterMatchAll struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithCounter struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAnyStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAnyStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAnyStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAnyStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAllStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAllStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAllStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAllStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithDebugLoggerCounterStop struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithInfoLoggerCounterStop struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithWarnLoggerCounterStop struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithErrorLoggerCounterStop struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAny struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAny struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAny struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAny struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAll struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAll struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAll struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAll struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithDebugLoggerCounter struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithInfoLoggerCounter struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithWarnLoggerCounter struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckAllowWithErrorLoggerCounter struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyMatchAnyStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckDenyMatchAllStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckDenyStop struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckDenyMatchAny struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckDenyMatchAll struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckDeny struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+}
+
+type aclRuleFieldCheckDenyWithDebugLoggerMatchAnyStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithInfoLoggerMatchAnyStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithWarnLoggerMatchAnyStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithErrorLoggerMatchAnyStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithDebugLoggerMatchAllStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithInfoLoggerMatchAllStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithWarnLoggerMatchAllStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithErrorLoggerMatchAllStop struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithDebugLoggerStop struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithInfoLoggerStop struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithWarnLoggerStop struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithErrorLoggerStop struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithDebugLoggerMatchAny struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithInfoLoggerMatchAny struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithWarnLoggerMatchAny struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithErrorLoggerMatchAny struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithDebugLoggerMatchAll struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithInfoLoggerMatchAll struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithWarnLoggerMatchAll struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithErrorLoggerMatchAll struct {
+	config      *ruleConfig
+	conditions  []aclRuleCondition
+	fields      []string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithDebugLogger struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithInfoLogger struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithWarnLogger struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithErrorLogger struct {
+	config      *ruleConfig
+	condition   aclRuleCondition
+	field       string
+	checkFields map[string]bool
+	logger      *zap.Logger
+	tag         string
+}
+
+type aclRuleFieldCheckDenyWithCounterMatchAnyStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithCounterMatchAllStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithCounterStop struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithCounterMatchAny struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithCounterMatchAll struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithCounter struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAnyStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAnyStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAnyStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAnyStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAllStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAllStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAllStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAllStop struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithDebugLoggerCounterStop struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithInfoLoggerCounterStop struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithWarnLoggerCounterStop struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithErrorLoggerCounterStop struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAny struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAny struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAny struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAny struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAll struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAll struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAll struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAll struct {
+	config       *ruleConfig
+	conditions   []aclRuleCondition
+	fields       []string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithDebugLoggerCounter struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithInfoLoggerCounter struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithWarnLoggerCounter struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
+type aclRuleFieldCheckDenyWithErrorLoggerCounter struct {
+	config       *ruleConfig
+	condition    aclRuleCondition
+	field        string
+	checkFields  map[string]bool
+	logger       *zap.Logger
+	tag          string
+	counterMiss  uint64
+	counterMatch uint64
+}
+
 func (rule *aclRuleAllowMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
 	return rule.config
 }
@@ -1601,6 +2769,486 @@ func (rule *aclRuleDenyWithWarnLoggerCounter) getConfig(ctx context.Context) *ru
 }
 
 func (rule *aclRuleDenyWithErrorLoggerCounter) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllow) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLogger) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLogger) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLogger) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLogger) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounter) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounter) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounter) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounter) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounter) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDeny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLogger) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLogger) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLogger) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLogger) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounter) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAnyStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAllStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterStop) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAny) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAll) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounter) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounter) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounter) getConfig(ctx context.Context) *ruleConfig {
+	return rule.config
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounter) getConfig(ctx context.Context) *ruleConfig {
 	return rule.config
 }
 
@@ -2084,14 +3732,496 @@ func (rule *aclRuleDenyWithErrorLoggerCounter) emptyFields(ctx context.Context) 
 	rule.field = ""
 }
 
+func (rule *aclRuleFieldCheckAllowMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllow) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLogger) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLogger) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLogger) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLogger) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounter) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounter) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounter) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounter) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounter) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDeny) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLogger) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLogger) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLogger) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLogger) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounter) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAnyStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAllStop) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterStop) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAny) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAll) emptyFields(ctx context.Context) {
+	rule.fields = make([]string, 0)
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounter) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounter) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounter) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounter) emptyFields(ctx context.Context) {
+	rule.field = ""
+}
+
 func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger *zap.Logger) (aclRule, error) {
 	var action, logLevel, tag string
+	var fieldCondFound bool
 	var stopEnabled, logEnabled, counterEnabled, matchAny bool
 	var skipNext, lastToken bool
 	var conditions []aclRuleCondition
 	var condConfigs []*config
 	var fields []string
 	fieldIndex := make(map[string]int)
+	checkFields := make(map[string]bool)
 
 	for i, c := range cfg.Conditions {
 		tokens, err := cfgutil.DecodeArgs(c)
@@ -2110,6 +4240,18 @@ func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger 
 		}
 		fieldIndex[condConfig.field] = i
 		fields = append(fields, condConfig.field)
+
+		// Identify conditions with field exists and not exists match strategies.
+		switch condConfig.matchStrategy {
+		case fieldFound:
+			fieldCondFound = true
+			// Covers "field exists".
+			checkFields[condConfig.field] = true
+		case fieldNotFound:
+			// Covers "field not exists".
+			fieldCondFound = true
+			checkFields[condConfig.field] = false
+		}
 	}
 
 	tokens, err := cfgutil.DecodeArgs(cfg.Action)
@@ -2165,8 +4307,13 @@ func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger 
 		}
 	}
 
-	// Action directives.
 	ruleTypeName := "aclRule"
+
+	if fieldCondFound {
+		ruleTypeName += "FieldCheck"
+	}
+
+	// Action directives.
 	switch action {
 	case "allow":
 		ruleTypeName += "Allow"
@@ -4480,6 +6627,2510 @@ func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger 
 			logger:    logger,
 		}
 		r = rule
+	case "aclRuleFieldCheckAllowMatchAnyStop":
+		rule := &aclRuleFieldCheckAllowMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowMatchAllStop":
+		rule := &aclRuleFieldCheckAllowMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowStop":
+		rule := &aclRuleFieldCheckAllowStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowMatchAny":
+		rule := &aclRuleFieldCheckAllowMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowMatchAll":
+		rule := &aclRuleFieldCheckAllowMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllow":
+		rule := &aclRuleFieldCheckAllow{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllow",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLoggerMatchAnyStop":
+		rule := &aclRuleFieldCheckAllowWithDebugLoggerMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLoggerMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLoggerMatchAnyStop":
+		rule := &aclRuleFieldCheckAllowWithInfoLoggerMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLoggerMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLoggerMatchAnyStop":
+		rule := &aclRuleFieldCheckAllowWithWarnLoggerMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLoggerMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLoggerMatchAnyStop":
+		rule := &aclRuleFieldCheckAllowWithErrorLoggerMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLoggerMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLoggerMatchAllStop":
+		rule := &aclRuleFieldCheckAllowWithDebugLoggerMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLoggerMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLoggerMatchAllStop":
+		rule := &aclRuleFieldCheckAllowWithInfoLoggerMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLoggerMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLoggerMatchAllStop":
+		rule := &aclRuleFieldCheckAllowWithWarnLoggerMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLoggerMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLoggerMatchAllStop":
+		rule := &aclRuleFieldCheckAllowWithErrorLoggerMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLoggerMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLoggerStop":
+		rule := &aclRuleFieldCheckAllowWithDebugLoggerStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLoggerStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLoggerStop":
+		rule := &aclRuleFieldCheckAllowWithInfoLoggerStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLoggerStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLoggerStop":
+		rule := &aclRuleFieldCheckAllowWithWarnLoggerStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLoggerStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLoggerStop":
+		rule := &aclRuleFieldCheckAllowWithErrorLoggerStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLoggerStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLoggerMatchAny":
+		rule := &aclRuleFieldCheckAllowWithDebugLoggerMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLoggerMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLoggerMatchAny":
+		rule := &aclRuleFieldCheckAllowWithInfoLoggerMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLoggerMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLoggerMatchAny":
+		rule := &aclRuleFieldCheckAllowWithWarnLoggerMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLoggerMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLoggerMatchAny":
+		rule := &aclRuleFieldCheckAllowWithErrorLoggerMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLoggerMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLoggerMatchAll":
+		rule := &aclRuleFieldCheckAllowWithDebugLoggerMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLoggerMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLoggerMatchAll":
+		rule := &aclRuleFieldCheckAllowWithInfoLoggerMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLoggerMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLoggerMatchAll":
+		rule := &aclRuleFieldCheckAllowWithWarnLoggerMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLoggerMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLoggerMatchAll":
+		rule := &aclRuleFieldCheckAllowWithErrorLoggerMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLoggerMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLogger":
+		rule := &aclRuleFieldCheckAllowWithDebugLogger{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLogger",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLogger":
+		rule := &aclRuleFieldCheckAllowWithInfoLogger{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLogger",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLogger":
+		rule := &aclRuleFieldCheckAllowWithWarnLogger{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLogger",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLogger":
+		rule := &aclRuleFieldCheckAllowWithErrorLogger{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLogger",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithCounterMatchAnyStop":
+		rule := &aclRuleFieldCheckAllowWithCounterMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithCounterMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithCounterMatchAllStop":
+		rule := &aclRuleFieldCheckAllowWithCounterMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithCounterMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithCounterStop":
+		rule := &aclRuleFieldCheckAllowWithCounterStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithCounterStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithCounterMatchAny":
+		rule := &aclRuleFieldCheckAllowWithCounterMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithCounterMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithCounterMatchAll":
+		rule := &aclRuleFieldCheckAllowWithCounterMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithCounterMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithCounter":
+		rule := &aclRuleFieldCheckAllowWithCounter{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithCounter",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAnyStop":
+		rule := &aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAnyStop":
+		rule := &aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAnyStop":
+		rule := &aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAnyStop":
+		rule := &aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAllStop":
+		rule := &aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAllStop":
+		rule := &aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAllStop":
+		rule := &aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAllStop":
+		rule := &aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLoggerCounterStop":
+		rule := &aclRuleFieldCheckAllowWithDebugLoggerCounterStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLoggerCounterStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLoggerCounterStop":
+		rule := &aclRuleFieldCheckAllowWithInfoLoggerCounterStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLoggerCounterStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLoggerCounterStop":
+		rule := &aclRuleFieldCheckAllowWithWarnLoggerCounterStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLoggerCounterStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLoggerCounterStop":
+		rule := &aclRuleFieldCheckAllowWithErrorLoggerCounterStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLoggerCounterStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAny":
+		rule := &aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAny":
+		rule := &aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAny":
+		rule := &aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAny":
+		rule := &aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAll":
+		rule := &aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAll":
+		rule := &aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAll":
+		rule := &aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAll":
+		rule := &aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithDebugLoggerCounter":
+		rule := &aclRuleFieldCheckAllowWithDebugLoggerCounter{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithDebugLoggerCounter",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithInfoLoggerCounter":
+		rule := &aclRuleFieldCheckAllowWithInfoLoggerCounter{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithInfoLoggerCounter",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithWarnLoggerCounter":
+		rule := &aclRuleFieldCheckAllowWithWarnLoggerCounter{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithWarnLoggerCounter",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckAllowWithErrorLoggerCounter":
+		rule := &aclRuleFieldCheckAllowWithErrorLoggerCounter{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckAllowWithErrorLoggerCounter",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionAllow,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyMatchAnyStop":
+		rule := &aclRuleFieldCheckDenyMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyMatchAllStop":
+		rule := &aclRuleFieldCheckDenyMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyStop":
+		rule := &aclRuleFieldCheckDenyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyMatchAny":
+		rule := &aclRuleFieldCheckDenyMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyMatchAll":
+		rule := &aclRuleFieldCheckDenyMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDeny":
+		rule := &aclRuleFieldCheckDeny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDeny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLoggerMatchAnyStop":
+		rule := &aclRuleFieldCheckDenyWithDebugLoggerMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLoggerMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLoggerMatchAnyStop":
+		rule := &aclRuleFieldCheckDenyWithInfoLoggerMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLoggerMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLoggerMatchAnyStop":
+		rule := &aclRuleFieldCheckDenyWithWarnLoggerMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLoggerMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLoggerMatchAnyStop":
+		rule := &aclRuleFieldCheckDenyWithErrorLoggerMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLoggerMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLoggerMatchAllStop":
+		rule := &aclRuleFieldCheckDenyWithDebugLoggerMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLoggerMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLoggerMatchAllStop":
+		rule := &aclRuleFieldCheckDenyWithInfoLoggerMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLoggerMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLoggerMatchAllStop":
+		rule := &aclRuleFieldCheckDenyWithWarnLoggerMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLoggerMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLoggerMatchAllStop":
+		rule := &aclRuleFieldCheckDenyWithErrorLoggerMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLoggerMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLoggerStop":
+		rule := &aclRuleFieldCheckDenyWithDebugLoggerStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLoggerStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLoggerStop":
+		rule := &aclRuleFieldCheckDenyWithInfoLoggerStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLoggerStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLoggerStop":
+		rule := &aclRuleFieldCheckDenyWithWarnLoggerStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLoggerStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLoggerStop":
+		rule := &aclRuleFieldCheckDenyWithErrorLoggerStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLoggerStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLoggerMatchAny":
+		rule := &aclRuleFieldCheckDenyWithDebugLoggerMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLoggerMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLoggerMatchAny":
+		rule := &aclRuleFieldCheckDenyWithInfoLoggerMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLoggerMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLoggerMatchAny":
+		rule := &aclRuleFieldCheckDenyWithWarnLoggerMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLoggerMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLoggerMatchAny":
+		rule := &aclRuleFieldCheckDenyWithErrorLoggerMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLoggerMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLoggerMatchAll":
+		rule := &aclRuleFieldCheckDenyWithDebugLoggerMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLoggerMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLoggerMatchAll":
+		rule := &aclRuleFieldCheckDenyWithInfoLoggerMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLoggerMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLoggerMatchAll":
+		rule := &aclRuleFieldCheckDenyWithWarnLoggerMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLoggerMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLoggerMatchAll":
+		rule := &aclRuleFieldCheckDenyWithErrorLoggerMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLoggerMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLogger":
+		rule := &aclRuleFieldCheckDenyWithDebugLogger{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLogger",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLogger":
+		rule := &aclRuleFieldCheckDenyWithInfoLogger{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLogger",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLogger":
+		rule := &aclRuleFieldCheckDenyWithWarnLogger{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLogger",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLogger":
+		rule := &aclRuleFieldCheckDenyWithErrorLogger{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLogger",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithCounterMatchAnyStop":
+		rule := &aclRuleFieldCheckDenyWithCounterMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithCounterMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithCounterMatchAllStop":
+		rule := &aclRuleFieldCheckDenyWithCounterMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithCounterMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithCounterStop":
+		rule := &aclRuleFieldCheckDenyWithCounterStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithCounterStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithCounterMatchAny":
+		rule := &aclRuleFieldCheckDenyWithCounterMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithCounterMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithCounterMatchAll":
+		rule := &aclRuleFieldCheckDenyWithCounterMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithCounterMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithCounter":
+		rule := &aclRuleFieldCheckDenyWithCounter{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithCounter",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAnyStop":
+		rule := &aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAnyStop":
+		rule := &aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAnyStop":
+		rule := &aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAnyStop":
+		rule := &aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAnyStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAnyStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAllStop":
+		rule := &aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAllStop":
+		rule := &aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAllStop":
+		rule := &aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAllStop":
+		rule := &aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAllStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAllStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLoggerCounterStop":
+		rule := &aclRuleFieldCheckDenyWithDebugLoggerCounterStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLoggerCounterStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLoggerCounterStop":
+		rule := &aclRuleFieldCheckDenyWithInfoLoggerCounterStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLoggerCounterStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLoggerCounterStop":
+		rule := &aclRuleFieldCheckDenyWithWarnLoggerCounterStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLoggerCounterStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLoggerCounterStop":
+		rule := &aclRuleFieldCheckDenyWithErrorLoggerCounterStop{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLoggerCounterStop",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAny":
+		rule := &aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAny":
+		rule := &aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAny":
+		rule := &aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAny":
+		rule := &aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAny{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAny",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAll":
+		rule := &aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAll":
+		rule := &aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAll":
+		rule := &aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAll":
+		rule := &aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAll{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAll",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			conditions:  conditions,
+			fields:      fields,
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithDebugLoggerCounter":
+		rule := &aclRuleFieldCheckDenyWithDebugLoggerCounter{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithDebugLoggerCounter",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithInfoLoggerCounter":
+		rule := &aclRuleFieldCheckDenyWithInfoLoggerCounter{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithInfoLoggerCounter",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithWarnLoggerCounter":
+		rule := &aclRuleFieldCheckDenyWithWarnLoggerCounter{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithWarnLoggerCounter",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
+	case "aclRuleFieldCheckDenyWithErrorLoggerCounter":
+		rule := &aclRuleFieldCheckDenyWithErrorLoggerCounter{
+			config: &ruleConfig{
+				ruleType:       "aclRuleFieldCheckDenyWithErrorLoggerCounter",
+				logEnabled:     logEnabled,
+				counterEnabled: counterEnabled,
+				comment:        cfg.Comment,
+				action:         ruleActionDeny,
+				tag:            tag,
+				logLevel:       logLevel,
+				checkFields:    checkFields,
+				matchAll:       true,
+				conditions:     condConfigs,
+				fields:         fields,
+			},
+			condition:   conditions[0],
+			field:       fields[0],
+			checkFields: checkFields,
+			tag:         tag,
+			logger:      logger,
+		}
+		r = rule
 	default:
 		return nil, errors.ErrACLRuleSyntaxTypeUnsupported.WithArgs(ruleTypeName)
 	}
@@ -4584,7 +9235,7 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAnyStop) eval(ctx context.Context, d
 		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4600,7 +9251,7 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAnyStop) eval(ctx context.Context, da
 		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4616,7 +9267,7 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAnyStop) eval(ctx context.Context, da
 		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4632,7 +9283,7 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAnyStop) eval(ctx context.Context, d
 		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4644,7 +9295,7 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAllStop) eval(ctx context.Context, d
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -4653,7 +9304,7 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAllStop) eval(ctx context.Context, d
 		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4665,7 +9316,7 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAllStop) eval(ctx context.Context, da
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -4674,7 +9325,7 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAllStop) eval(ctx context.Context, da
 		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4686,7 +9337,7 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAllStop) eval(ctx context.Context, da
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -4695,7 +9346,7 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAllStop) eval(ctx context.Context, da
 		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4707,7 +9358,7 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAllStop) eval(ctx context.Context, d
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -4716,7 +9367,7 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAllStop) eval(ctx context.Context, d
 		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4726,6 +9377,7 @@ func (rule *aclRuleAllowWithDebugLoggerStop) eval(ctx context.Context, data map[
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -4738,6 +9390,7 @@ func (rule *aclRuleAllowWithInfoLoggerStop) eval(ctx context.Context, data map[s
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -4750,6 +9403,7 @@ func (rule *aclRuleAllowWithWarnLoggerStop) eval(ctx context.Context, data map[s
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -4762,6 +9416,7 @@ func (rule *aclRuleAllowWithErrorLoggerStop) eval(ctx context.Context, data map[
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -4780,7 +9435,7 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAny) eval(ctx context.Context, data 
 		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4796,7 +9451,7 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAny) eval(ctx context.Context, data m
 		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4812,7 +9467,7 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAny) eval(ctx context.Context, data m
 		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4828,7 +9483,7 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAny) eval(ctx context.Context, data 
 		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4840,7 +9495,7 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAll) eval(ctx context.Context, data 
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -4849,7 +9504,7 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAll) eval(ctx context.Context, data 
 		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4861,7 +9516,7 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAll) eval(ctx context.Context, data m
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -4870,7 +9525,7 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAll) eval(ctx context.Context, data m
 		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4882,7 +9537,7 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAll) eval(ctx context.Context, data m
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -4891,7 +9546,7 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAll) eval(ctx context.Context, data m
 		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4903,7 +9558,7 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAll) eval(ctx context.Context, data 
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -4912,7 +9567,7 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAll) eval(ctx context.Context, data 
 		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -4922,6 +9577,7 @@ func (rule *aclRuleAllowWithDebugLogger) eval(ctx context.Context, data map[stri
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -4934,6 +9590,7 @@ func (rule *aclRuleAllowWithInfoLogger) eval(ctx context.Context, data map[strin
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -4946,6 +9603,7 @@ func (rule *aclRuleAllowWithWarnLogger) eval(ctx context.Context, data map[strin
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -4958,6 +9616,7 @@ func (rule *aclRuleAllowWithErrorLogger) eval(ctx context.Context, data map[stri
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -5074,11 +9733,11 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAnyStop) eval(ctx context.Con
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5092,11 +9751,11 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAnyStop) eval(ctx context.Cont
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5110,11 +9769,11 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAnyStop) eval(ctx context.Cont
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5128,11 +9787,11 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAnyStop) eval(ctx context.Con
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5145,18 +9804,18 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAllStop) eval(ctx context.Con
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5169,18 +9828,18 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAllStop) eval(ctx context.Cont
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5193,18 +9852,18 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAllStop) eval(ctx context.Cont
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5217,18 +9876,18 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAllStop) eval(ctx context.Con
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllowStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5239,10 +9898,11 @@ func (rule *aclRuleAllowWithDebugLoggerCounterStop) eval(ctx context.Context, da
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -5253,10 +9913,11 @@ func (rule *aclRuleAllowWithInfoLoggerCounterStop) eval(ctx context.Context, dat
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -5267,10 +9928,11 @@ func (rule *aclRuleAllowWithWarnLoggerCounterStop) eval(ctx context.Context, dat
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -5281,10 +9943,11 @@ func (rule *aclRuleAllowWithErrorLoggerCounterStop) eval(ctx context.Context, da
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllowStop
 }
 
@@ -5298,11 +9961,11 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAny) eval(ctx context.Context
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5316,11 +9979,11 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAny) eval(ctx context.Context,
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5334,11 +9997,11 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAny) eval(ctx context.Context,
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5352,11 +10015,11 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAny) eval(ctx context.Context
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5369,18 +10032,18 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAll) eval(ctx context.Context
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5393,18 +10056,18 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAll) eval(ctx context.Context,
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5417,18 +10080,18 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAll) eval(ctx context.Context,
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5441,18 +10104,18 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAll) eval(ctx context.Context
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictAllow
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5463,10 +10126,11 @@ func (rule *aclRuleAllowWithDebugLoggerCounter) eval(ctx context.Context, data m
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -5477,10 +10141,11 @@ func (rule *aclRuleAllowWithInfoLoggerCounter) eval(ctx context.Context, data ma
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -5491,10 +10156,11 @@ func (rule *aclRuleAllowWithWarnLoggerCounter) eval(ctx context.Context, data ma
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -5505,10 +10171,11 @@ func (rule *aclRuleAllowWithErrorLoggerCounter) eval(ctx context.Context, data m
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictAllow
 }
 
@@ -5610,7 +10277,7 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAnyStop) eval(ctx context.Context, da
 		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5626,7 +10293,7 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAnyStop) eval(ctx context.Context, dat
 		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5642,7 +10309,7 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAnyStop) eval(ctx context.Context, dat
 		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5658,7 +10325,7 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAnyStop) eval(ctx context.Context, da
 		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5670,7 +10337,7 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAllStop) eval(ctx context.Context, da
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -5679,7 +10346,7 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAllStop) eval(ctx context.Context, da
 		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5691,7 +10358,7 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAllStop) eval(ctx context.Context, dat
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -5700,7 +10367,7 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAllStop) eval(ctx context.Context, dat
 		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5712,7 +10379,7 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAllStop) eval(ctx context.Context, dat
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -5721,7 +10388,7 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAllStop) eval(ctx context.Context, dat
 		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5733,7 +10400,7 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAllStop) eval(ctx context.Context, da
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -5742,7 +10409,7 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAllStop) eval(ctx context.Context, da
 		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5752,6 +10419,7 @@ func (rule *aclRuleDenyWithDebugLoggerStop) eval(ctx context.Context, data map[s
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -5764,6 +10432,7 @@ func (rule *aclRuleDenyWithInfoLoggerStop) eval(ctx context.Context, data map[st
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -5776,6 +10445,7 @@ func (rule *aclRuleDenyWithWarnLoggerStop) eval(ctx context.Context, data map[st
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -5788,6 +10458,7 @@ func (rule *aclRuleDenyWithErrorLoggerStop) eval(ctx context.Context, data map[s
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -5806,7 +10477,7 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAny) eval(ctx context.Context, data m
 		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5822,7 +10493,7 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAny) eval(ctx context.Context, data ma
 		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5838,7 +10509,7 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAny) eval(ctx context.Context, data ma
 		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5854,7 +10525,7 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAny) eval(ctx context.Context, data m
 		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5866,7 +10537,7 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAll) eval(ctx context.Context, data m
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -5875,7 +10546,7 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAll) eval(ctx context.Context, data m
 		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5887,7 +10558,7 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAll) eval(ctx context.Context, data ma
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -5896,7 +10567,7 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAll) eval(ctx context.Context, data ma
 		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5908,7 +10579,7 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAll) eval(ctx context.Context, data ma
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -5917,7 +10588,7 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAll) eval(ctx context.Context, data ma
 		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5929,7 +10600,7 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAll) eval(ctx context.Context, data m
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
@@ -5938,7 +10609,7 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAll) eval(ctx context.Context, data m
 		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -5948,6 +10619,7 @@ func (rule *aclRuleDenyWithDebugLogger) eval(ctx context.Context, data map[strin
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -5960,6 +10632,7 @@ func (rule *aclRuleDenyWithInfoLogger) eval(ctx context.Context, data map[string
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -5972,6 +10645,7 @@ func (rule *aclRuleDenyWithWarnLogger) eval(ctx context.Context, data map[string
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -5984,6 +10658,7 @@ func (rule *aclRuleDenyWithErrorLogger) eval(ctx context.Context, data map[strin
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
+		rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
@@ -6100,11 +10775,11 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAnyStop) eval(ctx context.Cont
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6118,11 +10793,11 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAnyStop) eval(ctx context.Conte
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6136,11 +10811,11 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAnyStop) eval(ctx context.Conte
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6154,11 +10829,11 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAnyStop) eval(ctx context.Cont
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6171,18 +10846,18 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAllStop) eval(ctx context.Cont
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6195,18 +10870,18 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAllStop) eval(ctx context.Conte
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6219,18 +10894,18 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAllStop) eval(ctx context.Conte
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6243,18 +10918,18 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAllStop) eval(ctx context.Cont
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDenyStop
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6265,10 +10940,11 @@ func (rule *aclRuleDenyWithDebugLoggerCounterStop) eval(ctx context.Context, dat
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -6279,10 +10955,11 @@ func (rule *aclRuleDenyWithInfoLoggerCounterStop) eval(ctx context.Context, data
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -6293,10 +10970,11 @@ func (rule *aclRuleDenyWithWarnLoggerCounterStop) eval(ctx context.Context, data
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -6307,10 +10985,11 @@ func (rule *aclRuleDenyWithErrorLoggerCounterStop) eval(ctx context.Context, dat
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDenyStop
 }
 
@@ -6324,11 +11003,11 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAny) eval(ctx context.Context,
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6342,11 +11021,11 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAny) eval(ctx context.Context, 
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6360,11 +11039,11 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAny) eval(ctx context.Context, 
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6378,11 +11057,11 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAny) eval(ctx context.Context,
 			continue
 		}
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6395,18 +11074,18 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAll) eval(ctx context.Context,
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6419,18 +11098,18 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAll) eval(ctx context.Context, 
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6443,18 +11122,18 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAll) eval(ctx context.Context, 
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6467,18 +11146,18 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAll) eval(ctx context.Context,
 		}
 		if !rule.conditions[i].match(ctx, v) {
 			atomic.AddUint64(&rule.counterMiss, 1)
-			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 			return ruleVerdictContinue
 		}
 		matched = true
 	}
 	if matched {
 		atomic.AddUint64(&rule.counterMatch, 1)
-		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictDeny
 	}
 	atomic.AddUint64(&rule.counterMiss, 1)
-	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictContinue
 }
 
@@ -6489,10 +11168,11 @@ func (rule *aclRuleDenyWithDebugLoggerCounter) eval(ctx context.Context, data ma
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 
@@ -6503,10 +11183,11 @@ func (rule *aclRuleDenyWithInfoLoggerCounter) eval(ctx context.Context, data map
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 
@@ -6517,10 +11198,11 @@ func (rule *aclRuleDenyWithWarnLoggerCounter) eval(ctx context.Context, data map
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
-	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 
@@ -6531,10 +11213,2759 @@ func (rule *aclRuleDenyWithErrorLoggerCounter) eval(ctx context.Context, data ma
 	}
 	if !rule.condition.match(ctx, v) {
 		atomic.AddUint64(&rule.counterMiss, 1)
+		rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 		return ruleVerdictContinue
 	}
 	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDeny
+}
+
+func (rule *aclRuleFieldCheckAllowMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		return ruleVerdictAllowStop
+	}
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		return ruleVerdictAllowStop
+	}
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	return ruleVerdictAllowStop
+}
+
+func (rule *aclRuleFieldCheckAllowMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		return ruleVerdictAllow
+	}
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		return ruleVerdictAllow
+	}
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllow) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	return ruleVerdictAllow
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllowStop
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllowStop
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllowStop
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllowStop
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllow
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllow
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllow
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllow
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		return ruleVerdictAllowStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		return ruleVerdictAllowStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	return ruleVerdictAllowStop
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		return ruleVerdictAllow
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounterMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		return ruleVerdictAllow
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	return ruleVerdictAllow
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllowStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllowStop
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllowStop
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllowStop
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllowStop
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictAllow
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Debug("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllow
+}
+
+func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Info("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllow
+}
+
+func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Warn("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllow
+}
+
+func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Error("acl rule hit", zap.String("action", "allow"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictAllow
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		return ruleVerdictDenyStop
+	}
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		return ruleVerdictDenyStop
+	}
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	return ruleVerdictDenyStop
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		return ruleVerdictDeny
+	}
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		return ruleVerdictDeny
+	}
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDeny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			return ruleVerdictContinue
+		}
+	}
+	return ruleVerdictDeny
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDenyStop
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDenyStop
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDenyStop
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
 	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDenyStop
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDeny
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDeny
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDeny
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDeny
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		return ruleVerdictDenyStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		return ruleVerdictDenyStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	return ruleVerdictDenyStop
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		return ruleVerdictDeny
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounterMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		return ruleVerdictDeny
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	return ruleVerdictDeny
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAllStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDenyStop
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDenyStop
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDenyStop
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDenyStop
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDenyStop
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			continue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			continue
+		}
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAll) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule hit", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	var matched bool
+	for i, field := range rule.fields {
+		v, found := data[field]
+		if !found {
+			return ruleVerdictContinue
+		}
+		if !rule.conditions[i].match(ctx, v) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+		matched = true
+	}
+	if matched {
+		atomic.AddUint64(&rule.counterMatch, 1)
+		rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+		return ruleVerdictDeny
+	}
+	atomic.AddUint64(&rule.counterMiss, 1)
+	rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictContinue
+}
+
+func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Debug("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Debug("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDeny
+}
+
+func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Info("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Info("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDeny
+}
+
+func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Warn("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Warn("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+	return ruleVerdictDeny
+}
+
+func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
+
+	for fieldName, shouldExist := range rule.checkFields {
+		_, dataFound := data[fieldName]
+		if (dataFound && !shouldExist) || (!dataFound && shouldExist) {
+			atomic.AddUint64(&rule.counterMiss, 1)
+			rule.logger.Error("acl rule miss", zap.String("action", "continue"), zap.Uint64("counter", rule.counterMiss), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
+			return ruleVerdictContinue
+		}
+	}
+	atomic.AddUint64(&rule.counterMatch, 1)
+	rule.logger.Error("acl rule hit", zap.String("action", "deny"), zap.Uint64("counter", rule.counterMatch), zap.String("tag", rule.tag), zap.Any("user", sanitize(data)))
 	return ruleVerdictDeny
 }
 

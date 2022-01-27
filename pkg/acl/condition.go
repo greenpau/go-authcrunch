@@ -17,7 +17,6 @@ package acl
 import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"log"
 	"regexp"
 	"strings"
 )
@@ -27,10 +26,11 @@ type fieldMatchStrategy int
 
 var (
 	matchWithStrategyRgx *regexp.Regexp
+	matchFieldRgx        *regexp.Regexp
 
 	inputDataTypes = map[string]dataType{
 		"roles":  dataTypeListStr,
-		"mail":   dataTypeStr,
+		"email":  dataTypeStr,
 		"origin": dataTypeStr,
 		"name":   dataTypeStr,
 		"realm":  dataTypeStr,
@@ -52,7 +52,7 @@ var (
 		"issued":       "iat",
 		"issuer":       "iss",
 		"subject":      "sub",
-		"email":        "mail",
+		"mail":         "email",
 		"role":         "roles",
 		"group":        "roles",
 		"groups":       "roles",
@@ -79,7 +79,9 @@ const (
 	fieldMatchPrefix   fieldMatchStrategy = 4
 	fieldMatchSuffix   fieldMatchStrategy = 5
 	fieldMatchRegex    fieldMatchStrategy = 6
-	fieldMatchAlways   fieldMatchStrategy = 7
+	fieldFound         fieldMatchStrategy = 7
+	fieldNotFound      fieldMatchStrategy = 8
+	fieldMatchAlways   fieldMatchStrategy = 9
 )
 
 type field struct {
@@ -106,6 +108,224 @@ type config struct {
 type aclRuleCondition interface {
 	match(context.Context, interface{}) bool
 	getConfig(context.Context) *config
+}
+
+// ruleAnyCondAlwaysMatchAnyInput returns positive match regardless of
+// input fields, values, or conditions.
+type ruleAnyCondAlwaysMatchAnyInput struct {
+	field  *field
+	exprs  []*expr
+	config *config
+}
+
+// ruleCondFieldFound returns positive match regardless of input fields, values,
+// or conditions, because the condition is only relevant to ACL rule itself.
+type ruleCondFieldFound struct {
+	field  *field
+	exprs  []*expr
+	config *config
+}
+
+// ruleCondFieldNotFound returns positive match regardless of input fields, values,
+// or conditions, because the condition is only relevant to ACL rule itself.
+type ruleCondFieldNotFound struct {
+	field  *field
+	exprs  []*expr
+	config *config
+}
+
+func (c *ruleAnyCondAlwaysMatchAnyInput) match(ctx context.Context, v interface{}) bool {
+	return true
+}
+
+func (c *ruleAnyCondAlwaysMatchAnyInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleCondFieldFound) match(ctx context.Context, v interface{}) bool {
+	return true
+}
+
+func (c *ruleCondFieldFound) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleCondFieldNotFound) match(ctx context.Context, v interface{}) bool {
+	return true
+}
+
+func (c *ruleCondFieldNotFound) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+// ruleListStrCondExactNegativeMatchListStrInput not matches a list of strings
+// input against a list of strings where any of the input values not match at least
+// one value of the condition using exact not match.
+type ruleListStrCondExactNegativeMatchListStrInput struct {
+	field  *field
+	exprs  []*expr
+	config *config
+}
+
+// ruleListStrCondPartialNegativeMatchListStrInput not matches a list of strings
+// input against a list of strings where any of the input values not match at least
+// one value of the condition using substring not match.
+type ruleListStrCondPartialNegativeMatchListStrInput struct {
+	field  *field
+	exprs  []*expr
+	config *config
+}
+
+// ruleListStrCondPrefixNegativeMatchListStrInput not matches a list of strings
+// input against a list of strings where any of the input values not match at least
+// one value of the condition using string prefix not match.
+type ruleListStrCondPrefixNegativeMatchListStrInput struct {
+	field  *field
+	exprs  []*expr
+	config *config
+}
+
+// ruleListStrCondSuffixNegativeMatchListStrInput not matches a list of strings
+// input against a list of strings where any of the input values not match at least
+// one value of the condition using string suffix not match.
+type ruleListStrCondSuffixNegativeMatchListStrInput struct {
+	field  *field
+	exprs  []*expr
+	config *config
+}
+
+// ruleListStrCondRegexNegativeMatchListStrInput not matches a list of strings
+// input against a list of strings where any of the input values not match at least
+// one value of the condition using regular expressions not match.
+type ruleListStrCondRegexNegativeMatchListStrInput struct {
+	field  *field
+	exprs  []*regexp.Regexp
+	config *config
+}
+
+// ruleStrCondExactNegativeMatchListStrInput not matches a list of strings input
+// against a string condition using exact not match.
+type ruleStrCondExactNegativeMatchListStrInput struct {
+	field  *field
+	expr   *expr
+	config *config
+}
+
+// ruleStrCondPartialNegativeMatchListStrInput not matches a list of strings input
+// against a string condition using substring not match.
+type ruleStrCondPartialNegativeMatchListStrInput struct {
+	field  *field
+	expr   *expr
+	config *config
+}
+
+// ruleStrCondPrefixNegativeMatchListStrInput not matches a list of strings input
+// against a string condition using string prefix not match.
+type ruleStrCondPrefixNegativeMatchListStrInput struct {
+	field  *field
+	expr   *expr
+	config *config
+}
+
+// ruleStrCondSuffixNegativeMatchListStrInput not matches a list of strings input
+// against a string condition using string suffix not match.
+type ruleStrCondSuffixNegativeMatchListStrInput struct {
+	field  *field
+	expr   *expr
+	config *config
+}
+
+// ruleStrCondRegexNegativeMatchListStrInput not matches a list of strings input
+// against a string condition using regular expressions not match.
+type ruleStrCondRegexNegativeMatchListStrInput struct {
+	field  *field
+	expr   *regexp.Regexp
+	config *config
+}
+
+// ruleListStrCondExactNegativeMatchStrInput not matches an input string against a
+// list of strings where any of the input values not match at least one value of
+// the condition using exact not match.
+type ruleListStrCondExactNegativeMatchStrInput struct {
+	field  *field
+	exprs  []*expr
+	config *config
+}
+
+// ruleListStrCondPartialNegativeMatchStrInput not matches an input string against
+// a list of strings where any of the input values not match at least one value of
+// the condition using substring not match.
+type ruleListStrCondPartialNegativeMatchStrInput struct {
+	field  *field
+	exprs  []*expr
+	config *config
+}
+
+// ruleListStrCondPrefixNegativeMatchStrInput not matches an input string against a
+// list of strings where any of the input values not match at least one value of
+// the condition using string prefix not match.
+type ruleListStrCondPrefixNegativeMatchStrInput struct {
+	field  *field
+	exprs  []*expr
+	config *config
+}
+
+// ruleListStrCondSuffixNegativeMatchStrInput not matches an input string against a
+// list of strings where any of the input values not match at least one value of
+// the condition using string suffix not match.
+type ruleListStrCondSuffixNegativeMatchStrInput struct {
+	field  *field
+	exprs  []*expr
+	config *config
+}
+
+// ruleListStrCondRegexNegativeMatchStrInput not matches an input string against a
+// list of strings where any of the input values not match at least one value of
+// the condition using regular expressions not match.
+type ruleListStrCondRegexNegativeMatchStrInput struct {
+	field  *field
+	exprs  []*regexp.Regexp
+	config *config
+}
+
+// ruleStrCondExactNegativeMatchStrInput not matches an input string against a
+// string condition using exact not match.
+type ruleStrCondExactNegativeMatchStrInput struct {
+	field  *field
+	expr   *expr
+	config *config
+}
+
+// ruleStrCondPartialNegativeMatchStrInput not matches an input string against a
+// string condition using substring not match.
+type ruleStrCondPartialNegativeMatchStrInput struct {
+	field  *field
+	expr   *expr
+	config *config
+}
+
+// ruleStrCondPrefixNegativeMatchStrInput not matches an input string against a
+// string condition using string prefix not match.
+type ruleStrCondPrefixNegativeMatchStrInput struct {
+	field  *field
+	expr   *expr
+	config *config
+}
+
+// ruleStrCondSuffixNegativeMatchStrInput not matches an input string against a
+// string condition using string suffix not match.
+type ruleStrCondSuffixNegativeMatchStrInput struct {
+	field  *field
+	expr   *expr
+	config *config
+}
+
+// ruleStrCondRegexNegativeMatchStrInput not matches an input string against a
+// string condition using regular expressions not match.
+type ruleStrCondRegexNegativeMatchStrInput struct {
+	field  *field
+	expr   *regexp.Regexp
+	config *config
 }
 
 // ruleListStrCondExactMatchListStrInput matches a list of strings input against a
@@ -153,15 +373,6 @@ type ruleListStrCondRegexMatchListStrInput struct {
 	config *config
 }
 
-// ruleListStrCondAlwaysMatchListStrInput matches a list of strings input against a
-// list of strings where any of the input values match at least one value of the
-// condition using always match.
-type ruleListStrCondAlwaysMatchListStrInput struct {
-	field  *field
-	exprs  []*expr
-	config *config
-}
-
 // ruleStrCondExactMatchListStrInput matches a list of strings input against a
 // string condition using exact match.
 type ruleStrCondExactMatchListStrInput struct {
@@ -199,14 +410,6 @@ type ruleStrCondSuffixMatchListStrInput struct {
 type ruleStrCondRegexMatchListStrInput struct {
 	field  *field
 	expr   *regexp.Regexp
-	config *config
-}
-
-// ruleStrCondAlwaysMatchListStrInput matches a list of strings input against a
-// string condition using always match.
-type ruleStrCondAlwaysMatchListStrInput struct {
-	field  *field
-	expr   *expr
 	config *config
 }
 
@@ -255,15 +458,6 @@ type ruleListStrCondRegexMatchStrInput struct {
 	config *config
 }
 
-// ruleListStrCondAlwaysMatchStrInput matches an input string against a list of
-// strings where any of the input values match at least one value of the condition
-// using always match.
-type ruleListStrCondAlwaysMatchStrInput struct {
-	field  *field
-	exprs  []*expr
-	config *config
-}
-
 // ruleStrCondExactMatchStrInput matches an input string against a string condition
 // using exact match.
 type ruleStrCondExactMatchStrInput struct {
@@ -304,12 +498,184 @@ type ruleStrCondRegexMatchStrInput struct {
 	config *config
 }
 
-// ruleStrCondAlwaysMatchStrInput matches an input string against a string
-// condition using always match.
-type ruleStrCondAlwaysMatchStrInput struct {
-	field  *field
-	expr   *expr
-	config *config
+func (c *ruleListStrCondExactNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	for _, exp := range c.exprs {
+		for _, v := range values.([]string) {
+			if v == exp.value {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (c *ruleListStrCondPartialNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	for _, exp := range c.exprs {
+		for _, v := range values.([]string) {
+			if strings.Contains(v, exp.value) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (c *ruleListStrCondPrefixNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	for _, exp := range c.exprs {
+		for _, v := range values.([]string) {
+			if strings.HasPrefix(v, exp.value) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (c *ruleListStrCondSuffixNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	for _, exp := range c.exprs {
+		for _, v := range values.([]string) {
+			if strings.HasSuffix(v, exp.value) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (c *ruleListStrCondRegexNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	for _, exp := range c.exprs {
+		for _, v := range values.([]string) {
+			if exp.MatchString(v) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (c *ruleStrCondExactNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	for _, v := range values.([]string) {
+		if v == c.expr.value {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *ruleStrCondPartialNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	for _, v := range values.([]string) {
+		if strings.Contains(v, c.expr.value) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *ruleStrCondPrefixNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	for _, v := range values.([]string) {
+		if strings.HasPrefix(v, c.expr.value) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *ruleStrCondSuffixNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	for _, v := range values.([]string) {
+		if strings.HasSuffix(v, c.expr.value) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *ruleStrCondRegexNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	for _, v := range values.([]string) {
+		if c.expr.MatchString(v) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *ruleListStrCondExactNegativeMatchStrInput) match(ctx context.Context, v interface{}) bool {
+	for _, exp := range c.exprs {
+		if v.(string) == exp.value {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *ruleListStrCondPartialNegativeMatchStrInput) match(ctx context.Context, v interface{}) bool {
+	for _, exp := range c.exprs {
+		if strings.Contains(v.(string), exp.value) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *ruleListStrCondPrefixNegativeMatchStrInput) match(ctx context.Context, v interface{}) bool {
+	for _, exp := range c.exprs {
+		if strings.HasPrefix(v.(string), exp.value) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *ruleListStrCondSuffixNegativeMatchStrInput) match(ctx context.Context, v interface{}) bool {
+	for _, exp := range c.exprs {
+		if strings.HasSuffix(v.(string), exp.value) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *ruleListStrCondRegexNegativeMatchStrInput) match(ctx context.Context, v interface{}) bool {
+	for _, exp := range c.exprs {
+		if exp.MatchString(v.(string)) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *ruleStrCondExactNegativeMatchStrInput) match(ctx context.Context, v interface{}) bool {
+	if v.(string) == c.expr.value {
+		return false
+	}
+	return true
+}
+
+func (c *ruleStrCondPartialNegativeMatchStrInput) match(ctx context.Context, v interface{}) bool {
+	if strings.Contains(v.(string), c.expr.value) {
+		return false
+	}
+	return true
+}
+
+func (c *ruleStrCondPrefixNegativeMatchStrInput) match(ctx context.Context, v interface{}) bool {
+	if strings.HasPrefix(v.(string), c.expr.value) {
+		return false
+	}
+	return true
+}
+
+func (c *ruleStrCondSuffixNegativeMatchStrInput) match(ctx context.Context, v interface{}) bool {
+	if strings.HasSuffix(v.(string), c.expr.value) {
+		return false
+	}
+	return true
+}
+
+func (c *ruleStrCondRegexNegativeMatchStrInput) match(ctx context.Context, v interface{}) bool {
+	if c.expr.MatchString(v.(string)) {
+		return false
+	}
+	return true
 }
 
 func (c *ruleListStrCondExactMatchListStrInput) match(ctx context.Context, values interface{}) bool {
@@ -367,10 +733,6 @@ func (c *ruleListStrCondRegexMatchListStrInput) match(ctx context.Context, value
 	return false
 }
 
-func (c *ruleListStrCondAlwaysMatchListStrInput) match(ctx context.Context, v interface{}) bool {
-	return true
-}
-
 func (c *ruleStrCondExactMatchListStrInput) match(ctx context.Context, values interface{}) bool {
 	for _, v := range values.([]string) {
 		if v == c.expr.value {
@@ -414,10 +776,6 @@ func (c *ruleStrCondRegexMatchListStrInput) match(ctx context.Context, values in
 		}
 	}
 	return false
-}
-
-func (c *ruleStrCondAlwaysMatchListStrInput) match(ctx context.Context, v interface{}) bool {
-	return true
 }
 
 func (c *ruleListStrCondExactMatchStrInput) match(ctx context.Context, v interface{}) bool {
@@ -465,10 +823,6 @@ func (c *ruleListStrCondRegexMatchStrInput) match(ctx context.Context, v interfa
 	return false
 }
 
-func (c *ruleListStrCondAlwaysMatchStrInput) match(ctx context.Context, v interface{}) bool {
-	return true
-}
-
 func (c *ruleStrCondExactMatchStrInput) match(ctx context.Context, v interface{}) bool {
 	if v.(string) == c.expr.value {
 		return true
@@ -504,8 +858,84 @@ func (c *ruleStrCondRegexMatchStrInput) match(ctx context.Context, v interface{}
 	return false
 }
 
-func (c *ruleStrCondAlwaysMatchStrInput) match(ctx context.Context, v interface{}) bool {
-	return true
+func (c *ruleListStrCondExactNegativeMatchListStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleListStrCondPartialNegativeMatchListStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleListStrCondPrefixNegativeMatchListStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleListStrCondSuffixNegativeMatchListStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleListStrCondRegexNegativeMatchListStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleStrCondExactNegativeMatchListStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleStrCondPartialNegativeMatchListStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleStrCondPrefixNegativeMatchListStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleStrCondSuffixNegativeMatchListStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleStrCondRegexNegativeMatchListStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleListStrCondExactNegativeMatchStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleListStrCondPartialNegativeMatchStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleListStrCondPrefixNegativeMatchStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleListStrCondSuffixNegativeMatchStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleListStrCondRegexNegativeMatchStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleStrCondExactNegativeMatchStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleStrCondPartialNegativeMatchStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleStrCondPrefixNegativeMatchStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleStrCondSuffixNegativeMatchStrInput) getConfig(ctx context.Context) *config {
+	return c.config
+}
+
+func (c *ruleStrCondRegexNegativeMatchStrInput) getConfig(ctx context.Context) *config {
+	return c.config
 }
 
 func (c *ruleListStrCondExactMatchListStrInput) getConfig(ctx context.Context) *config {
@@ -525,10 +955,6 @@ func (c *ruleListStrCondSuffixMatchListStrInput) getConfig(ctx context.Context) 
 }
 
 func (c *ruleListStrCondRegexMatchListStrInput) getConfig(ctx context.Context) *config {
-	return c.config
-}
-
-func (c *ruleListStrCondAlwaysMatchListStrInput) getConfig(ctx context.Context) *config {
 	return c.config
 }
 
@@ -552,10 +978,6 @@ func (c *ruleStrCondRegexMatchListStrInput) getConfig(ctx context.Context) *conf
 	return c.config
 }
 
-func (c *ruleStrCondAlwaysMatchListStrInput) getConfig(ctx context.Context) *config {
-	return c.config
-}
-
 func (c *ruleListStrCondExactMatchStrInput) getConfig(ctx context.Context) *config {
 	return c.config
 }
@@ -573,10 +995,6 @@ func (c *ruleListStrCondSuffixMatchStrInput) getConfig(ctx context.Context) *con
 }
 
 func (c *ruleListStrCondRegexMatchStrInput) getConfig(ctx context.Context) *config {
-	return c.config
-}
-
-func (c *ruleListStrCondAlwaysMatchStrInput) getConfig(ctx context.Context) *config {
 	return c.config
 }
 
@@ -600,19 +1018,18 @@ func (c *ruleStrCondRegexMatchStrInput) getConfig(ctx context.Context) *config {
 	return c.config
 }
 
-func (c *ruleStrCondAlwaysMatchStrInput) getConfig(ctx context.Context) *config {
-	return c.config
-}
-
 func init() {
-	matchWithStrategyRgx = regexp.MustCompile(`^\s*((?P<negative_match>no)\s)?((?P<match_strategy>exact|partial|prefix|suffix|regex|always)\s)?match`)
+	matchWithStrategyRgx = regexp.MustCompile(`^\s*((?P<negative_match>no)\s)?((?P<match_strategy>exact|partial|prefix|suffix|regex)\s)?match`)
+	matchFieldRgx = regexp.MustCompile(`^\s*field\s+(?P<field_name>\S+)\s+(?P<field_exists>exists|not\s+exists)\s*$`)
 }
 
 func (cfg *config) AsMap() map[string]interface{} {
 	m := make(map[string]interface{})
 	m["field"] = cfg.field
 	m["match_strategy"] = getMatchStrategyName(cfg.matchStrategy)
-	m["values"] = cfg.values
+	if len(cfg.values) > 0 {
+		m["values"] = cfg.values
+	}
 	m["regex_enabled"] = cfg.regexEnabled
 	m["always_true"] = cfg.alwaysTrue
 	m["expr_data_type"] = getDataTypeName(cfg.exprDataType)
@@ -633,8 +1050,10 @@ func extractMatchStrategy(s string) fieldMatchStrategy {
 		return fieldMatchSuffix
 	case "regex":
 		return fieldMatchRegex
-	case "always":
-		return fieldMatchAlways
+	case "exists":
+		return fieldFound
+	case "not exists":
+		return fieldNotFound
 	}
 	return fieldMatchUnknown
 }
@@ -675,7 +1094,7 @@ func validateFieldNameValues(line, k string, v []string) error {
 	}
 	for _, s := range v {
 		switch s {
-		case "exact", "partial", "prefix", "suffix", "regex", "always":
+		case "exact", "partial", "prefix", "suffix", "regex":
 			return errors.ErrACLRuleConditionSyntaxReservedWordUsage.WithArgs(s, line)
 		}
 	}
@@ -689,6 +1108,8 @@ func extractCondDataType(line string, inputDataType dataType, values []string) (
 			return dataTypeStr, nil
 		}
 		return dataTypeListStr, nil
+	case dataTypeAny:
+		return dataTypeAny, nil
 	}
 	return dataTypeUnknown, errors.ErrACLRuleConditionSyntaxCondDataType.WithArgs(line)
 }
@@ -701,7 +1122,7 @@ func extractInputDataType(fieldName string) dataType {
 }
 
 func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition, error) {
-	// log.Printf("TOKENS: %v", tokens)
+	var inputDataType, condDataType dataType
 	var matchStrategy fieldMatchStrategy
 	var negativeMatch bool
 	var fieldName string
@@ -712,8 +1133,26 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 	switch {
 	case line == "match any":
 		matchStrategy = fieldMatchAlways
-		fieldName = "iss"
-		values = []string{"any"}
+		fieldName = "exp"
+		inputDataType = dataTypeAny
+		condDataType = dataTypeAny
+	case matchFieldRgx.Match([]byte(line)):
+		matched := matchFieldRgx.FindStringSubmatch(line)
+		for i, k := range matchFieldRgx.SubexpNames() {
+			if i > 0 && i <= len(matched) {
+				switch k {
+				case "field_exists":
+					matchStrategy = extractMatchStrategy(matched[i])
+				case "field_name":
+					fieldName = matched[i]
+					if alias, exists := inputDataAliases[fieldName]; exists {
+						fieldName = alias
+					}
+				}
+			}
+		}
+		inputDataType = dataTypeAny
+		condDataType = dataTypeAny
 	case matchWithStrategyRgx.Match([]byte(line)):
 		matched := matchWithStrategyRgx.FindStringSubmatch(line)
 		for i, k := range matchWithStrategyRgx.SubexpNames() {
@@ -740,21 +1179,559 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 		return nil, errors.ErrACLRuleConditionSyntaxStrategyNotFound.WithArgs(line)
 	}
 
-	if err := validateFieldNameValues(line, fieldName, values); err != nil {
-		return nil, err
-	}
-
-	inputDataType := extractInputDataType(fieldName)
-	condDataType, err := extractCondDataType(line, inputDataType, values)
-	if err != nil {
-		return nil, err
-	}
-
-	if negativeMatch {
-		log.Printf("found negative match")
+	switch matchStrategy {
+	case fieldMatchAlways, fieldFound, fieldNotFound:
+	default:
+		if err := validateFieldNameValues(line, fieldName, values); err != nil {
+			return nil, err
+		}
+		inputDataType = extractInputDataType(fieldName)
+		var err error
+		condDataType, err = extractCondDataType(line, inputDataType, values)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	switch {
+	case matchStrategy == fieldFound:
+		// Match: Field Found, Condition Type: Any, Input Type: Any
+		c := &ruleCondFieldFound{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldFound,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  inputDataType,
+				inputDataType: condDataType,
+				conditionType: `ruleCondFieldFound`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+			exprs: []*expr{},
+		}
+		return c, nil
+	case matchStrategy == fieldNotFound:
+		// Match: Field Found, Condition Type: Any, Input Type: Any
+		c := &ruleCondFieldNotFound{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldNotFound,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  inputDataType,
+				inputDataType: condDataType,
+				conditionType: `ruleCondFieldNotFound`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+			exprs: []*expr{},
+		}
+		return c, nil
+	case matchStrategy == fieldMatchAlways:
+		// Match: Always, Condition Type: Any, Input Type: Any
+		c := &ruleAnyCondAlwaysMatchAnyInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchAlways,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    true,
+				exprDataType:  inputDataType,
+				inputDataType: condDataType,
+				conditionType: `ruleAnyCondAlwaysMatchAnyInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+			exprs: []*expr{},
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchExact && condDataType == dataTypeListStr && inputDataType == dataTypeListStr:
+		// No match: Exact, Condition Type: ListStr, Input Type: ListStr
+		c := &ruleListStrCondExactNegativeMatchListStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchExact,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleListStrCondExactNegativeMatchListStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.exprs = []*expr{}
+		for _, val := range values {
+			c.exprs = append(c.exprs, &expr{
+				value: val,
+			})
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchPartial && condDataType == dataTypeListStr && inputDataType == dataTypeListStr:
+		// No match: Partial, Condition Type: ListStr, Input Type: ListStr
+		c := &ruleListStrCondPartialNegativeMatchListStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchPartial,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleListStrCondPartialNegativeMatchListStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.exprs = []*expr{}
+		for _, val := range values {
+			c.exprs = append(c.exprs, &expr{
+				value: val,
+			})
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchPrefix && condDataType == dataTypeListStr && inputDataType == dataTypeListStr:
+		// No match: Prefix, Condition Type: ListStr, Input Type: ListStr
+		c := &ruleListStrCondPrefixNegativeMatchListStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchPrefix,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleListStrCondPrefixNegativeMatchListStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.exprs = []*expr{}
+		for _, val := range values {
+			c.exprs = append(c.exprs, &expr{
+				value: val,
+			})
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchSuffix && condDataType == dataTypeListStr && inputDataType == dataTypeListStr:
+		// No match: Suffix, Condition Type: ListStr, Input Type: ListStr
+		c := &ruleListStrCondSuffixNegativeMatchListStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchSuffix,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleListStrCondSuffixNegativeMatchListStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.exprs = []*expr{}
+		for _, val := range values {
+			c.exprs = append(c.exprs, &expr{
+				value: val,
+			})
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchRegex && condDataType == dataTypeListStr && inputDataType == dataTypeListStr:
+		// No match: Regex, Condition Type: ListStr, Input Type: ListStr
+		c := &ruleListStrCondRegexNegativeMatchListStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchRegex,
+				values:        values,
+				regexEnabled:  true,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleListStrCondRegexNegativeMatchListStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.exprs = []*regexp.Regexp{}
+		for _, val := range values {
+			re, err := regexp.Compile(val)
+			if err != nil {
+				return nil, err
+			}
+			c.exprs = append(c.exprs, re)
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchExact && condDataType == dataTypeStr && inputDataType == dataTypeListStr:
+		// No match: Exact, Condition Type: Str, Input Type: ListStr
+		c := &ruleStrCondExactNegativeMatchListStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchExact,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleStrCondExactNegativeMatchListStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.expr = &expr{
+			value: values[0],
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchPartial && condDataType == dataTypeStr && inputDataType == dataTypeListStr:
+		// No match: Partial, Condition Type: Str, Input Type: ListStr
+		c := &ruleStrCondPartialNegativeMatchListStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchPartial,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleStrCondPartialNegativeMatchListStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.expr = &expr{
+			value: values[0],
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchPrefix && condDataType == dataTypeStr && inputDataType == dataTypeListStr:
+		// No match: Prefix, Condition Type: Str, Input Type: ListStr
+		c := &ruleStrCondPrefixNegativeMatchListStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchPrefix,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleStrCondPrefixNegativeMatchListStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.expr = &expr{
+			value: values[0],
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchSuffix && condDataType == dataTypeStr && inputDataType == dataTypeListStr:
+		// No match: Suffix, Condition Type: Str, Input Type: ListStr
+		c := &ruleStrCondSuffixNegativeMatchListStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchSuffix,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleStrCondSuffixNegativeMatchListStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.expr = &expr{
+			value: values[0],
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchRegex && condDataType == dataTypeStr && inputDataType == dataTypeListStr:
+		// No match: Regex, Condition Type: Str, Input Type: ListStr
+		c := &ruleStrCondRegexNegativeMatchListStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchRegex,
+				values:        values,
+				regexEnabled:  true,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleStrCondRegexNegativeMatchListStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		re, err := regexp.Compile(values[0])
+		if err != nil {
+			return nil, err
+		}
+		c.expr = re
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchExact && condDataType == dataTypeListStr && inputDataType == dataTypeStr:
+		// No match: Exact, Condition Type: ListStr, Input Type: Str
+		c := &ruleListStrCondExactNegativeMatchStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchExact,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleListStrCondExactNegativeMatchStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.exprs = []*expr{}
+		for _, val := range values {
+			c.exprs = append(c.exprs, &expr{
+				value: val,
+			})
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchPartial && condDataType == dataTypeListStr && inputDataType == dataTypeStr:
+		// No match: Partial, Condition Type: ListStr, Input Type: Str
+		c := &ruleListStrCondPartialNegativeMatchStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchPartial,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleListStrCondPartialNegativeMatchStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.exprs = []*expr{}
+		for _, val := range values {
+			c.exprs = append(c.exprs, &expr{
+				value: val,
+			})
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchPrefix && condDataType == dataTypeListStr && inputDataType == dataTypeStr:
+		// No match: Prefix, Condition Type: ListStr, Input Type: Str
+		c := &ruleListStrCondPrefixNegativeMatchStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchPrefix,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleListStrCondPrefixNegativeMatchStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.exprs = []*expr{}
+		for _, val := range values {
+			c.exprs = append(c.exprs, &expr{
+				value: val,
+			})
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchSuffix && condDataType == dataTypeListStr && inputDataType == dataTypeStr:
+		// No match: Suffix, Condition Type: ListStr, Input Type: Str
+		c := &ruleListStrCondSuffixNegativeMatchStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchSuffix,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleListStrCondSuffixNegativeMatchStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.exprs = []*expr{}
+		for _, val := range values {
+			c.exprs = append(c.exprs, &expr{
+				value: val,
+			})
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchRegex && condDataType == dataTypeListStr && inputDataType == dataTypeStr:
+		// No match: Regex, Condition Type: ListStr, Input Type: Str
+		c := &ruleListStrCondRegexNegativeMatchStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchRegex,
+				values:        values,
+				regexEnabled:  true,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleListStrCondRegexNegativeMatchStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.exprs = []*regexp.Regexp{}
+		for _, val := range values {
+			re, err := regexp.Compile(val)
+			if err != nil {
+				return nil, err
+			}
+			c.exprs = append(c.exprs, re)
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchExact && condDataType == dataTypeStr && inputDataType == dataTypeStr:
+		// No match: Exact, Condition Type: Str, Input Type: Str
+		c := &ruleStrCondExactNegativeMatchStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchExact,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleStrCondExactNegativeMatchStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.expr = &expr{
+			value: values[0],
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchPartial && condDataType == dataTypeStr && inputDataType == dataTypeStr:
+		// No match: Partial, Condition Type: Str, Input Type: Str
+		c := &ruleStrCondPartialNegativeMatchStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchPartial,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleStrCondPartialNegativeMatchStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.expr = &expr{
+			value: values[0],
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchPrefix && condDataType == dataTypeStr && inputDataType == dataTypeStr:
+		// No match: Prefix, Condition Type: Str, Input Type: Str
+		c := &ruleStrCondPrefixNegativeMatchStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchPrefix,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleStrCondPrefixNegativeMatchStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.expr = &expr{
+			value: values[0],
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchSuffix && condDataType == dataTypeStr && inputDataType == dataTypeStr:
+		// No match: Suffix, Condition Type: Str, Input Type: Str
+		c := &ruleStrCondSuffixNegativeMatchStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchSuffix,
+				values:        values,
+				regexEnabled:  false,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleStrCondSuffixNegativeMatchStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		c.expr = &expr{
+			value: values[0],
+		}
+		return c, nil
+	case negativeMatch && matchStrategy == fieldMatchRegex && condDataType == dataTypeStr && inputDataType == dataTypeStr:
+		// No match: Regex, Condition Type: Str, Input Type: Str
+		c := &ruleStrCondRegexNegativeMatchStrInput{
+			config: &config{
+				field:         fieldName,
+				matchStrategy: fieldMatchRegex,
+				values:        values,
+				regexEnabled:  true,
+				alwaysTrue:    false,
+				exprDataType:  condDataType,
+				inputDataType: inputDataType,
+				conditionType: `ruleStrCondRegexNegativeMatchStrInput`,
+			},
+			field: &field{
+				name:   fieldName,
+				length: len(fieldName),
+			},
+		}
+		re, err := regexp.Compile(values[0])
+		if err != nil {
+			return nil, err
+		}
+		c.expr = re
+		return c, nil
 	case matchStrategy == fieldMatchExact && condDataType == dataTypeListStr && inputDataType == dataTypeListStr:
 		// Match: Exact, Condition Type: ListStr, Input Type: ListStr
 		c := &ruleListStrCondExactMatchListStrInput{
@@ -882,31 +1859,6 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 			c.exprs = append(c.exprs, re)
 		}
 		return c, nil
-	case matchStrategy == fieldMatchAlways && condDataType == dataTypeListStr && inputDataType == dataTypeListStr:
-		// Match: Always, Condition Type: ListStr, Input Type: ListStr
-		c := &ruleListStrCondAlwaysMatchListStrInput{
-			config: &config{
-				field:         fieldName,
-				matchStrategy: fieldMatchAlways,
-				values:        values,
-				regexEnabled:  false,
-				alwaysTrue:    true,
-				exprDataType:  condDataType,
-				inputDataType: inputDataType,
-				conditionType: `ruleListStrCondAlwaysMatchListStrInput`,
-			},
-			field: &field{
-				name:   fieldName,
-				length: len(fieldName),
-			},
-		}
-		c.exprs = []*expr{}
-		for _, val := range values {
-			c.exprs = append(c.exprs, &expr{
-				value: val,
-			})
-		}
-		return c, nil
 	case matchStrategy == fieldMatchExact && condDataType == dataTypeStr && inputDataType == dataTypeListStr:
 		// Match: Exact, Condition Type: Str, Input Type: ListStr
 		c := &ruleStrCondExactMatchListStrInput{
@@ -1018,28 +1970,6 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 			return nil, err
 		}
 		c.expr = re
-		return c, nil
-	case matchStrategy == fieldMatchAlways && condDataType == dataTypeStr && inputDataType == dataTypeListStr:
-		// Match: Always, Condition Type: Str, Input Type: ListStr
-		c := &ruleStrCondAlwaysMatchListStrInput{
-			config: &config{
-				field:         fieldName,
-				matchStrategy: fieldMatchAlways,
-				values:        values,
-				regexEnabled:  false,
-				alwaysTrue:    true,
-				exprDataType:  condDataType,
-				inputDataType: inputDataType,
-				conditionType: `ruleStrCondAlwaysMatchListStrInput`,
-			},
-			field: &field{
-				name:   fieldName,
-				length: len(fieldName),
-			},
-		}
-		c.expr = &expr{
-			value: values[0],
-		}
 		return c, nil
 	case matchStrategy == fieldMatchExact && condDataType == dataTypeListStr && inputDataType == dataTypeStr:
 		// Match: Exact, Condition Type: ListStr, Input Type: Str
@@ -1168,31 +2098,6 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 			c.exprs = append(c.exprs, re)
 		}
 		return c, nil
-	case matchStrategy == fieldMatchAlways && condDataType == dataTypeListStr && inputDataType == dataTypeStr:
-		// Match: Always, Condition Type: ListStr, Input Type: Str
-		c := &ruleListStrCondAlwaysMatchStrInput{
-			config: &config{
-				field:         fieldName,
-				matchStrategy: fieldMatchAlways,
-				values:        values,
-				regexEnabled:  false,
-				alwaysTrue:    true,
-				exprDataType:  condDataType,
-				inputDataType: inputDataType,
-				conditionType: `ruleListStrCondAlwaysMatchStrInput`,
-			},
-			field: &field{
-				name:   fieldName,
-				length: len(fieldName),
-			},
-		}
-		c.exprs = []*expr{}
-		for _, val := range values {
-			c.exprs = append(c.exprs, &expr{
-				value: val,
-			})
-		}
-		return c, nil
 	case matchStrategy == fieldMatchExact && condDataType == dataTypeStr && inputDataType == dataTypeStr:
 		// Match: Exact, Condition Type: Str, Input Type: Str
 		c := &ruleStrCondExactMatchStrInput{
@@ -1305,28 +2210,6 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 		}
 		c.expr = re
 		return c, nil
-	case matchStrategy == fieldMatchAlways && condDataType == dataTypeStr && inputDataType == dataTypeStr:
-		// Match: Always, Condition Type: Str, Input Type: Str
-		c := &ruleStrCondAlwaysMatchStrInput{
-			config: &config{
-				field:         fieldName,
-				matchStrategy: fieldMatchAlways,
-				values:        values,
-				regexEnabled:  false,
-				alwaysTrue:    true,
-				exprDataType:  condDataType,
-				inputDataType: inputDataType,
-				conditionType: `ruleStrCondAlwaysMatchStrInput`,
-			},
-			field: &field{
-				name:   fieldName,
-				length: len(fieldName),
-			},
-		}
-		c.expr = &expr{
-			value: values[0],
-		}
-		return c, nil
 
 	}
 	return nil, errors.ErrACLRuleConditionSyntaxUnsupported.WithArgs(line)
@@ -1344,6 +2227,10 @@ func getMatchStrategyName(s fieldMatchStrategy) string {
 		return "fieldMatchSuffix"
 	case fieldMatchRegex:
 		return "fieldMatchRegex"
+	case fieldFound:
+		return "fieldFound"
+	case fieldNotFound:
+		return "fieldNotFound"
 	case fieldMatchAlways:
 		return "fieldMatchAlways"
 	case fieldMatchReserved:
@@ -1357,6 +2244,8 @@ func getDataTypeName(s dataType) string {
 		return "dataTypeListStr"
 	case dataTypeStr:
 		return "dataTypeStr"
+	case dataTypeAny:
+		return "dataTypeAny"
 	}
 	return "dataTypeUnknown"
 }

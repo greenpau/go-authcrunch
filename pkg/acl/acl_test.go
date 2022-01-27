@@ -21,6 +21,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"testing"
+	"time"
 )
 
 func TestNewAccessList(t *testing.T) {
@@ -255,8 +256,8 @@ func TestCustomAccessList(t *testing.T) {
 		err       error
 	}{
 		{
-			name:     "deny roles foobar",
-			disabled: true,
+			name: "deny roles foobar",
+			// disabled: true,
 			config: []*RuleConfiguration{
 				{
 					Comment: "match roles foobar and deny",
@@ -296,7 +297,6 @@ func TestCustomAccessList(t *testing.T) {
                     "fields": [
                       "roles"
                     ],
-                    "index": null,
                     "log_level": "info",
                     "log_enabled": true,
                     "match_all": true,
@@ -308,48 +308,50 @@ func TestCustomAccessList(t *testing.T) {
 			}`,
 		},
 		{
-			name: "deny any",
+			name: "deny role foobar with email outside of specific email domain",
 			// disabled: true,
 			config: []*RuleConfiguration{
 				{
-					Comment: "match roles foobar and deny",
+					Comment: "deny role foobar with email outside of @bar.foo",
 					Conditions: []string{
-						"no suffix match email @foo.bar",
-						"match roles foobar",
+						"no suffix match email @bar.foo",
+						"match role foobar",
 					},
-					Action: `allow stop log`,
+					Action: `deny stop log`,
 				},
 				{
-					Comment: "default deny",
+					Comment: "default allow",
 					Conditions: []string{
 						"match any",
 					},
-					Action: `deny stop log`,
+					Action: `allow stop log`,
 				},
 			},
 			input: map[string]interface{}{
 				"name":  "John Smith",
+				"email": "jsmith@bar.foo",
 				"roles": []string{"foobar"},
+				"exp":   time.Now().Add(time.Duration(180) * time.Second).UTC().Unix(),
 			},
 			want: `{
-              "allow": false,
+              "allow": true,
               "config": {
                 "count": 2,
                 "rules": [
                   {
-                    "action": "ruleActionAllow",
-                    "comment": "match roles foobar and deny",
+                    "action": "ruleActionDeny",
+                    "comment": "deny role foobar with email outside of @bar.foo",
                     "conditions": [
                       {
                         "always_true": false,
-                        "condition_type": "ruleStrCondSuffixMatchStrInput",
+                        "condition_type": "ruleStrCondSuffixNegativeMatchStrInput",
                         "expr_data_type": "dataTypeStr",
-                        "field": "mail",
+                        "field": "email",
                         "input_data_type": "dataTypeStr",
                         "match_strategy": "fieldMatchSuffix",
                         "regex_enabled": false,
                         "values": [
-                          "@foo.bar"
+                          "@bar.foo"
                         ]
                       },
                       {
@@ -367,15 +369,109 @@ func TestCustomAccessList(t *testing.T) {
                     ],
                     "counter_enabled": false,
                     "fields": [
-                      "mail",
+                      "email",
                       "roles"
                     ],
-                    "index": null,
                     "log_enabled": true,
                     "log_level": "info",
                     "match_all": true,
-                    "rule_type": "aclRuleAllowWithInfoLoggerMatchAllStop",
+                    "rule_type": "aclRuleDenyWithInfoLoggerMatchAllStop",
                     "tag": "rule0"
+                  },
+                  {
+                    "action": "ruleActionAllow",
+                    "comment": "default allow",
+                    "conditions": [
+                      {
+                        "always_true": true,
+                        "condition_type": "ruleAnyCondAlwaysMatchAnyInput",
+                        "expr_data_type": "dataTypeAny",
+                        "field": "exp",
+                        "input_data_type": "dataTypeAny",
+                        "match_strategy": "fieldMatchAlways",
+                        "regex_enabled": false
+                      }
+                    ],
+                    "counter_enabled": false,
+                    "fields": [
+                      "exp"
+                    ],
+                    "log_enabled": true,
+                    "log_level": "info",
+                    "match_all": true,
+                    "rule_type": "aclRuleAllowWithInfoLoggerStop",
+                    "tag": "rule1"
+                  }
+                ]
+              }
+			}`,
+		},
+		{
+			name: "allow when roles field exists, mutiple conditions, match all",
+			// disabled: true,
+			config: []*RuleConfiguration{
+				{
+					Conditions: []string{
+						"field roles exists",
+						"suffix match email @bar.foo",
+					},
+					Action: `allow stop`,
+				},
+				{
+					Comment: "default deny",
+					Conditions: []string{
+						"match any",
+					},
+					Action: `deny stop log`,
+				},
+			},
+			input: map[string]interface{}{
+				"name":  "John Smith",
+				"email": "jsmith@bar.foo",
+				"roles": []string{"foobar"},
+				"exp":   time.Now().Add(time.Duration(180) * time.Second).UTC().Unix(),
+			},
+			want: `{
+              "allow": true,
+              "config": {
+                "count": 2,
+                "rules": [
+                  {
+                    "action": "ruleActionAllow",
+                    "check_fields": {
+                      "roles": true
+                    },
+                    "conditions": [
+                      {
+                        "always_true": false,
+                        "condition_type": "ruleCondFieldFound",
+                        "expr_data_type": "dataTypeAny",
+                        "field": "roles",
+                        "input_data_type": "dataTypeAny",
+                        "match_strategy": "fieldFound",
+                        "regex_enabled": false
+                      },
+                      {
+                        "always_true": false,
+                        "condition_type": "ruleStrCondSuffixMatchStrInput",
+                        "expr_data_type": "dataTypeStr",
+                        "field": "email",
+                        "input_data_type": "dataTypeStr",
+                        "match_strategy": "fieldMatchSuffix",
+                        "regex_enabled": false,
+                        "values": [
+                          "@bar.foo"
+                        ]
+                      }
+                    ],
+                    "counter_enabled": false,
+                    "fields": [
+                      "roles",
+                      "email"
+                    ],
+                    "log_enabled": false,
+                    "match_all": true,
+                    "rule_type": "aclRuleFieldCheckAllowMatchAllStop"
                   },
                   {
                     "action": "ruleActionDeny",
@@ -383,22 +479,18 @@ func TestCustomAccessList(t *testing.T) {
                     "conditions": [
                       {
                         "always_true": true,
-                        "condition_type": "ruleStrCondAlwaysMatchStrInput",
-                        "expr_data_type": "dataTypeStr",
-                        "field": "iss",
-                        "input_data_type": "dataTypeStr",
+                        "condition_type": "ruleAnyCondAlwaysMatchAnyInput",
+                        "expr_data_type": "dataTypeAny",
+                        "field": "exp",
+                        "input_data_type": "dataTypeAny",
                         "match_strategy": "fieldMatchAlways",
-                        "regex_enabled": false,
-                        "values": [
-                          "any"
-                        ]
+                        "regex_enabled": false
                       }
                     ],
                     "counter_enabled": false,
                     "fields": [
-                      "iss"
+                      "exp"
                     ],
-                    "index": null,
                     "log_enabled": true,
                     "log_level": "info",
                     "match_all": true,
@@ -407,11 +499,106 @@ func TestCustomAccessList(t *testing.T) {
                   }
                 ]
               }
-			}`,
+            }`,
 		},
 		{
-			name:     "allow when roles field exists",
-			disabled: true,
+			name: "allow when roles field exists, mutiple conditions, match any",
+			// disabled: true,
+			config: []*RuleConfiguration{
+				{
+					Conditions: []string{
+						"field roles exists",
+						"suffix match email @bar.foo",
+					},
+					Action: `allow any stop`,
+				},
+				{
+					Comment: "default deny",
+					Conditions: []string{
+						"match any",
+					},
+					Action: `deny stop log`,
+				},
+			},
+			input: map[string]interface{}{
+				"name": "John Smith",
+				// "email": "jsmith@bar.foo",
+				"roles": []string{"foobar"},
+				"exp":   time.Now().Add(time.Duration(180) * time.Second).UTC().Unix(),
+			},
+			want: `{
+              "allow": true,
+              "config": {
+                "count": 2,
+                "rules": [
+                  {
+                    "action": "ruleActionAllow",
+                    "check_fields": {
+                      "roles": true
+                    },
+                    "conditions": [
+                      {
+                        "always_true": false,
+                        "condition_type": "ruleCondFieldFound",
+                        "expr_data_type": "dataTypeAny",
+                        "field": "roles",
+                        "input_data_type": "dataTypeAny",
+                        "match_strategy": "fieldFound",
+                        "regex_enabled": false
+                      },
+                      {
+                        "always_true": false,
+                        "condition_type": "ruleStrCondSuffixMatchStrInput",
+                        "expr_data_type": "dataTypeStr",
+                        "field": "email",
+                        "input_data_type": "dataTypeStr",
+                        "match_strategy": "fieldMatchSuffix",
+                        "regex_enabled": false,
+                        "values": [
+                          "@bar.foo"
+                        ]
+                      }
+                    ],
+                    "counter_enabled": false,
+                    "fields": [
+                      "roles",
+                      "email"
+                    ],
+                    "log_enabled": false,
+                    "match_all": false,
+                    "rule_type": "aclRuleFieldCheckAllowMatchAnyStop"
+                  },
+                  {
+                    "action": "ruleActionDeny",
+                    "comment": "default deny",
+                    "conditions": [
+                      {
+                        "always_true": true,
+                        "condition_type": "ruleAnyCondAlwaysMatchAnyInput",
+                        "expr_data_type": "dataTypeAny",
+                        "field": "exp",
+                        "input_data_type": "dataTypeAny",
+                        "match_strategy": "fieldMatchAlways",
+                        "regex_enabled": false
+                      }
+                    ],
+                    "counter_enabled": false,
+                    "fields": [
+                      "exp"
+                    ],
+                    "log_enabled": true,
+                    "log_level": "info",
+                    "match_all": true,
+                    "rule_type": "aclRuleDenyWithInfoLoggerStop",
+                    "tag": "rule1"
+                  }
+                ]
+              }
+            }`,
+		},
+		{
+			name: "allow when roles field exists",
+			// disabled: true,
 			config: []*RuleConfiguration{
 				{
 					Conditions: []string{
@@ -419,11 +606,75 @@ func TestCustomAccessList(t *testing.T) {
 					},
 					Action: `allow stop`,
 				},
+				{
+					Comment: "default deny",
+					Conditions: []string{
+						"match any",
+					},
+					Action: `deny stop log`,
+				},
 			},
 			input: map[string]interface{}{
+				"name":  "John Smith",
+				"email": "jsmith@bar.foo",
 				"roles": []string{"foobar"},
+				"exp":   time.Now().Add(time.Duration(180) * time.Second).UTC().Unix(),
 			},
 			want: `{
+              "allow": true,
+              "config": {
+                "count": 2,
+                "rules": [
+                  {
+                    "action": "ruleActionAllow",
+                    "conditions": [
+                      {
+                        "always_true": false,
+                        "condition_type": "ruleCondFieldFound",
+                        "expr_data_type": "dataTypeAny",
+                        "field": "roles",
+                        "input_data_type": "dataTypeAny",
+                        "match_strategy": "fieldFound",
+                        "regex_enabled": false
+                      }
+                    ],
+                    "counter_enabled": false,
+                    "fields": [
+                      "roles"
+                    ],
+					"check_fields": {
+					  "roles": true
+					},
+                    "log_enabled": false,
+                    "match_all": true,
+                    "rule_type": "aclRuleFieldCheckAllowStop"
+                  },
+                  {
+                    "action": "ruleActionDeny",
+                    "comment": "default deny",
+                    "conditions": [
+                      {
+                        "always_true": true,
+                        "condition_type": "ruleAnyCondAlwaysMatchAnyInput",
+                        "expr_data_type": "dataTypeAny",
+                        "field": "exp",
+                        "input_data_type": "dataTypeAny",
+                        "match_strategy": "fieldMatchAlways",
+                        "regex_enabled": false
+                      }
+                    ],
+                    "counter_enabled": false,
+                    "fields": [
+                      "exp"
+                    ],
+                    "log_enabled": true,
+                    "log_level": "info",
+                    "match_all": true,
+                    "rule_type": "aclRuleDenyWithInfoLoggerStop",
+                    "tag": "rule1"
+                  }
+                ]
+              }
             }`,
 		},
 		{
@@ -434,13 +685,78 @@ func TestCustomAccessList(t *testing.T) {
 					Conditions: []string{
 						"field roles not exists",
 					},
-					Action: `allow stop`,
+					Action: `allow stop log counter`,
+				},
+				{
+					Comment: "default deny",
+					Conditions: []string{
+						"match any",
+					},
+					Action: `deny stop log`,
 				},
 			},
 			input: map[string]interface{}{
-				"foo": "bar",
+				"name":  "John Smith",
+				"email": "jsmith@bar.foo",
+				"exp":   time.Now().Add(time.Duration(180) * time.Second).UTC().Unix(),
 			},
 			want: `{
+              "allow": true,
+              "config": {
+                "count": 2,
+                "rules": [
+                  {
+                    "action": "ruleActionAllow",
+                    "check_fields": {
+                      "roles": false
+                    },
+                    "conditions": [
+                      {
+                        "always_true": false,
+                        "condition_type": "ruleCondFieldNotFound",
+                        "expr_data_type": "dataTypeAny",
+                        "field": "roles",
+                        "input_data_type": "dataTypeAny",
+                        "match_strategy": "fieldNotFound",
+                        "regex_enabled": false
+                      }
+                    ],
+                    "counter_enabled": true,
+                    "fields": [
+                      "roles"
+                    ],
+                    "log_enabled": true,
+                    "log_level": "info",
+                    "match_all": true,
+                    "rule_type": "aclRuleFieldCheckAllowWithInfoLoggerCounterStop",
+                    "tag": "rule0"
+                  },
+                  {
+                    "action": "ruleActionDeny",
+                    "comment": "default deny",
+                    "conditions": [
+                      {
+                        "always_true": true,
+                        "condition_type": "ruleAnyCondAlwaysMatchAnyInput",
+                        "expr_data_type": "dataTypeAny",
+                        "field": "exp",
+                        "input_data_type": "dataTypeAny",
+                        "match_strategy": "fieldMatchAlways",
+                        "regex_enabled": false
+                      }
+                    ],
+                    "counter_enabled": false,
+                    "fields": [
+                      "exp"
+                    ],
+                    "log_enabled": true,
+                    "log_level": "info",
+                    "match_all": true,
+                    "rule_type": "aclRuleDenyWithInfoLoggerStop",
+                    "tag": "rule1"
+                  }
+                ]
+              }
             }`,
 		},
 		{

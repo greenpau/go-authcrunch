@@ -578,8 +578,8 @@ func (c *Claims) unpackMail(k string, v interface{}, mkv, tkv map[string]interfa
 	default:
 		return errors.ErrInvalidEmailClaimType.WithArgs(k, v)
 	}
-	tkv["mail"] = c.Email
-	mkv["mail"] = c.Email
+	tkv["email"] = c.Email
+	mkv["email"] = c.Email
 	return nil
 }
 

@@ -60,7 +60,7 @@ var (
 		{
 			Comment: "allow all scopes",
 			Conditions: []string{
-				"always match scopes any",
+				"field scopes exists",
 			},
 			Action: `allow`,
 		},
@@ -87,7 +87,7 @@ var (
 		{
 			Comment: "allow all audiences",
 			Conditions: []string{
-				"always match audience any",
+				"field audience exists",
 			},
 			Action: `allow`,
 		},
@@ -181,7 +181,7 @@ var (
 		},
 		{
 			Conditions: []string{
-				"always match role any",
+				"field roles exists",
 			},
 			Action: `allow`,
 		},
@@ -197,7 +197,7 @@ var (
 		},
 		{
 			Conditions: []string{
-				"always match role any",
+				"field roles exists",
 			},
 			Action: `allow`,
 		},
