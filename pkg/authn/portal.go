@@ -391,15 +391,15 @@ func (p *Portal) configureUserInterface() error {
 
 	if p.config.UI.CustomCSSPath != "" {
 		p.ui.CustomCSSPath = p.config.UI.CustomCSSPath
-		if err := ui.StaticAssets.AddAsset("assets/css/custop.css", "text/css", p.config.UI.CustomCSSPath); err != nil {
-			return errors.ErrStaticAssetAddFailed.WithArgs("assets/css/custop.css", "text/css", p.config.UI.CustomCSSPath, p.config.Name, err)
+		if err := ui.StaticAssets.AddAsset("assets/css/custom.css", "text/css", p.config.UI.CustomCSSPath); err != nil {
+			return errors.ErrStaticAssetAddFailed.WithArgs("assets/css/custom.css", "text/css", p.config.UI.CustomCSSPath, p.config.Name, err)
 		}
 	}
 
 	if p.config.UI.CustomJsPath != "" {
 		p.ui.CustomJsPath = p.config.UI.CustomJsPath
-		if err := ui.StaticAssets.AddAsset("assets/js/custop.js", "application/javascript", p.config.UI.CustomJsPath); err != nil {
-			return errors.ErrStaticAssetAddFailed.WithArgs("assets/js/custop.js", "application/javascript", p.config.UI.CustomJsPath, p.config.Name, err)
+		if err := ui.StaticAssets.AddAsset("assets/js/custom.js", "application/javascript", p.config.UI.CustomJsPath); err != nil {
+			return errors.ErrStaticAssetAddFailed.WithArgs("assets/js/custom.js", "application/javascript", p.config.UI.CustomJsPath, p.config.Name, err)
 		}
 	}
 
