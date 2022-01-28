@@ -156,9 +156,12 @@ func (v *TokenValidator) GetSourcePriority() []string {
 }
 
 func (g *guardianBase) authorize(ctx context.Context, r *http.Request, usr *user.User) error {
-	if usr.Cached {
-		return nil
-	}
+	// Note: the cache was removed because authorize uses the same
+	// authorization endpoint. Previously, the endpoint was
+	// attached to a route.
+	// if usr.Cached {
+	//	return nil
+	// }
 	if userAllowed := g.accessList.Allow(ctx, usr.GetData()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
