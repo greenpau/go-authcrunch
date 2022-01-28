@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"testing"
 	"time"
@@ -257,7 +258,6 @@ func TestCustomAccessList(t *testing.T) {
 	}{
 		{
 			name: "deny roles foobar",
-			// disabled: true,
 			config: []*RuleConfiguration{
 				{
 					Comment: "match roles foobar and deny",
@@ -309,7 +309,6 @@ func TestCustomAccessList(t *testing.T) {
 		},
 		{
 			name: "deny role foobar with email outside of specific email domain",
-			// disabled: true,
 			config: []*RuleConfiguration{
 				{
 					Comment: "deny role foobar with email outside of @bar.foo",
@@ -408,7 +407,6 @@ func TestCustomAccessList(t *testing.T) {
 		},
 		{
 			name: "allow when roles field exists, mutiple conditions, match all",
-			// disabled: true,
 			config: []*RuleConfiguration{
 				{
 					Conditions: []string{
@@ -503,7 +501,6 @@ func TestCustomAccessList(t *testing.T) {
 		},
 		{
 			name: "allow when roles field exists, mutiple conditions, match any",
-			// disabled: true,
 			config: []*RuleConfiguration{
 				{
 					Conditions: []string{
@@ -597,8 +594,33 @@ func TestCustomAccessList(t *testing.T) {
             }`,
 		},
 		{
+			name: "allow when roles field exists and role matches",
+			config: []*RuleConfiguration{
+				{
+					Conditions: []string{
+						"field roles exists",
+						"match role foobar",
+					},
+					Action: `allow stop`,
+				},
+				{
+					Conditions: []string{
+						"match any",
+					},
+					Action: `deny stop log`,
+				},
+			},
+			input: map[string]interface{}{
+				"name":  "John Smith",
+				"email": "jsmith@bar.foo",
+				"roles": []string{"foobar"},
+				"exp":   time.Now().Add(time.Duration(180) * time.Second).UTC().Unix(),
+			},
+			shouldErr: true,
+			err:       errors.ErrACLRuleSyntaxDuplicateField.WithArgs("roles"),
+		},
+		{
 			name: "allow when roles field exists",
-			// disabled: true,
 			config: []*RuleConfiguration{
 				{
 					Conditions: []string{
