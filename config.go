@@ -42,6 +42,14 @@ func (cfg *Config) AddCredential(c credentials.Credential) error {
 	return cfg.Credentials.Add(c)
 }
 
+// AddMessagingProvider adds a messaging provider configuration.
+func (cfg *Config) AddMessagingProvider(p messaging.Provider) error {
+	if cfg.Messaging == nil {
+		cfg.Messaging = &messaging.Config{}
+	}
+	return cfg.Messaging.Add(p)
+}
+
 // AddAuthenticationPortal adds an authentication portal configuration.
 func (cfg *Config) AddAuthenticationPortal(p *authn.PortalConfig) error {
 	if err := cfg.Validate(); err != nil {

@@ -37,6 +37,7 @@ func TestAddProviders(t *testing.T) {
 				Address:     "localhost",
 				Protocol:    "smtp",
 				Credentials: "default_email_creds",
+				SenderEmail: "root@localhost",
 			},
 			want: `{
               "email_providers": [
@@ -44,7 +45,8 @@ func TestAddProviders(t *testing.T) {
                   "address": "localhost",
                   "credentials": "default_email_creds",
                   "name": "default",
-                  "protocol": "smtp"
+                  "protocol": "smtp",
+				  "sender_email": "root@localhost"
                 }
               ]
             }`,
