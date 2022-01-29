@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package credentials
+package messaging
 
 import (
 	// "fmt"
@@ -22,27 +22,29 @@ import (
 	"testing"
 )
 
-func TestAddCredentials(t *testing.T) {
+func TestAddProviders(t *testing.T) {
 	testcases := []struct {
 		name      string
-		entry     Credential
+		entry     Provider
 		want      string
 		shouldErr bool
 		err       error
 	}{
 		{
-			name: "test valid generic credential",
-			entry: &Generic{
-				Name:     "default",
-				Username: "foo",
-				Password: "bar",
+			name: "test valid email",
+			entry: &EmailProvider{
+				Name:        "default",
+				Address:     "localhost",
+				Protocol:    "smtp",
+				Credentials: "default_email_creds",
 			},
 			want: `{
-              "generic": [
+              "email_providers": [
                 {
-                  "name":     "default",
-                  "username": "foo",
-                  "password": "bar"
+                  "address": "localhost",
+                  "credentials": "default_email_creds",
+                  "name": "default",
+                  "protocol": "smtp"
                 }
               ]
             }`,
@@ -68,6 +70,7 @@ func TestAddCredentials(t *testing.T) {
 			want := tests.Unpack(t, tc.want)
 
 			if diff := cmp.Diff(want, got); diff != "" {
+				t.Logf("JSON: %s", tests.UnpackJSON(t, got))
 				t.Errorf("Add() mismatch (-want +got):\n%s", diff)
 			}
 		})

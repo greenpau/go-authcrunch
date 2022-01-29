@@ -18,6 +18,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
+	"github.com/greenpau/go-authcrunch/pkg/messaging"
 )
 
 // Config is a configuration of Server.
@@ -25,6 +26,7 @@ type Config struct {
 	Credentials *credentials.Config   `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
 	Portals     []*authn.PortalConfig `json:"auth_portal_configs,omitempty" xml:"auth_portal_configs,omitempty" yaml:"auth_portal_configs,omitempty"`
 	Policies    []*authz.PolicyConfig `json:"authz_policy_configs,omitempty" xml:"authz_policy_configs,omitempty" yaml:"authz_policy_configs,omitempty"`
+	Messaging   *messaging.Config     `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
 }
 
 // NewConfig returns an instance of Config.

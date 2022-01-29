@@ -42,6 +42,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -62,6 +63,16 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{
+			name:  "test messaging.EmailProvider struct",
+			entry: &messaging.EmailProvider{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test messaging.Config struct",
+			entry: &messaging.Config{},
+			opts:  &Options{},
+		},
 		{
 			name:  "test requests.Query struct",
 			entry: &requests.Query{},
