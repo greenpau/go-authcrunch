@@ -459,7 +459,7 @@ func (sa *Authenticator) dial(server *AuthServer) (*ldap.Conn, error) {
 			sa.logger.Error(
 				"LDAP TLS dialer failed",
 				zap.String("server", server.Address),
-				zap.String("error", err.Error()),
+				zap.Error(err),
 			)
 			return nil, err
 		}
@@ -474,8 +474,9 @@ func (sa *Authenticator) dial(server *AuthServer) (*ldap.Conn, error) {
 			sa.logger.Error(
 				"LDAP dialer failed",
 				zap.String("server", server.Address),
-				zap.String("error", err.Error()),
+				zap.Error(err),
 			)
+			return nil, err
 		}
 		sa.logger.Debug(
 			"LDAP dialer setup succeeded",
@@ -485,10 +486,11 @@ func (sa *Authenticator) dial(server *AuthServer) (*ldap.Conn, error) {
 
 	ldapConnection := ldap.NewConn(ldapDialer, server.Encrypted)
 	if ldapConnection == nil {
+		err = fmt.Errorf("ldap connection is nil")
 		sa.logger.Error(
 			"LDAP connection failed",
 			zap.String("server", server.Address),
-			zap.String("error", err.Error()),
+			zap.Error(err),
 		)
 		return nil, err
 	}
@@ -496,10 +498,11 @@ func (sa *Authenticator) dial(server *AuthServer) (*ldap.Conn, error) {
 	if server.Encrypted {
 		tlsState, ok := ldapConnection.TLSConnectionState()
 		if !ok {
+			err = fmt.Errorf("TLSConnectionState is not ok")
 			sa.logger.Error(
 				"LDAP connection TLS state polling failed",
 				zap.String("server", server.Address),
-				zap.String("error", "TLSConnectionState is not ok"),
+				zap.Error(err),
 			)
 			return nil, err
 		}
