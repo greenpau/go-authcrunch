@@ -20,7 +20,6 @@ import (
 
 // Config represents a collection of various credentials.
 type Config struct {
-	Email   []*SMTP    `json:"email,omitempty" xml:"email,omitempty" yaml:"email,omitempty"`
 	Generic []*Generic `json:"generic,omitempty" xml:"generic,omitempty" yaml:"generic,omitempty"`
 }
 
@@ -32,7 +31,6 @@ type Credential interface {
 // Add adds a credential to Config.
 func (cfg *Config) Add(c Credential) error {
 	switch v := c.(type) {
-	case *SMTP:
 	case *Generic:
 	default:
 		return errors.ErrCredAddConfigType.WithArgs(v)
@@ -43,8 +41,6 @@ func (cfg *Config) Add(c Credential) error {
 	}
 
 	switch v := c.(type) {
-	case *SMTP:
-		cfg.Email = append(cfg.Email, v)
 	case *Generic:
 		cfg.Generic = append(cfg.Generic, v)
 	}

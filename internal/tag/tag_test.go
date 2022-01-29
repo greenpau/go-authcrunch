@@ -63,11 +63,6 @@ func TestTagCompliance(t *testing.T) {
 		err       error
 	}{
 		{
-			name:  "test credentials.SMTP",
-			entry: &credentials.SMTP{},
-		},
-
-		{
 			name:  "test requests.Query struct",
 			entry: &requests.Query{},
 			opts:  &Options{},

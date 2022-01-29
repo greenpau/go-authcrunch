@@ -31,28 +31,7 @@ func TestParseCaddyfileCredentials(t *testing.T) {
 		err       error
 	}{
 		{
-			name: "test valid smtp credentials",
-			entry: &SMTP{
-				Name:     "smtp.contoso.com",
-				Address:  "smtp.contoso.com:993",
-				Protocol: "smtp",
-				Username: "foo",
-				Password: "bar",
-			},
-			want: `{
-              "email": [
-			    {
-			      "address":  "smtp.contoso.com:993",
-                  "name":     "smtp.contoso.com",
-			      "username": "foo",
-			      "password": "bar",
-			      "protocol": "smtp"
-			    }
-			  ]
-			}`,
-		},
-		{
-			name: "test valid generic credentials",
+			name: "test valid generic credential",
 			entry: &Generic{
 				Name:     "default",
 				Username: "foo",

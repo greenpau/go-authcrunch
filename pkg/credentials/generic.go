@@ -18,11 +18,13 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
-// Generic represents username and password credentials.
+// Generic represents username and password credentials, with optional
+// domain name field.
 type Generic struct {
 	Name     string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	Username string `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
 	Password string `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
+	Domain   string `json:"domain,omitempty" xml:"domain,omitempty" yaml:"domain,omitempty"`
 }
 
 // Validate validates Generic credentials.
