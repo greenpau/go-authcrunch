@@ -111,6 +111,8 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 	m["iss"] = util.GetIssuerURL(r)
 	m["addr"] = addrutil.GetSourceAddress(r)
 
+	combineGroupRoles(m)
+
 	// Perform user claim transformation if necessary.
 	if err := p.transformUser(ctx, rr, m); err != nil {
 		return err
@@ -267,9 +269,11 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 		switch pm := rr.Response.Payload.(type) {
 		case map[string]interface{}:
 			m = pm
+			// Process groups, group, role, roles.
 		default:
 			return fmt.Errorf("response payload not a map")
 		}
+		combineGroupRoles(m)
 	default:
 		m["sub"] = rr.User.Username
 		m["email"] = rr.User.Email
@@ -398,6 +402,44 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	w.Header().Set("Location", redirectLocation)
 	rr.Response.Code = http.StatusSeeOther
 	return
+}
+
+func combineGroupRoles(m map[string]interface{}) {
+	var roles []string
+	roleMap := make(map[string]interface{})
+
+	for _, k := range []string{"roles", "role", "group", "groups"} {
+		if v, exists := m[k]; exists {
+			switch val := v.(type) {
+			case string:
+				if _, found := roleMap[val]; !found {
+					roleMap[val] = true
+					roles = append(roles, val)
+				}
+			case []string:
+				for _, va := range val {
+					if _, found := roleMap[va]; !found {
+						roleMap[va] = true
+						roles = append(roles, va)
+					}
+				}
+			case []interface{}:
+				for _, entry := range val {
+					switch e := entry.(type) {
+					case string:
+						if _, found := roleMap[e]; !found {
+							roleMap[e] = true
+							roles = append(roles, e)
+						}
+					}
+				}
+			}
+			delete(m, k)
+		}
+	}
+	if len(roles) > 0 {
+		m["roles"] = roles
+	}
 }
 
 func injectPortalRoles(m map[string]interface{}) {
