@@ -22,6 +22,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
+	"github.com/greenpau/go-authcrunch/pkg/util/validate"
 	"go.uber.org/zap"
 	"net/http"
 	"net/url"
@@ -193,6 +194,10 @@ func (g *Gatekeeper) handleAuthorizeWithRedirect(w http.ResponseWriter, r *http.
 		ar.Redirect.StatusCode = g.config.AuthRedirectStatusCode
 	}
 
+	if len(g.config.LoginHintValidators) > 0 {
+		g.handleLoginHint(r, ar)
+	}
+
 	if g.config.RedirectWithJavascript {
 		g.logger.Debug(
 			"redirecting unauthorized user",
@@ -289,6 +294,16 @@ func (g *Gatekeeper) injectHeaders(r *http.Request, usr *user.User) {
 			if v := usr.GetClaimValueByField(entry.Field); v != "" {
 				r.Header.Set(entry.Header, v)
 			}
+		}
+	}
+}
+
+func (g *Gatekeeper) handleLoginHint(r *http.Request, ar *requests.AuthorizationRequest) {
+	if loginHint := r.URL.Query().Get("login_hint"); loginHint != "" {
+		if err := validate.LoginHint(loginHint, g.config.LoginHintValidators); err != nil {
+			g.logger.Warn(err.Error())
+		} else {
+			ar.Redirect.LoginHint = loginHint
 		}
 	}
 }
