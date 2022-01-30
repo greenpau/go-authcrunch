@@ -38,21 +38,24 @@
               </span>
               {{ if not .Data.registered }}
               <div class="input-field">
-                <input id="username" name="username" type="text" class="validate"
+                <input id="registrant" name="username" type="text" class="validate"
                   pattern="{{ .Data.username_validate_pattern }}"
                   title="{{ .Data.username_validate_title }}"
+                  autocorrect="off" autocapitalize="off" spellcheck="false"
                   required />
-                <label for="username">Username</label>
+                <label for="registrant">Username</label>
               </div>
               <div class="input-field">
-                <input id="email" name="email" type="email" class="validate"
+                <input id="registrant_email" name="email" type="email" class="validate"
+                  autocorrect="off" autocapitalize="off" spellcheck="false"
                   required />
-                <label for="email">Email Address</label>
+                <label for="registrant_email">Email Address</label>
               </div>
               <div class="input-field">
                 <input id="password" name="password" type="password" class="validate"
                   pattern="{{ .Data.password_validate_pattern }}"
                   title="{{ .Data.password_validate_title }}"
+                  autocorrect="off" autocapitalize="off" spellcheck="false"
                   required />
                 <label for="password">Password</label>
               </div>
@@ -60,12 +63,15 @@
                 <input id="password_confirm" name="password_confirm" type="password" class="validate"
                   pattern="{{ .Data.password_validate_pattern }}"
                   title="{{ .Data.password_validate_title }}"
+                  autocorrect="off" autocapitalize="off" spellcheck="false"
                   required />
                 <label for="password_confirm">Confirm Password</label>
               </div>
               {{ if .Data.require_registration_code }}
               <div class="input-field">
-                <input id="code" name="code" type="text" class="validate" required />
+                <input id="code" name="code" type="text" class="validate"
+                  autocorrect="off" autocapitalize="off" spellcheck="false"
+                  required />
                 <label for="code">Registration Code</label>
               </div>
               {{ end }}
