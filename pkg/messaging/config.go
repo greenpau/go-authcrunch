@@ -46,3 +46,27 @@ func (cfg *Config) Add(c Provider) error {
 	}
 	return nil
 }
+
+// FindProvider search for Provider by name.
+func (cfg *Config) FindProvider(s string) bool {
+	for _, p := range cfg.EmailProviders {
+		if p.Name == s {
+			return true
+		}
+	}
+	return false
+}
+
+// FindProviderCredentials search for Provider by name and then identifies
+// the credentials used by the provider.
+func (cfg *Config) FindProviderCredentials(s string) string {
+	for _, p := range cfg.EmailProviders {
+		if p.Name == s {
+			if p.Passwordless {
+				return "passwordless"
+			}
+			return p.Credentials
+		}
+	}
+	return ""
+}

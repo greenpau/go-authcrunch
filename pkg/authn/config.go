@@ -26,8 +26,10 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	// "github.com/greenpau/go-authcrunch/pkg/authz/validator"
+	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	// "go.uber.org/zap"
 	"strings"
@@ -57,11 +59,16 @@ type PortalConfig struct {
 	// TokenGrantorOptions holds the configuration for the tokens issues by Authenticator.
 	TokenGrantorOptions *options.TokenGrantorOptions `json:"token_grantor_options,omitempty" xml:"token_grantor_options,omitempty" yaml:"token_grantor_options,omitempty"`
 
-	// Holds raw crypto configuration
+	// Holds raw crypto configuration.
 	cryptoRawConfigs []string
 
 	// Indicated that the config was successfully validated.
 	validated bool
+
+	// Shared credentials.
+	credentials *credentials.Config `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
+	// Shared messaging.
+	messaging *messaging.Config `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
 }
 
 // AddRawCryptoConfigs adds raw crypto configs.
@@ -108,6 +115,44 @@ func (cfg *PortalConfig) parseRawCryptoConfigs() error {
 			return errors.ErrConfigDirectiveFail.WithArgs("crypto.keystore", cryptoKeyStoreConfig, err)
 		}
 		cfg.CryptoKeyStoreConfig = configs
+	}
+	return nil
+}
+
+// SetCredentials binds to shared credentials.
+func (cfg *PortalConfig) SetCredentials(c *credentials.Config) {
+	cfg.credentials = c
+	return
+}
+
+// SetMessaging binds to messaging config.
+func (cfg *PortalConfig) SetMessaging(c *messaging.Config) {
+	cfg.messaging = c
+	return
+}
+
+// ValidateCredentials validates messaging provider and credentials used for
+// the user registration.
+func (cfg *PortalConfig) ValidateCredentials() error {
+	if cfg.UserRegistrationConfig != nil && cfg.UserRegistrationConfig.EmailProvider != "" {
+		if cfg.messaging == nil {
+			return errors.ErrPortalConfigMessagingNil
+		}
+		if found := cfg.messaging.FindProvider(cfg.UserRegistrationConfig.EmailProvider); !found {
+			return errors.ErrPortalConfigMessagingProviderNotFound.WithArgs(cfg.UserRegistrationConfig.EmailProvider)
+		}
+		providerCreds := cfg.messaging.FindProviderCredentials(cfg.UserRegistrationConfig.EmailProvider)
+		if providerCreds == "" {
+			return errors.ErrPortalConfigMessagingProviderCredentialsNotFound.WithArgs(cfg.UserRegistrationConfig.EmailProvider)
+		}
+		if providerCreds != "passwordless" {
+			if cfg.credentials == nil {
+				return errors.ErrPortalConfigCredentialsNil
+			}
+			if found := cfg.credentials.FindCredential(providerCreds); !found {
+				return errors.ErrPortalConfigCredentialsNotFound.WithArgs(providerCreds)
+			}
+		}
 	}
 	return nil
 }

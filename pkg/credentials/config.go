@@ -46,3 +46,13 @@ func (cfg *Config) Add(c Credential) error {
 	}
 	return nil
 }
+
+// FindCredential search for Credential by name.
+func (cfg *Config) FindCredential(s string) bool {
+	for _, c := range cfg.Generic {
+		if c.Name == s {
+			return true
+		}
+	}
+	return false
+}

@@ -52,7 +52,7 @@ func (cfg *Config) AddMessagingProvider(p messaging.Provider) error {
 
 // AddAuthenticationPortal adds an authentication portal configuration.
 func (cfg *Config) AddAuthenticationPortal(p *authn.PortalConfig) error {
-	if err := cfg.Validate(); err != nil {
+	if err := p.Validate(); err != nil {
 		return err
 	}
 	cfg.Portals = append(cfg.Portals, p)
@@ -61,7 +61,7 @@ func (cfg *Config) AddAuthenticationPortal(p *authn.PortalConfig) error {
 
 // AddAuthorizationPolicy adds an authorization policy configuration.
 func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
-	if err := cfg.Validate(); err != nil {
+	if err := p.Validate(); err != nil {
 		return err
 	}
 	cfg.Policies = append(cfg.Policies, p)
@@ -71,7 +71,12 @@ func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
 // Validate validates Config.
 func (cfg *Config) Validate() error {
 	for _, portal := range cfg.Portals {
+		portal.SetCredentials(cfg.Credentials)
+		portal.SetMessaging(cfg.Messaging)
 		if err := portal.Validate(); err != nil {
+			return err
+		}
+		if err := portal.ValidateCredentials(); err != nil {
 			return err
 		}
 	}
@@ -80,5 +85,6 @@ func (cfg *Config) Validate() error {
 			return err
 		}
 	}
+
 	return nil
 }

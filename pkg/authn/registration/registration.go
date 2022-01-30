@@ -34,4 +34,6 @@ type Config struct {
 	TermsConditionsLink string `json:"terms_conditions_link,omitempty" xml:"terms_conditions_link,omitempty" yaml:"terms_conditions_link,omitempty"`
 	// The link to privacy policy document.
 	PrivacyPolicyLink string `json:"privacy_policy_link,omitempty" xml:"privacy_policy_link,omitempty" yaml:"privacy_policy_link,omitempty"`
+	// The email provider used for the notifications.
+	EmailProvider string `json:"email_provider,omitempty" xml:"email_provider,omitempty" yaml:"email_provider,omitempty"`
 }
