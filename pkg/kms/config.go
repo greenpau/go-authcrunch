@@ -275,6 +275,8 @@ func ParseCryptoKeyConfigs(cfg string) ([]*CryptoKeyConfig, error) {
 						return nil, errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(line, err)
 					}
 					defaultConfig["token_lifetime"] = lifetime
+				case "kid":
+					defaultConfig["token_kid"] = p[2]
 				default:
 					return nil, errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(line, "unknown default token setting")
 				}
@@ -453,6 +455,11 @@ func ParseCryptoKeyConfigs(cfg string) ([]*CryptoKeyConfig, error) {
 				kcfg.TokenLifetime = defaultConfig["token_lifetime"].(int)
 			} else {
 				kcfg.TokenLifetime = defaultTokenLifetime
+			}
+		}
+		if kcfg.ID == defaultKeyID {
+			if _, exists := defaultConfig["token_kid"]; exists {
+				kcfg.ID = defaultConfig["token_kid"].(string)
 			}
 		}
 		if err := kcfg.validate(); err != nil {

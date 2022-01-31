@@ -255,18 +255,6 @@ func (k *CryptoKey) sign(signMethod, data interface{}) (interface{}, error) {
 		return k.signECDSA(method, s)
 	}
 
-	/*
-			sm := jwtlib.GetSigningMethod(method)
-			signer := jwtlib.NewWithClaims(sm, data.(jwtlib.Claims))
-			if k.Sign.Token.injectKeyID {
-				signer.Header["kid"] = k.Sign.Token.ID
-			}
-			signedData, err := signer.SignedString(k.Sign.Secret)
-			if err != nil {
-				return nil, errors.ErrDataSigningFailed.WithArgs(method, err)
-			}
-		return signedData, nil
-	*/
 	return nil, errors.ErrDataSigningFailed.WithArgs(method, "unsupported method")
 }
 
