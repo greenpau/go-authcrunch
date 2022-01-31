@@ -43,7 +43,7 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 		return p.handleHTTPRecover(ctx, w, r, rr)
 	case strings.Contains(r.URL.Path, "/settings"):
 		return p.handleHTTPSettings(ctx, w, r, rr, usr)
-	case strings.HasSuffix(r.URL.Path, "/register"):
+	case strings.HasSuffix(r.URL.Path, "/register"), strings.Contains(r.URL.Path, "/register/"):
 		return p.handleHTTPRegister(ctx, w, r, rr)
 	case strings.HasSuffix(r.URL.Path, "/whoami"):
 		return p.handleHTTPWhoami(ctx, w, r, rr, usr)

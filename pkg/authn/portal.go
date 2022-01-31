@@ -42,20 +42,21 @@ const (
 
 // Portal is an authentication portal.
 type Portal struct {
-	id           string
-	config       *PortalConfig
-	registrar    *identity.Database
-	validator    *validator.TokenValidator
-	keystore     *kms.CryptoKeyStore
-	backends     []*backends.Backend
-	cookie       *cookie.Factory
-	transformer  *transformer.Factory
-	ui           *ui.Factory
-	startedAt    time.Time
-	sessions     *cache.SessionCache
-	sandboxes    *cache.SandboxCache
-	loginOptions map[string]interface{}
-	logger       *zap.Logger
+	id            string
+	config        *PortalConfig
+	registrar     *identity.Database
+	validator     *validator.TokenValidator
+	keystore      *kms.CryptoKeyStore
+	backends      []*backends.Backend
+	cookie        *cookie.Factory
+	transformer   *transformer.Factory
+	ui            *ui.Factory
+	startedAt     time.Time
+	sessions      *cache.SessionCache
+	sandboxes     *cache.SandboxCache
+	registrations *cache.RegistrationCache
+	loginOptions  map[string]interface{}
+	logger        *zap.Logger
 }
 
 // NewPortal returns an instance of Portal.
@@ -365,6 +366,11 @@ func (p *Portal) configureUserRegistration() error {
 		return errors.ErrUserRegistrationConfig.WithArgs(p.config.Name, err)
 	}
 	p.registrar = db
+
+	if p.registrations == nil {
+		p.registrations = cache.NewRegistrationCache()
+		p.registrations.Run()
+	}
 
 	p.logger.Debug(
 		"Configured user registration",

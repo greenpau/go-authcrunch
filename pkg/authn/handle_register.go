@@ -18,10 +18,17 @@ import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/authn/validators"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 	"go.uber.org/zap"
 	"net/http"
 	"path"
+	"strings"
 )
+
+type registerRequest struct {
+	view    string
+	message string
+}
 
 func (p *Portal) handleHTTPRegister(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
 	p.disableClientCache(w)
@@ -30,20 +37,25 @@ func (p *Portal) handleHTTPRegister(ctx context.Context, w http.ResponseWriter, 
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/portal")
 	}
 	if r.Method != "POST" {
+		if strings.Contains(r.URL.Path, "/register/ack/") {
+			// Handle registration acknowledgement.
+			return p.handleHTTPRegisterAck(ctx, w, r, rr)
+		}
+		// Handle registration landing page.
 		return p.handleHTTPRegisterScreen(ctx, w, r, rr)
 	}
+	// Handle registration request.
 	return p.handleHTTPRegisterRequest(ctx, w, r, rr)
 }
 
 func (p *Portal) handleHTTPRegisterScreen(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
-	return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, false, "")
+	reg := &registerRequest{
+		view: "register",
+	}
+	return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 }
 
-func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, registered bool, msg string) error {
-	code := http.StatusOK
-	if msg != "" {
-		code = http.StatusBadRequest
-	}
+func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, reg *registerRequest) error {
 	if p.config.UserRegistrationConfig.Dropbox == "" {
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusServiceUnavailable)
 	}
@@ -52,45 +64,53 @@ func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http
 	}
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
-	if p.config.UserRegistrationConfig.Title == "" {
-		resp.Title = "Sign Up"
-	} else {
-		resp.Title = p.config.UserRegistrationConfig.Title
-	}
-	if p.config.UserRegistrationConfig.RequireAcceptTerms {
-		resp.Data["require_accept_terms"] = true
-	}
-	if p.config.UserRegistrationConfig.Code != "" {
-		resp.Data["require_registration_code"] = true
-	}
-	if p.config.UserRegistrationConfig.TermsConditionsLink != "" {
-		resp.Data["terms_conditions_link"] = p.config.UserRegistrationConfig.TermsConditionsLink
-	} else {
-		resp.Data["terms_conditions_link"] = path.Join(rr.Upstream.BasePath, "/terms-and-conditions")
-	}
-	if p.config.UserRegistrationConfig.PrivacyPolicyLink != "" {
-		resp.Data["privacy_policy_link"] = p.config.UserRegistrationConfig.PrivacyPolicyLink
-	} else {
-		resp.Data["privacy_policy_link"] = path.Join(rr.Upstream.BasePath, "/privacy-policy")
-	}
+	resp.Data["view"] = reg.view
 
-	resp.Data["username_validate_pattern"] = p.registrar.GetUsernamePolicyRegex()
-	resp.Data["username_validate_title"] = p.registrar.GetUsernamePolicySummary()
-	resp.Data["password_validate_pattern"] = p.registrar.GetPasswordPolicyRegex()
-	resp.Data["password_validate_title"] = p.registrar.GetPasswordPolicySummary()
+	switch reg.view {
+	case "register":
+		if p.config.UserRegistrationConfig.Title == "" {
+			resp.Title = "Sign Up"
+		} else {
+			resp.Title = p.config.UserRegistrationConfig.Title
+		}
+		if p.config.UserRegistrationConfig.RequireAcceptTerms {
+			resp.Data["require_accept_terms"] = true
+		}
+		if p.config.UserRegistrationConfig.Code != "" {
+			resp.Data["require_registration_code"] = true
+		}
+		if p.config.UserRegistrationConfig.TermsConditionsLink != "" {
+			resp.Data["terms_conditions_link"] = p.config.UserRegistrationConfig.TermsConditionsLink
+		} else {
+			resp.Data["terms_conditions_link"] = path.Join(rr.Upstream.BasePath, "/terms-and-conditions")
+		}
+		if p.config.UserRegistrationConfig.PrivacyPolicyLink != "" {
+			resp.Data["privacy_policy_link"] = p.config.UserRegistrationConfig.PrivacyPolicyLink
+		} else {
+			resp.Data["privacy_policy_link"] = path.Join(rr.Upstream.BasePath, "/privacy-policy")
+		}
 
-	if registered {
+		resp.Data["username_validate_pattern"] = p.registrar.GetUsernamePolicyRegex()
+		resp.Data["username_validate_title"] = p.registrar.GetUsernamePolicySummary()
+		resp.Data["password_validate_pattern"] = p.registrar.GetPasswordPolicyRegex()
+		resp.Data["password_validate_title"] = p.registrar.GetPasswordPolicySummary()
+		if reg.message != "" {
+			resp.Message = reg.message
+		}
+	case "registered":
 		resp.Title = "Thank you!"
-		resp.Data["registered"] = registered
+	case "ack":
+		resp.Title = "Acknowledgement Failed"
+		resp.Data["message"] = reg.message
+	case "acked":
+		resp.Title = "Registration Acknowledged"
 	}
-	if msg != "" {
-		resp.Message = msg
-	}
+
 	content, err := p.ui.Render("register", resp)
 	if err != nil {
 		return p.handleHTTPRenderError(ctx, w, r, rr, err)
 	}
-	return p.handleHTTPRenderHTML(ctx, w, code, content.Bytes())
+	return p.handleHTTPRenderHTML(ctx, w, http.StatusOK, content.Bytes())
 }
 
 func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
@@ -121,7 +141,8 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 			zap.Int64("size", r.ContentLength),
 			zap.Strings("violations", violations),
 		)
-		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, false, message)
+		reg := &registerRequest{view: "register", message: message}
+		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
 	if err := r.ParseForm(); err != nil {
@@ -217,25 +238,30 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 	}
 
 	if validUserRegistration {
-		// Contact registration backend.
-		req := &requests.Request{
-			User: requests.User{
-				Username: userHandle,
-				Password: userSecret,
-				Email:    userMail,
-				Roles:    []string{"registered"},
-			},
+		cachedEntry := map[string]string{
+			"username": userHandle,
+			"password": userSecret,
+			"email":    userMail,
 		}
-		if err := p.registrar.AddUser(req); err != nil {
+		registrationID := util.GetRandomStringFromRange(64, 96)
+		if err := p.registrations.Add(registrationID, cachedEntry); err != nil {
 			p.logger.Warn(
-				"registration request backend erred",
+				"failed adding a record to registration cache",
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
-				zap.String("error", err.Error()),
+				zap.Error(err),
 			)
-			message = "Failed processing the registration request"
-			message = err.Error()
+			message = "Internal registration error"
 			validUserRegistration = false
+		} else {
+			p.logger.Debug(
+				"Created registration cache entry",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.String("registration_id", registrationID),
+			)
+			// TODO(greenpau): send notification with session and request id,
+			// IP address, Signup URL, time, etc.
 		}
 	}
 
@@ -246,7 +272,8 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 			zap.String("request_id", rr.ID),
 			zap.String("error", message),
 		)
-		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, false, message)
+		reg := &registerRequest{view: "register", message: message}
+		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
 	p.logger.Info("Successful user registration",
@@ -255,5 +282,52 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 		zap.String("username", userHandle),
 		zap.String("email", userMail),
 	)
-	return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, true, message)
+	reg := &registerRequest{view: "registered"}
+	return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
+}
+
+func (p *Portal) handleHTTPRegisterAck(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
+	reg := &registerRequest{
+		view: "ack",
+	}
+	registrationID, err := getEndpointKeyID(r.URL.Path, "/register/ack/")
+	if err != nil {
+		reg.message = "Malformed registration acknowledgement request"
+		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
+	}
+
+	usr, err := p.registrations.Get(registrationID)
+	if err != nil {
+		reg.message = "Registration identifier not found"
+		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
+	}
+
+	// Build registration commit request.
+	req := &requests.Request{
+		User: requests.User{
+			Username: usr["username"],
+			Password: usr["password"],
+			Email:    usr["email"],
+			Roles:    []string{"authp/user"},
+		},
+	}
+
+	if err := p.registrations.Delete(registrationID); err != nil {
+		reg.message = "Registration session terminated"
+		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
+	}
+
+	if err := p.registrar.AddUser(req); err != nil {
+		p.logger.Warn(
+			"registration request backend erred",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.Error(err),
+		)
+		reg.message = "Registration session is no longer valid"
+		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
+	}
+
+	reg.view = "acked"
+	return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 }

@@ -1,4 +1,4 @@
-.PHONY: test ctest covdir coverage docs linter qtest clean dep release license envvar
+.PHONY: test ctest covdir coverage docs linter qtest clean dep release license envvar templates
 APP_VERSION:=$(shell cat VERSION | head -1)
 GIT_COMMIT:=$(shell git describe --dirty --always)
 GIT_BRANCH:=$(shell git rev-parse --abbrev-ref HEAD -- | head -1)
@@ -16,7 +16,7 @@ envvar:
 	@echo "Version: $(APP_VERSION), Branch: $(GIT_BRANCH), Revision: $(GIT_COMMIT)"
 	@echo "Build on $(BUILD_DATE) by $(BUILD_USER)"
 
-build:
+build: templates license
 	@mkdir -p bin/
 	@rm -rf ./bin/*
 	@CGO_ENABLED=0 go build -o ./bin/authdbctl $(VERBOSE) \
@@ -42,10 +42,10 @@ gtest:
 	@go test $(VERBOSE) -coverprofile=.coverage/coverage.out ./...
 	@echo "$@: complete"
 
-test: envvar covdir linter gtest coverage
+test: templates license envvar covdir linter gtest coverage
 	@echo "$@: complete"
 
-ctest: covdir linter
+ctest: templates license covdir linter
 	@richgo version || go get -u github.com/kyoh86/richgo
 	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./...
 	@echo "$@: complete"
@@ -61,6 +61,9 @@ coverage:
 	@go test -covermode=count -coverprofile=.coverage/coverage.out ./...
 	@go tool cover -func=.coverage/coverage.out | grep -v "100.0"
 	@echo "$@: complete"
+
+templates:
+	@./assets/scripts/generate_ui.sh
 
 docs:
 	@mkdir -p .doc

@@ -20,14 +20,15 @@ import (
 
 // EmailProvider represents email messaging provider.
 type EmailProvider struct {
-	Name         string            `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	Address      string            `json:"address,omitempty" xml:"address,omitempty" yaml:"address,omitempty"`
-	Protocol     string            `json:"protocol,omitempty" xml:"protocol,omitempty" yaml:"protocol,omitempty"`
-	Credentials  string            `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
-	SenderEmail  string            `json:"sender_email,omitempty" xml:"sender_email,omitempty" yaml:"sender_email,omitempty"`
-	SenderName   string            `json:"sender_name,omitempty" xml:"sender_name,omitempty" yaml:"sender_name,omitempty"`
-	Templates    map[string]string `json:"templates,omitempty" xml:"templates,omitempty" yaml:"templates,omitempty"`
-	Passwordless bool              `json:"passwordless,omitempty" xml:"passwordless,omitempty" yaml:"passwordless,omitempty"`
+	Name            string            `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Address         string            `json:"address,omitempty" xml:"address,omitempty" yaml:"address,omitempty"`
+	Protocol        string            `json:"protocol,omitempty" xml:"protocol,omitempty" yaml:"protocol,omitempty"`
+	Credentials     string            `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
+	SenderEmail     string            `json:"sender_email,omitempty" xml:"sender_email,omitempty" yaml:"sender_email,omitempty"`
+	SenderName      string            `json:"sender_name,omitempty" xml:"sender_name,omitempty" yaml:"sender_name,omitempty"`
+	Templates       map[string]string `json:"templates,omitempty" xml:"templates,omitempty" yaml:"templates,omitempty"`
+	Passwordless    bool              `json:"passwordless,omitempty" xml:"passwordless,omitempty" yaml:"passwordless,omitempty"`
+	BlindCarbonCopy []string          `json:"blind_carbon_copy,omitempty" xml:"blind_carbon_copy,omitempty" yaml:"blind_carbon_copy,omitempty"`
 }
 
 // Validate validates EmailProvider configuration.

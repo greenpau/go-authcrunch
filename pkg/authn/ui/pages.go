@@ -312,7 +312,7 @@ var PageTemplates = map[string]string{
     <div class="container">
       <div class="row">
         <div class="col s12 m12 l6 offset-l3 registration-container">
-          {{ if not .Data.registered }}
+          {{ if eq .Data.view "register" }}
           <form action="{{ pathjoin .ActionEndpoint "/register" }}" method="POST">
           {{ end }}
           <div class="card card-large app-card">
@@ -325,23 +325,26 @@ var PageTemplates = map[string]string{
                   <h4>{{ .Title }}</h4>
                 </div>
               </span>
-              {{ if not .Data.registered }}
+              {{ if eq .Data.view "register" }}
               <div class="input-field">
-                <input id="username" name="username" type="text" class="validate"
+                <input id="registrant" name="username" type="text" class="validate"
                   pattern="{{ .Data.username_validate_pattern }}"
                   title="{{ .Data.username_validate_title }}"
+                  autocorrect="off" autocapitalize="off" spellcheck="false"
                   required />
-                <label for="username">Username</label>
+                <label for="registrant">Username</label>
               </div>
               <div class="input-field">
-                <input id="email" name="email" type="email" class="validate"
+                <input id="registrant_email" name="email" type="email" class="validate"
+                  autocorrect="off" autocapitalize="off" spellcheck="false"
                   required />
-                <label for="email">Email Address</label>
+                <label for="registrant_email">Email Address</label>
               </div>
               <div class="input-field">
                 <input id="password" name="password" type="password" class="validate"
                   pattern="{{ .Data.password_validate_pattern }}"
                   title="{{ .Data.password_validate_title }}"
+                  autocorrect="off" autocapitalize="off" spellcheck="false"
                   required />
                 <label for="password">Password</label>
               </div>
@@ -349,12 +352,15 @@ var PageTemplates = map[string]string{
                 <input id="password_confirm" name="password_confirm" type="password" class="validate"
                   pattern="{{ .Data.password_validate_pattern }}"
                   title="{{ .Data.password_validate_title }}"
+                  autocorrect="off" autocapitalize="off" spellcheck="false"
                   required />
                 <label for="password_confirm">Confirm Password</label>
               </div>
               {{ if .Data.require_registration_code }}
               <div class="input-field">
-                <input id="code" name="code" type="text" class="validate" required />
+                <input id="code" name="code" type="text" class="validate"
+                  autocorrect="off" autocapitalize="off" spellcheck="false"
+                  required />
                 <label for="code">Registration Code</label>
               </div>
               {{ end }}
@@ -369,17 +375,31 @@ var PageTemplates = map[string]string{
                 </label>
               </p>
               {{ end }}
-              {{ else }}
-              <p class="app-text">Thank you for registering and we hope you enjoy the experience!</p>
-              <p class="app-text">Here are a few things to keep in mind:</p>
-              <ol class="app-text">
+              {{ end }}
+
+              {{ if eq .Data.view "registered" }}
+              <p style="margin-bottom: 1em">Thank you for registering and we hope you enjoy the experience!</p>
+              <p style="margin-bottom: 1em">Here are a few things to keep in mind:</p>
+              <ol style="margin-right: 3em">
                 <li>You should receive your confirmation email within the next 15 minutes.</li>
                 <li>If you still don't see it, please email support so we can resend it to you.</li>
               </ol>
               {{ end }}
+
+              {{ if eq .Data.view "ack" }}
+              <p>Unfortunately, things did not go as expected. {{ .Data.message }}.</p>
+              {{ end }}
+
+              {{ if eq .Data.view "acked" }}
+              <p style="margin-bottom: 1em">Thank you for confirming your registration and validating your email address!</p>
+              <p>At this point, once an administrator approves or disapproves your registration,
+                you will get an email about that decision. If approved, you will be able to login with your
+                credentials right away.
+              </p>
+              {{ end }}
             </div>
             <div class="card-action right-align">
-              {{ if not .Data.registered }}
+              {{ if eq .Data.view "register" }}
               <a href="{{ .ActionEndpoint }}" class="navbtn-last">
                 <button type="button" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
                   <i class="las la-undo left app-btn-icon"></i>
@@ -390,7 +410,8 @@ var PageTemplates = map[string]string{
                 <i class="las la-chevron-circle-right app-btn-icon"></i>
                 <span class="app-btn-text">Submit</span>
               </button>
-              {{ else }}
+              {{ end }}
+              {{ if ne .Data.view "register" }}
               <a href="{{ .ActionEndpoint }}" class="navbtn-last">
                 <button type="button" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
                   <i class="las la-home left app-btn-icon"></i>
@@ -400,7 +421,9 @@ var PageTemplates = map[string]string{
               {{ end }}
             </div>
           </div>
+          {{ if eq .Data.view "register" }}
           </form>
+          {{ end }}
         </div>
       </div>
     </div>
