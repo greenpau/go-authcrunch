@@ -64,6 +64,16 @@ func TestTagCompliance(t *testing.T) {
 		err       error
 	}{
 		{
+			name:  "test cache.RegistrationCache struct",
+			entry: &authncache.RegistrationCache{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test cache.RegistrationCacheEntry struct",
+			entry: &authncache.RegistrationCacheEntry{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test messaging.EmailProvider struct",
 			entry: &messaging.EmailProvider{},
 			opts:  &Options{},
