@@ -147,5 +147,12 @@ func configureRedirect(w http.ResponseWriter, r *http.Request, rr *requests.Auth
 		rr.Redirect.Separator = "&"
 	}
 
+	if rr.Redirect.LoginHint != "" {
+		loginHint := rr.Redirect.LoginHint
+		escapedLoginHint := url.QueryEscape(loginHint)
+		rr.Redirect.AuthURL = rr.Redirect.AuthURL + rr.Redirect.Separator + "login_hint" + "=" + escapedLoginHint
+		rr.Redirect.Separator = "&"
+	}
+
 	return
 }

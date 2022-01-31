@@ -59,7 +59,8 @@ type PolicyConfig struct {
 	ValidateSourceAddress bool `json:"validate_source_address,omitempty" xml:"validate_source_address,omitempty" yaml:"validate_source_address,omitempty"`
 	// Pass claims from JWT token via HTTP X- headers.
 	PassClaimsWithHeaders bool `json:"pass_claims_with_headers,omitempty" xml:"pass_claims_with_headers,omitempty" yaml:"pass_claims_with_headers,omitempty"`
-
+	// Validate the login hint which can be passed to the auth provider
+	LoginHintValidators []string `json:"login_hint_validators,omitempty" xml:"login_hint_validators,omitempty" yaml:"login_hint_validators,omitempty"`
 	// Holds raw crypto configuration.
 	cryptoRawConfigs []string
 	// Holds raw identity provider configuration.
