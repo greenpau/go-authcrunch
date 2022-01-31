@@ -23,6 +23,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
 	"net/http"
 	"strings"
@@ -252,6 +253,16 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					rr.Response.Code = http.StatusBadRequest
 					m["title"] = "Authentication Failed"
 					m["view"] = "error"
+					p.logger.Warn(
+						"invalid password for submission",
+						zap.String("session_id", rr.Upstream.SessionID),
+						zap.String("request_id", rr.ID),
+						zap.String("src_ip", addrutil.GetSourceAddress(r)),
+						zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+						zap.Int("checkpoint_id", checkpoint.ID),
+						zap.String("checkpoint_name", checkpoint.Name),
+						zap.String("checkpoint_type", checkpoint.Type),
+					)
 					return m, err
 				}
 				rr.Flags.Enabled = true
@@ -260,6 +271,16 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					checkpoint.FailedAttempts++
 					m["title"] = "Authentication Failed"
 					m["view"] = "error"
+					p.logger.Warn(
+						"password authentication failed",
+						zap.String("session_id", rr.Upstream.SessionID),
+						zap.String("request_id", rr.ID),
+						zap.Int("checkpoint_id", checkpoint.ID),
+						zap.String("src_ip", addrutil.GetSourceAddress(r)),
+						zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+						zap.String("checkpoint_name", checkpoint.Name),
+						zap.String("checkpoint_type", checkpoint.Type),
+					)
 					return m, fmt.Errorf("Password authentication failed. Please retry")
 				}
 				p.logger.Info(
