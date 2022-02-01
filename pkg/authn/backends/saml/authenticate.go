@@ -17,10 +17,11 @@ package saml
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 
 	"go.uber.org/zap"
 )
@@ -119,6 +120,10 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 			case strings.HasSuffix(attrEntry.Name, "identity/claims/name"):
 				if attrEntry.Values[0].Value != "" {
 					m["sub"] = attrEntry.Values[0].Value
+				}
+			case strings.HasSuffix(attrEntry.Name, "identity/claims/objectidentifier"):
+				if attrEntry.Values[0].Value != "" {
+					m["oid"] = attrEntry.Values[0].Value
 				}
 			case strings.HasSuffix(attrEntry.Name, "Attributes/Role"):
 				roles := []string{}
