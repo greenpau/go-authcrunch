@@ -22,6 +22,17 @@ import (
 // Config represents a common set of configuration settings
 // applicable to the cookies issued by authn.Authenticator.
 type Config struct {
+	Domains  map[string]*DomainConfig `json:"domains,omitempty" xml:"domains,omitempty" yaml:"domains,omitempty"`
+	Domain   string                   `json:"domain,omitempty" xml:"domain,omitempty" yaml:"domain,omitempty"`
+	Path     string                   `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
+	Lifetime int                      `json:"lifetime,omitempty" xml:"lifetime,omitempty" yaml:"lifetime,omitempty"`
+	Insecure bool                     `json:"insecure,omitempty" xml:"insecure,omitempty" yaml:"insecure,omitempty"`
+	SameSite string                   `json:"same_site,omitempty" xml:"same_site,omitempty" yaml:"same_site,omitempty"`
+}
+
+// DomainConfig represents a common set of configuration settings
+// applicable to the cookies issued by authn.Authenticator.
+type DomainConfig struct {
 	Domain   string `json:"domain,omitempty" xml:"domain,omitempty" yaml:"domain,omitempty"`
 	Path     string `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
 	Lifetime int    `json:"lifetime,omitempty" xml:"lifetime,omitempty" yaml:"lifetime,omitempty"`
