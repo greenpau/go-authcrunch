@@ -24,9 +24,11 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
+	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/messaging"
 
 	"github.com/satori/go.uuid"
 	"go.uber.org/zap"
@@ -348,6 +350,10 @@ func (p *Portal) configureUserRegistration() error {
 		return nil
 	}
 
+	if p.config.UserRegistrationConfig.EmailProvider == "" {
+		return errors.ErrUserRegistrationConfig.WithArgs(p.config.Name, "email provider not found")
+	}
+
 	p.logger.Debug(
 		"Configuring user registration",
 		zap.String("portal_name", p.config.Name),
@@ -523,4 +529,16 @@ func (p *Portal) configureUserTransformer() error {
 		zap.Any("transforms", p.config.UserTransformerConfigs),
 	)
 	return nil
+}
+
+// SetCredentials binds to shared credentials.
+func (p *Portal) SetCredentials(c *credentials.Config) {
+	p.config.credentials = c
+	return
+}
+
+// SetMessaging binds to messaging config.
+func (p *Portal) SetMessaging(c *messaging.Config) {
+	p.config.messaging = c
+	return
 }

@@ -56,3 +56,13 @@ func (cfg *Config) FindCredential(s string) bool {
 	}
 	return false
 }
+
+// ExtractGeneric returns Generic credentials by name.
+func (cfg *Config) ExtractGeneric(s string) *Generic {
+	for _, c := range cfg.Generic {
+		if c.Name == s {
+			return c
+		}
+	}
+	return nil
+}

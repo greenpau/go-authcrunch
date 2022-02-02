@@ -64,6 +64,7 @@ coverage:
 
 templates:
 	@./assets/scripts/generate_ui.sh
+	@./assets/scripts/generate_email_templates.sh
 
 docs:
 	@mkdir -p .doc

@@ -70,3 +70,13 @@ func (cfg *Config) FindProviderCredentials(s string) string {
 	}
 	return ""
 }
+
+// ExtractEmailProvider returns EmailProvider by name.
+func (cfg *Config) ExtractEmailProvider(s string) *EmailProvider {
+	for _, p := range cfg.EmailProviders {
+		if p.Name == s {
+			return p
+		}
+	}
+	return nil
+}

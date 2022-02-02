@@ -315,6 +315,9 @@ var PageTemplates = map[string]string{
           {{ if eq .Data.view "register" }}
           <form action="{{ pathjoin .ActionEndpoint "/register" }}" method="POST">
           {{ end }}
+          {{ if eq .Data.view "ack" }}
+          <form action="{{ pathjoin .ActionEndpoint "/register/ack" .Data.registration_id }}" method="POST">
+          {{ end }}
           <div class="card card-large app-card">
             <div class="card-content">
               <span class="card-title center-align">
@@ -327,41 +330,46 @@ var PageTemplates = map[string]string{
               </span>
               {{ if eq .Data.view "register" }}
               <div class="input-field">
-                <input id="registrant" name="username" type="text" class="validate"
+                <input id="registrant" name="registrant" type="text" class="validate"
                   pattern="{{ .Data.username_validate_pattern }}"
                   title="{{ .Data.username_validate_title }}"
                   autocorrect="off" autocapitalize="off" spellcheck="false"
+                  autocomplete="off"
                   required />
                 <label for="registrant">Username</label>
               </div>
               <div class="input-field">
-                <input id="registrant_email" name="email" type="email" class="validate"
+                <input id="registrant_email" name="registrant_email" type="email" class="validate"
                   autocorrect="off" autocapitalize="off" spellcheck="false"
+                  autocomplete="off"
                   required />
                 <label for="registrant_email">Email Address</label>
               </div>
               <div class="input-field">
-                <input id="password" name="password" type="password" class="validate"
+                <input id="registrant_password" name="registrant_password" type="password" class="validate"
                   pattern="{{ .Data.password_validate_pattern }}"
                   title="{{ .Data.password_validate_title }}"
                   autocorrect="off" autocapitalize="off" spellcheck="false"
+                  autocomplete="off"
                   required />
-                <label for="password">Password</label>
+                <label for="registrant_password">Password</label>
               </div>
               <div class="input-field">
-                <input id="password_confirm" name="password_confirm" type="password" class="validate"
+                <input id="registrant_password_confirm" name="registrant_password_confirm" type="password" class="validate"
                   pattern="{{ .Data.password_validate_pattern }}"
                   title="{{ .Data.password_validate_title }}"
                   autocorrect="off" autocapitalize="off" spellcheck="false"
+                  autocomplete="off"
                   required />
-                <label for="password_confirm">Confirm Password</label>
+                <label for="registrant_password_confirm">Confirm Password</label>
               </div>
               {{ if .Data.require_registration_code }}
               <div class="input-field">
-                <input id="code" name="code" type="text" class="validate"
+                <input id="registrant_code" name="registrant_code" type="text" class="validate"
                   autocorrect="off" autocapitalize="off" spellcheck="false"
+                  autocomplete="off"
                   required />
-                <label for="code">Registration Code</label>
+                <label for="registrant_code">Registration Code</label>
               </div>
               {{ end }}
               {{ if .Data.require_accept_terms }}
@@ -387,6 +395,16 @@ var PageTemplates = map[string]string{
               {{ end }}
 
               {{ if eq .Data.view "ack" }}
+              <div class="input-field">
+                <input id="registration_code" name="registration_code" type="password" class="validate"
+                  autocorrect="off" autocapitalize="off" spellcheck="false"
+                  autocomplete="off"
+                  required />
+                <label for="registration_code">Registration Code</label>
+              </div>
+              {{ end }}
+
+              {{ if eq .Data.view "ackfail" }}
               <p>Unfortunately, things did not go as expected. {{ .Data.message }}.</p>
               {{ end }}
 
@@ -400,6 +418,11 @@ var PageTemplates = map[string]string{
             </div>
             <div class="card-action right-align">
               {{ if eq .Data.view "register" }}
+              <button type="reset" name="reset" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1 app-btn">
+                <i class="las la-redo-alt app-btn-icon"></i>
+                <span class="app-btn-text">Clear</span>
+              </button>
+
               <a href="{{ .ActionEndpoint }}" class="navbtn-last">
                 <button type="button" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
                   <i class="las la-undo left app-btn-icon"></i>
@@ -411,6 +434,7 @@ var PageTemplates = map[string]string{
                 <span class="app-btn-text">Submit</span>
               </button>
               {{ end }}
+
               {{ if ne .Data.view "register" }}
               <a href="{{ .ActionEndpoint }}" class="navbtn-last">
                 <button type="button" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
@@ -419,9 +443,20 @@ var PageTemplates = map[string]string{
                 </button>
               </a>
               {{ end }}
+
+              {{ if eq .Data.view "ack" }}
+              <button type="reset" name="reset" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1 app-btn">
+                <i class="las la-redo-alt app-btn-icon"></i>
+                <span class="app-btn-text">Clear</span>
+              </button>
+              <button type="submit" name="submit" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
+                <i class="las la-chevron-circle-right app-btn-icon"></i>
+                <span class="app-btn-text">Submit</span>
+              </button>
+              {{ end }}
             </div>
           </div>
-          {{ if eq .Data.view "register" }}
+          {{ if or (eq .Data.view "register") (eq .Data.view "ack") }}
           </form>
           {{ end }}
         </div>

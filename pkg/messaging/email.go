@@ -15,7 +15,12 @@
 package messaging
 
 import (
+	"fmt"
+	"github.com/emersion/go-sasl"
+	"github.com/emersion/go-smtp"
+	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"strings"
 )
 
 // EmailProvider represents email messaging provider.
@@ -31,30 +36,111 @@ type EmailProvider struct {
 	BlindCarbonCopy []string          `json:"blind_carbon_copy,omitempty" xml:"blind_carbon_copy,omitempty" yaml:"blind_carbon_copy,omitempty"`
 }
 
+// Send sends an email message.
+func (e *EmailProvider) Send(creds *credentials.Generic, rcpt, subj, body string) error {
+	dial := smtp.Dial
+	if e.Protocol == "smtps" {
+		dial = func(addr string) (*smtp.Client, error) {
+			return smtp.DialTLS(addr, nil)
+		}
+	}
+
+	c, err := dial(e.Address)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	if found, _ := c.Extension("STARTTLS"); found {
+		if err := c.StartTLS(nil); err != nil {
+			return err
+		}
+	}
+
+	if !e.Passwordless && creds != nil {
+		if found, _ := c.Extension("AUTH"); !found {
+			return errors.ErrMessagingProviderAuthUnsupported
+		}
+		auth := sasl.NewPlainClient("", creds.Username, creds.Password)
+		if err := c.Auth(auth); err != nil {
+			return err
+		}
+	}
+
+	if err := c.Mail(e.SenderEmail, nil); err != nil {
+		return err
+	}
+
+	if err := c.Rcpt(rcpt); err != nil {
+		return err
+	}
+
+	sender := e.SenderEmail
+	if e.SenderName != "" {
+		sender = `"` + e.SenderName + `" <` + e.SenderEmail + ">"
+	}
+
+	msg := "From: " + sender + "\n"
+	msg += "To: " + rcpt + "\n"
+
+	if len(e.BlindCarbonCopy) > 0 {
+		msg += "Bcc: " + strings.Join(e.BlindCarbonCopy, ", ") + "\n"
+	}
+	msg += subj + "\r\n" + body
+
+	// Write email subject body.
+	wc, err := c.Data()
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(wc, msg)
+	if err != nil {
+		return err
+	}
+
+	if err := wc.Close(); err != nil {
+		return err
+	}
+
+	// Close connection.
+	if err := c.Quit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Validate validates EmailProvider configuration.
-func (c *EmailProvider) Validate() error {
-	if c.Name == "" {
+func (e *EmailProvider) Validate() error {
+	if e.Name == "" {
 		return errors.ErrMessagingProviderKeyValueEmpty.WithArgs("name")
 	}
 
 	switch {
-	case c.Credentials != "" && c.Passwordless:
+	case e.Credentials != "" && e.Passwordless:
 		return errors.ErrMessagingProviderCredentialsWithPasswordless
-	case c.Credentials == "" && !c.Passwordless:
+	case e.Credentials == "" && !e.Passwordless:
 		return errors.ErrMessagingProviderKeyValueEmpty.WithArgs("credentials")
 	}
 
-	if c.Address == "" {
+	if e.Address == "" {
 		return errors.ErrMessagingProviderKeyValueEmpty.WithArgs("address")
 	}
-	if c.Protocol == "" {
+
+	switch e.Protocol {
+	case "smtp":
+	case "smtps":
+	case "":
 		return errors.ErrMessagingProviderKeyValueEmpty.WithArgs("protocol")
+	default:
+		return errors.ErrMessagingProviderProtocolUnsupported.WithArgs(e.Protocol)
 	}
-	if c.SenderEmail == "" {
+
+	if e.SenderEmail == "" {
 		return errors.ErrMessagingProviderKeyValueEmpty.WithArgs("sender_email")
 	}
-	if c.Templates != nil {
-		for k := range c.Templates {
+	if e.Templates != nil {
+		for k := range e.Templates {
 			switch k {
 			case "password_recovery":
 			case "registration_confirmation":

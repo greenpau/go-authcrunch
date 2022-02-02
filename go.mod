@@ -4,6 +4,8 @@ go 1.16
 
 require (
 	github.com/crewjam/saml v0.4.6
+	github.com/emersion/go-sasl v0.0.0-20211008083017-0b9dcfb154ac
+	github.com/emersion/go-smtp v0.15.0
 	github.com/go-ldap/ldap/v3 v3.4.1
 	github.com/golang-jwt/jwt/v4 v4.2.0
 	github.com/google/go-cmp v0.5.7

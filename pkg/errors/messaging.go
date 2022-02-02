@@ -16,9 +16,11 @@ package errors
 
 // Messaging Errors
 const (
-	ErrMessagingAddProviderConfigType   StandardError = "messaging provider config %T is unsupported"
-	ErrMessagingProviderKeyValueEmpty   StandardError = "messaging provider config %q key is empty"
-	ErrMessagingProviderInvalidTemplate StandardError = "messaging provider config contains unsupported %q template"
+	ErrMessagingAddProviderConfigType       StandardError = "messaging provider config %T is unsupported"
+	ErrMessagingProviderKeyValueEmpty       StandardError = "messaging provider config %q key is empty"
+	ErrMessagingProviderInvalidTemplate     StandardError = "messaging provider config contains unsupported %q template"
+	ErrMessagingProviderProtocolUnsupported StandardError = "messaging provider config %q protocol unsupported"
 
 	ErrMessagingProviderCredentialsWithPasswordless StandardError = "messaging provider config is both passwordless and has credentials"
+	ErrMessagingProviderAuthUnsupported             StandardError = "messaging provider does not support AUTH extension"
 )
