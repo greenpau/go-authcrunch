@@ -86,6 +86,7 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 	}
 
 	m := make(map[string]interface{})
+	metadata := make(map[string]interface{})
 	for _, attrStatement := range samlAssertions.AttributeStatements {
 
 		for _, attrEntry := range attrStatement.Attributes {
@@ -116,6 +117,14 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 				if attrEntry.Values[0].Value != "" {
 					m["origin"] = attrEntry.Values[0].Value
 				}
+			case strings.HasSuffix(attrEntry.Name, "schemas.microsoft.com/identity/claims/objectidentifier"):
+				if attrEntry.Values[0].Value != "" {
+					metadata["oid"] = attrEntry.Values[0].Value
+				}
+			case strings.HasSuffix(attrEntry.Name, "schemas.xmlsoap.org/ws/2005/05/identity/claims/upn"):
+				if attrEntry.Values[0].Value != "" {
+					metadata["upn"] = attrEntry.Values[0].Value
+				}
 			case strings.HasSuffix(attrEntry.Name, "identity/claims/name"):
 				if attrEntry.Values[0].Value != "" {
 					m["sub"] = attrEntry.Values[0].Value
@@ -136,6 +145,10 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 		if _, exists := m[k]; !exists {
 			return fmt.Errorf("SAML authorization failed, mandatory %s attribute not found: %v", k, m)
 		}
+	}
+
+	if len(metadata) > 0 {
+		m["metadata"] = metadata
 	}
 
 	r.Response.Code = 200
