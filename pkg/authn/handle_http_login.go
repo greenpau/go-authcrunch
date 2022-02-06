@@ -171,7 +171,8 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 		path.Join(rr.Upstream.BasePath, "/sandbox/"),
 		usr.Authenticator.TempSessionID,
 	)
-	w.Header().Set("Set-Cookie", p.cookie.GetCookie(p.cookie.SandboxID, usr.Authenticator.TempSecret))
+
+	w.Header().Set("Set-Cookie", p.cookie.GetCookie(addrutil.GetSourceHost(r), p.cookie.SandboxID, usr.Authenticator.TempSecret))
 	w.Header().Set("Location", redirectLocation)
 	w.WriteHeader(http.StatusSeeOther)
 	return nil
@@ -366,11 +367,13 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 		return
 	}
 
+	h := addrutil.GetSourceHost(r)
+
 	rr.Response.Authenticated = true
 	usr.Authorized = true
 	p.sessions.Add(rr.Upstream.SessionID, usr)
 	w.Header().Set("Authorization", "Bearer "+usr.Token)
-	w.Header().Set("Set-Cookie", p.cookie.GetCookie(usr.TokenName, usr.Token))
+	w.Header().Set("Set-Cookie", p.cookie.GetCookie(h, usr.TokenName, usr.Token))
 
 	if rr.Response.Workflow == "json-api" {
 		// Do not perform redirects to API logins.
@@ -379,7 +382,7 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	}
 
 	// Delete sandbox cookie, if present.
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(p.cookie.SandboxID))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SandboxID))
 
 	// Determine whether redirect cookie is present and reditect to the page that
 	// forwarded a user to the authentication portal.
@@ -392,7 +395,7 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 				zap.String("request_id", rr.ID),
 				zap.String("redirect_url", redirectLocation),
 			)
-			w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(p.cookie.Referer))
+			w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.Referer))
 		}
 	}
 	if redirectLocation == "" {

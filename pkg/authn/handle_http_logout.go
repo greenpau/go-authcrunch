@@ -17,24 +17,26 @@ package authn
 import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"net/http"
 	"net/url"
 )
 
-func (p *Portal) deleteAuthCookies(w http.ResponseWriter) {
+func (p *Portal) deleteAuthCookies(w http.ResponseWriter, r *http.Request) {
 	for tokenName := range p.validator.GetAuthCookies() {
-		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(tokenName))
+		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(addrutil.GetSourceHost(r), tokenName))
 	}
 }
 
 func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
 	p.disableClientCache(w)
 	p.injectRedirectURL(ctx, w, r, rr)
+	h := addrutil.GetSourceHost(r)
 	for tokenName := range p.validator.GetAuthCookies() {
-		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(tokenName))
+		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, tokenName))
 	}
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(p.cookie.Referer))
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(p.cookie.SessionID))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.Referer))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SessionID))
 	return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 }
 
@@ -42,13 +44,14 @@ func (p *Portal) handleHTTPLogoutWithLocalRedirect(ctx context.Context, w http.R
 	var refererExists bool
 	p.disableClientCache(w)
 	p.injectRedirectURL(ctx, w, r, rr)
+	h := addrutil.GetSourceHost(r)
 	for tokenName := range p.validator.GetAuthCookies() {
-		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(tokenName))
+		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, tokenName))
 	}
 	if rr.Response.RedirectURL == "" {
-		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(p.cookie.Referer))
+		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.Referer))
 	}
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(p.cookie.SessionID))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SessionID))
 	// The redirect_url query parameter exists.
 	if rr.Response.RedirectURL != "" {
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login?redirect_url="+rr.Response.RedirectURL)
@@ -61,7 +64,7 @@ func (p *Portal) handleHTTPLogoutWithLocalRedirect(ctx context.Context, w http.R
 		}
 	}
 	if !refererExists {
-		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(p.cookie.Referer))
+		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.Referer))
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login?redirect_url="+r.RequestURI)
 	}
 	return p.handleHTTPRedirect(ctx, w, r, rr, "/login")

@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
 	"net/http"
 	"net/url"
@@ -31,7 +32,7 @@ func (p *Portal) handleHTTPPortal(ctx context.Context, w http.ResponseWriter, r 
 	}
 	usr, err := p.sessions.Get(parsedUser.Claims.ID)
 	if err != nil {
-		p.deleteAuthCookies(w)
+		p.deleteAuthCookies(w, r)
 		p.logger.Debug(
 			"User session not found, redirect to login",
 			zap.String("session_id", rr.Upstream.SessionID),
@@ -54,7 +55,7 @@ func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWrit
 				zap.String("redirect_url", redirectURL.String()),
 			)
 			w.Header().Set("Location", redirectURL.String())
-			w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(p.cookie.Referer))
+			w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(addrutil.GetSourceHost(r), p.cookie.Referer))
 			w.WriteHeader(http.StatusSeeOther)
 			return nil
 		}

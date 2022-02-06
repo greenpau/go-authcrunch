@@ -81,7 +81,7 @@ clean:
 
 qtest:
 	@echo "Perform quick tests ..."
-	@time richgo test -v -coverprofile=.coverage/coverage.out internal/tag/*.go
+	@#time richgo test -v -coverprofile=.coverage/coverage.out internal/tag/*.go
 	@### time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestAuthorize ./pkg/authz/validator/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out  -run TestAddProviders ./pkg/messaging/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/credentials/...
@@ -90,6 +90,7 @@ qtest:
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewPortal ./pkg/authn/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestServeHTTP ./pkg/authn/*.go
+	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestFactory ./pkg/authn/cookie/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authz/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewGatekeeper ./pkg/authz/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestAuthenticate ./pkg/authz/*.go
@@ -104,8 +105,9 @@ qtest:
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/shared/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/identity/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/backends/...
-	@#go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
+	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
 	@#go tool cover -func=.coverage/coverage.out | grep -v "100.0"
+	@go tool cover -func=.coverage/coverage.out
 	@echo "$@: complete"
 
 dep:

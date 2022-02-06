@@ -214,7 +214,7 @@ func (p *Portal) injectSessionID(ctx context.Context, w http.ResponseWriter, r *
 		}
 	}
 	rr.Upstream.SessionID = util.GetRandomStringFromRange(36, 46)
-	w.Header().Add("Set-Cookie", p.cookie.GetSessionCookie(rr.Upstream.SessionID))
+	w.Header().Add("Set-Cookie", p.cookie.GetSessionCookie(addrutil.GetSourceHost(r), rr.Upstream.SessionID))
 	return
 }
 
@@ -222,7 +222,7 @@ func (p *Portal) injectRedirectURL(ctx context.Context, w http.ResponseWriter, r
 	if r.Method == "GET" {
 		q := r.URL.Query()
 		if redirectURL, exists := q["redirect_url"]; exists {
-			c := p.cookie.GetCookie(p.cookie.Referer, util.StripQueryParam(redirectURL[0], "login_hint"))
+			c := p.cookie.GetCookie(addrutil.GetSourceHost(r), p.cookie.Referer, util.StripQueryParam(redirectURL[0], "login_hint"))
 			p.logger.Debug(
 				"redirect recorded",
 				zap.String("session_id", rr.Upstream.SessionID),
@@ -247,7 +247,7 @@ func (p *Portal) authorizeRequest(ctx context.Context, w http.ResponseWriter, r 
 			return nil, nil
 		default:
 			for tokenName := range p.validator.GetAuthCookies() {
-				w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(tokenName))
+				w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(addrutil.GetSourceHost(r), tokenName))
 			}
 			if strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon") {
 				return nil, nil

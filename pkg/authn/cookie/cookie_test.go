@@ -23,6 +23,7 @@ import (
 func TestFactory(t *testing.T) {
 	var testcases = []struct {
 		name   string
+		host   string
 		config *Config
 		// Expected results.
 		want      map[string]interface{}
@@ -40,8 +41,14 @@ func TestFactory(t *testing.T) {
 		},
 		{
 			name: "contoso.com cookie with default path",
+			host: "auth.contoso.com",
 			config: &Config{
-				Domain: "contoso.com",
+				Domains: map[string]*DomainConfig{
+					"contoso.com": &DomainConfig{
+						Seq:    0,
+						Domain: "contoso.com",
+					},
+				},
 			},
 			want: map[string]interface{}{
 				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
@@ -51,10 +58,78 @@ func TestFactory(t *testing.T) {
 			},
 		},
 		{
-			name: "contoso.com cookie with custom path",
+			name: "contoso.com cookie same host",
+			host: "contoso.com",
 			config: &Config{
-				Domain: "contoso.com",
-				Path:   "/mydir",
+				Domains: map[string]*DomainConfig{
+					"contoso.com": &DomainConfig{
+						Seq:    0,
+						Domain: "contoso.com",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "contoso.com cookie without domain config",
+			host: "contoso.com",
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "contoso.com cookie with default strict samesite",
+			host: "auth.contoso.com",
+			config: &Config{
+				Domains: map[string]*DomainConfig{
+					"contoso.com": &DomainConfig{
+						Seq:    0,
+						Domain: "contoso.com",
+					},
+				},
+				SameSite: "strict",
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; SameSite=Strict; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "fail contoso.com cookie with default incorrect samesite",
+			host: "auth.contoso.com",
+			config: &Config{
+				Domains: map[string]*DomainConfig{
+					"contoso.com": &DomainConfig{
+						Seq:    0,
+						Domain: "contoso.com",
+					},
+				},
+				SameSite: "foobar",
+			},
+			shouldErr: true,
+			err:       fmt.Errorf("the SameSite cookie attribute %q is invalid", "foobar"),
+		},
+		{
+			name: "contoso.com cookie with custom path",
+			host: "auth.contoso.com",
+			config: &Config{
+				Domains: map[string]*DomainConfig{
+					"contoso.com": &DomainConfig{
+						Seq:    0,
+						Domain: "contoso.com",
+						Path:   "/mydir",
+					},
+				},
 			},
 			want: map[string]interface{}{
 				"grant":          "access_token=foobar; Domain=contoso.com; Path=/mydir; Secure; HttpOnly;",
@@ -65,15 +140,86 @@ func TestFactory(t *testing.T) {
 		},
 		{
 			name: "contoso.com cookie custom lifetime",
+			host: "auth.contoso.com",
 			config: &Config{
-				Domain:   "contoso.com",
-				Lifetime: 900,
+				Domains: map[string]*DomainConfig{
+					"contoso.com": &DomainConfig{
+						Seq:      0,
+						Domain:   "contoso.com",
+						Lifetime: 900,
+					},
+					"foo.bar": &DomainConfig{
+						Seq:      0,
+						Domain:   "foo.bar",
+						Lifetime: 900,
+					},
+				},
 			},
 			want: map[string]interface{}{
 				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Max-Age=900; Secure; HttpOnly;",
 				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "contoso.com cookie without domain config",
+			host: "auth.contoso.com",
+			config: &Config{
+				Path:     "/",
+				Lifetime: 900,
+				SameSite: "strict",
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "localhost cookie",
+			host: "localhost",
+			config: &Config{
+				Path:     "/",
+				Lifetime: 900,
+				SameSite: "strict",
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "localhost ipv4 cookie with port",
+			host: "127.0.0.1:443",
+			config: &Config{
+				Path:     "/",
+				Lifetime: 900,
+				SameSite: "strict",
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "ipv6 cookie with port",
+			host: "[2001:db8:3333:4444::8888]:443",
+			config: &Config{
+				Path:     "/",
+				Lifetime: 900,
+				SameSite: "strict",
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
 		},
 	}
@@ -85,10 +231,10 @@ func TestFactory(t *testing.T) {
 				return
 			}
 			got := make(map[string]interface{})
-			got["grant"] = cf.GetCookie("access_token", "foobar")
-			got["delete"] = cf.GetDeleteCookie("access_token")
-			got["session_grant"] = cf.GetSessionCookie("foobar")
-			got["session_delete"] = cf.GetDeleteSessionCookie()
+			got["grant"] = cf.GetCookie(tc.host, "access_token", "foobar")
+			got["delete"] = cf.GetDeleteCookie(tc.host, "access_token")
+			got["session_grant"] = cf.GetSessionCookie(tc.host, "foobar")
+			got["session_delete"] = cf.GetDeleteSessionCookie(tc.host)
 			tests.EvalObjectsWithLog(t, "cookie", tc.want, got, msgs)
 		})
 	}

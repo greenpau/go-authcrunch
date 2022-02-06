@@ -19,6 +19,15 @@ import (
 	"strings"
 )
 
+// GetSourceHost returns the host or host:port of the request.
+func GetSourceHost(r *http.Request) string {
+	h := r.Header.Get("X-Forwarded-Host")
+	if h != "" {
+		return h
+	}
+	return r.Host
+}
+
 // GetSourceAddress returns the IP address of the request.
 func GetSourceAddress(r *http.Request) string {
 	var addr string
