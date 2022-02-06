@@ -20,7 +20,9 @@ import (
 	"github.com/emersion/go-smtp"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 	"strings"
+	"time"
 )
 
 // EmailProvider represents email messaging provider.
@@ -80,13 +82,22 @@ func (e *EmailProvider) Send(creds *credentials.Generic, rcpt, subj, body string
 		sender = `"` + e.SenderName + `" <` + e.SenderEmail + ">"
 	}
 
-	msg := "From: " + sender + "\n"
-	msg += "To: " + rcpt + "\n"
+	msg := "MIME-Version: 1.0\n"
+	msg += "Date: " + time.Now().Format(time.RFC1123Z) + "\n"
+	msg += "From: " + sender + "\n"
+	msg += "Subject: " + subj + "\n"
+	msg += "Thread-Topic: Account Registration." + "\n"
+	msg += "Message-ID: <" + util.GetRandomString(64) + "." + e.SenderEmail + ">" + "\n"
+	msg += `To: "` + rcpt + `" <` + rcpt + `>` + "\n"
 
 	if len(e.BlindCarbonCopy) > 0 {
 		msg += "Bcc: " + strings.Join(e.BlindCarbonCopy, ", ") + "\n"
 	}
-	msg += subj + "\r\n" + body
+
+	msg += "Content-Transfer-Encoding: quoted-printable" + "\n"
+	msg += `Content-Type: text/html; charset="utf-8"` + "\n"
+
+	msg += "\r\n" + body
 
 	// Write email subject body.
 	wc, err := c.Data()

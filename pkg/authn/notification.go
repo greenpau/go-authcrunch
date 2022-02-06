@@ -19,6 +19,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
+	"mime/quotedprintable"
 	"text/template"
 )
 
@@ -121,11 +122,29 @@ func (p *Portal) notify(data map[string]string) error {
 			return errors.ErrNotifyRequestEmail.WithArgs(providerName, err)
 		}
 
-		if err := provider.Send(providerCred, data["email"], emailSubj.String(), emailBody.String()); err != nil {
+		var qpEmailBody string
+		qpEmailBody, err := quotedPrintableBody(emailBody.String())
+		if err != nil {
+			return errors.ErrNotifyRequestEmail.WithArgs(providerName, err)
+		}
+
+		if err := provider.Send(providerCred, data["email"], emailSubj.String(), qpEmailBody); err != nil {
 			return errors.ErrNotifyRequestEmail.WithArgs(providerName, err)
 		}
 	default:
 		return errors.ErrNotifyRequestProviderTypeUnsupported.WithArgs(providerName, providerType)
 	}
 	return nil
+}
+
+func quotedPrintableBody(s string) (string, error) {
+	var b bytes.Buffer
+	w := quotedprintable.NewWriter(&b)
+	if _, err := w.Write([]byte(s)); err != nil {
+		return "", err
+	}
+	if err := w.Close(); err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
