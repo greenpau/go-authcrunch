@@ -35,7 +35,7 @@ import (
 	"strings"
 )
 
-// PortalConfig TODO
+// PortalConfig represents Portal configuration.
 type PortalConfig struct {
 	Name string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	// UI holds the configuration for the user interface.
@@ -58,6 +58,9 @@ type PortalConfig struct {
 	CryptoKeyStoreConfig map[string]interface{} `json:"crypto_key_store_config,omitempty" xml:"crypto_key_store_config,omitempty" yaml:"crypto_key_store_config,omitempty"`
 	// TokenGrantorOptions holds the configuration for the tokens issues by Authenticator.
 	TokenGrantorOptions *options.TokenGrantorOptions `json:"token_grantor_options,omitempty" xml:"token_grantor_options,omitempty" yaml:"token_grantor_options,omitempty"`
+
+	// API holds the configuration for API endpoints.
+	API *APIConfig `json:"api,omitempty" xml:"api,omitempty" yaml:"api,omitempty"`
 
 	// Holds raw crypto configuration.
 	cryptoRawConfigs []string

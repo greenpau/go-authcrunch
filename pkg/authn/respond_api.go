@@ -49,6 +49,10 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 		return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusForbidden, http.StatusText(http.StatusForbidden))
 	}
 
+	if p.config.API == nil || (p.config.API != nil && !p.config.API.Enabled) {
+		return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
+	}
+
 	switch {
 	case strings.HasSuffix(r.URL.Path, "/api/metadata"):
 		return p.handleAPIMetadata(ctx, w, r, rr, usr)

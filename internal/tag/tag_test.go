@@ -64,6 +64,11 @@ func TestTagCompliance(t *testing.T) {
 		err       error
 	}{
 		{
+			name:  "test authn.APIConfig struct",
+			entry: &authn.APIConfig{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test cookie.DomainConfig struct",
 			entry: &cookie.DomainConfig{},
 			opts:  &Options{},
