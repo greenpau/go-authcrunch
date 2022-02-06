@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-func (p *Portal) handleAPIVersion(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
+func (p *Portal) handleAPIMetadata(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
 	rr.Response.Code = http.StatusOK
 	resp := identity.Version()
 	resp["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)

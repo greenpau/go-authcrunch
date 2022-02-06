@@ -19,6 +19,7 @@ envvar:
 build: templates license
 	@mkdir -p bin/
 	@rm -rf ./bin/*
+	@versioned -sync ./pkg/identity/database.go
 	@CGO_ENABLED=0 go build -o ./bin/authdbctl $(VERBOSE) \
 		-ldflags="-w -s \
 		-X main.appVersion=$(APP_VERSION) \

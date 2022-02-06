@@ -50,8 +50,8 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	switch {
-	case strings.HasSuffix(r.URL.Path, "/api/version"):
-		return p.handleAPIVersion(ctx, w, r, rr, usr)
+	case strings.HasSuffix(r.URL.Path, "/api/metadata"):
+		return p.handleAPIMetadata(ctx, w, r, rr, usr)
 	case strings.Contains(r.URL.Path, "/api/orgs"):
 		return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
 	case strings.Contains(r.URL.Path, "/api/teams"):
