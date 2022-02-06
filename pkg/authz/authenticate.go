@@ -22,6 +22,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"github.com/greenpau/go-authcrunch/pkg/util/validate"
 	"go.uber.org/zap"
 	"net/http"
@@ -38,13 +39,18 @@ var (
 
 // Authenticate authorizes HTTP requests.
 func (g *Gatekeeper) Authenticate(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
-	// ar.Response.User       = map[string]interface{}
-	// ar.Response.Authorized = bool
-	// ar.Response.Error      = error
-
 	// Perform authorization bypass checks
 	if g.bypassEnabled && bypass.Match(r, g.config.BypassConfigs) {
 		ar.Response.Authorized = false
+		ar.Response.Bypassed = true
+		g.logger.Info(
+			"authorization bypassed",
+			zap.String("session_id", ar.SessionID),
+			zap.String("request_id", ar.ID),
+			zap.String("src_ip", addrutil.GetSourceAddress(r)),
+			zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+			zap.String("url", addrutil.GetTargetURL(r)),
+		)
 		return nil
 	}
 

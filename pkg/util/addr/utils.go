@@ -103,3 +103,38 @@ func parseAddr6(s string) string {
 	}
 	return s[(i + 1):j]
 }
+
+// GetTargetURL returns the URL the user landed on.
+func GetTargetURL(r *http.Request) string {
+	h := r.Header.Get("X-Forwarded-Host")
+	if h == "" {
+		h = r.Host
+	}
+	p := r.Header.Get("X-Forwarded-Proto")
+	if p == "" {
+		if r.TLS == nil {
+			p = "http"
+		} else {
+			p = "https"
+		}
+	}
+	port := r.Header.Get("X-Forwarded-Port")
+
+	u := p + "://" + h
+
+	if port != "" {
+		switch port {
+		case "443":
+			if p != "https" {
+				u += ":" + port
+			}
+		case "80":
+			if p != "http" {
+				u += ":" + port
+			}
+		default:
+			u += ":" + port
+		}
+	}
+	return u + r.RequestURI
+}

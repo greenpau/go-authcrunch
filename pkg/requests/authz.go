@@ -27,6 +27,7 @@ type AuthorizationRequest struct {
 type AuthorizationResponse struct {
 	User       map[string]interface{} `json:"-"`
 	Authorized bool                   `json:"authorized" xml:"authorized" yaml:"authorized"`
+	Bypassed   bool                   `json:"bypassed,omitempty" xml:"bypassed,omitempty" yaml:"bypassed,omitempty"`
 	Error      error                  `json:"error,omitempty" xml:"error,omitempty" yaml:"error,omitempty"`
 }
 
