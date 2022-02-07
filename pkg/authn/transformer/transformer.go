@@ -211,12 +211,36 @@ func transformData(args []string, m map[string]interface{}) error {
 			}
 		default:
 			// Handle custom fields.
-			v, err := parseCustomFieldValues(args[2:])
-			if err != nil {
-				return fmt.Errorf("failed transforming %q field for %q action in %v: %v", k, args[0], args, err)
+			if args[1] == "nested" {
+				nestedKeys, nestedValues, err := parseCustomNestedFieldValues(args[2:])
+				if err != nil {
+					return fmt.Errorf("failed transforming %q field for %q action in %v: %v", k, args[0], args, err)
+				}
+
+				// Use pointers to create nested map.
+				var mp map[string]interface{}
+				mp = m
+				for i, v := range nestedKeys {
+					if i == len(nestedKeys)-1 {
+						// Handle last element.
+						mp[v] = nestedValues
+						continue
+					}
+					mv, exists := mp[v]
+					if !exists {
+						mp[v] = make(map[string]interface{})
+						mp = mp[v].(map[string]interface{})
+						continue
+					}
+					mp = mv.(map[string]interface{})
+				}
+			} else {
+				v, err := parseCustomFieldValues(args[2:])
+				if err != nil {
+					return fmt.Errorf("failed transforming %q field for %q action in %v: %v", k, args[0], args, err)
+				}
+				m[args[1]] = v
 			}
-			m[args[1]] = v
-			// return fmt.Errorf("unsupported %q field for %q action in %v", k, args[0], args)
 		}
 	case "overwrite":
 		switch dt {
@@ -255,4 +279,41 @@ func parseCustomFieldValues(args []string) (interface{}, error) {
 		return args[x-1], nil
 	}
 	return nil, fmt.Errorf("unsupported %q data type", dt)
+}
+
+func parseCustomNestedFieldValues(args []string) ([]string, interface{}, error) {
+	var x, y int
+	for i, arg := range args {
+		if arg == "with" {
+			y = i
+		}
+		if arg == "as" {
+			x = i
+			break
+		}
+	}
+	if x == 0 {
+		return nil, nil, fmt.Errorf("as type directive not found")
+	}
+	if len(args[x:]) < 2 {
+		return nil, nil, fmt.Errorf("as type directive is too short")
+	}
+
+	dt := strings.Join(args[x+1:], "_")
+	args = args[:x]
+
+	if (dt != "map") && (y < 1) {
+		return nil, nil, fmt.Errorf("the with keyword not found")
+	}
+
+	switch dt {
+	case "string_list", "list":
+		return args[:y], args[y+1:], nil
+	case "string":
+		return args[:y], args[y+1], nil
+	case "map":
+		m := make(map[string]interface{})
+		return args, m, nil
+	}
+	return nil, nil, fmt.Errorf("unsupported %q data type", dt)
 }
