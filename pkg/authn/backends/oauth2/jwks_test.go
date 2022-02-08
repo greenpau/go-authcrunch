@@ -36,11 +36,22 @@ func TestValidateJwksKey(t *testing.T) {
 			err:       errors.ErrJwksKeyIDEmpty,
 		},
 		{
-			name: "unsupported algorithm",
+			name: "unsupported algorithm with rsa keys",
 			input: &JwksKey{
 				KeyID:     "0",
 				KeyType:   "RSA",
 				Algorithm: "FOO",
+			},
+			shouldErr: true,
+			err:       errors.ErrJwksKeyAlgoUnsupported.WithArgs("FOO", "0"),
+		},
+		{
+			name: "unsupported algorithm with shared keys",
+			input: &JwksKey{
+				KeyID:        "0",
+				KeyType:      "oct",
+				Algorithm:    "FOO",
+				SharedSecret: "FdFYFzERwC2uCBB46pZQi4GG85LujR8obt-KWRBICVQ",
 			},
 			shouldErr: true,
 			err:       errors.ErrJwksKeyAlgoUnsupported.WithArgs("FOO", "0"),
@@ -153,7 +164,6 @@ func TestValidateJwksKey(t *testing.T) {
 					"CQRoZmWiHu86SuJZYkDFstVTVSR0hiXudFlfQ2rOhPlpObmku68lXw-7V-P7jwrQRFfQVXw",
 			},
 		},
-
 		{
 			name: "ec key curve is empty",
 			input: &JwksKey{
@@ -173,16 +183,38 @@ func TestValidateJwksKey(t *testing.T) {
 			shouldErr: true,
 			err:       errors.ErrJwksKeyCurveUnsupported.WithArgs("FOO", "0"),
 		},
+		/*
+			{
+				name: "ec key curve processing not implemented",
+				input: &JwksKey{
+					KeyID:   "0",
+					KeyType: "EC",
+					Curve:   "P-256",
+				},
+				shouldErr: true,
+				err:       errors.ErrJwksKeyTypeNotImplemented.WithArgs("0", "EC"),
+			},
+		*/
 		{
-			name: "ec key curve processing not implemented",
+			name: "shated secret key is empty",
 			input: &JwksKey{
 				KeyID:   "0",
-				KeyType: "EC",
-				Curve:   "P-256",
+				KeyType: "oct",
 			},
 			shouldErr: true,
-			err:       errors.ErrJwksKeyTypeNotImplemented.WithArgs("0", "EC"),
+			err:       errors.ErrJwksKeySharedSecretEmpty.WithArgs("0"),
 		},
+		/*
+			{
+				name: "valid HS256 key",
+				input: &JwksKey{
+					KeyID:        "fcd54a6f-9708-4805-ba9c-c05356066a56",
+					Algorithm:    "HS256",
+					KeyType:      "oct",
+					SharedSecret: "FdFYFzERwC2uCBB46pZQi4GG85LujR8obt-KWRBICVQ",
+				},
+			},
+		*/
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

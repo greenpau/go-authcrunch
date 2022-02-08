@@ -40,7 +40,9 @@ type JwksKey struct {
 	CoordX string `json:"x,omitempty" xml:"x,omitempty" yaml:"x,omitempty"`
 	CoordY string `json:"y,omitempty" xml:"y,omitempty" yaml:"y,omitempty"`
 
-	publicKey *rsa.PublicKey
+	SharedSecret string `json:"k,omitempty" xml:"k,omitempty" yaml:"k,omitempty"`
+
+	publicKey interface{}
 }
 
 // Validate returns error if JwksKey does not contain relevant information.
@@ -63,6 +65,15 @@ func (k *JwksKey) Validate() error {
 			return errors.ErrJwksKeyCurveEmpty.WithArgs(k.KeyID)
 		default:
 			return errors.ErrJwksKeyCurveUnsupported.WithArgs(k.Curve, k.KeyID)
+		}
+	case "oct":
+		if k.SharedSecret == "" {
+			return errors.ErrJwksKeySharedSecretEmpty.WithArgs(k.KeyID)
+		}
+		switch k.Algorithm {
+		case "HS256", "HS384", "HS512", "":
+		default:
+			return errors.ErrJwksKeyAlgoUnsupported.WithArgs(k.Algorithm, k.KeyID)
 		}
 	case "":
 		return errors.ErrJwksKeyTypeEmpty.WithArgs(k.KeyID)
@@ -130,15 +141,14 @@ func (k *JwksKey) Validate() error {
 			return errors.ErrJwksKeyConvExponent.WithArgs(k.KeyID, err)
 		}
 		k.publicKey = &rsa.PublicKey{N: n, E: int(e)}
-
 	default:
-		return errors.ErrJwksKeyTypeNotImplemented.WithArgs(k.KeyID, k.KeyType)
+		return errors.ErrJwksKeyTypeNotImplemented.WithArgs(k.KeyID, k.KeyType, k)
 	}
 
 	return nil
 }
 
-// GetPublicKey returns pointer to rsa.PublicKey.
-func (k *JwksKey) GetPublicKey() *rsa.PublicKey {
+// GetPublic returns pointer to public key.
+func (k *JwksKey) GetPublic() interface{} {
 	return k.publicKey
 }

@@ -28,7 +28,10 @@ const (
 	ErrJwksKeyDecodeExponent   StandardError = "jwks failed to decode key %q exponent: %v"
 	ErrJwksKeyConvExponent     StandardError = "jwks failed to decode key %q exponent: %v"
 
-	ErrJwksKeyCurveEmpty         StandardError = "jwks key curve is empty for %s"
-	ErrJwksKeyCurveUnsupported   StandardError = "jwks unsupported key curve %s for %s"
-	ErrJwksKeyTypeNotImplemented StandardError = "jwks key %q type %q processing not implemented"
+	ErrJwksKeyCurveEmpty       StandardError = "jwks key curve is empty for %s"
+	ErrJwksKeyCurveUnsupported StandardError = "jwks unsupported key curve %s for %s"
+
+	ErrJwksKeySharedSecretEmpty StandardError = "jwks shared secret key for %s is empty"
+
+	ErrJwksKeyTypeNotImplemented StandardError = "jwks key %q type %q processing not implemented: %v"
 )

@@ -469,7 +469,6 @@ func (b *Backend) fetchKeysURL() error {
 			return errors.ErrBackendOauthJwksInvalidKey.WithArgs(err)
 		}
 		b.keys[k.KeyID] = k
-		b.publicKeys[k.KeyID] = k.publicKey
 	}
 
 	return nil

@@ -15,13 +15,11 @@
 package oauth2
 
 import (
-	"crypto/rsa"
-	"regexp"
-
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
+	"regexp"
 	"time"
 )
 
@@ -30,7 +28,6 @@ type Backend struct {
 	Config           *Config `json:"config,omitempty" xml:"config,omitempty" yaml:"config,omitempty"`
 	metadata         map[string]interface{}
 	keys             map[string]*JwksKey
-	publicKeys       map[string]*rsa.PublicKey
 	authorizationURL string
 	tokenURL         string
 	keysURL          string
@@ -68,10 +65,9 @@ type Backend struct {
 // with OAuth 2.0 backend.
 func NewDatabaseBackend(cfg *Config, logger *zap.Logger) *Backend {
 	b := &Backend{
-		Config:     cfg,
-		state:      newStateManager(),
-		keys:       make(map[string]*JwksKey),
-		publicKeys: make(map[string]*rsa.PublicKey),
+		Config: cfg,
+		state:  newStateManager(),
+		keys:   make(map[string]*JwksKey),
 		requiredTokenFields: map[string]interface{}{
 			"access_token": true,
 			"id_token":     true,

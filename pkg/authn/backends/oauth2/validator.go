@@ -17,6 +17,7 @@ package oauth2
 import (
 	jwtlib "github.com/golang-jwt/jwt/v4"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"strings"
 )
 
 var (
@@ -36,26 +37,36 @@ func (b *Backend) validateAccessToken(state string, data map[string]interface{})
 	}
 
 	token, err := jwtlib.Parse(tokenString, func(token *jwtlib.Token) (interface{}, error) {
-		if _, validMethod := token.Method.(*jwtlib.SigningMethodRSA); !validMethod {
-			return nil, errors.ErrBackendOAuthAccessTokenSignMethodNotSupported.WithArgs(b.Config.IdentityTokenName, token.Header["alg"])
+		switch {
+		case strings.HasPrefix(token.Method.Alg(), "RS"):
+			if _, validMethod := token.Method.(*jwtlib.SigningMethodRSA); !validMethod {
+				return nil, errors.ErrBackendOAuthAccessTokenSignMethodNotSupported.WithArgs(b.Config.IdentityTokenName, token.Header["alg"])
+			}
+		case strings.HasPrefix(token.Method.Alg(), "ES"):
+			if _, validMethod := token.Method.(*jwtlib.SigningMethodECDSA); !validMethod {
+				return nil, errors.ErrBackendOAuthAccessTokenSignMethodNotSupported.WithArgs(b.Config.IdentityTokenName, token.Header["alg"])
+			}
+		case strings.HasPrefix(token.Method.Alg(), "HS"):
+			return nil, errors.ErrBackendOAuthAccessTokenSignMethodNotSupported.WithArgs(b.Config.IdentityTokenName, token.Method.Alg())
 		}
+
 		keyID, found := token.Header["kid"].(string)
 		if !found {
 			return nil, errors.ErrBackendOAuthAccessTokenKeyIDNotFound.WithArgs(b.Config.IdentityTokenName)
 		}
-		key, exists := b.publicKeys[keyID]
+		key, exists := b.keys[keyID]
 		if !exists {
 			if !b.disableKeyVerification {
 				if err := b.fetchKeysURL(); err != nil {
 					return nil, errors.ErrBackendOauthKeyFetchFailed.WithArgs(err)
 				}
 			}
-			key, exists = b.publicKeys[keyID]
+			key, exists = b.keys[keyID]
 			if !exists {
 				return nil, errors.ErrBackendOAuthAccessTokenKeyIDNotRegistered.WithArgs(b.Config.IdentityTokenName, keyID)
 			}
 		}
-		return key, nil
+		return key.GetPublic(), nil
 	})
 
 	if err != nil {
