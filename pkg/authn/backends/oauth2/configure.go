@@ -389,7 +389,12 @@ func (b *Backend) fetchConfig() error {
 }
 
 func (b *Backend) fetchMetadataURL() error {
-	resp, err := http.Get(b.Config.MetadataURL)
+	cli, err := newBrowser()
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("GET", b.Config.MetadataURL, nil)
+	resp, err := cli.Do(req)
 	if err != nil {
 		return err
 	}
