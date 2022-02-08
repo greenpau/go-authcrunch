@@ -109,13 +109,13 @@ func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http
 	case "registered":
 		resp.Title = "Thank you!"
 	case "ackfail":
-		resp.Title = "Acknowledgement Failed"
+		resp.Title = "Registration"
 		resp.Data["message"] = reg.message
 	case "ack":
-		resp.Title = "Registration Acknowledgement"
+		resp.Title = "Registration"
 		resp.Data["registration_id"] = reg.registrationID
 	case "acked":
-		resp.Title = "Registration Acknowledged"
+		resp.Title = "Registration"
 	}
 
 	content, err := p.ui.Render("register", resp)
@@ -384,6 +384,7 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 			zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
 		)
 		reg.message = "Registration identifier mismatch"
+		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
 	// Build registration commit request.

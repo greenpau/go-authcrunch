@@ -13,8 +13,10 @@
 		<!-- Matrialize CSS -->
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/materialize-css/css/materialize.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/montserrat.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/styles.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/register.css" }}" />
     {{ if eq .Data.ui_options.custom_css_required "yes" }}
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
     {{ end }}
@@ -104,14 +106,15 @@
                 <li>If you still don't see it, please email support so we can resend it to you.</li>
               </ol>
               {{ end }}
-
               {{ if eq .Data.view "ack" }}
-              <div class="input-field">
-                <input id="registration_code" name="registration_code" type="password" class="validate"
+              <p style="margin-bottom: 1em; text-align: center;">Please provide the registration code you received.</p>
+              <div class="register-ctrl">
+                <input id="registration_code" name="registration_code" type="text" class="register-code validate"
                   autocorrect="off" autocapitalize="off" spellcheck="false"
+                  pattern="[A-Za-z0-9]{6,8}" maxlength="8" placeholder="________"
+                  title="The registration code should be 6-8 characters long."
                   autocomplete="off"
                   required />
-                <label for="registration_code">Registration Code</label>
               </div>
               {{ end }}
 
@@ -148,22 +151,20 @@
 
               {{ if ne .Data.view "register" }}
               <a href="{{ .ActionEndpoint }}" class="navbtn-last">
-                <button type="button" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
+                <button type="button" class="btn waves-effect waves-light navbtn active navbtn-last app-btn">
                   <i class="las la-home left app-btn-icon"></i>
                   <span class="app-btn-text">Portal</span>
                 </button>
               </a>
-              {{ end }}
-
               {{ if eq .Data.view "ack" }}
               <button type="reset" name="reset" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1 app-btn">
-                <i class="las la-redo-alt app-btn-icon"></i>
-                <span class="app-btn-text">Clear</span>
+                <i class="las la-redo-alt left app-btn-icon"></i>
               </button>
-              <button type="submit" name="submit" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
-                <i class="las la-chevron-circle-right app-btn-icon"></i>
+              <button type="submit" name="submit" class="btn waves-effect waves-light navbtn active navbtn-last app-btn">
+                <i class="las la-check-square left app-btn-icon"></i>
                 <span class="app-btn-text">Submit</span>
               </button>
+              {{ end }}
               {{ end }}
             </div>
           </div>
