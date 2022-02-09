@@ -87,7 +87,7 @@ func (k *JwksKey) Validate() error {
 	}
 
 	switch k.PublicKeyUse {
-	case "sig", "":
+	case "sig", "enc", "":
 	default:
 		return errors.ErrJwksKeyUsageUnsupported.WithArgs(k.PublicKeyUse, k.KeyID)
 	}
