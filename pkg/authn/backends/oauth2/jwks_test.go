@@ -183,20 +183,48 @@ func TestValidateJwksKey(t *testing.T) {
 			shouldErr: true,
 			err:       errors.ErrJwksKeyCurveUnsupported.WithArgs("FOO", "0"),
 		},
-		/*
-			{
-				name: "ec key curve processing not implemented",
-				input: &JwksKey{
-					KeyID:   "0",
-					KeyType: "EC",
-					Curve:   "P-256",
-				},
-				shouldErr: true,
-				err:       errors.ErrJwksKeyTypeNotImplemented.WithArgs("0", "EC"),
-			},
-		*/
 		{
-			name: "shated secret key is empty",
+			name: "ec key curve has no coordinates",
+			input: &JwksKey{
+				KeyID:   "0",
+				KeyType: "EC",
+				Curve:   "P-256",
+			},
+			shouldErr: true,
+			err:       errors.ErrJwksKeyCurveCoordNotFound.WithArgs("0"),
+		},
+		{
+			name: "valid ES256 key",
+			input: &JwksKey{
+				KeyID:   "0",
+				KeyType: "EC",
+				Curve:   "P-256",
+				CoordX:  "5lhEug5xK4xBDZ2nAbaxLtaLiv85bxJ7ePd1dkO23HQ",
+				CoordY:  "4aiK72sBeUAGkv0TaLsmwokYUYyNxGsS5EMIKwsNIKk",
+			},
+		},
+		{
+			name: "valid ES384 key",
+			input: &JwksKey{
+				KeyID:   "0",
+				KeyType: "EC",
+				Curve:   "P-384",
+				CoordX:  "Wyidjnd4VBA3nih1RZCJJ1EkKgHSApODejS_JCReqg6K0RhxaIzr9jh_NRslfjnd",
+				CoordY:  "kcGQFUrRDHqcj1dTwL_SOyaf6cnkp8dL5NX70WiV3Ti97bFLrCE1dfRGpnCPW4R6",
+			},
+		},
+		{
+			name: "valid ES512 key",
+			input: &JwksKey{
+				KeyID:   "0",
+				KeyType: "EC",
+				Curve:   "P-521",
+				CoordX:  "AekpBQ8ST8a8VcfVOTNl353vSrDCLLJXmPk06wTjxrrjcBpXp5EOnYG_NjFZ6OvLFV1jSfS9tsz4qUxcWceqwQGk",
+				CoordY:  "ADSmRA43Z1DSNx_RvcLI87cdL07l6jQyyBXMoxVg_l2Th-x3S1WDhjDly79ajL4Kkd0AZMaZmh9ubmf63e3kyMj2",
+			},
+		},
+		{
+			name: "shared secret key is empty",
 			input: &JwksKey{
 				KeyID:   "0",
 				KeyType: "oct",
@@ -204,17 +232,15 @@ func TestValidateJwksKey(t *testing.T) {
 			shouldErr: true,
 			err:       errors.ErrJwksKeySharedSecretEmpty.WithArgs("0"),
 		},
-		/*
-			{
-				name: "valid HS256 key",
-				input: &JwksKey{
-					KeyID:        "fcd54a6f-9708-4805-ba9c-c05356066a56",
-					Algorithm:    "HS256",
-					KeyType:      "oct",
-					SharedSecret: "FdFYFzERwC2uCBB46pZQi4GG85LujR8obt-KWRBICVQ",
-				},
+		{
+			name: "valid HS256 key",
+			input: &JwksKey{
+				KeyID:        "fcd54a6f-9708-4805-ba9c-c05356066a56",
+				Algorithm:    "HS256",
+				KeyType:      "oct",
+				SharedSecret: "FdFYFzERwC2uCBB46pZQi4GG85LujR8obt-KWRBICVQ",
 			},
-		*/
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

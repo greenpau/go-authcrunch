@@ -16,6 +16,8 @@ package oauth2
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/binary"
@@ -60,11 +62,14 @@ func (k *JwksKey) Validate() error {
 		}
 	case "EC":
 		switch k.Curve {
-		case "P-256", "P-521":
+		case "P-256", "P-384", "P-521":
 		case "":
 			return errors.ErrJwksKeyCurveEmpty.WithArgs(k.KeyID)
 		default:
 			return errors.ErrJwksKeyCurveUnsupported.WithArgs(k.Curve, k.KeyID)
+		}
+		if k.CoordX == "" || k.CoordY == "" {
+			return errors.ErrJwksKeyCurveCoordNotFound.WithArgs(k.KeyID)
 		}
 	case "oct":
 		if k.SharedSecret == "" {
@@ -141,6 +146,48 @@ func (k *JwksKey) Validate() error {
 			return errors.ErrJwksKeyConvExponent.WithArgs(k.KeyID, err)
 		}
 		k.publicKey = &rsa.PublicKey{N: n, E: int(e)}
+	case "EC":
+		var expByteCount int
+		pk := &ecdsa.PublicKey{}
+		switch k.Curve {
+		case "P-256":
+			pk.Curve = elliptic.P256()
+			expByteCount = 32
+		case "P-384":
+			pk.Curve = elliptic.P384()
+			expByteCount = 48
+		case "P-521":
+			pk.Curve = elliptic.P521()
+			expByteCount = 66
+		}
+
+		for i, c := range []string{k.CoordX, k.CoordY} {
+			ltr := "X"
+			if i > 0 {
+				ltr = "Y"
+			}
+			b, err := base64.RawURLEncoding.DecodeString(c)
+			if err != nil {
+				return errors.ErrJwksKeyDecodeCoord.WithArgs(k.KeyID, ltr, err)
+			}
+			if len(b) != expByteCount {
+				return errors.ErrJwksKeyCoordLength.WithArgs(k.KeyID, ltr, len(b), expByteCount)
+			}
+			bi := big.NewInt(0)
+			bi.SetBytes(b)
+			if i == 0 {
+				pk.X = bi
+				continue
+			}
+			pk.Y = bi
+		}
+		k.publicKey = pk
+	case "oct":
+		key, err := base64.RawURLEncoding.DecodeString(k.SharedSecret)
+		if err != nil {
+			return errors.ErrJwksKeyDecodeSharedSecret.WithArgs(k.KeyID, err)
+		}
+		k.publicKey = key
 	default:
 		return errors.ErrJwksKeyTypeNotImplemented.WithArgs(k.KeyID, k.KeyType, k)
 	}
