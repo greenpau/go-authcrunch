@@ -19,6 +19,5 @@ import (
 )
 
 func TestNewRegistration(t *testing.T) {
-	user := NewUser("jsmith")
-	NewRegistration(user)
+	NewRegistration("foo")
 }

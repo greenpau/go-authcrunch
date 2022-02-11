@@ -1,0 +1,5 @@
+{{- if eq .verdict "approved" -}}
+User Registration Approved
+{{- else -}}
+User Registration Declined
+{{- end -}}

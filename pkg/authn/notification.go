@@ -20,6 +20,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"mime/quotedprintable"
+	"strings"
 	"text/template"
 )
 
@@ -30,6 +31,7 @@ func (p *Portal) notify(data map[string]string) error {
 	var providerCredName string
 	var providerCred *credentials.Generic
 	var provider *messaging.EmailProvider
+	var rcpts []string
 
 	commonRequiredFields := []string{
 		"provider_name", "provider_type",
@@ -55,7 +57,16 @@ func (p *Portal) notify(data map[string]string) error {
 	case "registration_confirmation":
 		requiredFields = []string{
 			"registration_id", "username", "email", "registration_url",
-			"src_ip", "src_conn_ip",
+			"registration_code", "src_ip", "src_conn_ip",
+		}
+	case "registration_ready":
+		requiredFields = []string{
+			"registration_id", "username", "email", "registration_url",
+			"src_ip", "src_conn_ip", "admin_email",
+		}
+	case "registration_verdict":
+		requiredFields = []string{
+			"username", "email", "verdict",
 		}
 	default:
 		return errors.ErrNotifyRequestTemplateUnsupported.WithArgs(tmplName)
@@ -65,6 +76,14 @@ func (p *Portal) notify(data map[string]string) error {
 		if _, exists := data[fieldName]; !exists {
 			return errors.ErrNotifyRequestFieldNotFound.WithArgs(fieldName)
 		}
+	}
+
+	switch tmplName {
+	case "registration_confirmation", "registration_verdict":
+		rcpts = append(rcpts, data["email"])
+	case "registration_ready":
+
+		rcpts = strings.Split(data["admin_email"], ",")
 	}
 
 	lang := "en"
@@ -128,7 +147,11 @@ func (p *Portal) notify(data map[string]string) error {
 			return errors.ErrNotifyRequestEmail.WithArgs(providerName, err)
 		}
 
-		if err := provider.Send(providerCred, data["email"], emailSubj.String(), qpEmailBody); err != nil {
+		qpEmailSubj := emailSubj.String()
+		r := strings.NewReplacer("\r", "", "\n", " ")
+		qpEmailSubj = strings.TrimSpace(r.Replace(qpEmailSubj))
+
+		if err := provider.Send(providerCred, rcpts, qpEmailSubj, qpEmailBody); err != nil {
 			return errors.ErrNotifyRequestEmail.WithArgs(providerName, err)
 		}
 	default:

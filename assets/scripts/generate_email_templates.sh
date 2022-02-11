@@ -11,6 +11,8 @@ declare -a _TEMPLATES
 declare -a _NAMES
 _LANG[${#_LANG[@]}]="en"
 _TEMPLATES[${#_TEMPLATES[@]}]="registration_confirmation"
+_TEMPLATES[${#_TEMPLATES[@]}]="registration_ready"
+_TEMPLATES[${#_TEMPLATES[@]}]="registration_verdict"
 
 printf "package messaging\n\n" > ${TMPL_BODY_FILE}
 printf "// EmailTemplateBody stores email body templates.\n" >> ${TMPL_BODY_FILE}

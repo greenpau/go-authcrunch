@@ -65,6 +65,7 @@ type User struct {
 	LastModified   time.Time       `json:"last_modified,omitempty" xml:"last_modified,omitempty" yaml:"last_modified,omitempty"`
 	Revision       int             `json:"revision,omitempty" xml:"revision,omitempty" yaml:"revision,omitempty"`
 	Roles          []*Role         `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
+	Registration   *Registration   `json:"registration,omitempty" xml:"registration,omitempty" yaml:"registration,omitempty"`
 }
 
 // NewUserMetadataBundle returns an instance of UserMetadataBundle.

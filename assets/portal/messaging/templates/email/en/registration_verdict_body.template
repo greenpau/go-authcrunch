@@ -1,0 +1,19 @@
+<html>
+  <body>
+    <p>
+    {{- if eq .verdict "approved" -}}
+      Your registration has been approved.
+      You may now login with the username or email
+      address below.
+    {{- else -}}
+      Your registration has been declined.
+    {{- end -}}
+    </p>
+    <p>The registation metadata follows:</p>
+    <ul style="list-style-type: disc">
+      <li>Username: <code>{{ .username }}</code></li>
+      <li>Email: <code>{{ .email }}</code></li>
+      <li>Timestamp: {{ .timestamp }}</li>
+    </ul>
+  </body>
+</html>

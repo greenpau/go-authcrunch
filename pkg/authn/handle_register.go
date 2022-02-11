@@ -288,6 +288,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 					zap.String("registration_id", registrationID),
+					zap.String("registration_type", "registration_confirmation"),
 					zap.Error(err),
 				)
 				p.registrations.Delete(registrationID)
@@ -395,6 +396,9 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 			Email:    usr["email"],
 			Roles:    []string{"authp/user"},
 		},
+		Query: requests.Query{
+			ID: registrationID,
+		},
 	}
 
 	if err := p.registrations.Delete(registrationID); err != nil {
@@ -411,6 +415,34 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 		)
 		reg.message = "Registration session is no longer valid"
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
+	}
+
+	// Send a notification to admins.
+	regData := map[string]string{
+		"provider_name":   p.config.UserRegistrationConfig.EmailProvider,
+		"provider_type":   "email",
+		"template":        "registration_ready",
+		"session_id":      rr.Upstream.SessionID,
+		"request_id":      rr.ID,
+		"registration_id": registrationID,
+		"username":        req.User.Username,
+		"email":           req.User.Email,
+		"admin_email":     strings.Join(p.config.UserRegistrationConfig.AdminEmails, ","),
+	}
+	regData["registration_url"] = getCurrentURL(r, "/register")
+	regData["src_ip"] = addrutil.GetSourceAddress(r)
+	regData["src_conn_ip"] = addrutil.GetSourceConnAddress(r)
+	regData["timestamp"] = time.Now().UTC().Format(time.UnixDate)
+
+	if err := p.notify(regData); err != nil {
+		p.logger.Warn(
+			"Failed to send notification",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.String("registration_id", registrationID),
+			zap.String("registration_type", "registration_ready"),
+			zap.Error(err),
+		)
 	}
 
 	reg.view = "acked"

@@ -54,3 +54,17 @@ func FindStrArr(arr []string, s string) bool {
 	}
 	return false
 }
+
+// DedupStrArr returns deduplicated string array.
+func DedupStrArr(arr []string) []string {
+	var output []string
+	m := make(map[string]interface{})
+	for _, s := range arr {
+		if _, exists := m[s]; exists {
+			continue
+		}
+		m[s] = true
+		output = append(output, s)
+	}
+	return output
+}

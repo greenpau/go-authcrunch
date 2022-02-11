@@ -137,25 +137,35 @@ func (cfg *PortalConfig) SetMessaging(c *messaging.Config) {
 // ValidateCredentials validates messaging provider and credentials used for
 // the user registration.
 func (cfg *PortalConfig) ValidateCredentials() error {
-	if cfg.UserRegistrationConfig != nil && cfg.UserRegistrationConfig.EmailProvider != "" {
-		if cfg.messaging == nil {
-			return errors.ErrPortalConfigMessagingNil
+	if cfg.UserRegistrationConfig == nil {
+		return nil
+	}
+
+	if cfg.UserRegistrationConfig.EmailProvider == "" {
+		return nil
+	}
+
+	if cfg.messaging == nil {
+		return errors.ErrPortalConfigMessagingNil
+	}
+	if found := cfg.messaging.FindProvider(cfg.UserRegistrationConfig.EmailProvider); !found {
+		return errors.ErrPortalConfigMessagingProviderNotFound.WithArgs(cfg.UserRegistrationConfig.EmailProvider)
+	}
+	providerCreds := cfg.messaging.FindProviderCredentials(cfg.UserRegistrationConfig.EmailProvider)
+	if providerCreds == "" {
+		return errors.ErrPortalConfigMessagingProviderCredentialsNotFound.WithArgs(cfg.UserRegistrationConfig.EmailProvider)
+	}
+	if providerCreds != "passwordless" {
+		if cfg.credentials == nil {
+			return errors.ErrPortalConfigCredentialsNil
 		}
-		if found := cfg.messaging.FindProvider(cfg.UserRegistrationConfig.EmailProvider); !found {
-			return errors.ErrPortalConfigMessagingProviderNotFound.WithArgs(cfg.UserRegistrationConfig.EmailProvider)
+		if found := cfg.credentials.FindCredential(providerCreds); !found {
+			return errors.ErrPortalConfigCredentialsNotFound.WithArgs(providerCreds)
 		}
-		providerCreds := cfg.messaging.FindProviderCredentials(cfg.UserRegistrationConfig.EmailProvider)
-		if providerCreds == "" {
-			return errors.ErrPortalConfigMessagingProviderCredentialsNotFound.WithArgs(cfg.UserRegistrationConfig.EmailProvider)
-		}
-		if providerCreds != "passwordless" {
-			if cfg.credentials == nil {
-				return errors.ErrPortalConfigCredentialsNil
-			}
-			if found := cfg.credentials.FindCredential(providerCreds); !found {
-				return errors.ErrPortalConfigCredentialsNotFound.WithArgs(providerCreds)
-			}
-		}
+	}
+
+	if len(cfg.UserRegistrationConfig.AdminEmails) < 1 {
+		return errors.ErrPortalConfigAdminEmailNotFound
 	}
 	return nil
 }

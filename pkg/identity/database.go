@@ -285,6 +285,11 @@ func (db *Database) AddUser(r *requests.Request) error {
 		emailAddresses = append(emailAddresses, emailAddress)
 	}
 
+	if r.Query.ID != "" {
+		// Handle the case where registration ID is being provided with the request.
+		user.Registration = NewRegistration(r.Query.ID)
+	}
+
 	db.refUsername[username] = user
 	db.refID[user.ID] = user
 	for _, emailAddress := range emailAddresses {

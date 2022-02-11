@@ -39,7 +39,7 @@ type EmailProvider struct {
 }
 
 // Send sends an email message.
-func (e *EmailProvider) Send(creds *credentials.Generic, rcpt, subj, body string) error {
+func (e *EmailProvider) Send(creds *credentials.Generic, rcpts []string, subj, body string) error {
 	dial := smtp.Dial
 	if e.Protocol == "smtps" {
 		dial = func(addr string) (*smtp.Client, error) {
@@ -73,8 +73,10 @@ func (e *EmailProvider) Send(creds *credentials.Generic, rcpt, subj, body string
 		return err
 	}
 
-	if err := c.Rcpt(rcpt); err != nil {
-		return err
+	for _, rcpt := range rcpts {
+		if err := c.Rcpt(rcpt); err != nil {
+			return err
+		}
 	}
 
 	sender := e.SenderEmail
@@ -88,10 +90,13 @@ func (e *EmailProvider) Send(creds *credentials.Generic, rcpt, subj, body string
 	msg += "Subject: " + subj + "\n"
 	msg += "Thread-Topic: Account Registration." + "\n"
 	msg += "Message-ID: <" + util.GetRandomString(64) + "." + e.SenderEmail + ">" + "\n"
-	msg += `To: "` + rcpt + `" <` + rcpt + `>` + "\n"
+	msg += `To: ` + strings.Join(rcpts, ", ") + "\n"
 
 	if len(e.BlindCarbonCopy) > 0 {
-		msg += "Bcc: " + strings.Join(e.BlindCarbonCopy, ", ") + "\n"
+		bccRcpts := dedupRcpt(rcpts, e.BlindCarbonCopy)
+		if len(bccRcpts) > 0 {
+			msg += "Bcc: " + strings.Join(bccRcpts, ", ") + "\n"
+		}
 	}
 
 	msg += "Content-Transfer-Encoding: quoted-printable" + "\n"
@@ -155,6 +160,7 @@ func (e *EmailProvider) Validate() error {
 			switch k {
 			case "password_recovery":
 			case "registration_confirmation":
+			case "registration_ready":
 			case "registration_verdict":
 			case "mfa_otp":
 			default:
@@ -163,4 +169,20 @@ func (e *EmailProvider) Validate() error {
 		}
 	}
 	return nil
+}
+
+func dedupRcpt(arr1, arr2 []string) []string {
+	var output []string
+	m := make(map[string]interface{})
+	for _, s := range arr1 {
+		m[s] = true
+	}
+
+	for _, s := range arr2 {
+		if _, exists := m[s]; exists {
+			continue
+		}
+		output = append(output, s)
+	}
+	return output
 }

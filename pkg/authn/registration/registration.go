@@ -36,4 +36,6 @@ type Config struct {
 	PrivacyPolicyLink string `json:"privacy_policy_link,omitempty" xml:"privacy_policy_link,omitempty" yaml:"privacy_policy_link,omitempty"`
 	// The email provider used for the notifications.
 	EmailProvider string `json:"email_provider,omitempty" xml:"email_provider,omitempty" yaml:"email_provider,omitempty"`
+	// The email address(es) of portal administrators.
+	AdminEmails []string `json:"admin_emails,omitempty" xml:"admin_emails,omitempty" yaml:"admin_emails,omitempty"`
 }

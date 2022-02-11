@@ -354,6 +354,10 @@ func (p *Portal) configureUserRegistration() error {
 		return errors.ErrUserRegistrationConfig.WithArgs(p.config.Name, "email provider not found")
 	}
 
+	if len(p.config.UserRegistrationConfig.AdminEmails) < 1 {
+		return errors.ErrUserRegistrationConfig.WithArgs(p.config.Name, "admin email address(es) not found")
+	}
+
 	p.logger.Debug(
 		"Configuring user registration",
 		zap.String("portal_name", p.config.Name),
@@ -383,6 +387,7 @@ func (p *Portal) configureUserRegistration() error {
 		zap.String("portal_name", p.config.Name),
 		zap.String("portal_id", p.id),
 		zap.String("dropbox", p.config.UserRegistrationConfig.Dropbox),
+		zap.Strings("admin_emails", p.config.UserRegistrationConfig.AdminEmails),
 	)
 	return nil
 }

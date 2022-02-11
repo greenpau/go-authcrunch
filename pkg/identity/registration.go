@@ -23,16 +23,31 @@ import (
 // register for a service. The user provides identity information
 // and waits for an approval.
 type Registration struct {
-	User     *User     `json:"user,omitempty" xml:"user,omitempty" yaml:"user,omitempty"`
-	Created  time.Time `json:"created,omitempty" xml:"created,omitempty" yaml:"created,omitempty"`
-	Aprroved bool      `json:"aprroved,omitempty" xml:"aprroved,omitempty" yaml:"aprroved,omitempty"`
+	ID         string    `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
+	CreatedAt  time.Time `json:"created_at,omitempty" xml:"created_at,omitempty" yaml:"created_at,omitempty"`
+	ApprovedAt time.Time `json:"approved_at,omitempty" xml:"approved_at,omitempty" yaml:"approved_at,omitempty"`
+	Approved   bool      `json:"approved,omitempty" xml:"approved,omitempty" yaml:"approved,omitempty"`
+	DeclinedAt time.Time `json:"declined_at,omitempty" xml:"declined_at,omitempty" yaml:"declined_at,omitempty"`
+	Declined   bool      `json:"declined,omitempty" xml:"declined,omitempty" yaml:"declined,omitempty"`
 }
 
 // NewRegistration returns an instance of Registration.
-func NewRegistration(user *User) *Registration {
+func NewRegistration(s string) *Registration {
 	r := &Registration{
-		User:    user,
-		Created: time.Now().UTC(),
+		ID:        s,
+		CreatedAt: time.Now().UTC(),
 	}
 	return r
+}
+
+// Approve approves the Registration.
+func (r *Registration) Approve() {
+	r.Approved = true
+	r.ApprovedAt = time.Now().UTC()
+}
+
+// Decline declines the Registration.
+func (r *Registration) Decline() {
+	r.Declined = true
+	r.DeclinedAt = time.Now().UTC()
 }

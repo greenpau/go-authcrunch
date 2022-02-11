@@ -29,4 +29,5 @@ const (
 	ErrPortalConfigMessagingProviderCredentialsNotFound StandardError = "portal config messaging provider %q has no associated credentials"
 	ErrPortalConfigCredentialsNil                       StandardError = "portal config credentials is nil"
 	ErrPortalConfigCredentialsNotFound                  StandardError = "portal config credential %q not found"
+	ErrPortalConfigAdminEmailNotFound                   StandardError = "portal config registration admin email not found"
 )
