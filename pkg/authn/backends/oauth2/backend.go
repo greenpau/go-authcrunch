@@ -68,12 +68,9 @@ func NewDatabaseBackend(cfg *Config, logger *zap.Logger) *Backend {
 		Config: cfg,
 		state:  newStateManager(),
 		keys:   make(map[string]*JwksKey),
-		requiredTokenFields: map[string]interface{}{
-			"access_token": true,
-			"id_token":     true,
-		},
 		logger: logger,
 	}
+
 	go manageStateManager(b.state)
 	return b
 }

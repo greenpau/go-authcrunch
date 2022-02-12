@@ -79,6 +79,8 @@ type Config struct {
 	AuthorizationURL string `json:"authorization_url,omitempty" xml:"authorization_url,omitempty" yaml:"authorization_url,omitempty"`
 	TokenURL         string `json:"token_url,omitempty" xml:"token_url,omitempty" yaml:"token_url,omitempty"`
 
+	RequiredTokenFields []string `json:"required_token_fields,omitempty" xml:"required_token_fields,omitempty" yaml:"required_token_fields,omitempty"`
+
 	scopeMap map[string]interface{}
 }
 
@@ -171,6 +173,11 @@ func (b *Backend) Configure() error {
 	}
 	if b.Config.TokenURL != "" {
 		b.tokenURL = b.Config.TokenURL
+	}
+
+	b.requiredTokenFields = make(map[string]interface{})
+	for _, fieldName := range b.Config.RequiredTokenFields {
+		b.requiredTokenFields[fieldName] = true
 	}
 
 	b.Config.scopeMap = make(map[string]interface{})
@@ -276,6 +283,13 @@ func (b *Backend) Configure() error {
 	}
 	b.serverName = parsedBaseAuthURL.Host
 
+	if len(b.requiredTokenFields) < 1 {
+		for _, fieldName := range []string{"access_token", "id_token"} {
+			b.requiredTokenFields[fieldName] = true
+			b.Config.RequiredTokenFields = append(b.Config.RequiredTokenFields, fieldName)
+		}
+	}
+
 	if b.Config.DelayStart > 0 {
 		go b.fetchConfig()
 	} else {
@@ -310,6 +324,7 @@ func (b *Backend) Configure() error {
 		zap.String("domain_name", b.Config.DomainName),
 		zap.Any("metadata", b.metadata),
 		zap.Any("jwks_keys", b.keys),
+		zap.Strings("required_token_fields", b.Config.RequiredTokenFields),
 	)
 
 	return nil
