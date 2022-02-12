@@ -481,11 +481,11 @@ func getCurrentURL(r *http.Request, suffix string) string {
 		}
 	}
 	if suffix != "" {
-		i := strings.Index(p, suffix)
+		i := strings.Index(r.RequestURI, suffix)
 		if i < 0 {
 			return u + r.RequestURI
 		}
-		return r.RequestURI[:i] + suffix
+		return u + r.RequestURI[:i] + suffix
 	}
 
 	return u + r.RequestURI
