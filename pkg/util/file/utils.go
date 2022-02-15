@@ -17,7 +17,9 @@ package file
 import (
 	"bufio"
 	"bytes"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -75,4 +77,35 @@ func ReadFile(filePath string) (string, error) {
 	}
 
 	return buffer.String(), nil
+}
+
+func expandHomePath(fp string) (string, error) {
+	if fp[0] != '~' {
+		return fp, nil
+	}
+	hd, err := os.UserHomeDir()
+	if err != nil {
+		return fp, err
+	}
+	fp = filepath.Join(hd, fp[1:])
+	return fp, nil
+}
+
+// ReadFileBytes expands home directory and reads a file.
+func ReadFileBytes(fp string) ([]byte, error) {
+	var err error
+	fp, err = expandHomePath(fp)
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.ReadFile(fp)
+}
+
+// ExpandPath expands file system path.
+func ExpandPath(s string) string {
+	p, err := expandHomePath(s)
+	if err != nil {
+		return s
+	}
+	return p
 }

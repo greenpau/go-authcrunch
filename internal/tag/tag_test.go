@@ -46,6 +46,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
 	"github.com/greenpau/go-authcrunch/pkg/user"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"strings"
 	"unicode"
@@ -63,6 +64,11 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{
+			name:  "test util.Browser struct",
+			entry: &util.Browser{},
+			opts:  &Options{},
+		},
 		{
 			name:  "test authn.APIConfig struct",
 			entry: &authn.APIConfig{},
@@ -803,11 +809,25 @@ func TestStructTagCompliance(t *testing.T) {
 		t.Error(err)
 	}
 
+	excludedFiles := []string{
+		"authn/ui/content.go",
+		"cmd/authdbctl/user.go",
+		"cmd/authdbctl/config.go",
+	}
+
 	for _, fp := range files {
 		// t.Logf("file %s", fp)
-		if strings.HasSuffix(fp, "authn/ui/content.go") {
+		var skip bool
+		for _, excludedFile := range excludedFiles {
+			if strings.HasSuffix(fp, excludedFile) {
+				skip = true
+				break
+			}
+		}
+		if skip {
 			continue
 		}
+
 		var pkgFound bool
 		var pkgName string
 		fh, _ := os.Open(fp)

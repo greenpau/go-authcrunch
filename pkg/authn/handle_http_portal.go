@@ -38,6 +38,7 @@ func (p *Portal) handleHTTPPortal(ctx context.Context, w http.ResponseWriter, r 
 			zap.String("session_id", rr.Upstream.SessionID),
 			zap.String("request_id", rr.ID),
 			zap.Any("user", parsedUser.Claims),
+			zap.Error(err),
 		)
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 	}

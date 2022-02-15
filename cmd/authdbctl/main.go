@@ -17,6 +17,7 @@ package main
 import (
 	"fmt"
 	"github.com/urfave/cli/v2"
+	"log"
 	"os"
 
 	"github.com/greenpau/versioned"
@@ -54,13 +55,53 @@ func init() {
 	sh.HideHelp = false
 	sh.HideVersion = false
 	sh.Flags = append(sh.Flags, &cli.StringFlag{
-		Name:    "config",
-		Aliases: []string{"c"},
-		Usage:   "Sets path to configuration from `CONFIG_PATH` (default: ~/.config/authdbctl/config.json)",
-		EnvVars: []string{"AUTHDBCTL_CONFIG_PATH"},
+		Name:        "config",
+		Aliases:     []string{"c"},
+		Usage:       "Sets `PATH` to configuration file",
+		Value:       `~/.config/authdbctl/config.yaml`,
+		DefaultText: `~/.config/authdbctl/config.yaml`,
+		EnvVars:     []string{"AUTHDBCTL_CONFIG_PATH"},
 	})
+	sh.Flags = append(sh.Flags, &cli.StringFlag{
+		Name:        "token-path",
+		Usage:       "Sets `PATH` to token file",
+		Value:       `~/.config/authdbctl/token.jwt`,
+		DefaultText: `~/.config/authdbctl/token.jwt`,
+		EnvVars:     []string{"AUTHDBCTL_TOKEN_PATH"},
+	})
+	sh.Flags = append(sh.Flags, &cli.StringFlag{
+		Name:        "format",
+		Usage:       "Sets `NAME` of the output format",
+		Value:       `json`,
+		DefaultText: `json`,
+		EnvVars:     []string{"AUTHDBCTL_OUTPUT_FORMAT"},
+	})
+	sh.Flags = append(sh.Flags, &cli.BoolFlag{
+		Name:  "debug",
+		Usage: "Enabled debug logging",
+	})
+	sh.Commands = []*cli.Command{
+		{
+			Name:   "connect",
+			Usage:  "connect to auth portal and obtain access token",
+			Action: connect,
+		},
+		{
+			Name:        "add",
+			Usage:       "add database objects",
+			Subcommands: addSubcmd,
+		},
+		{
+			Name:        "list",
+			Usage:       "list database objects",
+			Subcommands: listSubcmd,
+		},
+	}
 }
 
 func main() {
-	sh.Run(os.Args)
+	err := sh.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
