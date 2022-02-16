@@ -26,6 +26,12 @@ import (
 func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, authMethod string) error {
 	p.disableClientCache(w)
 	p.injectRedirectURL(ctx, w, r, rr)
+
+	if strings.Contains(r.URL.Path, "-js-callback") {
+		// Intercept callback with Javascript.
+		return p.handleJavascriptCallbackIntercept(ctx, w, r)
+	}
+
 	authRealm, err := getEndpoint(r.URL.Path, "/"+authMethod+"/")
 	if err != nil {
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
@@ -96,5 +102,23 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 		return p.handleHTTPErrorWithLog(ctx, w, r, rr, rr.Response.Code, err.Error())
 	}
 	w.WriteHeader(rr.Response.Code)
+	return nil
+}
+
+func (p *Portal) handleJavascriptCallbackIntercept(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	p.disableClientCache(w)
+	w.WriteHeader(200)
+
+	w.Write([]byte(`<html>
+  <body>
+    <p>Redirecting to authentication endpoint.</p>
+    <script>
+	  let redirectURL = window.location.href;
+	  const i = redirectURL.indexOf("#");
+	  let redirectURI = redirectURL.slice(0, i).replace('authorization-code-js-callback', 'authorization-code-callback')
+	  window.location = redirectURI + "?" + redirectURL.slice(i+1);
+    </script>
+  </body>
+</html>`))
 	return nil
 }

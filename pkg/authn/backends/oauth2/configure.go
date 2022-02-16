@@ -74,7 +74,13 @@ type Config struct {
 	PassGrantTypeDisabled   bool `json:"pass_grant_type_disabled,omitempty" xml:"pass_grant_type_disabled,omitempty" yaml:"pass_grant_type_disabled,omitempty"`
 	ResponseTypeDisabled    bool `json:"response_type_disabled,omitempty" xml:"response_type_disabled,omitempty" yaml:"response_type_disabled,omitempty"`
 	NonceDisabled           bool `json:"nonce_disabled,omitempty" xml:"nonce_disabled,omitempty" yaml:"nonce_disabled,omitempty"`
-	AcceptHeaderEnabled     bool `json:"accept_header_enabled,omitempty" xml:"accept_header_enabled,omitempty" yaml:"accept_header_enabled,omitempty"`
+	ScopeDisabled           bool `json:"scope_disabled,omitempty" xml:"scope_disabled,omitempty" yaml:"scope_disabled,omitempty"`
+
+	AcceptHeaderEnabled bool `json:"accept_header_enabled,omitempty" xml:"accept_header_enabled,omitempty" yaml:"accept_header_enabled,omitempty"`
+
+	JsCallbackEnabled bool `json:"js_callback_enabled,omitempty" xml:"js_callback_enabled,omitempty" yaml:"js_callback_enabled,omitempty"`
+
+	ResponseType []string `json:"response_type,omitempty" xml:"response_type,omitempty" yaml:"response_type,omitempty"`
 
 	AuthorizationURL string `json:"authorization_url,omitempty" xml:"authorization_url,omitempty" yaml:"authorization_url,omitempty"`
 	TokenURL         string `json:"token_url,omitempty" xml:"token_url,omitempty" yaml:"token_url,omitempty"`
@@ -164,6 +170,10 @@ func (b *Backend) Configure() error {
 	if b.Config.NonceDisabled {
 		b.disableNonce = true
 	}
+	if b.Config.ScopeDisabled {
+		b.disableScope = true
+	}
+
 	if b.Config.AcceptHeaderEnabled {
 		b.enableAcceptHeader = true
 	}
@@ -288,6 +298,10 @@ func (b *Backend) Configure() error {
 			b.requiredTokenFields[fieldName] = true
 			b.Config.RequiredTokenFields = append(b.Config.RequiredTokenFields, fieldName)
 		}
+	}
+
+	if len(b.Config.ResponseType) < 1 {
+		b.Config.ResponseType = []string{"code"}
 	}
 
 	if b.Config.DelayStart > 0 {

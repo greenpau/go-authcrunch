@@ -39,11 +39,16 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 	reqPath := r.Upstream.BaseURL + path.Join(r.Upstream.BasePath, r.Upstream.Method, r.Upstream.Realm)
 	r.Response.Code = http.StatusBadRequest
 
-	var accessTokenExists, codeExists, stateExists, errorExists, loginHintExists bool
-	var reqParamsState, reqParamsCode, reqParamsError, reqParamsLoginHint string
+	var accessTokenExists, idTokenExists, codeExists, stateExists, errorExists, loginHintExists bool
+	var reqParamsAccessToken, reqParamsIDToken, reqParamsState, reqParamsCode, reqParamsError, reqParamsLoginHint string
 	reqParams := r.Upstream.Request.URL.Query()
 	if _, exists := reqParams["access_token"]; exists {
 		accessTokenExists = true
+		reqParamsAccessToken = reqParams["access_token"][0]
+	}
+	if _, exists := reqParams["id_token"]; exists {
+		idTokenExists = true
+		reqParamsIDToken = reqParams["id_token"][0]
 	}
 	if _, exists := reqParams["code"]; exists {
 		codeExists = true
@@ -75,7 +80,8 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 			}
 			return errors.ErrBackendOauthAuthorizationFailed.WithArgs(reqParamsError)
 		}
-		if codeExists && stateExists {
+		switch {
+		case codeExists && stateExists:
 			// Received Authorization Code
 			if b.state.exists(reqParamsState) {
 				b.state.addCode(reqParamsState, reqParamsCode)
@@ -150,6 +156,24 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 				zap.Any("claims", m),
 			)
 			return nil
+		case idTokenExists && accessTokenExists:
+			accessToken := map[string]interface{}{
+				"access_token": reqParamsAccessToken,
+				"id_token":     reqParamsIDToken,
+			}
+			m, err := b.validateAccessToken(reqParamsState, accessToken)
+			if err != nil {
+				return errors.ErrBackendOauthValidateAccessTokenFailed.WithArgs(err)
+			}
+
+			r.Response.Payload = m
+			r.Response.Code = http.StatusOK
+			b.logger.Debug(
+				"decoded claims from OAuth 2.0 authorization server access token",
+				zap.String("request_id", r.ID),
+				zap.Any("claims", m),
+			)
+			return nil
 		}
 		return errors.ErrBackendOauthResponseProcessingFailed
 	}
@@ -166,9 +190,15 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 	if !b.disableScope {
 		params.Set("scope", strings.Join(b.Config.Scopes, " "))
 	}
-	params.Set("redirect_uri", reqPath+"/authorization-code-callback")
+
+	if b.Config.JsCallbackEnabled {
+		params.Set("redirect_uri", reqPath+"/authorization-code-js-callback")
+	} else {
+		params.Set("redirect_uri", reqPath+"/authorization-code-callback")
+	}
+
 	if !b.disableResponseType {
-		params.Set("response_type", "code")
+		params.Set("response_type", strings.Join(b.Config.ResponseType, " "))
 	}
 	if loginHintExists {
 		params.Set("login_hint", reqParamsLoginHint)

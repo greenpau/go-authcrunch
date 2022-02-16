@@ -15,6 +15,7 @@
 package oauth2
 
 import (
+	"fmt"
 	jwtlib "github.com/golang-jwt/jwt/v4"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"strings"
@@ -25,6 +26,7 @@ var (
 		"sub", "name", "email", "iat", "exp", "jti",
 		"iss", "groups", "picture",
 		"roles", "role", "groups", "group",
+		"given_name", "family_name",
 	}
 )
 
@@ -95,5 +97,16 @@ func (b *Backend) validateAccessToken(state string, data map[string]interface{})
 		}
 		m[k] = claims[k]
 	}
+
+	if _, exists := m["name"]; !exists {
+		if _, exists := m["given_name"]; exists {
+			if _, exists := m["family_name"]; exists {
+				m["name"] = fmt.Sprintf("%s %s", m["given_name"].(string), m["family_name"].(string))
+				delete(m, "given_name")
+				delete(m, "family_name")
+			}
+		}
+	}
+
 	return m, nil
 }
