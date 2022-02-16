@@ -113,10 +113,15 @@ func (p *Portal) handleJavascriptCallbackIntercept(ctx context.Context, w http.R
   <body>
     <p>Redirecting to authentication endpoint.</p>
     <script>
-	  let redirectURL = window.location.href;
-	  const i = redirectURL.indexOf("#");
-	  let redirectURI = redirectURL.slice(0, i).replace('authorization-code-js-callback', 'authorization-code-callback')
-	  window.location = redirectURI + "?" + redirectURL.slice(i+1);
+      let redirectURL = window.location.href;
+      const i = redirectURL.indexOf("#");
+      if (i < 0) {
+        redirectURL = redirectURL.replace('authorization-code-js-callback', 'authorization-code-callback');
+        window.location = redirectURL;
+      } else {
+        ridirectURI = redirectURL.slice(0, i).replace('authorization-code-js-callback', 'authorization-code-callback');
+        window.location = redirectURI + "?" + redirectURL.slice(i+1);
+      }
     </script>
   </body>
 </html>`))
