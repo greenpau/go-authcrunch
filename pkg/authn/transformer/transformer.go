@@ -195,20 +195,31 @@ func transformData(args []string, m map[string]interface{}) error {
 				if e == "" {
 					continue
 				}
-				if _, exists := entryMap[e]; exists {
+				v, err := repl(m, e)
+				if err != nil {
+					return err
+				}
+				if _, exists := entryMap[v]; exists {
 					continue
 				}
-				entryMap[e] = true
-				newEntries = append(newEntries, e)
+				entryMap[v] = true
+				newEntries = append(newEntries, v)
 			}
 			m[k] = newEntries
 		case "str":
+			var e string
 			switch val := m[k].(type) {
 			case string:
-				m[k] = val + " " + strings.Join(args[2:], " ")
+				e = val + " " + strings.Join(args[2:], " ")
 			case nil:
-				m[k] = strings.Join(args[2:], " ")
+				e = strings.Join(args[2:], " ")
 			}
+
+			v, err := repl(m, e)
+			if err != nil {
+				return err
+			}
+			m[k] = v
 		default:
 			// Handle custom fields.
 			if args[1] == "nested" {
@@ -234,13 +245,13 @@ func transformData(args []string, m map[string]interface{}) error {
 					}
 					mp = mv.(map[string]interface{})
 				}
-			} else {
-				v, err := parseCustomFieldValues(args[2:])
-				if err != nil {
-					return fmt.Errorf("failed transforming %q field for %q action in %v: %v", k, args[0], args, err)
-				}
-				m[args[1]] = v
+				break
 			}
+			v, err := parseCustomFieldValues(m, args[2:])
+			if err != nil {
+				return fmt.Errorf("failed transforming %q field for %q action in %v: %v", k, args[0], args, err)
+			}
+			m[args[1]] = v
 		}
 	case "overwrite":
 		switch dt {
@@ -257,7 +268,7 @@ func transformData(args []string, m map[string]interface{}) error {
 	return nil
 }
 
-func parseCustomFieldValues(args []string) (interface{}, error) {
+func parseCustomFieldValues(m map[string]interface{}, args []string) (interface{}, error) {
 	var x int
 	for i, arg := range args {
 		if arg == "as" {
@@ -274,9 +285,17 @@ func parseCustomFieldValues(args []string) (interface{}, error) {
 	dt := strings.Join(args[x+1:], "_")
 	switch dt {
 	case "string_list", "list":
-		return args[:x], nil
+		values, err := replArr(m, args[:x])
+		if err != nil {
+			return nil, err
+		}
+		return values, nil
 	case "string":
-		return args[x-1], nil
+		value, err := repl(m, args[x-1])
+		if err != nil {
+			return nil, err
+		}
+		return value, nil
 	}
 	return nil, fmt.Errorf("unsupported %q data type", dt)
 }
@@ -316,4 +335,70 @@ func parseCustomNestedFieldValues(args []string) ([]string, interface{}, error) 
 		return args, m, nil
 	}
 	return nil, nil, fmt.Errorf("unsupported %q data type", dt)
+}
+
+func hasReplPattern(s string) bool {
+	if strings.IndexRune(s, '{') < 0 {
+		return false
+	}
+	if strings.IndexRune(s, '}') < 0 {
+		return false
+	}
+	return true
+}
+
+func getReplPattern(s string) string {
+	i := strings.IndexRune(s, '{')
+	j := strings.IndexRune(s, '}')
+	return string(s[i : j+1])
+}
+
+func getReplKey(s string) string {
+	i := strings.IndexRune(s, '.')
+	return string(s[i+1 : len(s)-1])
+}
+
+func getReplValue(m map[string]interface{}, s string) (string, error) {
+	var value string
+	v, exists := m[s]
+	if !exists {
+		return value, fmt.Errorf("transform replace field %q not found", s)
+	}
+	switch val := v.(type) {
+	case string:
+		value = val
+	default:
+		return "", fmt.Errorf("transform replace field %q value type %T is unsupported", s, val)
+	}
+	return value, nil
+}
+
+func repl(m map[string]interface{}, s string) (string, error) {
+	for {
+		if !hasReplPattern(s) {
+			break
+		}
+		ptrn := getReplPattern(s)
+		if !strings.HasPrefix(ptrn, "{claims.") {
+			return "", fmt.Errorf("transform replace pattern %q is unsupported", ptrn)
+		}
+		v, err := getReplValue(m, getReplKey(ptrn))
+		if err != nil {
+			return "", err
+		}
+		s = strings.ReplaceAll(s, ptrn, v)
+	}
+	return s, nil
+}
+
+func replArr(m map[string]interface{}, arr []string) ([]string, error) {
+	var values []string
+	for _, s := range arr {
+		value, err := repl(m, s)
+		if err != nil {
+			return values, err
+		}
+		values = append(values, value)
+	}
+	return values, nil
 }

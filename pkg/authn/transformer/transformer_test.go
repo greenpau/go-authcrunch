@@ -167,6 +167,67 @@ func TestTransformData(t *testing.T) {
 				"unsupported \"foo\" data type",
 			),
 		},
+		{
+			name: "add matrix_id claim with replacer from sub claim",
+			args: []string{"add", "matrix_id", "@{claims.sub}:matrix.foo.bar", "as", "string"},
+			user: map[string]interface{}{
+				"sub":   "webadmin",
+				"roles": []string{"authp/admin"},
+			},
+			want: map[string]interface{}{
+				"sub":       "webadmin",
+				"roles":     []interface{}{"authp/admin"},
+				"matrix_id": "@webadmin:matrix.foo.bar",
+			},
+		},
+		{
+			name: "add matrix_id claim with replacer from sub and email claims",
+			args: []string{"add", "matrix_id", "@{claims.sub}:{claims.email}:matrix.foo.bar", "as", "string"},
+			user: map[string]interface{}{
+				"sub":   "webadmin",
+				"email": "webadmin@localdomain.local",
+				"roles": []string{"authp/admin"},
+			},
+			want: map[string]interface{}{
+				"sub":       "webadmin",
+				"roles":     []interface{}{"authp/admin"},
+				"email":     "webadmin@localdomain.local",
+				"matrix_id": "@webadmin:webadmin@localdomain.local:matrix.foo.bar",
+			},
+		},
+		{
+			name: "add roles based on replacer from realm claim",
+			args: []string{
+				"add", "roles", "{claims.realm}/admin", "{claims.realm}/user"},
+			user: map[string]interface{}{
+				"sub":   "webadmin",
+				"realm": "local",
+				"email": "webadmin@localdomain.local",
+				"roles": []string{"authp/admin"},
+			},
+			want: map[string]interface{}{
+				"sub":   "webadmin",
+				"realm": "local",
+				"roles": []string{"authp/admin", "local/admin", "local/user"},
+				"email": "webadmin@localdomain.local",
+			},
+		},
+		{
+			name: "add email claim based on replacer from sub and realm claims",
+			args: []string{
+				"add", "email", "{claims.sub}@{claims.realm}"},
+			user: map[string]interface{}{
+				"sub":   "webadmin",
+				"realm": "localdomain.local",
+				"roles": []string{"authp/admin"},
+			},
+			want: map[string]interface{}{
+				"sub":   "webadmin",
+				"realm": "localdomain.local",
+				"roles": []interface{}{"authp/admin"},
+				"email": "webadmin@localdomain.local",
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
