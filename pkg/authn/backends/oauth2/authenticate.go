@@ -96,7 +96,16 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 				zap.String("code", reqParamsCode),
 			)
 
-			reqRedirectURI := reqPath + "/authorization-code-callback"
+			var reqRedirectURI string
+			if len(b.Config.CallbackUrl) > 0 {
+				if strings.HasPrefix(b.Config.CallbackUrl, "/") {
+					reqRedirectURI = reqPath + b.Config.CallbackUrl
+				} else {
+					reqRedirectURI = b.Config.CallbackUrl
+				}
+			} else {
+				reqRedirectURI = reqPath + "/authorization-code-callback"
+			}
 			var accessToken map[string]interface{}
 			var err error
 			switch b.Config.Provider {
@@ -193,6 +202,12 @@ func (b *Backend) Authenticate(r *requests.Request) error {
 
 	if b.Config.JsCallbackEnabled {
 		params.Set("redirect_uri", reqPath+"/authorization-code-js-callback")
+	} else if len(b.Config.CallbackUrl) > 0 {
+		if strings.HasPrefix(b.Config.CallbackUrl, "/") {
+			params.Set("redirect_uri", reqPath+b.Config.CallbackUrl)
+		} else {
+			params.Set("redirect_uri", b.Config.CallbackUrl)
+		}
 	} else {
 		params.Set("redirect_uri", reqPath+"/authorization-code-callback")
 	}
