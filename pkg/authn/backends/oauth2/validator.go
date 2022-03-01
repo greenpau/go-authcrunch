@@ -86,10 +86,6 @@ func (b *Backend) validateAccessToken(state string, data map[string]interface{})
 		return nil, errors.ErrBackendOAuthNonceValidationFailed.WithArgs(b.Config.IdentityTokenName, err)
 	}
 
-	if _, exists := claims["email"]; !exists {
-		return nil, errors.ErrBackendOAuthEmailNotFound.WithArgs(b.Config.IdentityTokenName)
-	}
-
 	m := make(map[string]interface{})
 	for _, k := range tokenFields {
 		if _, exists := claims[k]; !exists {
