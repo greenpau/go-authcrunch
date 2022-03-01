@@ -119,8 +119,8 @@ func (p *Portal) handleJavascriptCallbackIntercept(ctx context.Context, w http.R
         redirectURL = redirectURL.replace('authorization-code-js-callback', 'authorization-code-callback');
         window.location = redirectURL;
       } else {
-        ridirectURI = redirectURL.slice(0, i).replace('authorization-code-js-callback', 'authorization-code-callback');
-        window.location = redirectURI + "?" + redirectURL.slice(i+1);
+        redirectURL = redirectURL.slice(0, i).replace('authorization-code-js-callback', 'authorization-code-callback');
+        window.location = redirectURL + "?" + redirectURL.slice(i+1);
       }
     </script>
   </body>
