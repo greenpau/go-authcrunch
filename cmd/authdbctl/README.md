@@ -25,11 +25,16 @@ The expected output follows:
 2022/02/15 18:33:01 auth token found: /home/greenpau/.config/authdbctl/token.jwt
 ```
 
-Next, list the portal's users:
+Next, get metadata:
 
-```bash
-authdbctl list users
-authdbctl --debug --format table list users
+```
+authdbctl metadata
+```
+
+The expected output follows:
+
+```
+{"branch":"main","commit":"v1.0.17-2-g8295d6a","name":"authp","timestamp":"2022-03-05T15:27:07.289679072Z","version":"1.0.17"}
 ```
 
 ## Configuration Files
