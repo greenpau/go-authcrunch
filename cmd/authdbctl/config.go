@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"github.com/urfave/cli/v2"
@@ -43,8 +44,9 @@ type Config struct {
 }
 
 type wrapper struct {
-	config *Config
-	logger *zap.Logger
+	config  *Config
+	logger  *zap.Logger
+	browser *util.Browser
 }
 
 func (wr *wrapper) configure(c *cli.Context) error {
@@ -137,6 +139,13 @@ func (wr *wrapper) configure(c *cli.Context) error {
 	)
 
 	wr.config = cfg
+
+	browser, err := util.NewBrowser()
+	if err != nil {
+		return err
+	}
+
+	wr.browser = browser
 	return nil
 }
 

@@ -16,7 +16,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 	"golang.org/x/net/html"
@@ -29,11 +28,6 @@ import (
 func connect(c *cli.Context) error {
 	wr := new(wrapper)
 	if err := wr.configure(c); err != nil {
-		return err
-	}
-
-	browser, err := util.NewBrowser()
-	if err != nil {
 		return err
 	}
 
@@ -54,12 +48,12 @@ func connect(c *cli.Context) error {
 			formData.Set("realm", wr.config.Realm)
 
 			req, _ := http.NewRequest(http.MethodGet, wr.config.BaseURL+"/", nil)
-			browser.Do(req)
+			wr.browser.Do(req)
 		}
 
 		req, _ := http.NewRequest(http.MethodPost, wr.config.BaseURL+formURI, strings.NewReader(formData.Encode()))
 		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		respBody, resp, err := browser.Do(req)
+		respBody, resp, err := wr.browser.Do(req)
 		if err != nil {
 			return fmt.Errorf("failed connecting to auth portal sandbox: %v", err)
 		}
@@ -69,7 +63,7 @@ func connect(c *cli.Context) error {
 		if redirectURL != "" {
 			wr.logger.Debug("request redirected", zap.String("redirect_url", redirectURL))
 			req, _ := http.NewRequest(http.MethodGet, redirectURL, nil)
-			respBody, resp, err = browser.Do(req)
+			respBody, resp, err = wr.browser.Do(req)
 			for _, cookie := range resp.Cookies() {
 				if cookie.Name == wr.config.CookieName {
 					wr.config.token = cookie.Value
@@ -146,13 +140,13 @@ func connect(c *cli.Context) error {
 
 	if wr.config.token != "" {
 		wr.logger.Debug(
-			"auth token found",
+			"auth token acquired",
 			zap.String("token", wr.config.token),
 		)
 		if err := wr.commitToken(); err != nil {
 			return err
 		}
-		log.Printf("auth token found: %s", wr.config.TokenPath)
+		log.Printf("auth token acquired: %s", wr.config.TokenPath)
 		return nil
 	}
 	return fmt.Errorf("failed to obtain auth token")

@@ -16,9 +16,12 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
+	"net/http"
+	"os"
 )
 
 // User represents input user identity.
@@ -55,7 +58,21 @@ func listUsers(c *cli.Context) error {
 	if err := wr.configure(c); err != nil {
 		return err
 	}
-	wr.logger.Debug("listing users")
+	wr.logger.Debug("listing users", zap.String("token", wr.config.token))
+
+	var reqData = []byte(`{
+		"name": "",
+		"job": "leader"
+	}`)
+
+	req, _ := http.NewRequest(http.MethodPost, wr.config.BaseURL+"/api/users", bytes.NewBuffer(reqData))
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	req.Header.Set("Authorization", "access_token="+wr.config.token)
+	respBody, _, err := wr.browser.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed connecting to auth portal sandbox: %v", err)
+	}
+	fmt.Fprintf(os.Stdout, "%s\n", respBody)
 
 	return nil
 }

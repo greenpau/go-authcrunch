@@ -61,7 +61,7 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 	case strings.Contains(r.URL.Path, "/api/teams"):
 		return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
 	case strings.Contains(r.URL.Path, "/api/users"):
-		return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
+		return p.handleAPIListUsers(ctx, w, r, rr, usr)
 	}
 
 	return p.handleJSONError(ctx, w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))

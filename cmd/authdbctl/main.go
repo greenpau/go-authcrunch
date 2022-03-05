@@ -87,6 +87,11 @@ func init() {
 			Action: connect,
 		},
 		{
+			Name:   "metadata",
+			Usage:  "fetch metadata",
+			Action: metadata,
+		},
+		{
 			Name:        "add",
 			Usage:       "add database objects",
 			Subcommands: addSubcmd,
