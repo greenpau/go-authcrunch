@@ -1,5 +1,14 @@
 # AuthDB Management Client
 
+<!-- begin-markdown-toc -->
+## Table of Contents
+
+* [Getting Started](#getting-started)
+* [Configuration Files](#configuration-files)
+* [Under Development](#under-development)
+
+<!-- end-markdown-toc -->
+
 ## Getting Started
 
 Initially, create configuration file ` ~/.config/authdbctl/config.yaml`:
@@ -50,4 +59,12 @@ The configuration file contains the following:
 The `authdbctl` stores the JWT token acquired after a successful authentication
 in `~/.config/authdbctl/token.jwt`.
 
+## Under Development
 
+* [ ] `authdbctl list realms`
+* [ ] `authdbctl --format table list users --realm local`
+* [ ] `authdbctl add user --realm local <user_data.json>`
+* [ ] `authdbctl --format table list ...`
+* [ ] `authdbctl reload realm --name local`
+* [ ] auth with app authenticator
+* [ ] auth with U2F token
