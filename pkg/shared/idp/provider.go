@@ -53,6 +53,17 @@ func (c *ProviderCatalog) Register(s string, p Provider) error {
 	return nil
 }
 
+// Unregister unregisters identity provider from Catalog.
+func (c *ProviderCatalog) Unregister(s string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, exists := c.entries[s]; !exists {
+		return nil
+	}
+	delete(c.entries, s)
+	return nil
+}
+
 // BasicAuth performs basic authentication.
 func (c *ProviderCatalog) BasicAuth(r *ProviderRequest) error {
 	r.applyDefaults()

@@ -46,7 +46,7 @@ func ParseIdentityProviderConfig(lines []string) (*IdentityProviderConfig, error
 		return nil, errors.ErrIdentityProviderConfigInvalid.WithArgs("empty config")
 	}
 	for _, encodedLine := range lines {
-		contextName := "default"
+		var contextName string
 		realmName := "local"
 		var cfg *IdentityProviderConfig
 		arr, err := cfgutil.DecodeArgs(encodedLine)
@@ -83,10 +83,16 @@ func ParseIdentityProviderConfig(lines []string) (*IdentityProviderConfig, error
 			}
 		}
 
+		if contextName == "" {
+			return nil, errors.ErrIdentityProviderConfigInvalid.WithArgs(encodedLine)
+		}
+
 		if _, exists := m[contextName]; exists {
 			cfg = m[contextName]
 		} else {
-			cfg = &IdentityProviderConfig{Context: contextName}
+			cfg = &IdentityProviderConfig{
+				Context: contextName,
+			}
 			m[contextName] = cfg
 		}
 

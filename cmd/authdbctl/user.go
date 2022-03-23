@@ -58,7 +58,7 @@ func listUsers(c *cli.Context) error {
 	if err := wr.configure(c); err != nil {
 		return err
 	}
-	wr.logger.Debug("listing users", zap.String("token", wr.config.token))
+	wr.logger.Debug("listing users")
 
 	var reqData = []byte(`{
 		"name": "",
@@ -70,7 +70,7 @@ func listUsers(c *cli.Context) error {
 	req.Header.Set("Authorization", "access_token="+wr.config.token)
 	respBody, _, err := wr.browser.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed connecting to auth portal sandbox: %v", err)
+		return fmt.Errorf("failed listing users: %v", err)
 	}
 	fmt.Fprintf(os.Stdout, "%s\n", respBody)
 

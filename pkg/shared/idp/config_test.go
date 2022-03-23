@@ -32,8 +32,8 @@ func TestParseIdentityProviderConfig(t *testing.T) {
 		{
 			name: "basic and api key auth with realms",
 			config: []string{
-				"basic auth realm foo",
-				"api key auth realm bar",
+				"basic auth context default realm foo",
+				"api key auth context default realm bar",
 			},
 			want: map[string]interface{}{
 				"config": &IdentityProviderConfig{
@@ -56,8 +56,8 @@ func TestParseIdentityProviderConfig(t *testing.T) {
 		{
 			name: "basic and api key auth with default realm",
 			config: []string{
-				"basic auth",
-				"api key auth",
+				"basic auth context default",
+				"api key auth context default",
 			},
 			want: map[string]interface{}{
 				"config": &IdentityProviderConfig{
@@ -131,7 +131,7 @@ func TestParseIdentityProviderConfig(t *testing.T) {
 			name:      "malformed config with bad encoding",
 			config:    []string{`basic auth realm foo bar "baz`},
 			shouldErr: true,
-			err:       fmt.Errorf(`record on line 1; parse error on line 2, column 0: extraneous or missing " in quoted-field`),
+			err:       fmt.Errorf(`parse error on line 1, column 30: extraneous or missing " in quoted-field`),
 		},
 		{
 			name: "malformed config with multiple contexts",

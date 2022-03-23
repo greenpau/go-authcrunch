@@ -571,7 +571,7 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key "foo`,
-				`record on line 1; parse error on line 2, column 0: extraneous or missing " in quoted-field`,
+				`parse error on line 1, column 16: extraneous or missing " in quoted-field`,
 			),
 		},
 		{

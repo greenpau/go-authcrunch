@@ -16,6 +16,7 @@ package authn
 
 import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
 	"sync"
 )
 
@@ -55,12 +56,14 @@ func (r *PortalRegistry) RegisterPortal(s string, p *Portal) error {
 	existingPortal, exists := r.portals[s]
 	if !exists {
 		r.portals[s] = p
+		idp.Catalog.Register(s, p)
 		return nil
 	}
 	if existingPortal.id == p.id {
 		return errors.ErrPortalRegistryEntryExists.WithArgs(s)
 	}
 	r.portals[s] = p
+	idp.Catalog.Register(s, p)
 
 	for _, a := range r.authenticators {
 		if a.portalID != existingPortal.id {
@@ -81,6 +84,7 @@ func (r *PortalRegistry) UnregisterPortal(s string) {
 		return
 	}
 	delete(r.portals, s)
+	idp.Catalog.Unregister(s)
 }
 
 // RegisterAuthenticator registers Authenticator with the PortalRegistry.

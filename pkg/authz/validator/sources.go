@@ -184,7 +184,6 @@ func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *req
 		// The user is not in the cache.
 		usr, err = v.keystore.ParseToken(ar)
 		if err != nil {
-			// return usr, err
 			return nil, err
 		}
 	}

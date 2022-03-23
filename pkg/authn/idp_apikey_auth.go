@@ -83,7 +83,7 @@ func (p *Portal) APIKeyAuth(r *idp.ProviderRequest) error {
 	// m["jti"] = rr.Upstream.SessionID
 	m["exp"] = time.Now().Add(time.Duration(p.keystore.GetTokenLifetime(nil, nil)) * time.Second).UTC().Unix()
 	m["iat"] = time.Now().UTC().Unix()
-	m["nbf"] = time.Now().Add(time.Duration(60)*time.Second*-1).UTC().Unix() * 1000
+	m["nbf"] = time.Now().Add(time.Duration(60) * time.Second * -1).UTC().Unix()
 	if _, exists := m["origin"]; !exists {
 		m["origin"] = r.Realm
 	}

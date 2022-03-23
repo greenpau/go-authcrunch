@@ -15,18 +15,33 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/urfave/cli/v2"
+	"net/http"
+	"os"
 )
 
-var (
-	listSubcmd = []*cli.Command{
-		{
-			Name:   "users",
-			Action: listUsers,
-		},
-		{
-			Name:   "realms",
-			Action: listRealms,
-		},
+func listRealms(c *cli.Context) error {
+	wr := new(wrapper)
+	if err := wr.configure(c); err != nil {
+		return err
 	}
-)
+	wr.logger.Debug("listing realms")
+
+	var reqData = []byte(`{
+		"name": "",
+		"job": "leader"
+	}`)
+
+	req, _ := http.NewRequest(http.MethodPost, wr.config.BaseURL+"/api/realms", bytes.NewBuffer(reqData))
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	req.Header.Set("Authorization", "access_token="+wr.config.token)
+	respBody, _, err := wr.browser.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed listing realms: %v", err)
+	}
+	fmt.Fprintf(os.Stdout, "%s\n", respBody)
+
+	return nil
+}

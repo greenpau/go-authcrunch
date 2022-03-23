@@ -134,6 +134,7 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(ctx context.Context, r *htt
 		Realm:   tokenRealm,
 		Secret:  tokenSecret,
 	}
+
 	if err := idp.Catalog.APIKeyAuth(idpr); err != nil {
 		return err
 	}
