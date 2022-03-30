@@ -16,6 +16,7 @@ package authcrunch
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -145,4 +146,20 @@ func (srv *Server) GetConfig() map[string]interface{} {
 	b, _ := json.Marshal(srv.config)
 	json.Unmarshal(b, &m)
 	return m
+}
+
+// GetPortalByName returns an instance of authn.Portal based on its name.
+func (srv *Server) GetPortalByName(s string) (*authn.Portal, error) {
+	if portal, exists := srv.nameRefs.portals[s]; exists {
+		return portal, nil
+	}
+	return nil, fmt.Errorf("portal not found")
+}
+
+// GetGatekeeperByName returns an instance of authz.Gatekeeper based on its name.
+func (srv *Server) GetGatekeeperByName(s string) (*authz.Gatekeeper, error) {
+	if gatekeeper, exists := srv.nameRefs.gatekeepers[s]; exists {
+		return gatekeeper, nil
+	}
+	return nil, fmt.Errorf("gatekeeper not found")
 }

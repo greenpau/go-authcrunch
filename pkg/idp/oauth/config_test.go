@@ -74,7 +74,7 @@ func TestValidateConfig(t *testing.T) {
 				// After the validation.
 				ServerName:          "www.facebook.com",
 				IdentityTokenName:   "id_token",
-				Scopes:              []string{"public_profile", "email"},
+				Scopes:              []string{"email"},
 				BaseAuthURL:         "https://www.facebook.com/v12.0/dialog/",
 				ResponseType:        []string{"code"},
 				RequiredTokenFields: []string{"access_token"},
@@ -185,9 +185,10 @@ func TestValidateConfig(t *testing.T) {
 				ClientID:     "foo",
 				ClientSecret: "bar",
 				// After the validation.
-				ServerName:          "github.com",
-				IdentityTokenName:   "id_token",
-				Scopes:              []string{"openid", "email", "profile"},
+				ServerName:        "github.com",
+				IdentityTokenName: "id_token",
+				// Scopes:              []string{"openid", "email", "profile"},
+				Scopes:              []string{"read:user"},
 				BaseAuthURL:         "https://github.com/login/oauth/",
 				ResponseType:        []string{"code"},
 				RequiredTokenFields: []string{"access_token"},

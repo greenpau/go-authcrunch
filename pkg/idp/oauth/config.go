@@ -122,9 +122,16 @@ func (cfg *Config) Validate() error {
 	if len(cfg.Scopes) < 1 {
 		switch cfg.Driver {
 		case "facebook":
-			cfg.Scopes = []string{"public_profile", "email"}
+			cfg.Scopes = []string{
+				// "public_profile",
+				"email",
+			}
+		case "github":
+			cfg.Scopes = []string{"read:user"}
 		case "nextcloud":
 			cfg.Scopes = []string{"email"}
+		case "google":
+			cfg.Scopes = []string{"openid", "email", "profile"}
 		default:
 			cfg.Scopes = []string{"openid", "email", "profile"}
 		}

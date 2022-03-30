@@ -352,7 +352,12 @@ func (p *Portal) configureIdentityProviderLogin() error {
 
 	for _, provider := range p.identityProviders {
 		cfg := make(map[string]string)
-		cfg["endpoint"] = path.Join(provider.GetKind(), provider.GetRealm())
+		switch provider.GetKind() {
+		case "oauth":
+			cfg["endpoint"] = path.Join(provider.GetKind()+"2", provider.GetRealm())
+		default:
+			cfg["endpoint"] = path.Join(provider.GetKind(), provider.GetRealm())
+		}
 		cfg["realm"] = provider.GetRealm()
 		switch provider.GetRealm() {
 		case "google":
