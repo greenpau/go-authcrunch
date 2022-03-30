@@ -54,7 +54,11 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 
 		keyID, found := token.Header["kid"].(string)
 		if !found {
-			return nil, errors.ErrIdentityProviderOAuthAccessTokenKeyIDNotFound.WithArgs(b.config.IdentityTokenName)
+			// If key id is not found in the header, then try the first available key.
+			for _, key := range b.keys {
+				return key.GetPublic(), nil
+			}
+			// return nil, errors.ErrIdentityProviderOAuthAccessTokenKeyIDNotFound.WithArgs(b.config.IdentityTokenName)
 		}
 		key, exists := b.keys[keyID]
 		if !exists {
