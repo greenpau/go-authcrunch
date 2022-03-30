@@ -15,7 +15,7 @@
 package util
 
 import (
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"net/http"
 )
 
@@ -30,5 +30,5 @@ func GetContentType(r *http.Request) string {
 
 // GetRequestID returns request ID.
 func GetRequestID(r *http.Request) string {
-	return uuid.NewV4().String()
+	return uuid.New().String()
 }

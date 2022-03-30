@@ -22,7 +22,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"strings"
 )
@@ -53,7 +53,7 @@ func NewGatekeeper(cfg *PolicyConfig, logger *zap.Logger) (*Gatekeeper, error) {
 		return nil, errors.ErrNewGatekeeper.WithArgs(err)
 	}
 	p := &Gatekeeper{
-		id:     uuid.NewV4().String(),
+		id:     uuid.New().String(),
 		config: cfg,
 		logger: logger,
 	}
@@ -61,11 +61,6 @@ func NewGatekeeper(cfg *PolicyConfig, logger *zap.Logger) (*Gatekeeper, error) {
 		return nil, err
 	}
 	return p, nil
-}
-
-// Register registers the Gatekeeper with GatekeeperRegistry.
-func (g *Gatekeeper) Register() error {
-	return gatekeeperRegistry.RegisterGatekeeper(g.config.Name, g)
 }
 
 func (g *Gatekeeper) configure() error {

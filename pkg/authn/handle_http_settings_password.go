@@ -17,8 +17,8 @@ package authn
 import (
 	"context"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"net/http"
@@ -27,7 +27,7 @@ import (
 
 func (p *Portal) handleHTTPPasswordSettings(
 	ctx context.Context, r *http.Request, rr *requests.Request,
-	usr *user.User, backend *backends.Backend, data map[string]interface{},
+	usr *user.User, store ids.IdentityStore, data map[string]interface{},
 ) error {
 	var action string
 	var status bool
@@ -44,7 +44,7 @@ func (p *Portal) handleHTTPPasswordSettings(
 			attachFailStatus(data, "Bad Request")
 			break
 		}
-		if err = backend.Request(operator.ChangePassword, rr); err != nil {
+		if err = store.Request(operator.ChangePassword, rr); err != nil {
 			attachFailStatus(data, fmt.Sprintf("%v", err))
 			break
 		}

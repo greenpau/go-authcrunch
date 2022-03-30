@@ -17,9 +17,9 @@ package authn
 import (
 	"context"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"net/http"
@@ -27,10 +27,10 @@ import (
 
 func (p *Portal) handleHTTPGeneralSettings(
 	ctx context.Context, r *http.Request, rr *requests.Request,
-	usr *user.User, backend *backends.Backend, data map[string]interface{},
+	usr *user.User, store ids.IdentityStore, data map[string]interface{},
 ) error {
 	data["view"] = "general"
-	err := backend.Request(operator.GetUser, rr)
+	err := store.Request(operator.GetUser, rr)
 	if err != nil {
 		attachFailStatus(data, fmt.Sprintf("%v", err))
 		return nil

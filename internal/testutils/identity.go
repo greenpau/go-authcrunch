@@ -60,3 +60,12 @@ func CreateTestDatabase(s string) (*identity.Database, error) {
 	}
 	return db, nil
 }
+
+// CreateEmptyTestDatabase returns empty database instance.
+func CreateEmptyTestDatabase(s string) (*identity.Database, error) {
+	tmpDir, err := tests.TempDir(s)
+	if err != nil {
+		return nil, err
+	}
+	return identity.NewDatabase(filepath.Join(tmpDir, "user_db.json"))
+}

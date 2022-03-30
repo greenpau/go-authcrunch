@@ -17,8 +17,9 @@ package authn
 import (
 	"context"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/idp"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
@@ -61,12 +62,40 @@ func (p *Portal) handleHTTPLoginScreen(ctx context.Context, w http.ResponseWrite
 	return p.handleHTTPRenderHTML(ctx, w, http.StatusOK, content.Bytes())
 }
 
-func (p *Portal) getBackendByRealm(realm string) *backends.Backend {
-	for _, backend := range p.backends {
-		if backend.GetRealm() == realm {
-			return backend
+func (p *Portal) getIdentityProviderByRealm(realm string) idp.IdentityProvider {
+	for _, provider := range p.identityProviders {
+		if provider.GetRealm() == realm {
+			return provider
 		}
 	}
+	return nil
+}
+
+func (p *Portal) getIdentityStoreByRealm(realm string) ids.IdentityStore {
+	for _, store := range p.identityStores {
+		if store.GetRealm() == realm {
+			return store
+		}
+	}
+	return nil
+}
+
+func (p *Portal) getAuthenticatorByRealm(realm string) map[string]string {
+	if store := p.getIdentityStoreByRealm(realm); store != nil {
+		return map[string]string{
+			"name":  store.GetName(),
+			"realm": store.GetRealm(),
+			"kind":  store.GetKind(),
+		}
+	}
+	if provider := p.getIdentityProviderByRealm(realm); provider != nil {
+		return map[string]string{
+			"name":  provider.GetName(),
+			"realm": provider.GetRealm(),
+			"kind":  provider.GetKind(),
+		}
+	}
+
 	return nil
 }
 
@@ -213,12 +242,12 @@ func (p *Portal) injectUserChallenges(usr *user.User, data map[string]interface{
 
 func (p *Portal) identifyUserRequest(rr *requests.Request, identity map[string]string) error {
 	// Identify the backend associated with the user.
-	backend := p.getBackendByRealm(identity["realm"])
+	backend := p.getIdentityStoreByRealm(identity["realm"])
 	if backend == nil {
 		return fmt.Errorf("no matching realm found")
 	}
 	rr.Upstream.Name = backend.GetName()
-	rr.Upstream.Method = backend.GetMethod()
+	rr.Upstream.Method = backend.GetKind()
 	rr.Upstream.Realm = backend.GetRealm()
 	rr.Flags.Enabled = true
 	rr.User.Username = identity["user"]
@@ -228,12 +257,12 @@ func (p *Portal) identifyUserRequest(rr *requests.Request, identity map[string]s
 func (p *Portal) authenticateLoginRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, credentials map[string]string) error {
 	rr.User.Username = credentials["username"]
 	rr.User.Password = credentials["password"]
-	backend := p.getBackendByRealm(credentials["realm"])
+	backend := p.getIdentityStoreByRealm(credentials["realm"])
 	if backend == nil {
 		rr.Response.Code = http.StatusBadRequest
 		return fmt.Errorf("no matching realm found")
 	}
-	rr.Upstream.Method = backend.GetMethod()
+	rr.Upstream.Method = backend.GetKind()
 	rr.Upstream.Realm = backend.GetRealm()
 	rr.Flags.Enabled = true
 
@@ -257,7 +286,7 @@ func (p *Portal) authenticateLoginRequest(ctx context.Context, w http.ResponseWr
 }
 
 func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
-	backend := p.getBackendByRealm(rr.Upstream.Realm)
+	backend := p.getAuthenticatorByRealm(rr.Upstream.Realm)
 	if backend == nil {
 		rr.Response.Code = http.StatusBadRequest
 		return fmt.Errorf("no matching realm found")
@@ -317,9 +346,9 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 		rr.Response.Code = http.StatusInternalServerError
 		return err
 	}
-	usr.Authenticator.Name = backend.GetName()
-	usr.Authenticator.Realm = backend.GetRealm()
-	usr.Authenticator.Method = backend.GetMethod()
+	usr.Authenticator.Name = backend["name"]
+	usr.Authenticator.Realm = backend["realm"]
+	usr.Authenticator.Method = backend["kind"]
 
 	// Build a list of additional user-specific UI links.
 	if rr.Response.Workflow != "json-api" {

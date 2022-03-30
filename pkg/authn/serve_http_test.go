@@ -24,8 +24,8 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends/local"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
+	// "github.com/greenpau/go-authcrunch/pkg/authn/backends/local"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
@@ -78,34 +78,36 @@ func TestServeHTTP(t *testing.T) {
 				Action: "allow",
 			},
 		},
-		BackendConfigs: []backends.Config{
-			backends.Config{
-				Local: &local.Config{
-					Name:   "local_backend",
-					Method: "local",
-					Realm:  "localize",
-					Path:   dbPath,
-				},
-			},
+		IdentityStores: []string{"local_backend"},
+	}
+
+	storeCfg := &ids.IdentityStoreConfig{
+		Name: "local_backend",
+		Kind: "local",
+		Params: map[string]interface{}{
+			"path":  dbPath,
+			"realm": "localize",
 		},
 	}
-	portal, err := NewPortal(cfg, logger)
+
+	store, err := ids.NewIdentityStore(storeCfg, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if err := portal.Register(); err != nil {
+	if err := store.Configure(); err != nil {
 		t.Fatal(err)
 	}
 
-	authr := &Authenticator{
-		Path:       "/auth",
-		PortalName: "myportal",
+	params := PortalParameters{
+		Config: cfg,
+		Logger: logger,
+		IdentityStores: []ids.IdentityStore{
+			store,
+		},
 	}
-	if err := authr.Provision(logger); err != nil {
-		t.Fatal(err)
-	}
-	if err := authr.Validate(); err != nil {
+
+	portal, err := NewPortal(params)
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -248,7 +250,7 @@ func TestServeHTTP(t *testing.T) {
 			// Create test HTTP server.
 			ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				rr := requests.NewRequest()
-				err := authr.ServeHTTP(context.Background(), w, r, rr)
+				err := portal.ServeHTTP(context.Background(), w, r, rr)
 				if tests.EvalErrWithLog(t, err, tc.want, tc.shouldErr, tc.err, msgs) {
 					return
 				}

@@ -19,13 +19,13 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/registration"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
 	"testing"
@@ -54,7 +54,7 @@ func TestNewPortal(t *testing.T) {
 		userRegistrationConfig *registration.Config
 		userTransformerConfigs []*transformer.Config
 		cookieConfig           *cookie.Config
-		backendConfigsFunc     func() []backends.Config
+		identityStoreConfigs   []*ids.IdentityStoreConfig
 		aclConfigs             []*acl.RuleConfiguration
 		tokenValidatorOptions  *options.TokenValidatorOptions
 		tokenGrantorOptions    *options.TokenGrantorOptions
@@ -90,9 +90,6 @@ func TestNewPortal(t *testing.T) {
 			configFunc: func() *PortalConfig {
 				return &PortalConfig{}
 			},
-			backendConfigsFunc: func() []backends.Config {
-				return nil
-			},
 			shouldErr: true,
 			err:       errors.ErrNewPortal.WithArgs(errors.ErrPortalConfigNameNotFound),
 		},
@@ -106,9 +103,6 @@ func TestNewPortal(t *testing.T) {
 					Name: "myportal",
 				}
 			},
-			backendConfigsFunc: func() []backends.Config {
-				return nil
-			},
 			shouldErr: true,
 			err:       errors.ErrNewPortal.WithArgs(errors.ErrPortalConfigBackendsNotFound),
 		},
@@ -120,20 +114,20 @@ func TestNewPortal(t *testing.T) {
 			configFunc: func() *PortalConfig {
 				return &PortalConfig{
 					Name: "myportal",
+					IdentityStores: []string{
+						"local_backend",
+					},
 				}
 			},
-			backendConfigsFunc: func() []backends.Config {
-				m := map[string]interface{}{
-					"name":   "local_backend",
-					"method": "local",
-					"realm":  "local",
-					"path":   dbPath,
-				}
-				backendConfig, err := backends.NewConfig(m)
-				if err != nil {
-					return []backends.Config{}
-				}
-				return []backends.Config{*backendConfig}
+			identityStoreConfigs: []*ids.IdentityStoreConfig{
+				{
+					Name: "local_backend",
+					Kind: "local",
+					Params: map[string]interface{}{
+						"path":  dbPath,
+						"realm": "local",
+					},
+				},
 			},
 			want: `{
               "config": {
@@ -150,16 +144,7 @@ func TestNewPortal(t *testing.T) {
                     "conditions": ["` + defaultPortalACLCondition + `"]
 				  }
 				],
-                "backend_configs": [
-                  {
-                    "local": {
-                      "method": "local",
-                      "name": "local_backend",
-                      "path": "` + dbPath + `",
-                      "realm": "local"
-                    }
-                  }
-                ]
+				"identity_stores": ["local_backend"]
               }
             }`,
 		},
@@ -170,7 +155,6 @@ func TestNewPortal(t *testing.T) {
 			if tc.disabled {
 				return
 			}
-			logger := tc.loggerFunc()
 			cfg := tc.configFunc()
 			if cfg != nil {
 				if tc.uiConfig != nil {
@@ -184,10 +168,6 @@ func TestNewPortal(t *testing.T) {
 				}
 				if tc.cookieConfig != nil {
 					cfg.CookieConfig = tc.cookieConfig
-				}
-				backendConfigs := tc.backendConfigsFunc()
-				if len(backendConfigs) > 0 {
-					cfg.BackendConfigs = backendConfigs
 				}
 				if len(tc.aclConfigs) > 0 {
 					cfg.AccessListConfigs = tc.aclConfigs
@@ -203,7 +183,23 @@ func TestNewPortal(t *testing.T) {
 				}
 			}
 
-			portal, err := NewPortal(cfg, logger)
+			params := PortalParameters{
+				Config: cfg,
+				Logger: tc.loggerFunc(),
+			}
+
+			for _, storeCfg := range tc.identityStoreConfigs {
+				store, err := ids.NewIdentityStore(storeCfg, logutil.NewLogger())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := store.Configure(); err != nil {
+					t.Fatal(err)
+				}
+				params.IdentityStores = append(params.IdentityStores, store)
+			}
+
+			portal, err := NewPortal(params)
 			if err != nil {
 				if !tc.shouldErr {
 					t.Fatalf("expected success, got: %v", err)
@@ -221,8 +217,8 @@ func TestNewPortal(t *testing.T) {
 			got["config"] = tests.Unpack(t, portal.config)
 			want := tests.Unpack(t, tc.want)
 
-			// t.Logf("JSON: %s", tests.UnpackJSON(t, got))
 			if diff := cmp.Diff(want, got); diff != "" {
+				t.Logf("JSON: %s", tests.UnpackJSON(t, got))
 				t.Errorf("NewPortal() config mismatch (-want +got):\n%s", diff)
 			}
 		})

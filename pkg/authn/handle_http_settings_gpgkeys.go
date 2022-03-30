@@ -18,9 +18,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"net/http"
@@ -29,7 +29,7 @@ import (
 
 func (p *Portal) handleHTTPGPGKeysSettings(
 	ctx context.Context, r *http.Request, rr *requests.Request,
-	usr *user.User, backend *backends.Backend, data map[string]interface{},
+	usr *user.User, store ids.IdentityStore, data map[string]interface{},
 ) error {
 	var action string
 	var status bool
@@ -49,7 +49,7 @@ func (p *Portal) handleHTTPGPGKeysSettings(
 			break
 		}
 		rr.Key.Usage = "gpg"
-		if err = backend.Request(operator.AddKeyGPG, rr); err != nil {
+		if err = store.Request(operator.AddKeyGPG, rr); err != nil {
 			attachFailStatus(data, fmt.Sprintf("%v", err))
 			break
 		}
@@ -66,7 +66,7 @@ func (p *Portal) handleHTTPGPGKeysSettings(
 			break
 		}
 		rr.Key.ID = keyID
-		if err = backend.Request(operator.DeletePublicKey, rr); err != nil {
+		if err = store.Request(operator.DeletePublicKey, rr); err != nil {
 			attachFailStatus(data, fmt.Sprintf("failed deleting key id %s: %v", keyID, err))
 			break
 		}
@@ -80,7 +80,7 @@ func (p *Portal) handleHTTPGPGKeysSettings(
 			break
 		}
 		rr.Key.Usage = "gpg"
-		if err = backend.Request(operator.GetPublicKeys, rr); err != nil {
+		if err = store.Request(operator.GetPublicKeys, rr); err != nil {
 			attachFailStatus(data, fmt.Sprintf("failed fetching key id %s: %v", keyID, err))
 			break
 		}
@@ -109,7 +109,7 @@ func (p *Portal) handleHTTPGPGKeysSettings(
 	default:
 		// List GPG Keys.
 		rr.Key.Usage = "gpg"
-		if err = backend.Request(operator.GetPublicKeys, rr); err != nil {
+		if err = store.Request(operator.GetPublicKeys, rr); err != nil {
 			attachFailStatus(data, fmt.Sprintf("%v", err))
 			break
 		}

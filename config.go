@@ -15,18 +15,23 @@
 package authcrunch
 
 import (
+	"fmt"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
+	"github.com/greenpau/go-authcrunch/pkg/idp"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 )
 
 // Config is a configuration of Server.
 type Config struct {
-	Credentials *credentials.Config   `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
-	Portals     []*authn.PortalConfig `json:"auth_portal_configs,omitempty" xml:"auth_portal_configs,omitempty" yaml:"auth_portal_configs,omitempty"`
-	Policies    []*authz.PolicyConfig `json:"authz_policy_configs,omitempty" xml:"authz_policy_configs,omitempty" yaml:"authz_policy_configs,omitempty"`
-	Messaging   *messaging.Config     `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
+	Credentials           *credentials.Config           `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
+	AuthenticationPortals []*authn.PortalConfig         `json:"authentication_portals,omitempty" xml:"authentication_portals,omitempty" yaml:"authentication_portals,omitempty"`
+	AuthorizationPolicies []*authz.PolicyConfig         `json:"authorization_policies,omitempty" xml:"authorization_policies,omitempty" yaml:"authorization_policies,omitempty"`
+	Messaging             *messaging.Config             `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
+	IdentityStores        []*ids.IdentityStoreConfig    `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
+	IdentityProviders     []*idp.IdentityProviderConfig `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
 }
 
 // NewConfig returns an instance of Config.
@@ -50,12 +55,32 @@ func (cfg *Config) AddMessagingProvider(p messaging.Provider) error {
 	return cfg.Messaging.Add(p)
 }
 
+// AddIdentityStore adds an identity store configuration.
+func (cfg *Config) AddIdentityStore(name, kind string, data map[string]interface{}) error {
+	store, err := ids.NewIdentityStoreConfig(name, kind, data)
+	if err != nil {
+		return err
+	}
+	cfg.IdentityStores = append(cfg.IdentityStores, store)
+	return nil
+}
+
+// AddIdentityProvider adds an identity provider configuration.
+func (cfg *Config) AddIdentityProvider(name, kind string, data map[string]interface{}) error {
+	provider, err := idp.NewIdentityProviderConfig(name, kind, data)
+	if err != nil {
+		return err
+	}
+	cfg.IdentityProviders = append(cfg.IdentityProviders, provider)
+	return nil
+}
+
 // AddAuthenticationPortal adds an authentication portal configuration.
 func (cfg *Config) AddAuthenticationPortal(p *authn.PortalConfig) error {
 	if err := p.Validate(); err != nil {
 		return err
 	}
-	cfg.Portals = append(cfg.Portals, p)
+	cfg.AuthenticationPortals = append(cfg.AuthenticationPortals, p)
 	return nil
 }
 
@@ -64,25 +89,76 @@ func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
 	if err := p.Validate(); err != nil {
 		return err
 	}
-	cfg.Policies = append(cfg.Policies, p)
+	cfg.AuthorizationPolicies = append(cfg.AuthorizationPolicies, p)
 	return nil
 }
 
 // Validate validates Config.
 func (cfg *Config) Validate() error {
-	for _, portal := range cfg.Portals {
-		portal.SetCredentials(cfg.Credentials)
-		portal.SetMessaging(cfg.Messaging)
-		if err := portal.Validate(); err != nil {
-			return err
-		}
-		if err := portal.ValidateCredentials(); err != nil {
-			return err
-		}
+	if len(cfg.AuthenticationPortals) < 1 && len(cfg.AuthorizationPolicies) < 1 {
+		return fmt.Errorf("no portals and gatekeepers found")
 	}
-	for _, policy := range cfg.Policies {
-		if err := policy.Validate(); err != nil {
+
+	for _, portalCfg := range cfg.AuthenticationPortals {
+		portalCfg.SetCredentials(cfg.Credentials)
+		portalCfg.SetMessaging(cfg.Messaging)
+		if err := portalCfg.ValidateCredentials(); err != nil {
 			return err
+		}
+
+		// Vealidate that there are no duplicate or overlapping identity store and providers.
+		authByRealm := make(map[string]string)
+
+		for _, storeName := range portalCfg.IdentityStores {
+			var storeConfig *ids.IdentityStoreConfig
+			for _, entry := range cfg.IdentityStores {
+				storeConfig = entry
+				if entry.Name == storeName {
+					break
+				}
+			}
+			if storeConfig == nil {
+				continue
+			}
+			if storeConfig.Params == nil {
+				continue
+			}
+			if v, exists := storeConfig.Params["realm"]; exists {
+				realmName := v.(string)
+				if prevStoreName, exists := authByRealm[realmName]; exists {
+					return fmt.Errorf(
+						"identity provider %q has the same %q realm as %q",
+						storeName, realmName, prevStoreName,
+					)
+				}
+				authByRealm[realmName] = storeName
+			}
+		}
+
+		for _, providerName := range portalCfg.IdentityProviders {
+			var providerConfig *idp.IdentityProviderConfig
+			for _, entry := range cfg.IdentityProviders {
+				providerConfig = entry
+				if entry.Name == providerName {
+					break
+				}
+			}
+			if providerConfig == nil {
+				continue
+			}
+			if providerConfig.Params == nil {
+				continue
+			}
+			if v, exists := providerConfig.Params["realm"]; exists {
+				realmName := v.(string)
+				if prevProviderName, exists := authByRealm[realmName]; exists {
+					return fmt.Errorf(
+						"identity provider %q has the same %q realm as %q",
+						providerName, realmName, prevProviderName,
+					)
+				}
+				authByRealm[realmName] = providerName
+			}
 		}
 	}
 

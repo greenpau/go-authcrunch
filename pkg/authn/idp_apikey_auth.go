@@ -37,7 +37,7 @@ func (p *Portal) APIKeyAuth(r *idp.ProviderRequest) error {
 	rr.Key.Payload = r.Secret
 	rr.Upstream.Realm = r.Realm
 
-	backend := p.getBackendByRealm(r.Realm)
+	backend := p.getIdentityStoreByRealm(r.Realm)
 	if backend == nil {
 		p.logger.Warn(
 			"realm backend not found",

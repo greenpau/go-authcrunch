@@ -54,7 +54,7 @@ func (p *Portal) BasicAuth(r *idp.ProviderRequest) error {
 	rr.User.Username = creds[0]
 	rr.User.Password = creds[1]
 
-	backend := p.getBackendByRealm(r.Realm)
+	backend := p.getIdentityStoreByRealm(r.Realm)
 	if backend == nil {
 		p.logger.Warn(
 			"realm backend not found",

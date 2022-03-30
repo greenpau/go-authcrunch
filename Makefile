@@ -81,6 +81,8 @@ clean:
 
 qtest:
 	@echo "Perform quick tests ..."
+	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewConfig ./*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewServer ./*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out internal/tag/*.go
 	@### time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestAuthorize ./pkg/authz/validator/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out  -run TestAddProviders ./pkg/messaging/...
@@ -92,8 +94,15 @@ qtest:
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestServeHTTP ./pkg/authn/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestFactory ./pkg/authn/cookie/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestValidateJwksKey ./pkg/authn/backends/oauth2/jwks*.go
-	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestTransformData ./pkg/authn/transformer/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/transformer/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestTransformData ./pkg/authn/transformer/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/idp/...
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/idp/saml/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/idp/oauth/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewJwksKeyFromRSAPublicKeyPEM ./pkg/idp/oauth/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewIdentityProviderConfig ./pkg/idp/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/...
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/local/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/ldap/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authz/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewGatekeeper ./pkg/authz/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestAuthenticate ./pkg/authz/*.go

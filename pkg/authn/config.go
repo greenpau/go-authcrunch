@@ -18,7 +18,6 @@ import (
 	// "time"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
 	// "github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/registration"
@@ -46,8 +45,10 @@ type PortalConfig struct {
 	UserTransformerConfigs []*transformer.Config `json:"user_transformer_configs,omitempty" xml:"user_transformer_configs,omitempty" yaml:"user_transformer_configs,omitempty"`
 	// CookieConfig holds the configuration for the cookies issues by Authenticator.
 	CookieConfig *cookie.Config `json:"cookie_config,omitempty" xml:"cookie_config,omitempty" yaml:"cookie_config,omitempty"`
-	// BackendConfigs hold the configurations for authentication backends.
-	BackendConfigs []backends.Config `json:"backend_configs,omitempty" xml:"backend_configs,omitempty" yaml:"backend_configs,omitempty"`
+	// The names of identity stores.
+	IdentityStores []string `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
+	// The names of identity providers.
+	IdentityProviders []string `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
 	// AccessListConfigs hold the configurations for the ACL of the token validator.
 	AccessListConfigs []*acl.RuleConfiguration `json:"access_list_configs,omitempty" xml:"access_list_configs,omitempty" yaml:"access_list_configs,omitempty"`
 	// TokenValidatorOptions holds the configuration for the token validator.
@@ -178,7 +179,7 @@ func (cfg *PortalConfig) Validate() error {
 	if cfg.Name == "" {
 		return errors.ErrPortalConfigNameNotFound
 	}
-	if len(cfg.BackendConfigs) == 0 {
+	if len(cfg.IdentityStores) == 0 && len(cfg.IdentityProviders) == 0 {
 		return errors.ErrPortalConfigBackendsNotFound
 	}
 

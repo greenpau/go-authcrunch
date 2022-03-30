@@ -63,7 +63,7 @@ func init() {
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
 	app.SetVersion(appVersion, "1.0.19")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.0.18-4-gb0bcd90")
+	app.SetGitCommit(gitCommit, "v1.0.19-10-g7fb0932")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
@@ -112,6 +112,10 @@ type Database struct {
 
 // NewDatabase return an instance of Database.
 func NewDatabase(fp string) (*Database, error) {
+	if fp == "/dev/null" {
+		return nil, errors.ErrNewDatabase.WithArgs(fp, "null path")
+	}
+
 	db := &Database{
 		mu:              &sync.RWMutex{},
 		path:            fp,

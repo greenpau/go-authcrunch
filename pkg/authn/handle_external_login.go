@@ -53,17 +53,17 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 		zap.Any("request_path", r.URL.Path),
 	)
 
-	backend := p.getBackendByRealm(authRealm)
-	if backend == nil {
+	provider := p.getIdentityProviderByRealm(authRealm)
+	if provider == nil {
 		p.logger.Warn(
 			"Authentication failed",
 			zap.String("session_id", rr.Upstream.SessionID),
 			zap.String("request_id", rr.ID),
-			zap.String("error", "backend not found"),
+			zap.String("error", "identity provider not found"),
 		)
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 	}
-	err = backend.Request(operator.Authenticate, rr)
+	err = provider.Request(operator.Authenticate, rr)
 	if err != nil {
 		p.logger.Warn(
 			"Authentication failed",

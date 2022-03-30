@@ -15,14 +15,14 @@
 package tests
 
 import (
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"math/rand"
 	"strings"
 )
 
 // NewID returns a random ID to be used for user identification.
 func NewID() string {
-	return uuid.NewV4().String()
+	return uuid.New().String()
 }
 
 // NewRandomString returns a random string.

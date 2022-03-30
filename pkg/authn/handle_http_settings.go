@@ -48,7 +48,7 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 		return p.handleHTTPLogoutWithLocalRedirect(ctx, w, r, rr)
 	}
 
-	backend := p.getBackendByRealm(usr.Authenticator.Realm)
+	backend := p.getIdentityStoreByRealm(usr.Authenticator.Realm)
 	if backend == nil {
 		p.logger.Warn(
 			"backend not found",

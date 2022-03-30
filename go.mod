@@ -9,9 +9,9 @@ require (
 	github.com/go-ldap/ldap/v3 v3.4.1
 	github.com/golang-jwt/jwt/v4 v4.2.0
 	github.com/google/go-cmp v0.5.7
+	github.com/google/uuid v1.3.0
 	github.com/greenpau/versioned v1.0.27
 	github.com/iancoleman/strcase v0.2.0
-	github.com/satori/go.uuid v1.2.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/zap v1.20.0

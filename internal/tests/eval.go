@@ -61,6 +61,14 @@ func WriteLog(t *testing.T, msgs []string) {
 	}
 }
 
+// EvalErrPhaseWithLog evaluates the error according to the phase of execution.
+func EvalErrPhaseWithLog(t *testing.T, err error, errPhase, expErrPhase string, shouldErr bool, expErr error, msgs []string) bool {
+	if expErrPhase == errPhase {
+		return EvalErrWithLog(t, err, errPhase, shouldErr, expErr, msgs)
+	}
+	return EvalErrWithLog(t, err, errPhase, false, nil, msgs)
+}
+
 // EvalErrWithLog evaluates the error.
 func EvalErrWithLog(t *testing.T, err error, data interface{}, shouldErr bool, expErr error, msgs []string) bool {
 	_, fileName, lineNum, ok := runtime.Caller(1)

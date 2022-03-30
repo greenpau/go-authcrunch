@@ -22,11 +22,6 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends/ldap"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends/local"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends/oauth2"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends/saml"
 	authncache "github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/registration"
@@ -41,6 +36,12 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
+	idpp "github.com/greenpau/go-authcrunch/pkg/idp"
+	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
+	"github.com/greenpau/go-authcrunch/pkg/idp/saml"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"github.com/greenpau/go-authcrunch/pkg/ids/ldap"
+	"github.com/greenpau/go-authcrunch/pkg/ids/local"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -64,6 +65,21 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{
+			name:  "test authn.PortalParameters struct",
+			entry: &authn.PortalParameters{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test idp.IdentityProviderConfig struct",
+			entry: &idpp.IdentityProviderConfig{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test ids.IdentityStoreConfig struct",
+			entry: &ids.IdentityStoreConfig{},
+			opts:  &Options{},
+		},
 		{
 			name:  "test util.Browser struct",
 			entry: &util.Browser{},
@@ -374,11 +390,6 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test backends.Config struct",
-			entry: &backends.Config{},
-			opts:  &Options{},
-		},
-		{
 			name:  "test user.Claims struct",
 			entry: &user.Claims{},
 			opts: &Options{
@@ -442,7 +453,7 @@ func TestTagCompliance(t *testing.T) {
 		},
 		{
 			name:  "test local.Backend struct",
-			entry: &local.Backend{},
+			entry: &local.IdentityStore{},
 			opts:  &Options{},
 		},
 		{
@@ -456,8 +467,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test oauth2.Config struct",
-			entry: &oauth2.Config{},
+			name:  "test oauth.Config struct",
+			entry: &oauth.Config{},
 			opts: &Options{
 				AllowFieldMismatch: true,
 				AllowedFields: map[string]interface{}{
@@ -521,8 +532,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test oauth2.Backend struct",
-			entry: &oauth2.Backend{},
+			name:  "test oauth.Backend struct",
+			entry: &oauth.IdentityProvider{},
 			opts:  &Options{},
 		},
 		{
@@ -554,7 +565,7 @@ func TestTagCompliance(t *testing.T) {
 		},
 		{
 			name:  "test saml.Backend struct",
-			entry: &saml.Backend{},
+			entry: &saml.IdentityProvider{},
 			opts:  &Options{},
 		},
 		{
@@ -599,8 +610,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test oauth2.JwksKey struct",
-			entry: &oauth2.JwksKey{},
+			name:  "test oauth.JwksKey struct",
+			entry: &oauth.JwksKey{},
 			opts: &Options{
 				DisableTagMismatch: true,
 			},
@@ -627,7 +638,7 @@ func TestTagCompliance(t *testing.T) {
 		},
 		{
 			name:  "test ldap.Backend struct",
-			entry: &ldap.Backend{},
+			entry: &ldap.IdentityStore{},
 			opts:  &Options{},
 		},
 		{
@@ -648,11 +659,6 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test ldap.AuthServer struct",
 			entry: &ldap.AuthServer{},
-			opts:  &Options{},
-		},
-		{
-			name:  "test backends.Backend struct",
-			entry: &backends.Backend{},
 			opts:  &Options{},
 		},
 		{
@@ -723,11 +729,6 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test authn.Authenticator struct",
-			entry: &authn.Authenticator{},
-			opts:  &Options{},
-		},
-		{
 			name:  "test authn.AuthResponse struct",
 			entry: &authn.AuthResponse{},
 			opts:  &Options{},
@@ -737,30 +738,14 @@ func TestTagCompliance(t *testing.T) {
 			entry: &authcrunch.Server{},
 			opts:  &Options{},
 		},
-
-		{
-			name:  "test authz.GatekeeperRegistry struct",
-			entry: &authz.GatekeeperRegistry{},
-			opts:  &Options{},
-		},
 		{
 			name:  "test requests.RedirectResponse struct",
 			entry: &requests.RedirectResponse{},
 			opts:  &Options{},
 		},
 		{
-			name:  "test authz.Authorizer struct",
-			entry: &authz.Authorizer{},
-			opts:  &Options{},
-		},
-		{
 			name:  "test authz.Gatekeeper struct",
 			entry: &authz.Gatekeeper{},
-			opts:  &Options{},
-		},
-		{
-			name:  "test authn.PortalRegistry struct",
-			entry: &authn.PortalRegistry{},
 			opts:  &Options{},
 		},
 		{

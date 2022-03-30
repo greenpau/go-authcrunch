@@ -195,13 +195,13 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, usr *user.User, action string) (map[string]interface{}, error) {
 	var verifiedCount int
 	m := make(map[string]interface{})
-	backend := p.getBackendByRealm(usr.Authenticator.Realm)
+	backend := p.getIdentityStoreByRealm(usr.Authenticator.Realm)
 	if backend == nil {
 		m["title"] = "Internal Server Error"
 		m["view"] = "terminate"
 		return m, fmt.Errorf("Authentication realm not found")
 	}
-	rr.Upstream.Method = backend.GetMethod()
+	rr.Upstream.Method = backend.GetKind()
 	rr.Upstream.Realm = backend.GetRealm()
 
 	for _, checkpoint := range usr.Checkpoints {

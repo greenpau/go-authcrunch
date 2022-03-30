@@ -15,6 +15,7 @@
 package authz
 
 import (
+	"context"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
 	"github.com/greenpau/go-authcrunch/pkg/authz/injector"
@@ -22,6 +23,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"strings"
 )
 
@@ -179,6 +181,16 @@ func (cfg *PolicyConfig) Validate() error {
 			return errors.ErrInvalidConfiguration.WithArgs(cfg.Name, err)
 		}
 		cfg.PassClaimsWithHeaders = true
+	}
+
+	if len(cfg.AccessListRules) == 0 {
+		return errors.ErrInvalidConfiguration.WithArgs(cfg.Name, "access list rule config not found")
+	}
+
+	accessList := acl.NewAccessList()
+	accessList.SetLogger(logutil.NewLogger())
+	if err := accessList.AddRules(context.Background(), cfg.AccessListRules); err != nil {
+		return errors.ErrInvalidConfiguration.WithArgs(cfg.Name, err)
 	}
 
 	cfg.validated = true

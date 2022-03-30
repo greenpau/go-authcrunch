@@ -70,21 +70,6 @@ func TestAuthenticate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := gatekeeper.Register(); err != nil {
-		t.Fatal(err)
-	}
-
-	authzr := &Authorizer{
-		Path:           "/auth",
-		GatekeeperName: "mygatekeeper",
-	}
-	if err := authzr.Provision(logger); err != nil {
-		t.Fatal(err)
-	}
-	if err := authzr.Validate(); err != nil {
-		t.Fatal(err)
-	}
-
 	var testcases = []struct {
 		name      string
 		want      map[string]interface{}
@@ -113,7 +98,7 @@ func TestAuthenticate(t *testing.T) {
 	// Initialize HTTP server.
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rr := requests.NewAuthorizationRequest()
-		err := authzr.Authenticate(w, r, rr)
+		err := gatekeeper.Authenticate(w, r, rr)
 		resp := make(map[string]interface{})
 		if err != nil {
 			resp["error"] = err

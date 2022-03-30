@@ -48,4 +48,5 @@ const (
 	ErrCryptoKeyStoreAutoGenerateAlgo         StandardError = "auto-generate does not support %q algorithm"
 	// Signing
 	ErrUnsupportedSigningMethod StandardError = "kms: grantor does not support %s token signing method"
+	ErrUnexpectedSigningMethod  StandardError = "signing method mismatch: %v (expected) vs. %v (received)"
 )

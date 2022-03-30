@@ -17,20 +17,20 @@ package authn
 import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
-	"github.com/greenpau/go-authcrunch/pkg/authn/backends"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
-	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/idp"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
-	"github.com/greenpau/go-authcrunch/pkg/messaging"
 
-	"github.com/satori/go.uuid"
+	"fmt"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"path"
 	"strings"
@@ -44,48 +44,102 @@ const (
 
 // Portal is an authentication portal.
 type Portal struct {
-	id            string
-	config        *PortalConfig
-	registrar     *identity.Database
-	validator     *validator.TokenValidator
-	keystore      *kms.CryptoKeyStore
-	backends      []*backends.Backend
-	cookie        *cookie.Factory
-	transformer   *transformer.Factory
-	ui            *ui.Factory
-	startedAt     time.Time
-	sessions      *cache.SessionCache
-	sandboxes     *cache.SandboxCache
-	registrations *cache.RegistrationCache
-	loginOptions  map[string]interface{}
-	logger        *zap.Logger
+	id                string
+	config            *PortalConfig
+	registrar         *identity.Database
+	validator         *validator.TokenValidator
+	keystore          *kms.CryptoKeyStore
+	identityStores    []ids.IdentityStore
+	identityProviders []idp.IdentityProvider
+	cookie            *cookie.Factory
+	transformer       *transformer.Factory
+	ui                *ui.Factory
+	startedAt         time.Time
+	sessions          *cache.SessionCache
+	sandboxes         *cache.SandboxCache
+	registrations     *cache.RegistrationCache
+	loginOptions      map[string]interface{}
+	logger            *zap.Logger
+}
+
+// PortalParameters are input parameters for NewPortal.
+type PortalParameters struct {
+	Config            *PortalConfig          `json:"config,omitempty" xml:"config,omitempty" yaml:"config,omitempty"`
+	Logger            *zap.Logger            `json:"logger,omitempty" xml:"logger,omitempty" yaml:"logger,omitempty"`
+	IdentityStores    []ids.IdentityStore    `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
+	IdentityProviders []idp.IdentityProvider `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
 }
 
 // NewPortal returns an instance of Portal.
-func NewPortal(cfg *PortalConfig, logger *zap.Logger) (*Portal, error) {
-	if logger == nil {
+func NewPortal(params PortalParameters) (*Portal, error) {
+	if params.Logger == nil {
 		return nil, errors.ErrNewPortalLoggerNil
 	}
-	if cfg == nil {
+	if params.Config == nil {
 		return nil, errors.ErrNewPortalConfigNil
 	}
-	if err := cfg.Validate(); err != nil {
+
+	if err := params.Config.Validate(); err != nil {
 		return nil, errors.ErrNewPortal.WithArgs(err)
 	}
 	p := &Portal{
-		id:     uuid.NewV4().String(),
-		config: cfg,
-		logger: logger,
+		id:     uuid.New().String(),
+		config: params.Config,
+		logger: params.Logger,
 	}
+
+	for _, storeName := range params.Config.IdentityStores {
+		var storeFound bool
+		for _, store := range params.IdentityStores {
+			if store.GetName() == storeName {
+				if !store.Configured() {
+					return nil, errors.ErrNewPortal.WithArgs(
+						fmt.Errorf("identity store %q not configured", storeName),
+					)
+				}
+				p.identityStores = append(p.identityStores, store)
+				storeFound = true
+				break
+			}
+		}
+		if !storeFound {
+			return nil, errors.ErrNewPortal.WithArgs(
+				fmt.Errorf("identity store %q not found", storeName),
+			)
+		}
+	}
+
+	for _, providerName := range params.Config.IdentityProviders {
+		var providerFound bool
+		for _, provider := range params.IdentityProviders {
+			if provider.GetName() == providerName {
+				if !provider.Configured() {
+					return nil, errors.ErrNewPortal.WithArgs(
+						fmt.Errorf("identity provider %q not configured", providerName),
+					)
+				}
+				p.identityProviders = append(p.identityProviders, provider)
+				providerFound = true
+				break
+			}
+		}
+		if !providerFound {
+			return nil, errors.ErrNewPortal.WithArgs(
+				fmt.Errorf("identity provider %q not found", providerName),
+			)
+		}
+	}
+
+	if len(p.identityStores) < 1 && len(p.identityProviders) < 1 {
+		return nil, errors.ErrNewPortal.WithArgs(
+			fmt.Errorf("no identity providers or stores found"),
+		)
+	}
+
 	if err := p.configure(); err != nil {
 		return nil, err
 	}
 	return p, nil
-}
-
-// Register registers the Portal with PortalRegistry.
-func (p *Portal) Register() error {
-	return portalRegistry.RegisterPortal(p.config.Name, p)
 }
 
 func (p *Portal) configure() error {
@@ -95,9 +149,11 @@ func (p *Portal) configure() error {
 	if err := p.configureCryptoKeyStore(); err != nil {
 		return err
 	}
-	if err := p.configureBackends(); err != nil {
+
+	if err := p.configureLoginOptions(); err != nil {
 		return err
 	}
+
 	if err := p.configureUserRegistration(); err != nil {
 		return err
 	}
@@ -209,22 +265,7 @@ func (p *Portal) configureCryptoKeyStore() error {
 	return nil
 }
 
-func (p *Portal) configureBackends() error {
-	p.logger.Debug(
-		"Configuring authentication backends",
-		zap.String("portal_name", p.config.Name),
-		zap.String("portal_id", p.id),
-		zap.Int("backend_count", len(p.config.BackendConfigs)),
-	)
-
-	if len(p.config.BackendConfigs) == 0 {
-		return errors.ErrNoBackendsFound.WithArgs(p.config.Name)
-	}
-
-	backendNameRef := make(map[string]interface{})
-	var loginRealms []map[string]string
-	var externalLoginProviders []map[string]string
-
+func (p *Portal) configureLoginOptions() error {
 	p.loginOptions = make(map[string]interface{})
 	p.loginOptions["form_required"] = "no"
 	p.loginOptions["realm_dropdown_required"] = "no"
@@ -233,104 +274,12 @@ func (p *Portal) configureBackends() error {
 	p.loginOptions["registration_required"] = "no"
 	p.loginOptions["password_recovery_required"] = "no"
 
-	for _, cfg := range p.config.BackendConfigs {
-		backend, err := backends.NewBackend(&cfg, p.logger)
-		if err != nil {
-			return errors.ErrBackendConfigurationFailed.WithArgs(p.config.Name, err)
-		}
-		if err := backend.Configure(); err != nil {
-			return errors.ErrBackendConfigurationFailed.WithArgs(p.config.Name, err)
-		}
-		if err := backend.Validate(); err != nil {
-			return errors.ErrBackendValidationFailed.WithArgs(p.config.Name, err)
-		}
-		backendName := backend.GetName()
-
-		if _, exists := backendNameRef[backendName]; exists {
-			return errors.ErrDuplicateBackendName.WithArgs(backendName, p.config.Name)
-		}
-		backendNameRef[backendName] = true
-		backendRealm := backend.GetRealm()
-		backendMethod := backend.GetMethod()
-		if backendMethod == "local" || backendMethod == "ldap" {
-			loginRealm := make(map[string]string)
-			loginRealm["realm"] = backendRealm
-			loginRealm["default"] = "no"
-			if backendMethod == "ldap" {
-				loginRealm["label"] = strings.ToUpper(backendRealm)
-			} else {
-				loginRealm["label"] = strings.ToTitle(backendRealm)
-				loginRealm["default"] = "yes"
-			}
-			loginRealms = append(loginRealms, loginRealm)
-		}
-		if backendMethod != "local" && backendMethod != "ldap" {
-			externalLoginProvider := make(map[string]string)
-			externalLoginProvider["endpoint"] = path.Join(backendMethod, backendRealm)
-			externalLoginProvider["icon"] = backendMethod
-			externalLoginProvider["realm"] = backendRealm
-			switch backendRealm {
-			case "google":
-				externalLoginProvider["icon"] = "google"
-				externalLoginProvider["text"] = "Google"
-				externalLoginProvider["color"] = "red darken-1"
-			case "facebook":
-				externalLoginProvider["icon"] = "facebook"
-				externalLoginProvider["text"] = "Facebook"
-				externalLoginProvider["color"] = "blue darken-4"
-			case "twitter":
-				externalLoginProvider["icon"] = "twitter"
-				externalLoginProvider["text"] = "Twitter"
-				externalLoginProvider["color"] = "blue darken-1"
-			case "linkedin":
-				externalLoginProvider["icon"] = "linkedin"
-				externalLoginProvider["text"] = "LinkedIn"
-				externalLoginProvider["color"] = "blue darken-1"
-			case "github":
-				externalLoginProvider["icon"] = "github"
-				externalLoginProvider["text"] = "Github"
-				externalLoginProvider["color"] = "grey darken-3"
-			case "windows":
-				externalLoginProvider["icon"] = "windows"
-				externalLoginProvider["text"] = "Microsoft"
-				externalLoginProvider["color"] = "orange darken-1"
-			case "azure":
-				externalLoginProvider["icon"] = "windows"
-				externalLoginProvider["text"] = "Azure"
-				externalLoginProvider["color"] = "blue"
-			case "aws", "amazon":
-				externalLoginProvider["icon"] = "aws"
-				externalLoginProvider["text"] = "AWS"
-				externalLoginProvider["color"] = "blue-grey darken-2"
-			default:
-				externalLoginProvider["icon"] = "codepen"
-				externalLoginProvider["text"] = backendRealm
-				externalLoginProvider["color"] = "grey darken-3"
-			}
-			externalLoginProviders = append(externalLoginProviders, externalLoginProvider)
-		}
-		p.backends = append(p.backends, backend)
-		p.logger.Debug(
-			"Provisioned authentication backend",
-			zap.String("portal_name", p.config.Name),
-			zap.String("portal_id", p.id),
-			zap.String("backend_name", backendName),
-			zap.String("backend_type", backendMethod),
-			zap.String("backend_realm", backendRealm),
-		)
+	if err := p.configureIdentityStoreLogin(); err != nil {
+		return err
 	}
 
-	if len(loginRealms) > 0 {
-		p.loginOptions["form_required"] = "yes"
-		p.loginOptions["identity_required"] = "yes"
-		p.loginOptions["realms"] = loginRealms
-	}
-	if len(loginRealms) > 1 {
-		p.loginOptions["realm_dropdown_required"] = "yes"
-	}
-	if len(externalLoginProviders) > 0 {
-		p.loginOptions["external_providers_required"] = "yes"
-		p.loginOptions["external_providers"] = externalLoginProviders
+	if err := p.configureIdentityProviderLogin(); err != nil {
+		return err
 	}
 
 	p.logger.Debug(
@@ -338,7 +287,119 @@ func (p *Portal) configureBackends() error {
 		zap.String("portal_name", p.config.Name),
 		zap.String("portal_id", p.id),
 		zap.Any("options", p.loginOptions),
+		zap.Int("identity_store_count", len(p.config.IdentityStores)),
+		zap.Int("identity_provider_count", len(p.config.IdentityProviders)),
 	)
+
+	return nil
+}
+
+func (p *Portal) configureIdentityStoreLogin() error {
+	if len(p.config.IdentityStores) < 1 {
+		return nil
+	}
+
+	p.logger.Debug(
+		"Configuring identity store login options",
+		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
+		zap.Int("identity_store_count", len(p.config.IdentityStores)),
+	)
+
+	var stores []map[string]string
+
+	for _, store := range p.identityStores {
+		cfg := make(map[string]string)
+		cfg["realm"] = store.GetRealm()
+		cfg["default"] = "no"
+		switch store.GetKind() {
+		case "local":
+			cfg["label"] = strings.ToTitle(store.GetRealm())
+			cfg["default"] = "yes"
+		case "ldap":
+			cfg["label"] = strings.ToUpper(store.GetRealm())
+		default:
+			cfg["label"] = strings.ToTitle(store.GetRealm())
+		}
+		stores = append(stores, cfg)
+	}
+
+	if len(stores) > 0 {
+		p.loginOptions["form_required"] = "yes"
+		p.loginOptions["identity_required"] = "yes"
+		p.loginOptions["realms"] = stores
+	}
+
+	if len(stores) > 1 {
+		p.loginOptions["realm_dropdown_required"] = "yes"
+	}
+
+	return nil
+}
+
+func (p *Portal) configureIdentityProviderLogin() error {
+	if len(p.config.IdentityProviders) < 1 {
+		return nil
+	}
+
+	p.logger.Debug(
+		"Configuring identity provider login options",
+		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
+		zap.Int("identity_provider_count", len(p.config.IdentityProviders)),
+	)
+	var providers []map[string]string
+
+	for _, provider := range p.identityProviders {
+		cfg := make(map[string]string)
+		cfg["endpoint"] = path.Join(provider.GetKind(), provider.GetRealm())
+		cfg["realm"] = provider.GetRealm()
+		switch provider.GetRealm() {
+		case "google":
+			cfg["icon"] = "google"
+			cfg["text"] = "Google"
+			cfg["color"] = "red darken-1"
+		case "facebook":
+			cfg["icon"] = "facebook"
+			cfg["text"] = "Facebook"
+			cfg["color"] = "blue darken-4"
+		case "twitter":
+			cfg["icon"] = "twitter"
+			cfg["text"] = "Twitter"
+			cfg["color"] = "blue darken-1"
+		case "linkedin":
+			cfg["icon"] = "linkedin"
+			cfg["text"] = "LinkedIn"
+			cfg["color"] = "blue darken-1"
+		case "github":
+			cfg["icon"] = "github"
+			cfg["text"] = "Github"
+			cfg["color"] = "grey darken-3"
+		case "windows":
+			cfg["icon"] = "windows"
+			cfg["text"] = "Microsoft"
+			cfg["color"] = "orange darken-1"
+		case "azure":
+			cfg["icon"] = "windows"
+			cfg["text"] = "Azure"
+			cfg["color"] = "blue"
+		case "aws", "amazon":
+			cfg["icon"] = "aws"
+			cfg["text"] = "AWS"
+			cfg["color"] = "blue-grey darken-2"
+		default:
+			cfg["icon"] = "codepen"
+			cfg["text"] = provider.GetRealm()
+			cfg["color"] = "grey darken-3"
+		}
+		providers = append(providers, cfg)
+	}
+
+	if len(providers) > 0 {
+		p.loginOptions["external_providers_required"] = "yes"
+		p.loginOptions["external_providers"] = providers
+	}
+
 	return nil
 }
 
@@ -362,7 +423,7 @@ func (p *Portal) configureUserRegistration() error {
 		"Configuring user registration",
 		zap.String("portal_name", p.config.Name),
 		zap.String("portal_id", p.id),
-		zap.Int("backend_count", len(p.config.BackendConfigs)),
+		zap.Int("identity_store_count", len(p.identityStores)),
 	)
 
 	p.loginOptions["registration_required"] = "yes"
@@ -534,16 +595,4 @@ func (p *Portal) configureUserTransformer() error {
 		zap.Any("transforms", p.config.UserTransformerConfigs),
 	)
 	return nil
-}
-
-// SetCredentials binds to shared credentials.
-func (p *Portal) SetCredentials(c *credentials.Config) {
-	p.config.credentials = c
-	return
-}
-
-// SetMessaging binds to messaging config.
-func (p *Portal) SetMessaging(c *messaging.Config) {
-	p.config.messaging = c
-	return
 }
