@@ -23,4 +23,7 @@ const (
 
 	ErrMessagingProviderCredentialsWithPasswordless StandardError = "messaging provider config is both passwordless and has credentials"
 	ErrMessagingProviderAuthUnsupported             StandardError = "messaging provider does not support AUTH extension"
+
+	ErrMessagingProviderSend StandardError = "messaging provider send error: %v"
+	ErrMessagingProviderDir  StandardError = "messaging provider file dir error: %v"
 )

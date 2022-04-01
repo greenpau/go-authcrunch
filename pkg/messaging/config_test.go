@@ -15,23 +15,36 @@
 package messaging
 
 import (
-	// "fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
-	// "github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"testing"
 )
 
+type dummyProvider struct {
+}
+
+func (p *dummyProvider) Validate() error {
+	return nil
+}
+
 func TestAddProviders(t *testing.T) {
+	tmpDir, err := tests.TempDir("TestAddMessagingProviders")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	testcases := []struct {
-		name      string
-		entry     Provider
-		want      string
-		shouldErr bool
-		err       error
+		name         string
+		providerName string
+		entry        Provider
+		want         string
+		shouldErr    bool
+		err          error
 	}{
 		{
-			name: "test valid email",
+			name:         "test valid email provider config",
+			providerName: "default",
 			entry: &EmailProvider{
 				Name:        "default",
 				Address:     "localhost",
@@ -50,6 +63,58 @@ func TestAddProviders(t *testing.T) {
                 }
               ]
             }`,
+		},
+		{
+			name:         "test valid email provider passwordless config",
+			providerName: "default",
+			entry: &EmailProvider{
+				Name:         "default",
+				Address:      "localhost",
+				Protocol:     "smtp",
+				Passwordless: true,
+				SenderEmail:  "root@localhost",
+			},
+			want: `{
+              "email_providers": [
+                {
+                  "address": "localhost",
+                  "name": "default",
+                  "protocol": "smtp",
+				  "passwordless": true,
+                  "sender_email": "root@localhost"
+                }
+              ]
+            }`,
+		},
+		{
+			name:         "test valid file provider config",
+			providerName: "default",
+			entry: &FileProvider{
+				Name:    "default",
+				RootDir: tmpDir,
+			},
+			want: `{
+              "file_providers": [
+                {
+                  "name": "default",
+				  "root_dir": "` + tmpDir + `"
+                }
+              ]
+            }`,
+		},
+		{
+			name:      "test invalid messaging provider config",
+			entry:     &dummyProvider{},
+			shouldErr: true,
+			err:       errors.ErrMessagingAddProviderConfigType.WithArgs(&dummyProvider{}),
+		},
+		{
+			name: "test file provider config without root directory",
+			entry: &FileProvider{
+				Name: "default",
+			},
+			shouldErr: true,
+			err:       errors.ErrMessagingProviderKeyValueEmpty.WithArgs("root_dir"),
 		},
 	}
 	for _, tc := range testcases {
@@ -70,6 +135,50 @@ func TestAddProviders(t *testing.T) {
 			}
 			got := tests.Unpack(t, cfg)
 			want := tests.Unpack(t, tc.want)
+
+			if !cfg.FindProvider(tc.providerName) {
+				t.Fatalf("failed FindProvider with %q", tc.providerName)
+			}
+
+			switch tc.entry.(type) {
+			case *EmailProvider:
+				p := cfg.ExtractEmailProvider(tc.providerName)
+				if p == nil {
+					t.Fatalf("failed to extract %q file provider", tc.providerName)
+				}
+				providerCreds := cfg.FindProviderCredentials(tc.providerName)
+				switch providerCreds {
+				case "passwordless":
+					if !p.Passwordless {
+						t.Fatalf("provider credentials mismatch: %v, %v", providerCreds, p.Credentials)
+					}
+				case p.Credentials:
+				default:
+					t.Fatalf("provider credentials mismatch: %v, %v", providerCreds, p.Credentials)
+				}
+			case *FileProvider:
+				p := cfg.ExtractFileProvider(tc.providerName)
+				if p == nil {
+					t.Fatalf("failed to extract %q file provider", tc.providerName)
+				}
+			}
+
+			if tc.name == "test valid email provider config" {
+				if cfg.FindProvider("foobar") {
+					t.Fatal("unexpected success with FindProvider")
+				}
+
+				if cfg.ExtractEmailProvider("foo") != nil {
+					t.Fatal("unexpected success with ExtractEmailProvider")
+				}
+
+				if cfg.ExtractFileProvider("foo") != nil {
+					t.Fatal("unexpected success with ExtractEmailProvider")
+				}
+				if cfg.FindProviderCredentials("foo") != "" {
+					t.Fatal("unexpected success with FindProviderCredentials")
+				}
+			}
 
 			if diff := cmp.Diff(want, got); diff != "" {
 				t.Logf("JSON: %s", tests.UnpackJSON(t, got))

@@ -21,6 +21,7 @@ import (
 // Config represents a collection of various messaging providers.
 type Config struct {
 	EmailProviders []*EmailProvider `json:"email_providers,omitempty" xml:"email_providers,omitempty" yaml:"email_providers,omitempty"`
+	FileProviders  []*FileProvider  `json:"file_providers,omitempty" xml:"file_providers,omitempty" yaml:"file_providers,omitempty"`
 }
 
 // Provider is an interface to work with messaging providers.
@@ -32,6 +33,7 @@ type Provider interface {
 func (cfg *Config) Add(c Provider) error {
 	switch v := c.(type) {
 	case *EmailProvider:
+	case *FileProvider:
 	default:
 		return errors.ErrMessagingAddProviderConfigType.WithArgs(v)
 	}
@@ -43,6 +45,8 @@ func (cfg *Config) Add(c Provider) error {
 	switch v := c.(type) {
 	case *EmailProvider:
 		cfg.EmailProviders = append(cfg.EmailProviders, v)
+	case *FileProvider:
+		cfg.FileProviders = append(cfg.FileProviders, v)
 	}
 	return nil
 }
@@ -50,6 +54,11 @@ func (cfg *Config) Add(c Provider) error {
 // FindProvider search for Provider by name.
 func (cfg *Config) FindProvider(s string) bool {
 	for _, p := range cfg.EmailProviders {
+		if p.Name == s {
+			return true
+		}
+	}
+	for _, p := range cfg.FileProviders {
 		if p.Name == s {
 			return true
 		}
@@ -74,6 +83,16 @@ func (cfg *Config) FindProviderCredentials(s string) string {
 // ExtractEmailProvider returns EmailProvider by name.
 func (cfg *Config) ExtractEmailProvider(s string) *EmailProvider {
 	for _, p := range cfg.EmailProviders {
+		if p.Name == s {
+			return p
+		}
+	}
+	return nil
+}
+
+// ExtractFileProvider returns FileProvider by name.
+func (cfg *Config) ExtractFileProvider(s string) *FileProvider {
+	for _, p := range cfg.FileProviders {
 		if p.Name == s {
 			return p
 		}
