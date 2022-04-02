@@ -179,9 +179,10 @@ func (cfg *PortalConfig) Validate() error {
 	if cfg.Name == "" {
 		return errors.ErrPortalConfigNameNotFound
 	}
-	if len(cfg.IdentityStores) == 0 && len(cfg.IdentityProviders) == 0 {
-		return errors.ErrPortalConfigBackendsNotFound
-	}
+
+	// if len(cfg.IdentityStores) == 0 && len(cfg.IdentityProviders) == 0 {
+	//	  return errors.ErrPortalConfigBackendsNotFound
+	// }
 
 	if err := cfg.parseRawCryptoConfigs(); err != nil {
 		return err

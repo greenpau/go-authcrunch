@@ -18,9 +18,9 @@ import (
 	"context"
 	"encoding/base64"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"go.uber.org/zap"
 	"strings"
@@ -28,7 +28,7 @@ import (
 )
 
 // BasicAuth performs API key authentication.
-func (p *Portal) BasicAuth(r *idp.ProviderRequest) error {
+func (p *Portal) BasicAuth(r *authproxy.Request) error {
 	if r.Realm == "" {
 		r.Realm = "local"
 	}

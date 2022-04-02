@@ -27,7 +27,7 @@ func TestFileProviderSend(t *testing.T) {
 	}
 
 	tmpDir += "/inbox"
-	t.Logf("Temp dir: %s", tmpDir)
+	// t.Logf("Temp dir: %s", tmpDir)
 
 	testcases := []struct {
 		name      string

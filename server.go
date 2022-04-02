@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
@@ -55,6 +56,7 @@ func newRefMap() refMap {
 
 // NewServer returns an instance of Server.
 func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
+	var authenticators []authproxy.Authenticator
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
@@ -122,6 +124,7 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 
 		srv.nameRefs.portals[cfg.Name] = portal
 		srv.portals = append(srv.portals, portal)
+		authenticators = append(authenticators, portal)
 	}
 
 	for _, cfg := range config.AuthorizationPolicies {
@@ -135,6 +138,12 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		}
 		srv.nameRefs.gatekeepers[cfg.Name] = gatekeeper
 		srv.gatekeepers = append(srv.gatekeepers, gatekeeper)
+	}
+
+	for _, gatekeeper := range srv.gatekeepers {
+		if err := gatekeeper.AddAuthenticators(authenticators); err != nil {
+			return nil, err
+		}
 	}
 
 	return srv, nil

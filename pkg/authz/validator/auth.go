@@ -16,9 +16,9 @@ package validator
 
 import (
 	"context"
+	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"net/http"
 	"strings"
@@ -75,22 +75,23 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(ctx context.Context, r *http
 	if ar.Token.Found {
 		if tokenRealm != "" {
 			// Check if the realm is registered.
-			if _, exists := v.idpConfig.BasicAuth.Realms[tokenRealm]; !exists {
+			if _, exists := v.authProxyConfig.BasicAuth.Realms[tokenRealm]; !exists {
 				return errors.ErrBasicAuthFailed
 			}
 		}
 
-		idpr := &idp.ProviderRequest{
+		apr := &authproxy.Request{
 			Address: addrutil.GetSourceAddress(r),
-			Context: v.idpConfig.Context,
 			Realm:   tokenRealm,
 			Secret:  tokenSecret,
 		}
-		if err := idp.Catalog.BasicAuth(idpr); err != nil {
+
+		if err := v.authProxy.BasicAuth(apr); err != nil {
 			return err
 		}
-		ar.Token.Name = idpr.Response.Name
-		ar.Token.Payload = idpr.Response.Payload
+
+		ar.Token.Name = apr.Response.Name
+		ar.Token.Payload = apr.Response.Payload
 	}
 
 	return nil
@@ -123,23 +124,22 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(ctx context.Context, r *htt
 
 	if tokenRealm != "" {
 		// Check if the realm is registered.
-		if _, exists := v.idpConfig.APIKeyAuth.Realms[tokenRealm]; !exists {
+		if _, exists := v.authProxyConfig.APIKeyAuth.Realms[tokenRealm]; !exists {
 			return errors.ErrAPIKeyAuthFailed
 		}
 	}
 
-	idpr := &idp.ProviderRequest{
+	apr := &authproxy.Request{
 		Address: addrutil.GetSourceAddress(r),
-		Context: v.idpConfig.Context,
 		Realm:   tokenRealm,
 		Secret:  tokenSecret,
 	}
 
-	if err := idp.Catalog.APIKeyAuth(idpr); err != nil {
+	if err := v.authProxy.APIKeyAuth(apr); err != nil {
 		return err
 	}
-	ar.Token.Name = idpr.Response.Name
-	ar.Token.Payload = idpr.Response.Payload
+	ar.Token.Name = apr.Response.Name
+	ar.Token.Payload = apr.Response.Payload
 	return nil
 }
 

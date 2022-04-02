@@ -20,11 +20,11 @@ import (
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
-	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 )
@@ -79,7 +79,8 @@ type TokenValidator struct {
 	basicAuthEnabled  bool
 	apiKeyAuthEnabled bool
 	customAuthEnabled bool
-	idpConfig         *idp.IdentityProviderConfig
+	authProxyConfig   *authproxy.Config
+	authProxy         authproxy.Authenticator
 }
 
 // NewTokenValidator returns an instance of TokenValidator
@@ -396,11 +397,15 @@ func (v *TokenValidator) CacheUser(usr *user.User) error {
 	return v.cache.Add(usr)
 }
 
-// RegisterIdentityProvider registers an identity provider with TokenValidator.
-func (v *TokenValidator) RegisterIdentityProvider(cfg *idp.IdentityProviderConfig) error {
+// RegisterAuthProxy registers authproxy.Authenticator  with TokenValidator.
+func (v *TokenValidator) RegisterAuthProxy(cfg *authproxy.Config, authenticators []authproxy.Authenticator) error {
 	if cfg == nil {
-		return errors.ErrValidatorIdentityProvider
+		return errors.ErrValidatorAuthProxy
 	}
+	if cfg.PortalName == "" {
+		return errors.ErrValidatorAuthProxyPortalName
+	}
+
 	if cfg.BasicAuth.Enabled {
 		v.basicAuthEnabled = true
 		v.customAuthEnabled = true
@@ -409,6 +414,15 @@ func (v *TokenValidator) RegisterIdentityProvider(cfg *idp.IdentityProviderConfi
 		v.apiKeyAuthEnabled = true
 		v.customAuthEnabled = true
 	}
-	v.idpConfig = cfg
-	return nil
+	v.authProxyConfig = cfg
+
+	for _, authenticator := range authenticators {
+		if authenticator.GetName() != cfg.PortalName {
+			continue
+		}
+		v.authProxy = authenticator
+		return nil
+	}
+
+	return errors.ErrValidatorAuthProxyNotFound.WithArgs(cfg.PortalName)
 }

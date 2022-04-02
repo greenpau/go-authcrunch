@@ -185,7 +185,7 @@ func TestNewConfig(t *testing.T) {
 				},
 			},
 			shouldErr: true,
-			errPhase:  "AddAuthenticationPortal",
+			errPhase:  "Validate",
 			err:       errors.ErrPortalConfigBackendsNotFound,
 		},
 		{

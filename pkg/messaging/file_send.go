@@ -24,10 +24,11 @@ import (
 	"time"
 )
 
+// FileProviderSendInput is input for FileProvider.Send function.
 type FileProviderSendInput struct {
-	Subject    string
-	Body       string
-	Recipients []string
+	Subject    string   `json:"subject,omitempty" xml:"subject,omitempty" yaml:"subject,omitempty"`
+	Body       string   `json:"body,omitempty" xml:"body,omitempty" yaml:"body,omitempty"`
+	Recipients []string `json:"recipients,omitempty" xml:"recipients,omitempty" yaml:"recipients,omitempty"`
 }
 
 // Send writes a message to a file system.

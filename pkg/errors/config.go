@@ -22,7 +22,7 @@ const (
 	ErrConfigDirectiveShort                             StandardError = "the %q directive is too short: %v"
 	ErrConfigDirectiveValueUnsupported                  StandardError = "the %q directive value of %q is unsupported"
 	ErrConfigDirectiveFail                              StandardError = "the %q directive with value of %q failed: %v"
-	ErrPortalConfigBackendsNotFound                     StandardError = "portal config has no backends"
+	ErrPortalConfigBackendsNotFound                     StandardError = "portal config has no identity providers or stores"
 	ErrPortalConfigNameNotFound                         StandardError = "portal config name not found"
 	ErrPolicyConfigNameNotFound                         StandardError = "gatekeeper policy config name not found"
 	ErrPortalConfigMessagingNil                         StandardError = "portal config messaging is nil"

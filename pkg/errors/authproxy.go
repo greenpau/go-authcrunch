@@ -14,8 +14,7 @@
 
 package errors
 
-// Identity Provider Catalog Errors
+// Auth Proxy Errors
 const (
-	ErrProviderCatalogRegisterContextNotRegistered StandardError = "idp catalog: provider context does not registered"
-	ErrIdentityProviderConfigInvalid               StandardError = "invalid idp config: %v"
+	ErrAuthProxyConfigInvalid StandardError = "invalid authproxy config: %v"
 )

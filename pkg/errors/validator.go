@@ -26,5 +26,7 @@ const (
 	ErrEmptyTokenName                      StandardError = "token validator: a token name is empty"
 	ErrDuplicateTokenName                  StandardError = "token validator: duplicate allowed token name: %s"
 	ErrTokenValidatorOptionsNotFound       StandardError = "token validator: options not found"
-	ErrValidatorIdentityProvider           StandardError = "token validator: identity provider config is nil"
+	ErrValidatorAuthProxy                  StandardError = "token validator: auth proxy config is nil"
+	ErrValidatorAuthProxyPortalName        StandardError = "token validator: auth proxy config has empty portal name"
+	ErrValidatorAuthProxyNotFound          StandardError = "token validator: auth proxy %q not found"
 )

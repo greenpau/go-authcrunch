@@ -17,17 +17,17 @@ package authz
 import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
 	"github.com/greenpau/go-authcrunch/pkg/authz/injector"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
-	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"strings"
 )
 
-// PolicyConfig TODO
+// PolicyConfig is Gatekeeper configuration.
 type PolicyConfig struct {
 	Name                       string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	AuthURLPath                string `json:"auth_url_path,omitempty" xml:"auth_url_path,omitempty" yaml:"auth_url_path,omitempty"`
@@ -45,12 +45,12 @@ type PolicyConfig struct {
 	AccessListRules        []*acl.RuleConfiguration `json:"access_list_rules,omitempty" xml:"access_list_rules,omitempty" yaml:"access_list_rules,omitempty"`
 	CryptoKeyConfigs       []*kms.CryptoKeyConfig   `json:"crypto_key_configs,omitempty" xml:"crypto_key_configs,omitempty" yaml:"crypto_key_configs,omitempty"`
 	// CryptoKeyStoreConfig hold the default configuration for the keys, e.g. token name and lifetime.
-	CryptoKeyStoreConfig   map[string]interface{}      `json:"crypto_key_store_config,omitempty" xml:"crypto_key_store_config,omitempty" yaml:"crypto_key_store_config,omitempty"`
-	IdentityProviderConfig *idp.IdentityProviderConfig `json:"identity_provider_config,omitempty" xml:"identity_provider_config,omitempty" yaml:"identity_provider_config,omitempty"`
-	AllowedTokenSources    []string                    `json:"allowed_token_sources,omitempty" xml:"allowed_token_sources,omitempty" yaml:"allowed_token_sources,omitempty"`
-	StripTokenEnabled      bool                        `json:"strip_token_enabled,omitempty" xml:"strip_token_enabled,omitempty" yaml:"strip_token_enabled,omitempty"`
-	ForbiddenURL           string                      `json:"forbidden_url,omitempty" xml:"forbidden_url,omitempty" yaml:"forbidden_url,omitempty"`
-	UserIdentityField      string                      `json:"user_identity_field,omitempty" xml:"user_identity_field,omitempty" yaml:"user_identity_field,omitempty"`
+	CryptoKeyStoreConfig map[string]interface{} `json:"crypto_key_store_config,omitempty" xml:"crypto_key_store_config,omitempty" yaml:"crypto_key_store_config,omitempty"`
+	AuthProxyConfig      *authproxy.Config      `json:"auth_proxy_config,omitempty" xml:"auth_proxy_config,omitempty" yaml:"auth_proxy_config,omitempty"`
+	AllowedTokenSources  []string               `json:"allowed_token_sources,omitempty" xml:"allowed_token_sources,omitempty" yaml:"allowed_token_sources,omitempty"`
+	StripTokenEnabled    bool                   `json:"strip_token_enabled,omitempty" xml:"strip_token_enabled,omitempty" yaml:"strip_token_enabled,omitempty"`
+	ForbiddenURL         string                 `json:"forbidden_url,omitempty" xml:"forbidden_url,omitempty" yaml:"forbidden_url,omitempty"`
+	UserIdentityField    string                 `json:"user_identity_field,omitempty" xml:"user_identity_field,omitempty" yaml:"user_identity_field,omitempty"`
 	// Validate HTTP Authorization header.
 	ValidateBearerHeader bool `json:"validate_bearer_header,omitempty" xml:"validate_bearer_header,omitempty" yaml:"validate_bearer_header,omitempty"`
 	// Validate HTTP method and path.
@@ -66,7 +66,7 @@ type PolicyConfig struct {
 	// Holds raw crypto configuration.
 	cryptoRawConfigs []string
 	// Holds raw identity provider configuration.
-	idpRawConfig []string
+	authProxyRawConfig []string
 
 	// Indicated that the config was successfully validated.
 	validated bool
@@ -79,7 +79,7 @@ func (cfg *PolicyConfig) AddRawCryptoConfigs(s string) {
 
 // AddRawIdpConfig add raw identity provider configs.
 func (cfg *PolicyConfig) AddRawIdpConfig(s string) {
-	cfg.idpRawConfig = append(cfg.idpRawConfig, s)
+	cfg.authProxyRawConfig = append(cfg.authProxyRawConfig, s)
 }
 
 // parseRawCryptoConfigs parses raw crypto configs into CryptoKeyConfigs
@@ -125,15 +125,15 @@ func (cfg *PolicyConfig) parseRawCryptoConfigs() error {
 	return nil
 }
 
-// parseRawIdpConfig parses raw identity provider configs
-// into IdentityProviderConfig.
-func (cfg *PolicyConfig) parseRawIdpConfig() error {
-	if len(cfg.idpRawConfig) > 0 {
-		config, err := idp.ParseIdentityProviderConfig(cfg.idpRawConfig)
+// parseRawAuthProxyConfig parses raw auth proxy configs
+// into AuthProxyConfig.
+func (cfg *PolicyConfig) parseRawAuthProxyConfig() error {
+	if len(cfg.authProxyRawConfig) > 0 {
+		config, err := authproxy.ParseConfig(cfg.authProxyRawConfig)
 		if err != nil {
-			return errors.ErrConfigDirectiveFail.WithArgs("idp", cfg.idpRawConfig, err)
+			return errors.ErrConfigDirectiveFail.WithArgs("authproxy", cfg.authProxyRawConfig, err)
 		}
-		cfg.IdentityProviderConfig = config
+		cfg.AuthProxyConfig = config
 	}
 	return nil
 }
@@ -149,7 +149,7 @@ func (cfg *PolicyConfig) Validate() error {
 	if err := cfg.parseRawCryptoConfigs(); err != nil {
 		return err
 	}
-	if err := cfg.parseRawIdpConfig(); err != nil {
+	if err := cfg.parseRawAuthProxyConfig(); err != nil {
 		return err
 	}
 

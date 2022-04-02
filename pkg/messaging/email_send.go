@@ -25,11 +25,12 @@ import (
 	"time"
 )
 
+// EmailProviderSendInput is input for EmailProvider.Send function.
 type EmailProviderSendInput struct {
-	Subject     string
-	Body        string
-	Recipients  []string
-	Credentials *credentials.Generic
+	Subject     string               `json:"subject,omitempty" xml:"subject,omitempty" yaml:"subject,omitempty"`
+	Body        string               `json:"body,omitempty" xml:"body,omitempty" yaml:"body,omitempty"`
+	Recipients  []string             `json:"recipients,omitempty" xml:"recipients,omitempty" yaml:"recipients,omitempty"`
+	Credentials *credentials.Generic `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
 }
 
 // Send sends an email message.

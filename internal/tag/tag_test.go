@@ -27,6 +27,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/registration"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
+	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
 	"github.com/greenpau/go-authcrunch/pkg/authz/cache"
@@ -36,7 +37,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
-	idpp "github.com/greenpau/go-authcrunch/pkg/idp"
+	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
 	"github.com/greenpau/go-authcrunch/pkg/idp/saml"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
@@ -45,7 +46,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/shared/idp"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
@@ -66,13 +66,28 @@ func TestTagCompliance(t *testing.T) {
 		err       error
 	}{
 		{
+			name:  "test messaging.FileProvider struct",
+			entry: &messaging.FileProvider{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test messaging.FileProviderSendInput struct",
+			entry: &messaging.FileProviderSendInput{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test messaging.EmailProviderSendInput struct",
+			entry: &messaging.EmailProviderSendInput{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test authn.PortalParameters struct",
 			entry: &authn.PortalParameters{},
 			opts:  &Options{},
 		},
 		{
 			name:  "test idp.IdentityProviderConfig struct",
-			entry: &idpp.IdentityProviderConfig{},
+			entry: &idp.IdentityProviderConfig{},
 			opts:  &Options{},
 		},
 		{
@@ -385,8 +400,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test idp.BasicAuthConfig struct",
-			entry: &idp.BasicAuthConfig{},
+			name:  "test authproxy.BasicAuthConfig struct",
+			entry: &authproxy.BasicAuthConfig{},
 			opts:  &Options{},
 		},
 		{
@@ -537,8 +552,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test idp.IdentityProviderConfig struct",
-			entry: &idp.IdentityProviderConfig{},
+			name:  "test authproxy.Config struct",
+			entry: &authproxy.Config{},
 			opts:  &Options{},
 		},
 		{
@@ -595,8 +610,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test idp.ProviderResponse struct",
-			entry: &idp.ProviderResponse{},
+			name:  "test authproxy.Response struct",
+			entry: &authproxy.Response{},
 			opts:  &Options{},
 		},
 		{
@@ -617,8 +632,8 @@ func TestTagCompliance(t *testing.T) {
 			},
 		},
 		{
-			name:  "test idp.ProviderRequest struct",
-			entry: &idp.ProviderRequest{},
+			name:  "test authproxy.Request struct",
+			entry: &authproxy.Request{},
 			opts:  &Options{},
 		},
 		{
@@ -629,11 +644,6 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test options.TokenValidatorOptions struct",
 			entry: &options.TokenValidatorOptions{},
-			opts:  &Options{},
-		},
-		{
-			name:  "test idp.ProviderCatalog struct",
-			entry: &idp.ProviderCatalog{},
 			opts:  &Options{},
 		},
 		{
@@ -677,8 +687,8 @@ func TestTagCompliance(t *testing.T) {
 			},
 		},
 		{
-			name:  "test idp.APIKeyAuthConfig struct",
-			entry: &idp.APIKeyAuthConfig{},
+			name:  "test authproxy.APIKeyAuthConfig struct",
+			entry: &authproxy.APIKeyAuthConfig{},
 			opts:  &Options{},
 		},
 		{

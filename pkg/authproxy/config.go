@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package idp
+package authproxy
 
 import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -32,23 +32,23 @@ type APIKeyAuthConfig struct {
 	Realms  map[string]interface{} `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
 }
 
-// IdentityProviderConfig is a config for an identity provider.
-type IdentityProviderConfig struct {
-	Context    string           `json:"context,omitempty" xml:"context,omitempty" yaml:"context,omitempty"`
+// Config is a config for an identity provider.
+type Config struct {
+	PortalName string           `json:"portal_name,omitempty" xml:"portal_name,omitempty" yaml:"portal_name,omitempty"`
 	BasicAuth  BasicAuthConfig  `json:"basic_auth,omitempty" xml:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`
 	APIKeyAuth APIKeyAuthConfig `json:"api_key_auth,omitempty" xml:"api_key_auth,omitempty" yaml:"api_key_auth,omitempty"`
 }
 
-// ParseIdentityProviderConfig parses configuration into an identity provider config
-func ParseIdentityProviderConfig(lines []string) (*IdentityProviderConfig, error) {
-	m := make(map[string]*IdentityProviderConfig)
+// ParseConfig parses configuration into an identity provider config
+func ParseConfig(lines []string) (*Config, error) {
+	m := make(map[string]*Config)
 	if len(lines) == 0 {
-		return nil, errors.ErrIdentityProviderConfigInvalid.WithArgs("empty config")
+		return nil, errors.ErrAuthProxyConfigInvalid.WithArgs("empty config")
 	}
 	for _, encodedLine := range lines {
-		var contextName string
+		var portalName string
 		realmName := "local"
-		var cfg *IdentityProviderConfig
+		var cfg *Config
 		arr, err := cfgutil.DecodeArgs(encodedLine)
 		if err != nil {
 			return nil, err
@@ -59,7 +59,7 @@ func ParseIdentityProviderConfig(lines []string) (*IdentityProviderConfig, error
 		case strings.HasPrefix(encodedLine, "api key auth"):
 			arr = arr[3:]
 		default:
-			return nil, errors.ErrIdentityProviderConfigInvalid.WithArgs(encodedLine)
+			return nil, errors.ErrAuthProxyConfigInvalid.WithArgs(encodedLine)
 		}
 		if len(arr) > 0 {
 			for {
@@ -67,33 +67,33 @@ func ParseIdentityProviderConfig(lines []string) (*IdentityProviderConfig, error
 					break
 				}
 				if (len(arr) % 2) > 0 {
-					return nil, errors.ErrIdentityProviderConfigInvalid.WithArgs(encodedLine)
+					return nil, errors.ErrAuthProxyConfigInvalid.WithArgs(encodedLine)
 				}
 				k := arr[0]
 				switch k {
-				case "context":
-					contextName = arr[1]
+				case "portal":
+					portalName = arr[1]
 					arr = arr[2:]
 				case "realm":
 					realmName = arr[1]
 					arr = arr[2:]
 				default:
-					return nil, errors.ErrIdentityProviderConfigInvalid.WithArgs(encodedLine)
+					return nil, errors.ErrAuthProxyConfigInvalid.WithArgs(encodedLine)
 				}
 			}
 		}
 
-		if contextName == "" {
-			return nil, errors.ErrIdentityProviderConfigInvalid.WithArgs(encodedLine)
+		if portalName == "" {
+			return nil, errors.ErrAuthProxyConfigInvalid.WithArgs(encodedLine)
 		}
 
-		if _, exists := m[contextName]; exists {
-			cfg = m[contextName]
+		if _, exists := m[portalName]; exists {
+			cfg = m[portalName]
 		} else {
-			cfg = &IdentityProviderConfig{
-				Context: contextName,
+			cfg = &Config{
+				PortalName: portalName,
 			}
-			m[contextName] = cfg
+			m[portalName] = cfg
 		}
 
 		switch {
@@ -113,9 +113,9 @@ func ParseIdentityProviderConfig(lines []string) (*IdentityProviderConfig, error
 	}
 
 	if len(m) > 1 {
-		return nil, errors.ErrIdentityProviderConfigInvalid.WithArgs("multiple contexts")
+		return nil, errors.ErrAuthProxyConfigInvalid.WithArgs("multiple portals")
 	}
-	var providers []*IdentityProviderConfig
+	var providers []*Config
 	for _, provider := range m {
 		providers = append(providers, provider)
 	}

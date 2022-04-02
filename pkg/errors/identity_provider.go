@@ -16,7 +16,7 @@ package errors
 
 // Identity Provider Errors
 const (
-	// ErrIdentityProviderConfigInvalid StandardError = "invalid identity provider config: %v"
+	ErrIdentityProviderConfigInvalid StandardError = "invalid identity provider config: %v"
 
 	// Generic Errors.
 	ErrIdentityProviderRequest StandardError = "%s failed: %v"

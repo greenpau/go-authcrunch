@@ -151,7 +151,14 @@ func (p *Portal) notify(data map[string]string) error {
 		r := strings.NewReplacer("\r", "", "\n", " ")
 		qpEmailSubj = strings.TrimSpace(r.Replace(qpEmailSubj))
 
-		if err := provider.Send(providerCred, rcpts, qpEmailSubj, qpEmailBody); err != nil {
+		sendInput := &messaging.EmailProviderSendInput{
+			Subject:     qpEmailSubj,
+			Body:        qpEmailBody,
+			Recipients:  rcpts,
+			Credentials: providerCred,
+		}
+
+		if err := provider.Send(sendInput); err != nil {
 			return errors.ErrNotifyRequestEmail.WithArgs(providerName, err)
 		}
 	default:

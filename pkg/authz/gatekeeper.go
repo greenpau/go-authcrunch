@@ -17,6 +17,7 @@ package authz
 import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -34,6 +35,7 @@ type Gatekeeper struct {
 	tokenValidator *validator.TokenValidator
 	opts           *options.TokenValidatorOptions
 	accessList     *acl.AccessList
+	authenticators []authproxy.Authenticator
 	// Enable authorization bypass for specific URIs.
 	bypassEnabled bool
 	// The names of the headers injected by an instance.
@@ -127,13 +129,6 @@ func (g *Gatekeeper) configure() error {
 		return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
 	}
 
-	// Add identity provider to the token validator.
-	if g.config.IdentityProviderConfig != nil {
-		if err := g.tokenValidator.RegisterIdentityProvider(g.config.IdentityProviderConfig); err != nil {
-			return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
-		}
-	}
-
 	// Configure token validator with keys and access list.
 	if err := g.tokenValidator.Configure(ctx, ks.GetVerifyKeys(), accessList, g.opts); err != nil {
 		return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
@@ -156,5 +151,16 @@ func (g *Gatekeeper) configure() error {
 		zap.Any("access_list_rules", g.config.AccessListRules),
 		zap.String("forbidden_path", g.config.ForbiddenURL),
 	)
+	return nil
+}
+
+// AddAuthenticators adds authproxy.Authenticator instances to Gatekeeper.
+func (g *Gatekeeper) AddAuthenticators(authenticators []authproxy.Authenticator) error {
+	g.authenticators = authenticators
+	if g.config.AuthProxyConfig != nil {
+		if err := g.tokenValidator.RegisterAuthProxy(g.config.AuthProxyConfig, g.authenticators); err != nil {
+			return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
+		}
+	}
 	return nil
 }

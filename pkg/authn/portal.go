@@ -131,15 +131,18 @@ func NewPortal(params PortalParameters) (*Portal, error) {
 	}
 
 	if len(p.identityStores) < 1 && len(p.identityProviders) < 1 {
-		return nil, errors.ErrNewPortal.WithArgs(
-			fmt.Errorf("no identity providers or stores found"),
-		)
+		return nil, errors.ErrNewPortal.WithArgs(errors.ErrPortalConfigBackendsNotFound)
 	}
 
 	if err := p.configure(); err != nil {
 		return nil, err
 	}
 	return p, nil
+}
+
+// GetName returns the configuration name of the Portal.
+func (p *Portal) GetName() string {
+	return p.config.Name
 }
 
 func (p *Portal) configure() error {

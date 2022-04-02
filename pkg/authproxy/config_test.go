@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package idp
+package authproxy
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func TestParseIdentityProviderConfig(t *testing.T) {
+func TestParseConfig(t *testing.T) {
 	var testcases = []struct {
 		name      string
 		config    []string
@@ -32,12 +32,12 @@ func TestParseIdentityProviderConfig(t *testing.T) {
 		{
 			name: "basic and api key auth with realms",
 			config: []string{
-				"basic auth context default realm foo",
-				"api key auth context default realm bar",
+				"basic auth portal default realm foo",
+				"api key auth portal default realm bar",
 			},
 			want: map[string]interface{}{
-				"config": &IdentityProviderConfig{
-					Context: "default",
+				"config": &Config{
+					PortalName: "default",
 					BasicAuth: BasicAuthConfig{
 						Enabled: true,
 						Realms: map[string]interface{}{
@@ -56,12 +56,12 @@ func TestParseIdentityProviderConfig(t *testing.T) {
 		{
 			name: "basic and api key auth with default realm",
 			config: []string{
-				"basic auth context default",
-				"api key auth context default",
+				"basic auth portal default",
+				"api key auth portal default",
 			},
 			want: map[string]interface{}{
-				"config": &IdentityProviderConfig{
-					Context: "default",
+				"config": &Config{
+					PortalName: "default",
 					BasicAuth: BasicAuthConfig{
 						Enabled: true,
 						Realms: map[string]interface{}{
@@ -78,14 +78,14 @@ func TestParseIdentityProviderConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "basic and api key auth with foo realm in bar context",
+			name: "basic and api key auth with foo realm in bar portal",
 			config: []string{
-				"basic auth realm foo context bar",
-				"api key auth realm foo context bar",
+				"basic auth realm foo portal bar",
+				"api key auth realm foo portal bar",
 			},
 			want: map[string]interface{}{
-				"config": &IdentityProviderConfig{
-					Context: "bar",
+				"config": &Config{
+					PortalName: "bar",
 					BasicAuth: BasicAuthConfig{
 						Enabled: true,
 						Realms: map[string]interface{}{
@@ -107,25 +107,25 @@ func TestParseIdentityProviderConfig(t *testing.T) {
 				"foo",
 			},
 			shouldErr: true,
-			err:       errors.ErrIdentityProviderConfigInvalid.WithArgs("foo"),
+			err:       errors.ErrAuthProxyConfigInvalid.WithArgs("foo"),
 		},
 		{
 			name:      "empty config",
 			config:    []string{},
 			shouldErr: true,
-			err:       errors.ErrIdentityProviderConfigInvalid.WithArgs("empty config"),
+			err:       errors.ErrAuthProxyConfigInvalid.WithArgs("empty config"),
 		},
 		{
 			name:      "malformed config with incomplete realm",
 			config:    []string{"basic auth realm"},
 			shouldErr: true,
-			err:       errors.ErrIdentityProviderConfigInvalid.WithArgs("basic auth realm"),
+			err:       errors.ErrAuthProxyConfigInvalid.WithArgs("basic auth realm"),
 		},
 		{
 			name:      "malformed config with unsupported keyword",
 			config:    []string{"basic auth realm foo bar baz"},
 			shouldErr: true,
-			err:       errors.ErrIdentityProviderConfigInvalid.WithArgs("basic auth realm foo bar baz"),
+			err:       errors.ErrAuthProxyConfigInvalid.WithArgs("basic auth realm foo bar baz"),
 		},
 		{
 			name:      "malformed config with bad encoding",
@@ -134,20 +134,20 @@ func TestParseIdentityProviderConfig(t *testing.T) {
 			err:       fmt.Errorf(`parse error on line 1, column 30: extraneous or missing " in quoted-field`),
 		},
 		{
-			name: "malformed config with multiple contexts",
+			name: "malformed config with multiple portals",
 			config: []string{
-				"basic auth realm local context foo",
-				"api key auth realm local context bar",
+				"basic auth realm local portal foo",
+				"api key auth realm local portal bar",
 			},
 			shouldErr: true,
-			err:       errors.ErrIdentityProviderConfigInvalid.WithArgs("multiple contexts"),
+			err:       errors.ErrAuthProxyConfigInvalid.WithArgs("multiple portals"),
 		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
 			msgs = append(msgs, fmt.Sprintf("config: %v", tc.config))
-			config, err := ParseIdentityProviderConfig(tc.config)
+			config, err := ParseConfig(tc.config)
 			if tests.EvalErrWithLog(t, err, nil, tc.shouldErr, tc.err, msgs) {
 				return
 			}

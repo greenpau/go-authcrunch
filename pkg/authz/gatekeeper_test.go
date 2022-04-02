@@ -38,11 +38,11 @@ func TestNewGatekeeper(t *testing.T) {
 		loggerFunc func() *zap.Logger
 		configFunc func() *PolicyConfig
 
-		bypassConfigs    []*bypass.Config
-		injectorConfigs  []*injector.Config
-		aclConfigs       []*acl.RuleConfiguration
-		cryptoRawConfigs []string
-		idpRawConfig     []string
+		bypassConfigs      []*bypass.Config
+		injectorConfigs    []*injector.Config
+		aclConfigs         []*acl.RuleConfiguration
+		cryptoRawConfigs   []string
+		authProxyRawConfig []string
 	}{
 		{
 			name: "test new gatekeeper without logger",
@@ -169,7 +169,7 @@ func TestNewGatekeeper(t *testing.T) {
 				cfg.HeaderInjectionConfigs = tc.injectorConfigs
 				cfg.AccessListRules = tc.aclConfigs
 				cfg.cryptoRawConfigs = tc.cryptoRawConfigs
-				cfg.idpRawConfig = tc.idpRawConfig
+				cfg.authProxyRawConfig = tc.authProxyRawConfig
 			}
 
 			gatekeeper, err := NewGatekeeper(cfg, logger)
