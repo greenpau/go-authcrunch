@@ -65,44 +65,41 @@ func (p *Portal) handleHTTPRegisterScreen(ctx context.Context, w http.ResponseWr
 }
 
 func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, reg *registerRequest) error {
-	if p.config.UserRegistrationConfig.Dropbox == "" {
+	if len(p.config.UserRegistries) < 1 {
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusServiceUnavailable)
 	}
-	if p.registrar == nil {
-		return p.handleHTTPError(ctx, w, r, rr, http.StatusFailedDependency)
-	}
+
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
 	resp.Data["view"] = reg.view
 
 	switch reg.view {
 	case "register":
-		if p.config.UserRegistrationConfig.Title == "" {
-			resp.Title = "Sign Up"
-		} else {
-			resp.Title = p.config.UserRegistrationConfig.Title
-		}
-		if p.config.UserRegistrationConfig.RequireAcceptTerms {
+		resp.Title = p.userRegistry.GetTitle()
+		if p.userRegistry.GetRequireAcceptTerms() {
 			resp.Data["require_accept_terms"] = true
 		}
-		if p.config.UserRegistrationConfig.Code != "" {
+
+		if p.userRegistry.GetCode() != "" {
 			resp.Data["require_registration_code"] = true
 		}
-		if p.config.UserRegistrationConfig.TermsConditionsLink != "" {
-			resp.Data["terms_conditions_link"] = p.config.UserRegistrationConfig.TermsConditionsLink
+
+		if p.userRegistry.GetTermsConditionsLink() != "" {
+			resp.Data["terms_conditions_link"] = p.userRegistry.GetTermsConditionsLink()
 		} else {
 			resp.Data["terms_conditions_link"] = path.Join(rr.Upstream.BasePath, "/terms-and-conditions")
 		}
-		if p.config.UserRegistrationConfig.PrivacyPolicyLink != "" {
-			resp.Data["privacy_policy_link"] = p.config.UserRegistrationConfig.PrivacyPolicyLink
+
+		if p.userRegistry.GetPrivacyPolicyLink() != "" {
+			resp.Data["privacy_policy_link"] = p.userRegistry.GetPrivacyPolicyLink()
 		} else {
 			resp.Data["privacy_policy_link"] = path.Join(rr.Upstream.BasePath, "/privacy-policy")
 		}
 
-		resp.Data["username_validate_pattern"] = p.registrar.GetUsernamePolicyRegex()
-		resp.Data["username_validate_title"] = p.registrar.GetUsernamePolicySummary()
-		resp.Data["password_validate_pattern"] = p.registrar.GetPasswordPolicyRegex()
-		resp.Data["password_validate_title"] = p.registrar.GetPasswordPolicySummary()
+		resp.Data["username_validate_pattern"] = p.userRegistry.GetUsernamePolicyRegex()
+		resp.Data["username_validate_title"] = p.userRegistry.GetUsernamePolicySummary()
+		resp.Data["password_validate_pattern"] = p.userRegistry.GetPasswordPolicyRegex()
+		resp.Data["password_validate_title"] = p.userRegistry.GetPasswordPolicySummary()
 		if reg.message != "" {
 			resp.Message = reg.message
 		}
@@ -196,14 +193,14 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 			message = "Failed processing the registration form due to mismatched passwords"
 		}
 
-		if p.config.UserRegistrationConfig.Code != "" {
-			if userCode != p.config.UserRegistrationConfig.Code {
+		if p.userRegistry.GetCode() != "" {
+			if userCode != p.userRegistry.GetCode() {
 				validUserRegistration = false
 				message = "Failed processing the registration form due to invalid verification code"
 			}
 		}
 
-		if p.config.UserRegistrationConfig.RequireAcceptTerms {
+		if p.userRegistry.GetRequireAcceptTerms() {
 			if !userAccept {
 				validUserRegistration = false
 				message = "Failed processing the registration form due to the failure to accept terms and conditions"
@@ -229,7 +226,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 				}
 			case "email":
 				emailOpts := make(map[string]interface{})
-				if p.config.UserRegistrationConfig.RequireDomainMailRecord {
+				if p.userRegistry.GetRequireDomainMailRecord() {
 					emailOpts["check_domain_mx"] = true
 				}
 				if err := validators.ValidateUserInput(k, userMail, emailOpts); err != nil {
@@ -249,7 +246,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 			"email":             userMail,
 			"registration_code": registrationCode,
 		}
-		if err := p.registrations.Add(registrationID, cachedEntry); err != nil {
+		if err := p.userRegistry.AddRegistrationEntry(registrationID, cachedEntry); err != nil {
 			p.logger.Warn(
 				"failed adding a record to registration cache",
 				zap.String("session_id", rr.Upstream.SessionID),
@@ -268,8 +265,6 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 
 			// Send notification about registration.
 			regData := map[string]string{
-				"provider_name":     p.config.UserRegistrationConfig.EmailProvider,
-				"provider_type":     "email",
 				"template":          "registration_confirmation",
 				"session_id":        rr.Upstream.SessionID,
 				"request_id":        rr.ID,
@@ -282,7 +277,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 			regData["src_ip"] = addrutil.GetSourceAddress(r)
 			regData["src_conn_ip"] = addrutil.GetSourceConnAddress(r)
 			regData["timestamp"] = time.Now().UTC().Format(time.UnixDate)
-			if err := p.notify(regData); err != nil {
+			if err := p.userRegistry.Notify(regData); err != nil {
 				p.logger.Warn(
 					"Failed to send notification",
 					zap.String("session_id", rr.Upstream.SessionID),
@@ -291,7 +286,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 					zap.String("registration_type", "registration_confirmation"),
 					zap.Error(err),
 				)
-				p.registrations.Delete(registrationID)
+				p.userRegistry.DeleteRegistrationEntry(registrationID)
 				message = "Internal registration messaging error"
 				validUserRegistration = false
 			}
@@ -333,7 +328,7 @@ func (p *Portal) handleHTTPRegisterAck(ctx context.Context, w http.ResponseWrite
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
-	if _, err := p.registrations.Get(registrationID); err != nil {
+	if _, err := p.userRegistry.GetRegistrationEntry(registrationID); err != nil {
 		reg.message = "Registration identifier not found"
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
@@ -370,7 +365,7 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
-	usr, err := p.registrations.Get(registrationID)
+	usr, err := p.userRegistry.GetRegistrationEntry(registrationID)
 	if err != nil {
 		reg.message = "Registration identifier not found"
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
@@ -401,12 +396,12 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 		},
 	}
 
-	if err := p.registrations.Delete(registrationID); err != nil {
+	if err := p.userRegistry.DeleteRegistrationEntry(registrationID); err != nil {
 		reg.message = "Registration session terminated"
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
-	if err := p.registrar.AddUser(req); err != nil {
+	if err := p.userRegistry.AddUser(req); err != nil {
 		p.logger.Warn(
 			"registration request backend erred",
 			zap.String("session_id", rr.Upstream.SessionID),
@@ -419,22 +414,19 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 
 	// Send a notification to admins.
 	regData := map[string]string{
-		"provider_name":   p.config.UserRegistrationConfig.EmailProvider,
-		"provider_type":   "email",
 		"template":        "registration_ready",
 		"session_id":      rr.Upstream.SessionID,
 		"request_id":      rr.ID,
 		"registration_id": registrationID,
 		"username":        req.User.Username,
 		"email":           req.User.Email,
-		"admin_email":     strings.Join(p.config.UserRegistrationConfig.AdminEmails, ","),
 	}
 	regData["registration_url"] = getCurrentURL(r, "/register")
 	regData["src_ip"] = addrutil.GetSourceAddress(r)
 	regData["src_conn_ip"] = addrutil.GetSourceConnAddress(r)
 	regData["timestamp"] = time.Now().UTC().Format(time.UnixDate)
 
-	if err := p.notify(regData); err != nil {
+	if err := p.userRegistry.Notify(regData); err != nil {
 		p.logger.Warn(
 			"Failed to send notification",
 			zap.String("session_id", rr.Upstream.SessionID),

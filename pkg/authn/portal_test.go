@@ -20,7 +20,6 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
-	"github.com/greenpau/go-authcrunch/pkg/authn/registration"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
@@ -51,7 +50,6 @@ func TestNewPortal(t *testing.T) {
 
 		// Portal Config fields.
 		uiConfig               *ui.Parameters
-		userRegistrationConfig *registration.Config
 		userTransformerConfigs []*transformer.Config
 		cookieConfig           *cookie.Config
 		identityStoreConfigs   []*ids.IdentityStoreConfig
@@ -159,9 +157,6 @@ func TestNewPortal(t *testing.T) {
 			if cfg != nil {
 				if tc.uiConfig != nil {
 					cfg.UI = tc.uiConfig
-				}
-				if tc.userRegistrationConfig != nil {
-					cfg.UserRegistrationConfig = tc.userRegistrationConfig
 				}
 				if len(tc.userTransformerConfigs) > 0 {
 					cfg.UserTransformerConfigs = tc.userTransformerConfigs

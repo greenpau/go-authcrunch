@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authn
+package registry
 
 import (
 	"bytes"
@@ -24,17 +24,12 @@ import (
 	"text/template"
 )
 
-func (p *Portal) notify(data map[string]string) error {
+// Notify serves notifications.
+func (r *LocaUserRegistry) Notify(data map[string]string) error {
 	var requiredFields []string
-	var providerName string
-	var providerType string
-	var providerCredName string
-	var providerCred *credentials.Generic
-	var provider *messaging.EmailProvider
 	var rcpts []string
 
 	commonRequiredFields := []string{
-		"provider_name", "provider_type",
 		"session_id", "request_id", "timestamp",
 		"template",
 	}
@@ -49,9 +44,6 @@ func (p *Portal) notify(data map[string]string) error {
 		}
 	}
 
-	providerName = data["provider_name"]
-	providerType = data["provider_type"]
-
 	tmplName := data["template"]
 	switch tmplName {
 	case "registration_confirmation":
@@ -62,7 +54,7 @@ func (p *Portal) notify(data map[string]string) error {
 	case "registration_ready":
 		requiredFields = []string{
 			"registration_id", "username", "email", "registration_url",
-			"src_ip", "src_conn_ip", "admin_email",
+			"src_ip", "src_conn_ip",
 		}
 	case "registration_verdict":
 		requiredFields = []string{
@@ -82,8 +74,7 @@ func (p *Portal) notify(data map[string]string) error {
 	case "registration_confirmation", "registration_verdict":
 		rcpts = append(rcpts, data["email"])
 	case "registration_ready":
-
-		rcpts = strings.Split(data["admin_email"], ",")
+		rcpts = r.config.AdminEmails
 	}
 
 	lang := "en"
@@ -99,70 +90,85 @@ func (p *Portal) notify(data map[string]string) error {
 		return errors.ErrNotifyRequestLangUnsupported.WithArgs(lang)
 	}
 
+	if r.config.messaging == nil {
+		return errors.ErrNotifyRequestMessagingNil.WithArgs(r.config.EmailProvider)
+	}
+
+	tmplSubj, tmplSubjErr := template.New("email_subj").Parse(messaging.EmailTemplateSubject[lang+"/"+tmplName])
+	if tmplSubjErr != nil {
+		return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, tmplSubjErr)
+	}
+	emailSubj := bytes.NewBuffer(nil)
+	if err := tmplSubj.Execute(emailSubj, data); err != nil {
+		return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, err)
+	}
+
+	tmplBody, tmplBodyErr := template.New("email_body").Parse(messaging.EmailTemplateBody[lang+"/"+tmplName])
+	if tmplBodyErr != nil {
+		return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, tmplBodyErr)
+	}
+	emailBody := bytes.NewBuffer(nil)
+	if err := tmplBody.Execute(emailBody, data); err != nil {
+		return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, err)
+	}
+
+	var qpEmailBody string
+	qpEmailBody, err := quotedPrintableBody(emailBody.String())
+	if err != nil {
+		return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, err)
+	}
+
+	qpEmailSubj := emailSubj.String()
+	repl := strings.NewReplacer("\r", "", "\n", " ")
+	qpEmailSubj = strings.TrimSpace(repl.Replace(qpEmailSubj))
+
+	providerType := r.config.messaging.GetProviderType(r.config.EmailProvider)
+
 	switch providerType {
 	case "email":
-		if p.config.messaging == nil {
-			return errors.ErrNotifyRequestMessagingNil.WithArgs(providerName)
-		}
-		provider = p.config.messaging.ExtractEmailProvider(providerName)
+		provider := r.config.messaging.ExtractEmailProvider(r.config.EmailProvider)
 		if provider == nil {
-			return errors.ErrNotifyRequestEmailProviderNotFound.WithArgs(providerName)
+			return errors.ErrNotifyRequestEmailProviderNotFound.WithArgs(r.config.EmailProvider)
 		}
 
-		providerCredName = p.config.messaging.FindProviderCredentials(providerName)
+		providerCredName := r.config.messaging.FindProviderCredentials(r.config.EmailProvider)
 		if providerCredName == "" {
-			return errors.ErrNotifyRequestEmailProviderCredNotFound.WithArgs(providerName)
+			return errors.ErrNotifyRequestEmailProviderCredNotFound.WithArgs(r.config.EmailProvider)
 		}
+
+		var providerCred *credentials.Generic
 		if providerCredName != "passwordless" {
-			if p.config.credentials == nil {
-				return errors.ErrNotifyRequestCredNil.WithArgs(providerName)
+			if r.config.credentials == nil {
+				return errors.ErrNotifyRequestCredNil.WithArgs(r.config.EmailProvider)
 			}
-			providerCred = p.config.credentials.ExtractGeneric(providerCredName)
+			providerCred = r.config.credentials.ExtractGeneric(providerCredName)
 			if providerCred == nil {
-				return errors.ErrNotifyRequestCredNotFound.WithArgs(providerName, providerCredName)
+				return errors.ErrNotifyRequestCredNotFound.WithArgs(r.config.EmailProvider, providerCredName)
 			}
 		}
 
-		tmplSubj, tmplSubjErr := template.New("email_subj").Parse(messaging.EmailTemplateSubject[lang+"/"+tmplName])
-		if tmplSubjErr != nil {
-			return errors.ErrNotifyRequestEmail.WithArgs(providerName, tmplSubjErr)
-		}
-		emailSubj := bytes.NewBuffer(nil)
-		if err := tmplSubj.Execute(emailSubj, data); err != nil {
-			return errors.ErrNotifyRequestEmail.WithArgs(providerName, err)
-		}
-
-		tmplBody, tmplBodyErr := template.New("email_body").Parse(messaging.EmailTemplateBody[lang+"/"+tmplName])
-		if tmplBodyErr != nil {
-			return errors.ErrNotifyRequestEmail.WithArgs(providerName, tmplBodyErr)
-		}
-		emailBody := bytes.NewBuffer(nil)
-		if err := tmplBody.Execute(emailBody, data); err != nil {
-			return errors.ErrNotifyRequestEmail.WithArgs(providerName, err)
-		}
-
-		var qpEmailBody string
-		qpEmailBody, err := quotedPrintableBody(emailBody.String())
-		if err != nil {
-			return errors.ErrNotifyRequestEmail.WithArgs(providerName, err)
-		}
-
-		qpEmailSubj := emailSubj.String()
-		r := strings.NewReplacer("\r", "", "\n", " ")
-		qpEmailSubj = strings.TrimSpace(r.Replace(qpEmailSubj))
-
-		sendInput := &messaging.EmailProviderSendInput{
+		if err := provider.Send(&messaging.EmailProviderSendInput{
 			Subject:     qpEmailSubj,
 			Body:        qpEmailBody,
 			Recipients:  rcpts,
 			Credentials: providerCred,
+		}); err != nil {
+			return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, err)
 		}
-
-		if err := provider.Send(sendInput); err != nil {
-			return errors.ErrNotifyRequestEmail.WithArgs(providerName, err)
+	case "file":
+		provider := r.config.messaging.ExtractFileProvider(r.config.EmailProvider)
+		if provider == nil {
+			return errors.ErrNotifyRequestEmailProviderNotFound.WithArgs(r.config.EmailProvider)
+		}
+		if err := provider.Send(&messaging.FileProviderSendInput{
+			Subject:    qpEmailSubj,
+			Body:       qpEmailBody,
+			Recipients: rcpts,
+		}); err != nil {
+			return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, err)
 		}
 	default:
-		return errors.ErrNotifyRequestProviderTypeUnsupported.WithArgs(providerName, providerType)
+		return errors.ErrNotifyRequestProviderTypeUnsupported.WithArgs(r.config.EmailProvider, providerType)
 	}
 	return nil
 }

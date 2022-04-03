@@ -16,19 +16,13 @@ package errors
 
 // Global security config errors.
 const (
-	ErrSecurityConfig                                   StandardError = "security config error: %v"
-	ErrMalformedDirective                               StandardError = "malformed %q directive: %v"
-	ErrMalformedDirectiveValue                          StandardError = "malformed %q directive with %v: %v"
-	ErrConfigDirectiveShort                             StandardError = "the %q directive is too short: %v"
-	ErrConfigDirectiveValueUnsupported                  StandardError = "the %q directive value of %q is unsupported"
-	ErrConfigDirectiveFail                              StandardError = "the %q directive with value of %q failed: %v"
-	ErrPortalConfigBackendsNotFound                     StandardError = "portal config has no identity providers or stores"
-	ErrPortalConfigNameNotFound                         StandardError = "portal config name not found"
-	ErrPolicyConfigNameNotFound                         StandardError = "gatekeeper policy config name not found"
-	ErrPortalConfigMessagingNil                         StandardError = "portal config messaging is nil"
-	ErrPortalConfigMessagingProviderNotFound            StandardError = "portal config messaging provider %q not found"
-	ErrPortalConfigMessagingProviderCredentialsNotFound StandardError = "portal config messaging provider %q has no associated credentials"
-	ErrPortalConfigCredentialsNil                       StandardError = "portal config credentials is nil"
-	ErrPortalConfigCredentialsNotFound                  StandardError = "portal config credential %q not found"
-	ErrPortalConfigAdminEmailNotFound                   StandardError = "portal config registration admin email not found"
+	ErrSecurityConfig                  StandardError = "security config error: %v"
+	ErrMalformedDirective              StandardError = "malformed %q directive: %v"
+	ErrMalformedDirectiveValue         StandardError = "malformed %q directive with %v: %v"
+	ErrConfigDirectiveShort            StandardError = "the %q directive is too short: %v"
+	ErrConfigDirectiveValueUnsupported StandardError = "the %q directive value of %q is unsupported"
+	ErrConfigDirectiveFail             StandardError = "the %q directive with value of %q failed: %v"
+	ErrPortalConfigBackendsNotFound    StandardError = "portal config has no identity providers or stores"
+	ErrPortalConfigNameNotFound        StandardError = "portal config name not found"
+	ErrPolicyConfigNameNotFound        StandardError = "gatekeeper policy config name not found"
 )

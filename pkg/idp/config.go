@@ -88,6 +88,7 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			"response_type",
 			"jwks_keys",
 			"tls_insecure_skip_verify",
+			"email_claim_check_disabled",
 		}
 	case "saml":
 		requiredFields = []string{

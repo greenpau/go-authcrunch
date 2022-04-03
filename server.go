@@ -23,6 +23,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"go.uber.org/zap"
 )
 
@@ -31,6 +32,7 @@ type refMap struct {
 	gatekeepers       map[string]*authz.Gatekeeper
 	identityStores    map[string]ids.IdentityStore
 	identityProviders map[string]idp.IdentityProvider
+	userRegistries    map[string]registry.UserRegistry
 }
 
 // Server represents AAA SF server.
@@ -40,6 +42,7 @@ type Server struct {
 	gatekeepers       []*authz.Gatekeeper
 	identityStores    []ids.IdentityStore
 	identityProviders []idp.IdentityProvider
+	userRegistries    []registry.UserRegistry
 	nameRefs          refMap
 	realmRefs         refMap
 	logger            *zap.Logger
@@ -51,6 +54,7 @@ func newRefMap() refMap {
 		gatekeepers:       make(map[string]*authz.Gatekeeper),
 		identityStores:    make(map[string]ids.IdentityStore),
 		identityProviders: make(map[string]idp.IdentityProvider),
+		userRegistries:    make(map[string]registry.UserRegistry),
 	}
 }
 
@@ -106,6 +110,18 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		srv.identityStores = append(srv.identityStores, store)
 	}
 
+	for _, cfg := range config.UserRegistries {
+		userRegistry, err := registry.NewUserRegistry(cfg, logger)
+		if err != nil {
+			return nil, errors.ErrNewServer.WithArgs("failed initializing user registry", err)
+		}
+		if _, exists := srv.nameRefs.userRegistries[userRegistry.GetName()]; exists {
+			return nil, errors.ErrNewServer.WithArgs("duplicate user registry name", userRegistry.GetName())
+		}
+		srv.nameRefs.userRegistries[userRegistry.GetName()] = userRegistry
+		srv.userRegistries = append(srv.userRegistries, userRegistry)
+	}
+
 	for _, cfg := range config.AuthenticationPortals {
 		params := authn.PortalParameters{
 			Config:            cfg,
@@ -143,6 +159,18 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 	for _, gatekeeper := range srv.gatekeepers {
 		if err := gatekeeper.AddAuthenticators(authenticators); err != nil {
 			return nil, err
+		}
+	}
+
+	for _, portal := range srv.portals {
+		enabledIdentityStores := portal.GetIdentityStoreNames()
+		for _, userRegistry := range srv.userRegistries {
+			if _, exists := enabledIdentityStores[userRegistry.GetIdentityStoreName()]; !exists {
+				continue
+			}
+			if err := portal.AddUserRegistry(userRegistry); err != nil {
+				return nil, errors.ErrNewServer.WithArgs("failed adding registry to portal", err)
+			}
 		}
 	}
 

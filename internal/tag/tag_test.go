@@ -24,7 +24,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	authncache "github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
-	"github.com/greenpau/go-authcrunch/pkg/authn/registration"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
@@ -45,6 +44,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/ids/local"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
+	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
@@ -65,6 +65,11 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{
+			name:  "test registry.LocaUserRegistry struct",
+			entry: &registry.LocaUserRegistry{},
+			opts:  &Options{},
+		},
 		{
 			name:  "test messaging.FileProvider struct",
 			entry: &messaging.FileProvider{},
@@ -111,13 +116,13 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test cache.RegistrationCache struct",
-			entry: &authncache.RegistrationCache{},
+			name:  "test registry.RegistrationCache struct",
+			entry: &registry.RegistrationCache{},
 			opts:  &Options{},
 		},
 		{
-			name:  "test cache.RegistrationCacheEntry struct",
-			entry: &authncache.RegistrationCacheEntry{},
+			name:  "test registry.RegistrationCacheEntry struct",
+			entry: &registry.RegistrationCacheEntry{},
 			opts:  &Options{},
 		},
 		{
@@ -442,8 +447,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test registration.Config struct",
-			entry: &registration.Config{},
+			name:  "test registry.UserRegistryConfig struct",
+			entry: &registry.UserRegistryConfig{},
 			opts: &Options{
 				AllowFieldMismatch: true,
 				AllowedFields: map[string]interface{}{

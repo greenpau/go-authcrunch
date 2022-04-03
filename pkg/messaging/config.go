@@ -80,6 +80,22 @@ func (cfg *Config) FindProviderCredentials(s string) string {
 	return ""
 }
 
+// GetProviderType returns type of a messaging provider.
+func (cfg *Config) GetProviderType(s string) string {
+	for _, p := range cfg.EmailProviders {
+		if p.Name == s {
+			return "email"
+		}
+	}
+	for _, p := range cfg.FileProviders {
+		if p.Name == s {
+			return "file"
+		}
+	}
+
+	return "unknown"
+}
+
 // ExtractEmailProvider returns EmailProvider by name.
 func (cfg *Config) ExtractEmailProvider(s string) *EmailProvider {
 	for _, p := range cfg.EmailProviders {

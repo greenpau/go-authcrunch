@@ -21,9 +21,8 @@ const (
 	ErrUserInterfaceBuiltinTemplateAddFailed StandardError = "user interface validation for %s portal failed for built-in template %s in %s theme: %v"
 	ErrUserInterfaceCustomTemplateAddFailed  StandardError = "user interface validation for %s portal failed for custom template %s in %s: %v"
 
-	ErrUserRegistrationConfig StandardError = "user registration configuration for %q instance failed: %v"
-	ErrCryptoKeyStoreConfig   StandardError = "crypto key store configuration for %q instance failed: %v"
-	ErrGeneric                StandardError = "%s: %v"
+	ErrCryptoKeyStoreConfig StandardError = "crypto key store configuration for %q instance failed: %v"
+	ErrGeneric              StandardError = "%s: %v"
 
 	ErrAuthorizationFailed StandardError = "user authorization failed: %s, reason: %v"
 )

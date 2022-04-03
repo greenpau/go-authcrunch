@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cache
+package registry
 
 import (
 	"errors"
@@ -230,6 +230,20 @@ func (e *RegistrationCacheEntry) Valid(max int) error {
 	diff := time.Now().UTC().Unix() - e.createdAt.Unix()
 	if diff > int64(max) {
 		return errors.New("registration cached entry expired")
+	}
+	return nil
+}
+
+// parseCacheID checks the id associated with the cached entry for format
+// requirements.
+func parseCacheID(s string) error {
+	if len(s) > 96 || len(s) < 32 {
+		return errors.New("cached id length is outside of 32-96 character range")
+	}
+	for _, c := range s {
+		if (c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && (c < '0' || c > '9') && (c != '-') {
+			return errors.New("cached id contains invalid characters")
+		}
 	}
 	return nil
 }

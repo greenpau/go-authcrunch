@@ -20,7 +20,6 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
-	"github.com/greenpau/go-authcrunch/pkg/authn/registration"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -225,33 +224,6 @@ func TestNewConfig(t *testing.T) {
 			shouldErr: true,
 			errPhase:  "AddAuthorizationPolicy",
 			err:       errors.ErrInvalidConfiguration.WithArgs("mygatekeeper", "access list rule config not found"),
-		},
-		{
-			name: "test local auth config with invalid credentials",
-			identityStores: []*ids.IdentityStoreConfig{
-				{
-					Name: "localdb",
-					Kind: "local",
-					Params: map[string]interface{}{
-						"realm": "local",
-						"path":  dbPath,
-					},
-				},
-			},
-			portals: []*authn.PortalConfig{
-				{
-					Name: "myportal",
-					IdentityStores: []string{
-						"localdb",
-					},
-					UserRegistrationConfig: &registration.Config{
-						EmailProvider: "default",
-					},
-				},
-			},
-			shouldErr: true,
-			errPhase:  "Validate",
-			err:       errors.ErrPortalConfigMessagingNil,
 		},
 		{
 			name: "test valid local auth config",

@@ -24,10 +24,11 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/registry"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 
 	"fmt"
 	"github.com/google/uuid"
@@ -46,7 +47,7 @@ const (
 type Portal struct {
 	id                string
 	config            *PortalConfig
-	registrar         *identity.Database
+	userRegistry      registry.UserRegistry
 	validator         *validator.TokenValidator
 	keystore          *kms.CryptoKeyStore
 	identityStores    []ids.IdentityStore
@@ -57,7 +58,6 @@ type Portal struct {
 	startedAt         time.Time
 	sessions          *cache.SessionCache
 	sandboxes         *cache.SandboxCache
-	registrations     *cache.RegistrationCache
 	loginOptions      map[string]interface{}
 	logger            *zap.Logger
 }
@@ -152,12 +152,7 @@ func (p *Portal) configure() error {
 	if err := p.configureCryptoKeyStore(); err != nil {
 		return err
 	}
-
 	if err := p.configureLoginOptions(); err != nil {
-		return err
-	}
-
-	if err := p.configureUserRegistration(); err != nil {
 		return err
 	}
 	if err := p.configureUserInterface(); err != nil {
@@ -411,56 +406,6 @@ func (p *Portal) configureIdentityProviderLogin() error {
 	return nil
 }
 
-func (p *Portal) configureUserRegistration() error {
-	if p.config.UserRegistrationConfig == nil {
-		return nil
-	}
-	if p.config.UserRegistrationConfig.Dropbox == "" {
-		return nil
-	}
-
-	if p.config.UserRegistrationConfig.EmailProvider == "" {
-		return errors.ErrUserRegistrationConfig.WithArgs(p.config.Name, "email provider not found")
-	}
-
-	if len(p.config.UserRegistrationConfig.AdminEmails) < 1 {
-		return errors.ErrUserRegistrationConfig.WithArgs(p.config.Name, "admin email address(es) not found")
-	}
-
-	p.logger.Debug(
-		"Configuring user registration",
-		zap.String("portal_name", p.config.Name),
-		zap.String("portal_id", p.id),
-		zap.Int("identity_store_count", len(p.identityStores)),
-	)
-
-	p.loginOptions["registration_required"] = "yes"
-
-	if p.config.UserRegistrationConfig.Title == "" {
-		p.config.UserRegistrationConfig.Title = "Sign Up"
-	}
-
-	db, err := identity.NewDatabase(p.config.UserRegistrationConfig.Dropbox)
-	if err != nil {
-		return errors.ErrUserRegistrationConfig.WithArgs(p.config.Name, err)
-	}
-	p.registrar = db
-
-	if p.registrations == nil {
-		p.registrations = cache.NewRegistrationCache()
-		p.registrations.Run()
-	}
-
-	p.logger.Debug(
-		"Configured user registration",
-		zap.String("portal_name", p.config.Name),
-		zap.String("portal_id", p.id),
-		zap.String("dropbox", p.config.UserRegistrationConfig.Dropbox),
-		zap.Strings("admin_emails", p.config.UserRegistrationConfig.AdminEmails),
-	)
-	return nil
-}
-
 func (p *Portal) configureUserInterface() error {
 	p.logger.Debug(
 		"Configuring user interface",
@@ -514,19 +459,6 @@ func (p *Portal) configureUserInterface() error {
 	if p.config.UI.PasswordRecoveryEnabled {
 		p.loginOptions["password_recovery_required"] = "yes"
 	}
-
-	p.logger.Debug(
-		"Configured user interface",
-		zap.String("portal_name", p.config.Name),
-		zap.String("portal_id", p.id),
-		zap.String("title", p.ui.Title),
-		zap.String("logo_url", p.ui.LogoURL),
-		zap.String("logo_description", p.ui.LogoDescription),
-		zap.Any("action_endpoint", p.ui.ActionEndpoint),
-		zap.Any("private_links", p.ui.PrivateLinks),
-		zap.Any("realms", p.ui.Realms),
-		zap.String("theme", p.config.UI.Theme),
-	)
 
 	// User Interface Templates
 	for k := range ui.PageTemplates {
@@ -603,4 +535,41 @@ func (p *Portal) configureUserTransformer() error {
 		zap.Any("transforms", p.config.UserTransformerConfigs),
 	)
 	return nil
+}
+
+// AddUserRegistry adds registry.UserRegistry instance to Portal.
+func (p *Portal) AddUserRegistry(userRegistry registry.UserRegistry) error {
+	p.config.UserRegistries = cfgutil.DedupStrArr(p.config.UserRegistries)
+
+	if len(p.config.UserRegistries) < 1 {
+		return fmt.Errorf("auth portal has no user registries configured")
+	}
+	if len(p.config.UserRegistries) > 1 {
+		return fmt.Errorf("auth portal does not support multiple user registries: %v", p.config.UserRegistries)
+	}
+
+	p.userRegistry = userRegistry
+
+	p.loginOptions["registration_required"] = "yes"
+
+	p.logger.Debug(
+		"Configured user registration",
+		zap.String("portal_name", p.config.Name),
+		zap.String("portal_id", p.id),
+		zap.Any("user_registry", p.userRegistry.GetConfig()),
+	)
+
+	return nil
+}
+
+// GetIdentityStoreNames returns a list of existing identity stores.
+func (p *Portal) GetIdentityStoreNames() map[string]string {
+	var m map[string]string
+	for _, store := range p.identityStores {
+		if m == nil {
+			m = make(map[string]string)
+		}
+		m[store.GetName()] = store.GetRealm()
+	}
+	return m
 }

@@ -79,10 +79,11 @@ clean:
 	@rm -rf bin/
 	@echo "$@: complete"
 
-qtest:
+qtest: covdir
 	@echo "Perform quick tests ..."
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewConfig ./*.go
-	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewServer ./*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewServer ./*.go
+	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/registry/...
 	@#time richgo test -v -coverprofile=.coverage/coverage.out internal/tag/*.go
 	@### time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestAuthorize ./pkg/authz/validator/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out  -run TestAddProviders ./pkg/messaging/...

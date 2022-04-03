@@ -15,22 +15,14 @@
 package authn
 
 import (
-	// "time"
-
 	"github.com/greenpau/go-authcrunch/pkg/acl"
-	// "github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
-	"github.com/greenpau/go-authcrunch/pkg/authn/registration"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
-	// "github.com/greenpau/go-authcrunch/pkg/authz/validator"
-	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
-	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	// "go.uber.org/zap"
 	"strings"
 )
 
@@ -39,8 +31,6 @@ type PortalConfig struct {
 	Name string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	// UI holds the configuration for the user interface.
 	UI *ui.Parameters `json:"ui,omitempty" xml:"ui,omitempty" yaml:"ui,omitempty"`
-	// UserRegistrationConfig holds the configuration for the user registration.
-	UserRegistrationConfig *registration.Config `json:"user_registration_config,omitempty" xml:"user_registration_config,omitempty" yaml:"user_registration_config,omitempty"`
 	// UserTransformerConfig holds the configuration for the user transformer.
 	UserTransformerConfigs []*transformer.Config `json:"user_transformer_configs,omitempty" xml:"user_transformer_configs,omitempty" yaml:"user_transformer_configs,omitempty"`
 	// CookieConfig holds the configuration for the cookies issues by Authenticator.
@@ -49,6 +39,8 @@ type PortalConfig struct {
 	IdentityStores []string `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
 	// The names of identity providers.
 	IdentityProviders []string `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
+	// The names of user registries.
+	UserRegistries []string `json:"user_registries,omitempty" xml:"user_registries,omitempty" yaml:"user_registries,omitempty"`
 	// AccessListConfigs hold the configurations for the ACL of the token validator.
 	AccessListConfigs []*acl.RuleConfiguration `json:"access_list_configs,omitempty" xml:"access_list_configs,omitempty" yaml:"access_list_configs,omitempty"`
 	// TokenValidatorOptions holds the configuration for the token validator.
@@ -68,11 +60,6 @@ type PortalConfig struct {
 
 	// Indicated that the config was successfully validated.
 	validated bool
-
-	// Shared credentials.
-	credentials *credentials.Config `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
-	// Shared messaging.
-	messaging *messaging.Config `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
 }
 
 // AddRawCryptoConfigs adds raw crypto configs.
@@ -119,54 +106,6 @@ func (cfg *PortalConfig) parseRawCryptoConfigs() error {
 			return errors.ErrConfigDirectiveFail.WithArgs("crypto.keystore", cryptoKeyStoreConfig, err)
 		}
 		cfg.CryptoKeyStoreConfig = configs
-	}
-	return nil
-}
-
-// SetCredentials binds to shared credentials.
-func (cfg *PortalConfig) SetCredentials(c *credentials.Config) {
-	cfg.credentials = c
-	return
-}
-
-// SetMessaging binds to messaging config.
-func (cfg *PortalConfig) SetMessaging(c *messaging.Config) {
-	cfg.messaging = c
-	return
-}
-
-// ValidateCredentials validates messaging provider and credentials used for
-// the user registration.
-func (cfg *PortalConfig) ValidateCredentials() error {
-	if cfg.UserRegistrationConfig == nil {
-		return nil
-	}
-
-	if cfg.UserRegistrationConfig.EmailProvider == "" {
-		return nil
-	}
-
-	if cfg.messaging == nil {
-		return errors.ErrPortalConfigMessagingNil
-	}
-	if found := cfg.messaging.FindProvider(cfg.UserRegistrationConfig.EmailProvider); !found {
-		return errors.ErrPortalConfigMessagingProviderNotFound.WithArgs(cfg.UserRegistrationConfig.EmailProvider)
-	}
-	providerCreds := cfg.messaging.FindProviderCredentials(cfg.UserRegistrationConfig.EmailProvider)
-	if providerCreds == "" {
-		return errors.ErrPortalConfigMessagingProviderCredentialsNotFound.WithArgs(cfg.UserRegistrationConfig.EmailProvider)
-	}
-	if providerCreds != "passwordless" {
-		if cfg.credentials == nil {
-			return errors.ErrPortalConfigCredentialsNil
-		}
-		if found := cfg.credentials.FindCredential(providerCreds); !found {
-			return errors.ErrPortalConfigCredentialsNotFound.WithArgs(providerCreds)
-		}
-	}
-
-	if len(cfg.UserRegistrationConfig.AdminEmails) < 1 {
-		return errors.ErrPortalConfigAdminEmailNotFound
 	}
 	return nil
 }
