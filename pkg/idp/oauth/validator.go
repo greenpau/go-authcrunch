@@ -90,8 +90,10 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 		return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(b.config.IdentityTokenName, err)
 	}
 
-	if _, exists := claims["email"]; !exists {
-		return nil, errors.ErrIdentityProviderOAuthEmailNotFound.WithArgs(b.config.IdentityTokenName)
+	if !b.disableEmailClaimCheck {
+		if _, exists := claims["email"]; !exists {
+			return nil, errors.ErrIdentityProviderOAuthEmailNotFound.WithArgs(b.config.IdentityTokenName)
+		}
 	}
 
 	m := make(map[string]interface{})

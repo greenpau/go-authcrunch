@@ -60,7 +60,7 @@ type Config struct {
 	// The regex filters for user orgs extracted via IdP API.
 	UserOrgFilters []string `json:"user_org_filters,omitempty" xml:"user_org_filters,omitempty" yaml:"user_org_filters,omitempty"`
 
-	// Disabled metadata discovery via public metadata URL.
+	// Disables metadata discovery via public metadata URL.
 	MetadataDiscoveryDisabled bool `json:"metadata_discovery_disabled,omitempty" xml:"metadata_discovery_disabled,omitempty" yaml:"metadata_discovery_disabled,omitempty"`
 
 	KeyVerificationDisabled bool `json:"key_verification_disabled,omitempty" xml:"key_verification_disabled,omitempty" yaml:"key_verification_disabled,omitempty"`
@@ -84,6 +84,9 @@ type Config struct {
 
 	// The predefined public RSA based JWKS keys.
 	JwksKeys map[string]string `json:"jwks_keys,omitempty" xml:"jwks_keys,omitempty" yaml:"jwks_keys,omitempty"`
+
+	// Disables the check for the presence of email field in a token.
+	EmailClaimCheckDisabled bool `json:"email_claim_check_disabled,omitempty" xml:"email_claim_check_disabled,omitempty" yaml:"email_claim_check_disabled,omitempty"`
 }
 
 // Validate validates identity store configuration.

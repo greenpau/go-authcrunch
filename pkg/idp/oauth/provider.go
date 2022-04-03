@@ -69,6 +69,8 @@ type IdentityProvider struct {
 	logger        *zap.Logger
 	browserConfig *browserConfig
 	configured    bool
+	// Disabled the check for the presence of email field in a token.
+	disableEmailClaimCheck bool
 }
 
 // NewIdentityProvider returns an instance of IdentityProvider.
@@ -142,6 +144,9 @@ func (b *IdentityProvider) Request(op operator.Type, r *requests.Request) error 
 
 // Configure configures IdentityProvider.
 func (b *IdentityProvider) Configure() error {
+	if b.config.EmailClaimCheckDisabled {
+		b.disableEmailClaimCheck = true
+	}
 	if b.config.KeyVerificationDisabled {
 		b.disableKeyVerification = true
 	}
