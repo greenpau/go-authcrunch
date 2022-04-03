@@ -17,4 +17,6 @@ package errors
 // Auth Proxy Errors
 const (
 	ErrAuthProxyConfigInvalid StandardError = "invalid authproxy config: %v"
+	ErrBasicAuthFailed        StandardError = "basic authentication via authproxy failed"
+	ErrAPIKeyAuthFailed       StandardError = "api key authentication via authproxy failed"
 )
