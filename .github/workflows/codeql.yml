@@ -33,9 +33,6 @@ jobs:
       with:
         languages: ${{ matrix.language }}
 
-    - run: |
-        make
-
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
 
