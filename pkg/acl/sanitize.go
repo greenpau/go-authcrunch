@@ -23,7 +23,7 @@ func sanitize(m map[string]interface{}) map[string]interface{} {
 	for k, v := range m {
 		switch val := v.(type) {
 		case string:
-			out[k] = sanitizeStr(val)
+			out[k] = sanitizeStr(k, val)
 		case map[string]interface{}:
 			out[k] = sanitize(val)
 		case []interface{}:
@@ -31,7 +31,7 @@ func sanitize(m map[string]interface{}) map[string]interface{} {
 			for _, entry := range val {
 				switch s := entry.(type) {
 				case string:
-					entries = append(entries, sanitizeStr(s))
+					entries = append(entries, sanitizeStr(k, s))
 				}
 			}
 			if len(entries) > 0 {
@@ -46,7 +46,11 @@ func sanitize(m map[string]interface{}) map[string]interface{} {
 	return out
 }
 
-func sanitizeStr(s string) string {
+func sanitizeStr(k, s string) string {
+	switch k {
+	case "password", "secret", "old_password":
+		return "***masked***"
+	}
 	s = strings.ReplaceAll(s, "\n", "")
 	s = strings.ReplaceAll(s, "\r", "")
 	s = strings.ReplaceAll(s, "http://", "hxxp://")
