@@ -94,7 +94,7 @@ func (g *Gatekeeper) parseSessionID(r *http.Request, ar *requests.AuthorizationR
 	if cookie, err := r.Cookie("AUTHP_SESSION_ID"); err == nil {
 		v, err := url.Parse(cookie.Value)
 		if err == nil && v.String() != "" {
-			ar.SessionID = v.String()
+			ar.SessionID = util.SanitizeSessionID(v.String())
 		}
 	}
 }

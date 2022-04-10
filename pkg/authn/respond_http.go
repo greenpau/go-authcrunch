@@ -209,7 +209,7 @@ func (p *Portal) injectSessionID(ctx context.Context, w http.ResponseWriter, r *
 	if cookie, err := r.Cookie(p.cookie.SessionID); err == nil {
 		v, err := url.Parse(cookie.Value)
 		if err == nil && v.String() != "" {
-			rr.Upstream.SessionID = v.String()
+			rr.Upstream.SessionID = util.SanitizeSessionID(v.String())
 			return
 		}
 	}
