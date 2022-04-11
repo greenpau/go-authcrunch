@@ -3,7 +3,7 @@ name: "CodeQL"
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: '40 19 * * 2'
+  - cron: '40 19 * * 2'
 
 jobs:
   analyze:
@@ -28,10 +28,17 @@ jobs:
       uses: github/codeql-action/init@v2
       with:
         languages: ${{ matrix.language }}
+      debug: true
 
     - name: Autobuild
       uses: github/codeql-action/autobuild@v2
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
+      upload: false
 
+    - name: Upload CodeQL Analysis
+      uses: actions/upload-artifact@v3
+      with:
+        name: go.sarif
+        path: results/go.sarif"
