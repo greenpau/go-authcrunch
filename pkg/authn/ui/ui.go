@@ -26,7 +26,8 @@ import (
 
 // Themes stores UI themes.
 var Themes = map[string]interface{}{
-	"basic": true,
+	"basic":      true,
+	"authcrunch": true,
 }
 
 // Factory represents a collection of HTML templates

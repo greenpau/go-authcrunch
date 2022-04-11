@@ -1,0 +1,8 @@
+{
+  "goTemplateBracketSpacing": true,
+  "tabWidth": 2,
+  "useTabs": false,
+  "bracketSameLine": true,
+  "singleAttributePerLine": false,
+  "printWidth": 160
+}

@@ -8,7 +8,10 @@ UI_FILE=pkg/authn/ui/pages.go
 declare -a _THEMES
 declare -a _PAGES
 declare -a _NAMES
+
 _THEMES[${#_THEMES[@]}]="basic"
+_THEMES[${#_THEMES[@]}]="authcrunch"
+
 _PAGES[${#_PAGES[@]}]="login"
 _PAGES[${#_PAGES[@]}]="portal"
 _PAGES[${#_PAGES[@]}]="whoami"
