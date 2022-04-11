@@ -26,6 +26,8 @@ jobs:
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2
+      env:
+        CODEQL_ACTION_EXTRA_OPTIONS: '{"database":{"interpret-results":["--max-paths",1]}}'
       with:
         languages: ${{ matrix.language }}
         debug: true
