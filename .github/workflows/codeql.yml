@@ -43,11 +43,11 @@ jobs:
     - name: Debug
       run: |
         pwd
-        find .
+        find "${RUNNER_WORKSPACE}/"
         env | grep "go-authcrunch"
 
     - name: Upload CodeQL Analysis
       uses: actions/upload-artifact@v3
       with:
         name: go.sarif
-        path: "results/go.sarif"
+        path: "${RUNNER_WORKSPACE}/results/go.sarif"
