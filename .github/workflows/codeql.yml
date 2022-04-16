@@ -50,4 +50,5 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: go.sarif
-        path: "${RUNNER_WORKSPACE}/results/go.sarif"
+        path: ${{runner.workspace}}/results/go.sarif
+        #path: "/home/runner/work/go-authcrunch/results/go.sarif"
