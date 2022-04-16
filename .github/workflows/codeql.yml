@@ -27,7 +27,7 @@ jobs:
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2
       env:
-        CODEQL_ACTION_EXTRA_OPTIONS: '{"database":{"interpret-results":["--max-paths",1]}}'
+        CODEQL_ACTION_EXTRA_OPTIONS: '{"database":{"interpret-results":["--max-paths",0]}}'
       with:
         languages: ${{ matrix.language }}
         debug: true
