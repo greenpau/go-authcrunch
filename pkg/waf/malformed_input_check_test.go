@@ -25,6 +25,7 @@ func TestMalformedInput(t *testing.T) {
 		entries []string
 		want    bool
 	}{
+		// X-Forwarded-Proto checks.
 		{
 			name: "test valid X-Forwarded-Proto header value",
 			kind: "X-Forwarded-Proto",
@@ -45,6 +46,7 @@ func TestMalformedInput(t *testing.T) {
 			},
 			want: true,
 		},
+		// X-Forwarded-Host checks.
 		{
 			name: "test valid X-Forwarded-Host header value",
 			kind: "X-Forwarded-Host",
@@ -68,6 +70,7 @@ func TestMalformedInput(t *testing.T) {
 			},
 			want: true,
 		},
+		// X-Forwarded-Port checks.
 		{
 			name:    "test valid X-Forwarded-Port header value",
 			kind:    "X-Forwarded-Port",
@@ -79,6 +82,51 @@ func TestMalformedInput(t *testing.T) {
 			kind:    "X-Forwarded-Port",
 			entries: []string{`foo`, `1000000`, `99999`, `00000`},
 			want:    true,
+		},
+		// X-Forwarded-For checks.
+		{
+			name: "test valid X-Forwarded-For header value",
+			kind: "X-Forwarded-For",
+			entries: []string{
+				"",
+				"2001:db8:85a3:8d3:1319:8a2e:370:7348",
+				"203.0.113.195",
+				"203.0.113.195, 2001:db8:85a3:8d3:1319:8a2e:370:7348",
+				"203.0.113.195,2001:db8:85a3:8d3:1319:8a2e:370:7348,150.172.238.178",
+			},
+			want: false,
+		},
+		{
+			name: "test malformed X-Forwarded-For header value",
+			kind: "X-Forwarded-For",
+			entries: []string{
+				"malformed.com",
+				"1.1.1",
+			},
+			want: true,
+		},
+		// X-Real-Ip checks.
+		{
+			name: "test valid X-Real-Ip header value",
+			kind: "X-Real-Ip",
+			entries: []string{
+				"",
+				"2001:db8:85a3:8d3:1319:8a2e:370:7348",
+				"203.0.113.195",
+				"[2001:DB8::21f:5bff:febf:ce22:8a2e]:80",
+			},
+			want: false,
+		},
+		{
+			name: "test malformed X-Real-Ip header value",
+			kind: "X-Real-Ip",
+			entries: []string{
+				"malformed.com",
+				"1.1.1",
+				"203.0.113.195, 2001:db8:85a3:8d3:1319:8a2e:370:7348",
+				"203.0.113.195,2001:db8:85a3:8d3:1319:8a2e:370:7348,150.172.238.178",
+			},
+			want: true,
 		},
 	}
 	for _, tc := range testcases {
@@ -94,6 +142,10 @@ func TestMalformedInput(t *testing.T) {
 					got = IsMalformedForwardedHost(entry, 2, 255)
 				case "X-Forwarded-Port":
 					got = IsMalformedForwardedPort(entry, 2, 5)
+				case "X-Forwarded-For":
+					got = IsMalformedForwardedFor(entry, 7, 255)
+				case "X-Real-Ip":
+					got = IsMalformedRealIP(entry, 7, 255)
 				default:
 					t.Fatalf("unsuppored check type: %s", tc.kind)
 				}

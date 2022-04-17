@@ -16,12 +16,10 @@ package authn
 
 import (
 	"context"
-	"fmt"
 	"github.com/greenpau/go-authcrunch/pkg/authn/validators"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
-	"github.com/greenpau/go-authcrunch/pkg/waf"
 	"go.uber.org/zap"
 	"net/http"
 	"path"
@@ -276,7 +274,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 				"email":             userMail,
 			}
 
-			regURL, err := getCurrentURL(r, "/register")
+			regURL, err := addrutil.GetCurrentURLWithSuffix(r, "/register")
 			if err != nil {
 				p.logger.Warn(
 					"Detected malformed request headers",
@@ -435,7 +433,7 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 		"email":           req.User.Email,
 	}
 
-	regURL, err := getCurrentURL(r, "/register")
+	regURL, err := addrutil.GetCurrentURLWithSuffix(r, "/register")
 	if err != nil {
 		p.logger.Warn(
 			"Detected malformed request headers",
@@ -463,60 +461,4 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 
 	reg.view = "acked"
 	return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
-}
-
-func getCurrentURL(r *http.Request, suffix string) (string, error) {
-	h := r.Header.Get("X-Forwarded-Host")
-
-	if waf.IsMalformedForwardedHost(h, 2, 255) {
-		return "", fmt.Errorf("malformed X-Forwarded-Host header")
-	}
-
-	if h == "" {
-		h = r.Host
-	}
-
-	p := r.Header.Get("X-Forwarded-Proto")
-	if waf.IsMalformedForwardedProto(p, 2, 10) {
-		return "", fmt.Errorf("malformed X-Forwarded-Proto header")
-	}
-
-	if p == "" {
-		if r.TLS == nil {
-			p = "http"
-		} else {
-			p = "https"
-		}
-	}
-
-	port := r.Header.Get("X-Forwarded-Port")
-	if waf.IsMalformedForwardedPort(port, 2, 5) {
-		return "", fmt.Errorf("malformed X-Forwarded-Port header")
-	}
-
-	u := p + "://" + h
-
-	if port != "" {
-		switch port {
-		case "443":
-			if p != "https" {
-				u += ":" + port
-			}
-		case "80":
-			if p != "http" {
-				u += ":" + port
-			}
-		default:
-			u += ":" + port
-		}
-	}
-	if suffix != "" {
-		i := strings.Index(r.RequestURI, suffix)
-		if i < 0 {
-			return u + r.RequestURI, nil
-		}
-		return u + r.RequestURI[:i] + suffix, nil
-	}
-
-	return u + r.RequestURI, nil
 }

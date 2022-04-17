@@ -84,7 +84,7 @@ const (
 	ErrAccessNotAllowed                   StandardError = "user role is valid, but not allowed by access list"
 	ErrAccessNotAllowedByPathACL          StandardError = "user role is valid, but not allowed by path access list"
 	ErrSourceAddressNotFound              StandardError = "source ip validation is enabled, but no ip address claim found"
-	ErrSourceAddressMismatch              StandardError = "source ip address mismatch between the claim %s and request %s"
+	ErrSourceAddressMismatch              StandardError = "source ip address mismatch between the claim %q and request %q"
 	ErrNoParsedClaims                     StandardError = "failed to extract claims"
 	ErrNoTokenFound                       StandardError = "no token found"
 	ErrInvalidParsedClaims                StandardError = "failed to extract claims: %s"
