@@ -273,7 +273,18 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 				"username":          userHandle,
 				"email":             userMail,
 			}
-			regData["registration_url"] = getCurrentURL(r, "/register")
+
+			regURL, err := addrutil.GetCurrentURLWithSuffix(r, "/register")
+			if err != nil {
+				p.logger.Warn(
+					"Detected malformed request headers",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.Error(err),
+				)
+			}
+			regData["registration_url"] = regURL
+
 			regData["src_ip"] = addrutil.GetSourceAddress(r)
 			regData["src_conn_ip"] = addrutil.GetSourceConnAddress(r)
 			regData["timestamp"] = time.Now().UTC().Format(time.UnixDate)
@@ -421,7 +432,18 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 		"username":        req.User.Username,
 		"email":           req.User.Email,
 	}
-	regData["registration_url"] = getCurrentURL(r, "/register")
+
+	regURL, err := addrutil.GetCurrentURLWithSuffix(r, "/register")
+	if err != nil {
+		p.logger.Warn(
+			"Detected malformed request headers",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.Error(err),
+		)
+	}
+	regData["registration_url"] = regURL
+
 	regData["src_ip"] = addrutil.GetSourceAddress(r)
 	regData["src_conn_ip"] = addrutil.GetSourceConnAddress(r)
 	regData["timestamp"] = time.Now().UTC().Format(time.UnixDate)
@@ -439,46 +461,4 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 
 	reg.view = "acked"
 	return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
-}
-
-func getCurrentURL(r *http.Request, suffix string) string {
-	h := r.Header.Get("X-Forwarded-Host")
-	if h == "" {
-		h = r.Host
-	}
-	p := r.Header.Get("X-Forwarded-Proto")
-	if p == "" {
-		if r.TLS == nil {
-			p = "http"
-		} else {
-			p = "https"
-		}
-	}
-	port := r.Header.Get("X-Forwarded-Port")
-
-	u := p + "://" + h
-
-	if port != "" {
-		switch port {
-		case "443":
-			if p != "https" {
-				u += ":" + port
-			}
-		case "80":
-			if p != "http" {
-				u += ":" + port
-			}
-		default:
-			u += ":" + port
-		}
-	}
-	if suffix != "" {
-		i := strings.Index(r.RequestURI, suffix)
-		if i < 0 {
-			return u + r.RequestURI
-		}
-		return u + r.RequestURI[:i] + suffix
-	}
-
-	return u + r.RequestURI
 }

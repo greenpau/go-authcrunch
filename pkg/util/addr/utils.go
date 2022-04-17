@@ -15,35 +15,31 @@
 package addr
 
 import (
+	"fmt"
+	"github.com/greenpau/go-authcrunch/pkg/waf"
 	"net/http"
 	"strings"
 )
 
+const malformedURLStr = "malformed-url"
+
 // GetSourceHost returns the host or host:port of the request.
 func GetSourceHost(r *http.Request) string {
 	h := r.Header.Get("X-Forwarded-Host")
-	if h != "" {
-		return h
+	if !waf.IsMalformedForwardedHost(h, 2, 255) {
+		if h != "" {
+			return h
+		}
 	}
 	return r.Host
 }
 
-// GetSourceAddress returns the IP address of the request.
-func GetSourceAddress(r *http.Request) string {
-	var addr string
-	if r.Header.Get("X-Real-Ip") != "" {
-		addr = r.Header.Get("X-Real-Ip")
-	} else {
-		if r.Header.Get("X-Forwarded-For") != "" {
-			addr = r.Header.Get("X-Forwarded-For")
-		} else {
-			addr = r.RemoteAddr
-		}
-	}
+func parseSourceAddress(addr string) string {
 	if strings.Contains(addr, ",") {
 		addr = strings.TrimSpace(addr)
 		addr = strings.SplitN(addr, ",", 2)[0]
 	}
+
 	switch {
 	case strings.Contains(addr, "["):
 		// Handle IPv6 "[host]:port" address.
@@ -52,6 +48,7 @@ func GetSourceAddress(r *http.Request) string {
 		// Handle IPv6 address.
 		return addr
 	}
+
 	if strings.Contains(addr, ":") {
 		parts := strings.Split(addr, ":")
 		if len(parts) > 2 {
@@ -60,7 +57,23 @@ func GetSourceAddress(r *http.Request) string {
 		}
 		return parts[0]
 	}
+
 	return addr
+}
+
+// GetSourceAddress returns the IP address of the request.
+func GetSourceAddress(r *http.Request) string {
+	if r.Header.Get("X-Real-Ip") != "" {
+		if !waf.IsMalformedRealIP(r.Header.Get("X-Real-Ip"), 7, 255) {
+			return parseSourceAddress(r.Header.Get("X-Real-Ip"))
+		}
+	}
+	if r.Header.Get("X-Forwarded-For") != "" {
+		if !waf.IsMalformedForwardedFor(r.Header.Get("X-Forwarded-For"), 7, 255) {
+			return parseSourceAddress(r.Header.Get("X-Forwarded-For"))
+		}
+	}
+	return parseSourceAddress(r.RemoteAddr)
 }
 
 // GetSourceConnAddress returns the IP address of the HTTP connection.
@@ -106,11 +119,27 @@ func parseAddr6(s string) string {
 
 // GetTargetURL returns the URL the user landed on.
 func GetTargetURL(r *http.Request) string {
+	s, _ := GetCurrentURLWithSuffix(r, "")
+	return s
+}
+
+// GetCurrentURLWithSuffix returns current URL based on the provided suffux.
+func GetCurrentURLWithSuffix(r *http.Request, suffix string) (string, error) {
 	h := r.Header.Get("X-Forwarded-Host")
+
+	if waf.IsMalformedForwardedHost(h, 2, 255) {
+		return malformedURLStr, fmt.Errorf("malformed X-Forwarded-Host header")
+	}
+
 	if h == "" {
 		h = r.Host
 	}
+
 	p := r.Header.Get("X-Forwarded-Proto")
+	if waf.IsMalformedForwardedProto(p, 2, 10) {
+		return malformedURLStr, fmt.Errorf("malformed X-Forwarded-Proto header")
+	}
+
 	if p == "" {
 		if r.TLS == nil {
 			p = "http"
@@ -118,7 +147,11 @@ func GetTargetURL(r *http.Request) string {
 			p = "https"
 		}
 	}
+
 	port := r.Header.Get("X-Forwarded-Port")
+	if waf.IsMalformedForwardedPort(port, 2, 5) {
+		return malformedURLStr, fmt.Errorf("malformed X-Forwarded-Port header")
+	}
 
 	u := p + "://" + h
 
@@ -136,5 +169,13 @@ func GetTargetURL(r *http.Request) string {
 			u += ":" + port
 		}
 	}
-	return u + r.RequestURI
+	if suffix != "" {
+		i := strings.Index(r.RequestURI, suffix)
+		if i < 0 {
+			return u + r.RequestURI, nil
+		}
+		return u + r.RequestURI[:i] + suffix, nil
+	}
+
+	return u + r.RequestURI, nil
 }

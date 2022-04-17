@@ -16,6 +16,7 @@ package handlers
 
 import (
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -101,47 +102,22 @@ func configureRedirect(w http.ResponseWriter, r *http.Request, rr *requests.Auth
 		return
 	}
 
-	rr.Redirect.Enabled = true
-
 	if rr.Redirect.QueryDisabled {
 		return
 	}
 
-	rr.Redirect.Separator = "?"
-	rr.Redirect.URL = r.RequestURI
-
-	if strings.HasPrefix(rr.Redirect.URL, "/") {
-		redirHost := r.Header.Get("X-Forwarded-Host")
-		if redirHost == "" {
-			redirHost = r.Host
+	if strings.HasPrefix(r.RequestURI, "/") {
+		u, err := addrutil.GetCurrentURLWithSuffix(r, "")
+		if err != nil {
+			return
 		}
-		redirProto := r.Header.Get("X-Forwarded-Proto")
-		if redirProto == "" {
-			if r.TLS == nil {
-				redirProto = "http"
-			} else {
-				redirProto = "https"
-			}
-		}
-		redirPort := r.Header.Get("X-Forwarded-Port")
-
-		redirectBaseURL := redirProto + "://" + redirHost
-		if redirPort != "" {
-			switch redirPort {
-			case "443":
-				if redirProto != "https" {
-					redirectBaseURL += ":" + redirPort
-				}
-			case "80":
-				if redirProto != "http" {
-					redirectBaseURL += ":" + redirPort
-				}
-			default:
-				redirectBaseURL += ":" + redirPort
-			}
-		}
-		rr.Redirect.URL = redirectBaseURL + r.RequestURI
+		rr.Redirect.URL = u
+	} else {
+		rr.Redirect.URL = r.RequestURI
 	}
+
+	rr.Redirect.Enabled = true
+	rr.Redirect.Separator = "?"
 
 	if strings.Contains(rr.Redirect.AuthURL, "?") {
 		rr.Redirect.Separator = "&"

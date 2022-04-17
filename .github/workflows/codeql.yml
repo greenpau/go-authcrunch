@@ -2,8 +2,12 @@ name: "CodeQL"
 
 on:
   workflow_dispatch: {}
-  schedule:
-  - cron: '40 19 * * 2'
+  #push:
+  #  branches: [ main ]
+  #pull_request:
+  #  branches: [ main ]
+  #schedule:
+  #- cron: '40 19 * * 2'
 
 jobs:
   analyze:
@@ -38,13 +42,8 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
       with:
-        upload: false
-
-    - name: Debug
-      run: |
-        pwd
-        find "${RUNNER_WORKSPACE}/"
-        env | grep "go-authcrunch"
+        #  upload: false
+        wait-for-processing: true
 
     - name: Upload CodeQL Analysis
       uses: actions/upload-artifact@v3
