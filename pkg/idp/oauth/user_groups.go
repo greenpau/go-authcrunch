@@ -37,13 +37,19 @@ func (b *IdentityProvider) fetchUserGroups(tokenData, userData map[string]interf
 	var req *http.Request
 	var err error
 
-	for _, k := range []string{"access_token"} {
-		if _, exists := tokenData[k]; !exists {
-			return fmt.Errorf("provider %s failed fetching user groups, token response has no %s field", b.config.Driver, k)
-		}
+	if b.config.Driver != "google" || !b.ScopeExists(
+		"https://www.googleapis.com/auth/cloud-identity.groups.readonly",
+		"https://www.googleapis.com/auth/cloud-identity.groups",
+	) {
+		return nil
+	}
+	if tokenData == nil || userData == nil {
+		return nil
 	}
 
-	tokenString := tokenData["access_token"].(string)
+	if _, exists := tokenData["access_token"]; !exists {
+		return fmt.Errorf("access_token not found")
+	}
 
 	cli, err := b.newBrowser()
 	if err != nil {
@@ -59,7 +65,7 @@ func (b *IdentityProvider) fetchUserGroups(tokenData, userData map[string]interf
 		if err != nil {
 			return err
 		}
-		req.Header.Add("Authorization", "Bearer "+tokenString)
+		req.Header.Add("Authorization", "Bearer "+tokenData["access_token"].(string))
 	default:
 		return fmt.Errorf("provider %s is unsupported for fetching user groups", b.config.Driver)
 	}

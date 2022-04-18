@@ -64,6 +64,7 @@ type IdentityProvider struct {
 	enableBodyDecoder      bool
 	requiredTokenFields    map[string]interface{}
 	scopeMap               map[string]interface{}
+	userInfoFields         map[string]interface{}
 	// state stores cached state IDs
 	state         *stateManager
 	logger        *zap.Logger
@@ -214,6 +215,11 @@ func (b *IdentityProvider) Configure() error {
 		b.requiredTokenFields[fieldName] = true
 	}
 
+	b.userInfoFields = make(map[string]interface{})
+	for _, fieldName := range b.config.UserInfoFields {
+		b.userInfoFields[fieldName] = true
+	}
+
 	// Configure user group filters, if any.
 	for _, pattern := range b.config.UserGroupFilters {
 		b.userGroupFilters = append(b.userGroupFilters, regexp.MustCompile(pattern))
@@ -245,6 +251,9 @@ func (b *IdentityProvider) Configure() error {
 		zap.Int("retry_attempts", b.config.RetryAttempts),
 		zap.Int("retry_interval", b.config.RetryInterval),
 		zap.Strings("scopes", b.config.Scopes),
+		zap.String("icon_name", b.config.IconName),
+		zap.String("icon_text", b.config.IconText),
+		zap.String("icon_color", b.config.IconColor),
 	)
 
 	b.configured = true
@@ -426,4 +435,19 @@ func (b *IdentityProvider) fetchKeysURL() error {
 	}
 
 	return nil
+}
+
+// GetIconName returns the name of the icon associated with the provider.
+func (b *IdentityProvider) GetIconName() string {
+	return b.config.IconName
+}
+
+// GetIconText returns the text of the icon associated with the provider.
+func (b *IdentityProvider) GetIconText() string {
+	return b.config.IconText
+}
+
+// GetIconColor returns the color of the icon associated with the provider.
+func (b *IdentityProvider) GetIconColor() string {
+	return b.config.IconColor
 }

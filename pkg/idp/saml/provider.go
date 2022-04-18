@@ -191,9 +191,27 @@ func (b *IdentityProvider) Configure() error {
 		zap.String("login_url", b.loginURL),
 		zap.String("idp_sign_cert_location", b.config.IdpSignCertLocation),
 		zap.String("idp_metadata_location", b.config.IdpMetadataLocation),
+		zap.String("icon_name", b.config.IconName),
+		zap.String("icon_text", b.config.IconText),
+		zap.String("icon_color", b.config.IconColor),
 	)
 
 	b.configured = true
 
 	return nil
+}
+
+// GetIconName returns the name of the icon associated with the provider.
+func (b *IdentityProvider) GetIconName() string {
+	return b.config.IconName
+}
+
+// GetIconText returns the text of the icon associated with the provider.
+func (b *IdentityProvider) GetIconText() string {
+	return b.config.IconText
+}
+
+// GetIconColor returns the color of the icon associated with the provider.
+func (b *IdentityProvider) GetIconColor() string {
+	return b.config.IconColor
 }

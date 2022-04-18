@@ -133,17 +133,22 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 				}
 			}
 
+			// Fetch user info.
+			if err := b.fetchUserInfo(accessToken, m); err != nil {
+				b.logger.Debug(
+					"failed fetching user info",
+					zap.String("request_id", r.ID),
+					zap.Error(err),
+				)
+			}
+
 			// Fetch subsequent user info, e.g. user groups.
-			switch b.config.Driver {
-			case "google":
-				if b.ScopeExists(
-					"https://www.googleapis.com/auth/cloud-identity.groups.readonly",
-					"https://www.googleapis.com/auth/cloud-identity.groups",
-				) {
-					if err := b.fetchUserGroups(accessToken, m); err != nil {
-						return errors.ErrIdentityProviderOauthFetchUserGroupsFailed.WithArgs(err)
-					}
-				}
+			if err := b.fetchUserGroups(accessToken, m); err != nil {
+				b.logger.Debug(
+					"failed fetching user groups",
+					zap.String("request_id", r.ID),
+					zap.Error(err),
+				)
 			}
 
 			r.Response.Payload = m

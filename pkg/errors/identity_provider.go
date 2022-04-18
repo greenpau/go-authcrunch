@@ -35,6 +35,7 @@ const (
 	ErrIdentityProviderOauthAuthorizationFailed          StandardError = "failed OAuth 2.0 authorization flow, error: %s"
 	ErrIdentityProviderOauthFetchAccessTokenFailed       StandardError = "failed fetching OAuth 2.0 access token: %s"
 	ErrIdentityProviderOauthFetchClaimsFailed            StandardError = "failed fetching OAuth 2.0 claims: %s"
+	ErrIdentityProviderOauthFetchUserInfoFailed          StandardError = "failed fetching OAuth 2.0 user info: %v"
 	ErrIdentityProviderOauthFetchUserGroupsFailed        StandardError = "failed fetching OAuth 2.0 user groups: %v"
 	ErrIdentityProviderOauthValidateAccessTokenFailed    StandardError = "failed validating OAuth 2.0 access token: %s"
 	ErrIdentityProviderOauthResponseProcessingFailed     StandardError = "unable to process OAuth 2.0 response"

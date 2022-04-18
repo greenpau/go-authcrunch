@@ -51,6 +51,10 @@ type Config struct {
 	AssertionConsumerServiceURLs []string `json:"acs_urls,omitempty" xml:"acs_urls,omitempty" yaml:"acs_urls,omitempty"`
 
 	TLSInsecureSkipVerify bool `json:"tls_insecure_skip_verify,omitempty" xml:"tls_insecure_skip_verify,omitempty" yaml:"tls_insecure_skip_verify,omitempty"`
+
+	IconName  string `json:"icon_name,omitempty" xml:"icon_name,omitempty" yaml:"icon_name,omitempty"`
+	IconText  string `json:"icon_text,omitempty" xml:"icon_text,omitempty" yaml:"icon_text,omitempty"`
+	IconColor string `json:"icon_color,omitempty" xml:"icon_color,omitempty" yaml:"icon_color,omitempty"`
 }
 
 // Validate validates identity store configuration.
@@ -102,6 +106,34 @@ func (cfg *Config) Validate() error {
 
 	if cfg.IdpSignCertLocation == "" {
 		return errors.ErrIdentityProviderConfig.WithArgs("IdP Signing Certificate not found")
+	}
+
+	// Configure UI Icons.
+	if cfg.IconName == "" {
+		switch cfg.Driver {
+		case "azure":
+			cfg.IconName = "windows"
+		default:
+			cfg.IconName = "codepen"
+		}
+	}
+
+	if cfg.IconText == "" {
+		switch cfg.Driver {
+		case "azure":
+			cfg.IconText = "Azure"
+		default:
+			cfg.IconText = cfg.Realm
+		}
+	}
+
+	if cfg.IconColor == "" {
+		switch cfg.Driver {
+		case "azure":
+			cfg.IconColor = "blue"
+		default:
+			cfg.IconColor = "grey darken-3"
+		}
 	}
 
 	return nil
