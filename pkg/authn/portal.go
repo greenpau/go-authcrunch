@@ -357,44 +357,9 @@ func (p *Portal) configureIdentityProviderLogin() error {
 			cfg["endpoint"] = path.Join(provider.GetKind(), provider.GetRealm())
 		}
 		cfg["realm"] = provider.GetRealm()
-		switch provider.GetRealm() {
-		case "google":
-			cfg["icon"] = "google"
-			cfg["text"] = "Google"
-			cfg["color"] = "red darken-1"
-		case "facebook":
-			cfg["icon"] = "facebook"
-			cfg["text"] = "Facebook"
-			cfg["color"] = "blue darken-4"
-		case "twitter":
-			cfg["icon"] = "twitter"
-			cfg["text"] = "Twitter"
-			cfg["color"] = "blue darken-1"
-		case "linkedin":
-			cfg["icon"] = "linkedin"
-			cfg["text"] = "LinkedIn"
-			cfg["color"] = "blue darken-1"
-		case "github":
-			cfg["icon"] = "github"
-			cfg["text"] = "Github"
-			cfg["color"] = "grey darken-3"
-		case "windows":
-			cfg["icon"] = "windows"
-			cfg["text"] = "Microsoft"
-			cfg["color"] = "orange darken-1"
-		case "azure":
-			cfg["icon"] = "windows"
-			cfg["text"] = "Azure"
-			cfg["color"] = "blue"
-		case "aws", "amazon":
-			cfg["icon"] = "aws"
-			cfg["text"] = "AWS"
-			cfg["color"] = "blue-grey darken-2"
-		default:
-			cfg["icon"] = "codepen"
-			cfg["text"] = provider.GetRealm()
-			cfg["color"] = "grey darken-3"
-		}
+		cfg["icon"] = provider.GetIconName()
+		cfg["text"] = provider.GetIconText()
+		cfg["color"] = provider.GetIconColor()
 		providers = append(providers, cfg)
 	}
 

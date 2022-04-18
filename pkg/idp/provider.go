@@ -34,6 +34,9 @@ type IdentityProvider interface {
 	Configure() error
 	Configured() bool
 	Request(operator.Type, *requests.Request) error
+	GetIconName() string
+	GetIconText() string
+	GetIconColor() string
 }
 
 // NewIdentityProvider returns IdentityProvider instance.

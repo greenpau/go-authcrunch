@@ -87,6 +87,12 @@ type Config struct {
 
 	// Disables the check for the presence of email field in a token.
 	EmailClaimCheckDisabled bool `json:"email_claim_check_disabled,omitempty" xml:"email_claim_check_disabled,omitempty" yaml:"email_claim_check_disabled,omitempty"`
+
+	IconName  string `json:"icon_name,omitempty" xml:"icon_name,omitempty" yaml:"icon_name,omitempty"`
+	IconText  string `json:"icon_text,omitempty" xml:"icon_text,omitempty" yaml:"icon_text,omitempty"`
+	IconColor string `json:"icon_color,omitempty" xml:"icon_color,omitempty" yaml:"icon_color,omitempty"`
+
+	UserInfoFields []string `json:"user_info_fields,omitempty" xml:"user_info_fields,omitempty" yaml:"user_info_fields,omitempty"`
 }
 
 // Validate validates identity store configuration.
@@ -222,7 +228,9 @@ func (cfg *Config) Validate() error {
 	}
 
 	if cfg.BaseAuthURL == "" {
-		return errors.ErrIdentityProviderConfig.WithArgs("base authentication url not found")
+		if cfg.MetadataURL == "" {
+			return errors.ErrIdentityProviderConfig.WithArgs("base authentication url not found")
+		}
 	}
 
 	// Validate metadata URL, i.e. endpoint discovery.
@@ -273,6 +281,76 @@ func (cfg *Config) Validate() error {
 			return errors.ErrIdentityProviderConfig.WithArgs(
 				fmt.Errorf("invalid user org pattern %q: %v", pattern, err),
 			)
+		}
+	}
+
+	// Configure UI Icons.
+	if cfg.IconName == "" {
+		switch cfg.Driver {
+		case "google":
+			cfg.IconName = "google"
+		case "facebook":
+			cfg.IconName = "facebook"
+		case "linkedin":
+			cfg.IconName = "linkedin"
+		case "github":
+			cfg.IconName = "github"
+		case "gitlab":
+			cfg.IconName = "gitlab"
+		case "windows":
+			cfg.IconName = "windows"
+		case "azure":
+			cfg.IconName = "windows"
+		case "aws":
+			cfg.IconName = "aws"
+		case "amazon":
+			cfg.IconName = "amazon"
+		default:
+			cfg.IconName = "codepen"
+		}
+	}
+
+	if cfg.IconText == "" {
+		switch cfg.Driver {
+		case "google":
+			cfg.IconText = "Google"
+		case "facebook":
+			cfg.IconText = "Facebook"
+		case "linkedin":
+			cfg.IconText = "LinkedIn"
+		case "github":
+			cfg.IconText = "Github"
+		case "windows":
+			cfg.IconText = "Microsoft"
+		case "azure":
+			cfg.IconText = "Azure"
+		case "aws":
+			cfg.IconText = "AWS"
+		case "amazon":
+			cfg.IconText = "Amazon"
+		default:
+			cfg.IconText = cfg.Realm
+		}
+	}
+
+	if cfg.IconColor == "" {
+		switch cfg.Driver {
+		case "google":
+			cfg.IconColor = "red darken-1"
+		case "facebook":
+			cfg.IconColor = "blue darken-4"
+		case "linkedin":
+			cfg.IconColor = "blue darken-1"
+		case "github":
+			cfg.IconColor = "grey darken-3"
+		case "windows":
+			cfg.IconColor = "orange darken-1"
+		case "azure":
+			cfg.IconColor = "blue"
+		case "aws", "amazon":
+			cfg.IconColor = "blue-grey darken-2"
+		default:
+			cfg.IconColor = "grey darken-3"
 		}
 	}
 
