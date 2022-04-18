@@ -180,7 +180,7 @@ func (cfg *PolicyConfig) Validate() error {
 		if err := entry.Validate(); err != nil {
 			return errors.ErrInvalidConfiguration.WithArgs(cfg.Name, err)
 		}
-		cfg.PassClaimsWithHeaders = true
+		// cfg.PassClaimsWithHeaders = true
 	}
 
 	if len(cfg.AccessListRules) == 0 {

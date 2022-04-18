@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
+	datautil "github.com/greenpau/go-authcrunch/pkg/util/data"
 	"strings"
 	"time"
 )
@@ -347,17 +348,23 @@ func (u *User) GetClaimValueByField(k string) string {
 	if u.mkv == nil {
 		return ""
 	}
-	if v, exists := u.mkv[k]; exists {
-		switch data := v.(type) {
-		case string:
-			return data
-		case []string:
-			return strings.Join(data, " ")
-		default:
-			return fmt.Sprintf("%v", data)
+	data := datautil.GetValueFromMapByPath(k, u.mkv)
+	switch v := data.(type) {
+	case string:
+		return v
+	case []string:
+		return strings.Join(v, ", ")
+	case []interface{}:
+		var entries []string
+		for _, entry := range v {
+			switch s := entry.(type) {
+			case string:
+				entries = append(entries, s)
+			}
 		}
+		return strings.Join(entries, ", ")
 	}
-	return ""
+	return fmt.Sprintf("%v", data)
 }
 
 // NewCheckpoints returns Checkpoint instances.

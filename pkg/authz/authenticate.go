@@ -294,12 +294,10 @@ func (g *Gatekeeper) injectHeaders(r *http.Request, usr *user.User) {
 		}
 	}
 
-	if g.injectedHeaders != nil {
-		// Inject custom headers.
-		for _, entry := range g.config.HeaderInjectionConfigs {
-			if v := usr.GetClaimValueByField(entry.Field); v != "" {
-				r.Header.Set(entry.Header, v)
-			}
+	// Inject custom headers.
+	for _, entry := range g.config.HeaderInjectionConfigs {
+		if v := usr.GetClaimValueByField(entry.Field); v != "" {
+			r.Header.Set(entry.Header, v)
 		}
 	}
 }
