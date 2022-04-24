@@ -18,6 +18,7 @@ import (
 	"fmt"
 	jwtlib "github.com/golang-jwt/jwt/v4"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"strings"
 )
 
@@ -110,6 +111,29 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 				m["name"] = fmt.Sprintf("%s %s", m["given_name"].(string), m["family_name"].(string))
 				delete(m, "given_name")
 				delete(m, "family_name")
+			}
+		}
+	}
+
+	switch b.config.Driver {
+	case "cognito":
+		if v, exists := data["id_token"]; exists {
+			if tp, err := kms.ParsePayloadFromToken(v.(string)); err == nil {
+				for k, val := range tp {
+					if !strings.HasPrefix(k, "custom:") {
+						continue
+					}
+					switch k {
+					case "custom:roles":
+						roles := []string{}
+						for _, roleName := range strings.Split(val.(string), "|") {
+							roles = append(roles, roleName)
+						}
+						m["roles"] = roles
+					case "custom:timezone":
+						m["timezone"] = val.(string)
+					}
+				}
 			}
 		}
 	}

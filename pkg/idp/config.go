@@ -80,6 +80,9 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			"delay_start",
 			"retry_attempts",
 			"retry_interval",
+			// AWS Cognito.
+			"user_pool_id",
+			"region",
 			// Misc.
 			"required_token_fields",
 			"scopes",

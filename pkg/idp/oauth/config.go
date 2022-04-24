@@ -36,6 +36,11 @@ type Config struct {
 	TenantID          string `json:"tenant_id,omitempty" xml:"tenant_id,omitempty" yaml:"tenant_id,omitempty"`
 	IdentityTokenName string `json:"identity_token_name,omitempty" xml:"identity_token_name,omitempty" yaml:"identity_token_name,omitempty"`
 
+	// AWS Cognito User Pool ID
+	UserPoolID string `json:"user_pool_id,omitempty" xml:"user_pool_id,omitempty" yaml:"user_pool_id,omitempty"`
+	// AWS Region
+	Region string `json:"region,omitempty" xml:"region,omitempty" yaml:"region,omitempty"`
+
 	Scopes []string `json:"scopes,omitempty" xml:"scopes,omitempty" yaml:"scopes,omitempty"`
 
 	// The number if seconds to wait before getting key material
@@ -141,6 +146,8 @@ func (cfg *Config) Validate() error {
 			cfg.Scopes = []string{"email"}
 		case "google":
 			cfg.Scopes = []string{"openid", "email", "profile"}
+		case "cognito":
+			cfg.Scopes = []string{"openid", "email", "profile"}
 		default:
 			cfg.Scopes = []string{"openid", "email", "profile"}
 		}
@@ -171,6 +178,17 @@ func (cfg *Config) Validate() error {
 			)
 			cfg.MetadataURL = cfg.BaseAuthURL + ".well-known/openid-configuration?client_id=" + cfg.ClientID
 		}
+	case "cognito":
+		if cfg.Region == "" {
+			return errors.ErrIdentityProviderConfig.WithArgs("region not found")
+		}
+		if cfg.UserPoolID == "" {
+			return errors.ErrIdentityProviderConfig.WithArgs("user_pool_id not found")
+		}
+		cfg.BaseAuthURL = fmt.Sprintf(
+			"https://cognito-idp.%s.amazonaws.com/%s/", cfg.Region, cfg.UserPoolID,
+		)
+		cfg.MetadataURL = cfg.BaseAuthURL + ".well-known/openid-configuration"
 	case "google":
 		if cfg.BaseAuthURL == "" {
 			cfg.BaseAuthURL = "https://accounts.google.com/o/oauth2/v2/"
@@ -301,7 +319,7 @@ func (cfg *Config) Validate() error {
 			cfg.IconName = "windows"
 		case "azure":
 			cfg.IconName = "windows"
-		case "aws":
+		case "aws", "cognito":
 			cfg.IconName = "aws"
 		case "amazon":
 			cfg.IconName = "amazon"
@@ -324,7 +342,7 @@ func (cfg *Config) Validate() error {
 			cfg.IconText = "Microsoft"
 		case "azure":
 			cfg.IconText = "Azure"
-		case "aws":
+		case "aws", "cognito":
 			cfg.IconText = "AWS"
 		case "amazon":
 			cfg.IconText = "Amazon"
@@ -347,7 +365,7 @@ func (cfg *Config) Validate() error {
 			cfg.IconColor = "orange darken-1"
 		case "azure":
 			cfg.IconColor = "blue"
-		case "aws", "amazon":
+		case "aws", "amazon", "cognito":
 			cfg.IconColor = "blue-grey darken-2"
 		default:
 			cfg.IconColor = "grey darken-3"

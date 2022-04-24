@@ -81,7 +81,8 @@ clean:
 
 qtest: covdir
 	@echo "Perform quick tests ..."
-	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/util/data/...
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/util/data/...
+	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestParsePayloadFromToken ./pkg/kms/parser*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewConfig ./*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewServer ./*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/registry/...
