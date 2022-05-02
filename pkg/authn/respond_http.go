@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"regexp"
 	"strings"
 )
 
@@ -93,13 +92,6 @@ func (p *Portal) handleHTTPErrorWithLog(ctx context.Context, w http.ResponseWrit
 	return p.handleHTTPError(ctx, w, r, rr, code)
 }
 
-func sanitizeUrl(urlToSanitize string) string {
-	r := regexp.MustCompile("(&|<|>|\"|')")
-	return r.ReplaceAllStringFunc(urlToSanitize, func(s string) string {
-		return url.QueryEscape(s)
-	})
-}
-
 func (p *Portal) handleHTTPError(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, code int) error {
 	p.disableClientCache(w)
 	resp := p.ui.GetArgs()
@@ -119,7 +111,7 @@ func (p *Portal) handleHTTPError(ctx context.Context, w http.ResponseWriter, r *
 		resp.Data["go_back_url"] = rr.Response.RedirectURL
 	} else {
 		if r.Referer() != "" {
-			resp.Data["go_back_url"] = sanitizeUrl(r.Referer())
+			resp.Data["go_back_url"] = util.SanitizeUrlForInvalidCharacters(r.Referer())
 		} else {
 			resp.Data["go_back_url"] = "/"
 		}

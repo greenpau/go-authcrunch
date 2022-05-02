@@ -27,29 +27,28 @@ import (
 	"testing"
 )
 
-type CustomResponseWriter struct {
+type customResponseWriter struct {
 	body       []byte
 	statusCode int
 	header     http.Header
 }
 
-func NewCustomResponseWriter() *CustomResponseWriter {
-	return &CustomResponseWriter{
+func NewCustomResponseWriter() *customResponseWriter {
+	return &customResponseWriter{
 		header: http.Header{},
 	}
 }
 
-func (w *CustomResponseWriter) Header() http.Header {
+func (w *customResponseWriter) Header() http.Header {
 	return w.header
 }
 
-func (w *CustomResponseWriter) Write(b []byte) (int, error) {
+func (w *customResponseWriter) Write(b []byte) (int, error) {
 	w.body = b
-	// implement it as per your requirement
 	return 0, nil
 }
 
-func (w *CustomResponseWriter) WriteHeader(statusCode int) {
+func (w *customResponseWriter) WriteHeader(statusCode int) {
 	w.statusCode = statusCode
 }
 
