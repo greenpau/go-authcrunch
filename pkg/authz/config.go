@@ -63,6 +63,8 @@ type PolicyConfig struct {
 	PassClaimsWithHeaders bool `json:"pass_claims_with_headers,omitempty" xml:"pass_claims_with_headers,omitempty" yaml:"pass_claims_with_headers,omitempty"`
 	// Validate the login hint which can be passed to the auth provider
 	LoginHintValidators []string `json:"login_hint_validators,omitempty" xml:"login_hint_validators,omitempty" yaml:"login_hint_validators,omitempty"`
+	// Allow to append scopes that come from the query parameter 'additionalScopes'
+	AdditionalScopes bool
 	// Holds raw crypto configuration.
 	cryptoRawConfigs []string
 	// Holds raw identity provider configuration.
