@@ -50,7 +50,8 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		sandboxPartition = sandboxArr[1]
 	}
 
-	// Parse sandbox cookie.
+	// Parse sandbox cookie and authenticate temporary session ID
+	// and secret.
 	for _, cookie := range r.Cookies() {
 		if cookie.Name != p.cookie.SandboxID {
 			continue
@@ -107,6 +108,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
 	}
 
+	// Handle auxiliary functions, e.g. QR code and sandbox termination.
 	switch {
 	case strings.HasPrefix(sandboxPartition, "mfa-app-barcode/"):
 		// Handle App Portal barcode.
