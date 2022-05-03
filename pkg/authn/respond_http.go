@@ -111,7 +111,7 @@ func (p *Portal) handleHTTPError(ctx context.Context, w http.ResponseWriter, r *
 		resp.Data["go_back_url"] = rr.Response.RedirectURL
 	} else {
 		if r.Referer() != "" {
-			resp.Data["go_back_url"] = util.SanitizeUrlForInvalidCharacters(r.Referer())
+			resp.Data["go_back_url"] = util.SanitizeURL(r.Referer())
 		} else {
 			resp.Data["go_back_url"] = "/"
 		}

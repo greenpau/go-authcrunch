@@ -33,7 +33,7 @@ type customResponseWriter struct {
 	header     http.Header
 }
 
-func NewCustomResponseWriter() *customResponseWriter {
+func buildCustomResponseWriter() *customResponseWriter {
 	return &customResponseWriter{
 		header: http.Header{},
 	}
@@ -72,7 +72,7 @@ func TestInjectRedirectURL(t *testing.T) {
 		}
 		request := requests.NewRequest()
 
-		p.injectRedirectURL(context.Background(), NewCustomResponseWriter(), &r, request)
+		p.injectRedirectURL(context.Background(), buildCustomResponseWriter(), &r, request)
 
 		cookieParts := strings.Split(request.Response.RedirectURL, ";")
 		tests.EvalObjectsWithLog(t, "redirect url", "AUTHP_REDIRECT_URL=https://foo.bar/redir", cookieParts[0], []string{})
@@ -89,8 +89,8 @@ func TestRefererSanitization(t *testing.T) {
 		}
 		r := http.Request{URL: &reqURL, Method: "GET"}
 		r.Header = make(http.Header)
-		maliciousUrl := "https://www.google.com/search?hl=en&q=testing'\"()&%<acx><ScRiPt >alert(9854)</ScRiPt>"
-		r.Header.Set("Referer", maliciousUrl)
+		maliciousURL := "https://www.google.com/search?hl=en&q=testing'\"()&%<acx><ScRiPt >alert(9854)</ScRiPt>"
+		r.Header.Set("Referer", maliciousURL)
 		f, _ := cookie.NewFactory(nil)
 		uiFactory := ui.NewFactory()
 		p := Portal{
@@ -106,7 +106,7 @@ func TestRefererSanitization(t *testing.T) {
 		}
 		_ = p.configureUserInterface()
 		request := requests.NewRequest()
-		rw := NewCustomResponseWriter()
+		rw := buildCustomResponseWriter()
 
 		_ = p.handleHTTPError(context.Background(), rw, &r, request, 404)
 		rb := string(rw.body)
