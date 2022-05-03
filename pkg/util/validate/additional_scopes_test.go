@@ -20,10 +20,22 @@ func TestAdditionalScopes(t *testing.T) {
 			err:              nil,
 		},
 		{
+			name:             "doesn't return an error if the provided additional_scopes is only one",
+			additionalScopes: "email",
+			shouldErr:        false,
+			err:              nil,
+		},
+		{
 			name:             "returns an error if the provided additional_scopes are in a invalid format",
 			additionalScopes: "email profile orders",
 			shouldErr:        true,
 			err:              errors.ErrInvalidAdditionalScopes,
+		},
+		{
+			name:             "returns an error if the provided additional_scopes contains underscores",
+			additionalScopes: "e_mail%20profile%20orders",
+			shouldErr:        false,
+			err:              nil,
 		},
 	}
 	for _, tc := range testcases {
