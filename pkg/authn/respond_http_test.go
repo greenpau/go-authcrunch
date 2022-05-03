@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
 	"net/http"
@@ -26,17 +27,30 @@ import (
 	"testing"
 )
 
-type mockResponseWriter struct{}
-
-func (w *mockResponseWriter) Header() http.Header {
-	return http.Header{}
+type customResponseWriter struct {
+	body       []byte
+	statusCode int
+	header     http.Header
 }
 
-func (w *mockResponseWriter) Write([]byte) (int, error) {
+func NewCustomResponseWriter() *customResponseWriter {
+	return &customResponseWriter{
+		header: http.Header{},
+	}
+}
+
+func (w *customResponseWriter) Header() http.Header {
+	return w.header
+}
+
+func (w *customResponseWriter) Write(b []byte) (int, error) {
+	w.body = b
 	return 0, nil
 }
 
-func (w *mockResponseWriter) WriteHeader(int) {}
+func (w *customResponseWriter) WriteHeader(statusCode int) {
+	w.statusCode = statusCode
+}
 
 func TestInjectRedirectURL(t *testing.T) {
 
@@ -58,10 +72,45 @@ func TestInjectRedirectURL(t *testing.T) {
 		}
 		request := requests.NewRequest()
 
-		p.injectRedirectURL(context.Background(), &mockResponseWriter{}, &r, request)
+		p.injectRedirectURL(context.Background(), NewCustomResponseWriter(), &r, request)
 
 		cookieParts := strings.Split(request.Response.RedirectURL, ";")
 		tests.EvalObjectsWithLog(t, "redirect url", "AUTHP_REDIRECT_URL=https://foo.bar/redir", cookieParts[0], []string{})
+	})
+}
 
+func TestRefererSanitization(t *testing.T) {
+	t.Run("should sanitize referral url if its malformed in a way that is intended to cause a XSS", func(t *testing.T) {
+		reqURL := url.URL{
+			Scheme:   "https",
+			Host:     "foo.bar",
+			Path:     "/myPage",
+			RawQuery: "redirect_url=https%3A%2F%2Ffoo.bar%2Fredir",
+		}
+		r := http.Request{URL: &reqURL, Method: "GET"}
+		r.Header = make(http.Header)
+		maliciousUrl := "https://www.google.com/search?hl=en&q=testing'\"()&%<acx><ScRiPt >alert(9854)</ScRiPt>"
+		r.Header.Set("Referer", maliciousUrl)
+		f, _ := cookie.NewFactory(nil)
+		uiFactory := ui.NewFactory()
+		p := Portal{
+			config: &PortalConfig{
+				Name: "somePortal",
+				UI: &ui.Parameters{
+					Theme: "",
+				},
+			},
+			logger: zap.L(),
+			cookie: f,
+			ui:     uiFactory,
+		}
+		_ = p.configureUserInterface()
+		request := requests.NewRequest()
+		rw := NewCustomResponseWriter()
+
+		_ = p.handleHTTPError(context.Background(), rw, &r, request, 404)
+		rb := string(rw.body)
+
+		tests.EvalObjectsWithLog(t, "sanitized url", true, strings.Contains(rb, "https://www.google.com/search?hl=en%26q=testing%27%22()%26%%3Cacx%3E%3CScRiPt %3Ealert(9854)%3C/ScRiPt%3E"), []string{})
 	})
 }
