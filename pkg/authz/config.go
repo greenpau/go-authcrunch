@@ -64,7 +64,7 @@ type PolicyConfig struct {
 	// Validate the login hint which can be passed to the auth provider
 	LoginHintValidators []string `json:"login_hint_validators,omitempty" xml:"login_hint_validators,omitempty" yaml:"login_hint_validators,omitempty"`
 	// Allow to append scopes that come from the query parameter 'additionalScopes'
-	AdditionalScopes bool
+	AdditionalScopes bool `json:"additional_scopes,omitempty" xml:"additional_scopes,omitempty" yaml:"additional_scopes,omitempty"`
 	// Holds raw crypto configuration.
 	cryptoRawConfigs []string
 	// Holds raw identity provider configuration.

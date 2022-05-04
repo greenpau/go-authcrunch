@@ -123,10 +123,17 @@ func configureRedirect(w http.ResponseWriter, r *http.Request, rr *requests.Auth
 		rr.Redirect.Separator = "&"
 	}
 
-	if rr.Redirect.LoginHint != "" {
+	if len(rr.Redirect.LoginHint) > 0 {
 		loginHint := rr.Redirect.LoginHint
 		escapedLoginHint := url.QueryEscape(loginHint)
 		rr.Redirect.AuthURL = rr.Redirect.AuthURL + rr.Redirect.Separator + "login_hint" + "=" + escapedLoginHint
+		rr.Redirect.Separator = "&"
+	}
+
+	if len(rr.Redirect.AdditionalScopes) > 0 {
+		additionalScopes := rr.Redirect.AdditionalScopes
+		escapedAdditionalScopes := url.QueryEscape(additionalScopes)
+		rr.Redirect.AuthURL = rr.Redirect.AuthURL + rr.Redirect.Separator + "additional_scopes" + "=" + escapedAdditionalScopes
 		rr.Redirect.Separator = "&"
 	}
 

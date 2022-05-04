@@ -42,14 +42,15 @@ type AuthorizationToken struct {
 // RedirectResponse holds the redirect parameters associated with the
 // response to AuthorizationRequest.
 type RedirectResponse struct {
-	Enabled        bool   `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
-	AuthURL        string `json:"auth_url,omitempty" xml:"auth_url,omitempty" yaml:"auth_url,omitempty"`
-	Separator      string `json:"separator,omitempty" xml:"separator,omitempty" yaml:"separator,omitempty"`
-	QueryParameter string `json:"query_parameter,omitempty" xml:"query_parameter,omitempty" yaml:"query_parameter,omitempty"`
-	QueryDisabled  bool   `json:"query_disabled,omitempty" xml:"query_disabled,omitempty" yaml:"query_disabled,omitempty"`
-	URL            string `json:"url,omitempty" xml:"url,omitempty" yaml:"url,omitempty"`
-	StatusCode     int    `json:"status_code,omitempty" xml:"status_code,omitempty" yaml:"status_code,omitempty"`
-	LoginHint      string `json:"login_hint,omitempty" xml:"login_hint,omitempty" yaml:"login_hint,omitempty"`
+	Enabled          bool   `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
+	AuthURL          string `json:"auth_url,omitempty" xml:"auth_url,omitempty" yaml:"auth_url,omitempty"`
+	Separator        string `json:"separator,omitempty" xml:"separator,omitempty" yaml:"separator,omitempty"`
+	QueryParameter   string `json:"query_parameter,omitempty" xml:"query_parameter,omitempty" yaml:"query_parameter,omitempty"`
+	QueryDisabled    bool   `json:"query_disabled,omitempty" xml:"query_disabled,omitempty" yaml:"query_disabled,omitempty"`
+	URL              string `json:"url,omitempty" xml:"url,omitempty" yaml:"url,omitempty"`
+	StatusCode       int    `json:"status_code,omitempty" xml:"status_code,omitempty" yaml:"status_code,omitempty"`
+	LoginHint        string `json:"login_hint,omitempty" xml:"login_hint,omitempty" yaml:"login_hint,omitempty"`
+	AdditionalScopes string `json:"additional_scopes,omitempty" xml:"additional_scopes,omitempty" yaml:"additional_scopes,omitempty"`
 }
 
 // NewAuthorizationRequest returns an instance of AuthorizationRequest.
