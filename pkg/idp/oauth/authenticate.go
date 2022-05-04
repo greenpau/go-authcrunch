@@ -195,7 +195,11 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		params.Set("nonce", nonce)
 	}
 	if !b.disableScope {
-		params.Set("scope", strings.Join(b.config.Scopes, " "))
+		scopes := b.config.Scopes
+		if additionalScopesExists {
+			scopes = append(scopes, strings.Split(additionalScopes, " ")...)
+		}
+		params.Set("scope", strings.Join(scopes, " "))
 	}
 
 	if b.config.JsCallbackEnabled {
@@ -209,10 +213,6 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	}
 	if loginHintExists {
 		params.Set("login_hint", reqParamsLoginHint)
-	}
-
-	if additionalScopesExists {
-		params.Set("additional_scopes", additionalScopes)
 	}
 
 	params.Set("client_id", b.config.ClientID)

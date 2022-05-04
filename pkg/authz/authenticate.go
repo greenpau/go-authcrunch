@@ -318,10 +318,11 @@ func (g *Gatekeeper) handleLoginHint(r *http.Request, ar *requests.Authorization
 
 func (g *Gatekeeper) handleAdditionalScopes(r *http.Request, ar *requests.AuthorizationRequest) {
 	if additionalScopes := r.URL.Query().Get("additional_scopes"); additionalScopes != "" {
-		if err := validate.LoginHint(additionalScopes, g.config.LoginHintValidators); err != nil {
+		if err := validate.AdditionalScopes(additionalScopes); err != nil {
 			g.logger.Warn(err.Error())
 		} else {
-		} // ar.Redirect. = additionalScopes
+			ar.Redirect.AdditionalScopes = additionalScopes
+		}
 	}
 
 }
