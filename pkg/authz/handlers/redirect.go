@@ -102,6 +102,8 @@ func configureRedirect(w http.ResponseWriter, r *http.Request, rr *requests.Auth
 		return
 	}
 
+	rr.Redirect.Enabled = true
+
 	if rr.Redirect.QueryDisabled {
 		return
 	}
@@ -115,8 +117,7 @@ func configureRedirect(w http.ResponseWriter, r *http.Request, rr *requests.Auth
 	} else {
 		rr.Redirect.URL = r.RequestURI
 	}
-
-	rr.Redirect.Enabled = true
+	
 	rr.Redirect.Separator = "?"
 
 	if strings.Contains(rr.Redirect.AuthURL, "?") {
