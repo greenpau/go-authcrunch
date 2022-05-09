@@ -17,9 +17,11 @@ package oauth
 import (
 	"encoding/json"
 	"fmt"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 func (b *IdentityProvider) fetchUserInfo(tokenData, userData map[string]interface{}) error {
@@ -81,8 +83,12 @@ func (b *IdentityProvider) fetchUserInfo(tokenData, userData map[string]interfac
 		zap.String("url", b.userInfoURL),
 	)
 
+	var roles []string
 	if _, exists := b.userInfoFields["all"]; exists {
-		userData["userinfo"] = userinfo
+		roles = extractUserInfoRoles(userinfo)
+		if len(userinfo) > 0 {
+			userData["userinfo"] = userinfo
+		}
 	} else {
 		for k := range userinfo {
 			if _, exists := b.userInfoFields[k]; !exists {
@@ -90,8 +96,44 @@ func (b *IdentityProvider) fetchUserInfo(tokenData, userData map[string]interfac
 			}
 		}
 		if len(userinfo) > 0 {
-			userData["userinfo"] = userinfo
+			roles = extractUserInfoRoles(userinfo)
+			if len(userinfo) > 0 {
+				userData["userinfo"] = userinfo
+			}
 		}
 	}
+
+	if len(roles) > 0 {
+		userData["roles"] = roles
+	}
 	return nil
+}
+
+func extractUserInfoRoles(m map[string]interface{}) []string {
+	entries := make(map[string]interface{})
+	var roles []string
+	for k, v := range m {
+		if !strings.HasSuffix(k, "roles") && !strings.HasSuffix(k, "groups") {
+			continue
+		}
+		switch values := v.(type) {
+		case string:
+			roles = append(roles, values)
+			entries[k] = true
+		case []interface{}:
+			for _, value := range values {
+				switch roleName := value.(type) {
+				case string:
+					roles = append(roles, roleName)
+					entries[k] = true
+				}
+			}
+		}
+	}
+
+	for k := range entries {
+		delete(m, k)
+	}
+
+	return cfgutil.DedupStrArr(roles)
 }
