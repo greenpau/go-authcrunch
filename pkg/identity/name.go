@@ -49,6 +49,9 @@ func (n *Name) ToString() string {
 
 // GetFullName returns the primary full name for User.
 func (n *Name) GetFullName() string {
+	if n.Alias {
+		return n.Last
+	}
 	var b strings.Builder
 	if n.Last != "" {
 		b.WriteString(n.Last)
@@ -61,6 +64,7 @@ func (n *Name) GetFullName() string {
 
 // ParseName parses name from input.
 func ParseName(s string) (*Name, error) {
+	s = strings.TrimSpace(s)
 	n := &Name{}
 	var x, y int
 	for i, sp := range []string{",", " "} {
@@ -80,5 +84,12 @@ func ParseName(s string) (*Name, error) {
 			return n, nil
 		}
 	}
-	return nil, errors.ErrParseNameFailed.WithArgs(s)
+
+	if s == "" {
+		return nil, errors.ErrParseNameFailed.WithArgs(s)
+	}
+
+	n.Last = s
+	n.Alias = true
+	return n, nil
 }

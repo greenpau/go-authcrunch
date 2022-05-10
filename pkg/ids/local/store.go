@@ -28,9 +28,10 @@ const (
 
 // Config holds the configuration for the identity store.
 type Config struct {
-	Name  string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	Realm string `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
-	Path  string `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
+	Name  string  `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Realm string  `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
+	Path  string  `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
+	Users []*User `json:"users,omitempty" xml:"users,omitempty" yaml:"users,omitempty"`
 }
 
 // IdentityStore represents authentication provider with local identity store.
@@ -136,7 +137,7 @@ func (b *IdentityStore) Configure() error {
 	}
 	b.authenticator.logger = b.logger
 
-	if err := b.authenticator.Configure(b.config.Path); err != nil {
+	if err := b.authenticator.Configure(b.config.Path, b.config.Users); err != nil {
 		return err
 	}
 

@@ -442,6 +442,11 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
+			name:  "test local.User struct",
+			entry: &local.User{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test credentials.Config struct",
 			entry: &credentials.Config{},
 			opts:  &Options{},

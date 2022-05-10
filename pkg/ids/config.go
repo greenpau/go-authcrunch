@@ -55,7 +55,9 @@ func (cfg *IdentityStoreConfig) Validate() error {
 			"realm",
 			"path",
 		}
-		optionalFields = []string{}
+		optionalFields = []string{
+			"users",
+		}
 	case "ldap":
 		requiredFields = []string{
 			"realm",

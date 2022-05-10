@@ -66,6 +66,7 @@ type User struct {
 	Revision       int             `json:"revision,omitempty" xml:"revision,omitempty" yaml:"revision,omitempty"`
 	Roles          []*Role         `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
 	Registration   *Registration   `json:"registration,omitempty" xml:"registration,omitempty" yaml:"registration,omitempty"`
+	rolesRef       map[string]interface{}
 }
 
 // NewUserMetadataBundle returns an instance of UserMetadataBundle.
@@ -153,6 +154,14 @@ func (user *User) AddPassword(s string, keepVersions int) error {
 	if err != nil {
 		return err
 	}
+
+	// Check if the existing password is the same as the one provided.
+	if len(user.Passwords) > 0 {
+		if user.Passwords[0].Hash == password.Hash {
+			return nil
+		}
+	}
+
 	if keepVersions < 1 {
 		keepVersions = 9
 	}
@@ -519,6 +528,21 @@ func (user *User) ChangePassword(r *requests.Request, keepVersions int) error {
 	return nil
 }
 
+// UpdatePassword update user password.
+func (user *User) UpdatePassword(r *requests.Request, keepVersions int) error {
+	if !strings.HasPrefix(r.User.Password, "bcrypt:") {
+		// Check whether the existing password matches the newly provided password,
+		// and skip updating if it is.
+		if user.VerifyPassword(r.User.Password) == nil {
+			return nil
+		}
+	}
+	if err := user.AddPassword(r.User.Password, keepVersions); err != nil {
+		return errors.ErrUpdateUserPassword.WithArgs(err)
+	}
+	return nil
+}
+
 // GetMetadata returns user metadata.
 func (user *User) GetMetadata() *UserMetadata {
 	m := &UserMetadata{
@@ -557,4 +581,14 @@ func (user *User) GetChallenges() []string {
 func (user *User) Revise() {
 	user.Revision++
 	user.LastModified = time.Now().UTC()
+}
+
+// HasAdminRights returns true if the user has admin rights.
+func (user *User) HasAdminRights() bool {
+	for _, role := range user.Roles {
+		if role.Name == "admin" && role.Organization == "authp" {
+			return true
+		}
+	}
+	return false
 }

@@ -17,6 +17,7 @@ package identity
 import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -74,6 +75,25 @@ func (p *Password) hash(s string) error {
 	if s == "" {
 		return errors.ErrPasswordEmpty
 	}
+
+	// Handle bcrypt hashed password.
+	if strings.HasPrefix(s, "bcrypt:") {
+		arr := strings.SplitN(s, ":", 3)
+		if len(arr) != 3 {
+			return errors.ErrPasswordHashed.WithArgs("unsupported format")
+		}
+		cost, err := strconv.Atoi(arr[1])
+		if err != nil {
+			return errors.ErrPasswordHashed.WithArgs("cost converstion failed")
+		}
+		if cost < 8 {
+			return errors.ErrPasswordHashed.WithArgs("cost value is too low")
+		}
+		p.Cost = cost
+		p.Hash = arr[2]
+		return nil
+	}
+
 	switch p.Algorithm {
 	case "bcrypt":
 		if p.Cost < 8 {

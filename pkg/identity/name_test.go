@@ -39,10 +39,18 @@ func TestNewName(t *testing.T) {
 			},
 		},
 		{
+			name:     "test alias",
+			fullName: "foobar",
+			want: map[string]interface{}{
+				"claim":     "foobar",
+				"full_name": "foobar",
+			},
+		},
+		{
 			name:      "test parse name error",
-			fullName:  "foobar",
+			fullName:  "",
 			shouldErr: true,
-			err:       errors.ErrParseNameFailed.WithArgs("foobar"),
+			err:       errors.ErrParseNameFailed.WithArgs(""),
 		},
 	}
 	for _, tc := range testcases {

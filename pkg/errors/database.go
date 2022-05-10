@@ -39,6 +39,7 @@ const (
 	ErrGetAPIKeys   StandardError = "failed getting %q keys: %v"
 
 	ErrChangeUserPassword   StandardError = "failed change user password: %v"
+	ErrUpdateUserPassword   StandardError = "failed updating user password: %v"
 	ErrUserPasswordNotFound StandardError = "user password not set"
 	ErrUserPasswordInvalid  StandardError = "user password is invalid"
 
@@ -54,6 +55,7 @@ const (
 	ErrPasswordEmptyAlgorithm       StandardError = "empty password hash algorithm"
 	ErrPasswordGenerate             StandardError = "password generation error: %v"
 	ErrPasswordUnsupportedAlgorithm StandardError = "unsupported password hash algorithm: %v"
+	ErrPasswordHashed               StandardError = "failed handling hashed password: %v"
 
 	ErrUserIDInvalidLength StandardError = "invalid user id length: %d"
 	ErrUsernameEmpty       StandardError = "username is empty"

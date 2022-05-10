@@ -207,7 +207,7 @@ func TestNewAuthenticator(t *testing.T) {
 
 			b := NewAuthenticator()
 			b.logger = logutil.NewLogger()
-			err := b.Configure(db.GetPath())
+			err := b.Configure(db.GetPath(), nil)
 			if tests.EvalErrWithLog(t, err, "configure", tc.shouldErr, tc.err, msgs) {
 				return
 			}

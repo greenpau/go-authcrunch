@@ -37,7 +37,7 @@ func NewAuthenticator() *Authenticator {
 }
 
 // Configure check database connectivity and required tables.
-func (sa *Authenticator) Configure(fp string) error {
+func (sa *Authenticator) Configure(fp string, users []*User) error {
 	sa.mux.Lock()
 	defer sa.mux.Unlock()
 	sa.logger.Info(
@@ -52,7 +52,57 @@ func (sa *Authenticator) Configure(fp string) error {
 		return err
 	}
 	sa.db = db
-	if len(sa.db.Users) == 0 {
+
+	if len(users) > 0 {
+		for _, user := range users {
+			// Check whether user exists.
+			userFound, err := sa.db.UserExists(user.Username, user.EmailAddress)
+			if err != nil {
+				return err
+			}
+			if !userFound {
+				sa.logger.Debug(
+					"creating statically-defined identity store user",
+					zap.String("user", user.Username),
+					zap.String("email", user.EmailAddress),
+				)
+				// Create user.
+				req := &requests.Request{
+					User: requests.User{
+						Username: user.Username,
+						Password: user.Password,
+						Email:    user.EmailAddress,
+						Roles:    user.Roles,
+						FullName: user.Name,
+					},
+				}
+				if err := sa.db.AddUser(req); err != nil {
+					return err
+				}
+			} else {
+				if user.PasswordOverwriteEnabled {
+					sa.logger.Debug(
+						"updating password for statically-defined identity store user",
+						zap.String("user", user.Username),
+						zap.String("email", user.EmailAddress),
+					)
+					// Update password (if overwrite is enabled).
+					req := &requests.Request{
+						User: requests.User{
+							Username: user.Username,
+							Password: user.Password,
+							Email:    user.EmailAddress,
+						},
+					}
+					if err := sa.db.UpdateUserPassword(req); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	if sa.db.GetAdminUserCount() < 1 {
 		req := &requests.Request{
 			User: requests.User{
 				Username: os.Getenv("AUTHP_ADMIN_USER"),

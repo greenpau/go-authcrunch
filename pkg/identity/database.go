@@ -442,6 +442,19 @@ func (db *Database) GetUserCount() int {
 	return len(db.Users)
 }
 
+// GetAdminUserCount returns user count.
+func (db *Database) GetAdminUserCount() int {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+	var counter int
+	for _, user := range db.Users {
+		if user.HasAdminRights() {
+			counter++
+		}
+	}
+	return counter
+}
+
 // Save saves the database.
 func (db *Database) Save() error {
 	db.mu.Lock()
@@ -645,6 +658,26 @@ func (db *Database) ChangeUserPassword(r *requests.Request) error {
 	return nil
 }
 
+// UpdateUserPassword change user password.
+func (db *Database) UpdateUserPassword(r *requests.Request) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
+	if err != nil {
+		return errors.ErrUpdateUserPassword.WithArgs(err)
+	}
+	if err := db.checkPasswordPolicyCompliance(r.User.Password); err != nil {
+		return errors.ErrUpdateUserPassword.WithArgs(err)
+	}
+	if err := user.UpdatePassword(r, db.Policy.Password.KeepVersions); err != nil {
+		return err
+	}
+	if err := db.commit(); err != nil {
+		return errors.ErrUpdateUserPassword.WithArgs(err)
+	}
+	return nil
+}
+
 // IdentifyUser returns user identity and a list of challenges that should be
 // satisfied prior to successfully authenticating a user.
 func (db *Database) IdentifyUser(r *requests.Request) error {
@@ -824,4 +857,24 @@ func (db *Database) GetPasswordPolicyRegex() string {
 
 	return fmt.Sprintf("^%s.{%d,%d}$", allowedChars, db.Policy.Password.MinLength, db.Policy.Password.MaxLength)
 
+}
+
+// UserExists checks whether user exists.
+func (db *Database) UserExists(username, emailAddress string) (bool, error) {
+	username = strings.ToLower(username)
+	emailAddress = strings.ToLower(emailAddress)
+	user1, _ := db.refUsername[username]
+	user2, _ := db.refEmailAddress[emailAddress]
+	switch {
+	case user1 == nil && user2 == nil:
+		return false, nil
+	case user1 == nil:
+		return false, fmt.Errorf("email is registered to a user, while username not found")
+	case user2 == nil:
+		return false, fmt.Errorf("username is registered to a user, while email not found")
+	}
+	if user1.ID != user2.ID {
+		return false, fmt.Errorf("username and email address belong to two different users")
+	}
+	return true, nil
 }
