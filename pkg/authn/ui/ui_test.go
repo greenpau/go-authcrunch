@@ -64,10 +64,19 @@ func TestNewFactory(t *testing.T) {
 	loginOptions["form_required"] = "yes"
 	loginOptions["realm_dropdown_required"] = "no"
 	loginOptions["identity_required"] = "yes"
-	loginOptions["external_providers_required"] = "no"
-	loginOptions["registration_required"] = "no"
-	loginOptions["password_recovery_required"] = "no"
 	loginOptions["realms"] = loginRealms
+	loginOptions["default_realm"] = "local"
+	loginOptions["authenticators"] = []map[string]interface{}{
+		map[string]interface{}{
+			"background_color":          "#324960",
+			"class_name":                "las la-key la-2x",
+			"color":                     "white",
+			"password_recovery_enabled": "y",
+			"realm":                     "local",
+			"text":                      "LOCAL",
+			"text_color":                "#37474f",
+		},
+	}
 
 	uiOptions := make(map[string]interface{})
 	uiOptions["custom_css_required"] = "no"

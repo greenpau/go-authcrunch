@@ -17,6 +17,7 @@ package oauth
 import (
 	"fmt"
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"testing"
 )
@@ -54,9 +55,12 @@ func TestValidateConfig(t *testing.T) {
 				ResponseType:        []string{"code"},
 				RequiredTokenFields: []string{"access_token", "id_token"},
 				MetadataURL:         "https://localhost/oauth/.well-known/openid-configuration",
-				IconName:            "codepen",
-				IconText:            "contoso",
-				IconColor:           "grey darken-3",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-codepen la-2x",
+					Color:           "white",
+					BackgroundColor: "#324960",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 		{
@@ -83,9 +87,13 @@ func TestValidateConfig(t *testing.T) {
 				RequiredTokenFields: []string{"access_token"},
 				AuthorizationURL:    "https://www.facebook.com/v12.0/dialog/oauth",
 				TokenURL:            "https://graph.facebook.com/v12.0/oauth/access_token",
-				IconName:            "facebook",
-				IconText:            "Facebook",
-				IconColor:           "blue darken-4",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-facebook la-2x",
+					Color:           "white",
+					BackgroundColor: "#0d47a1",
+					Text:            "Facebook",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 		{
@@ -113,9 +121,12 @@ func TestValidateConfig(t *testing.T) {
 				RequiredTokenFields: []string{"access_token", "id_token"},
 				AuthorizationURL:    "https://localhost/oauth/apps/oauth2/authorize",
 				TokenURL:            "https://localhost/oauth/apps/oauth2/api/v1/token",
-				IconName:            "codepen",
-				IconText:            "nextcloud",
-				IconColor:           "grey darken-3",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-codepen la-2x",
+					Color:           "white",
+					BackgroundColor: "#324960",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 		{
@@ -150,9 +161,12 @@ func TestValidateConfig(t *testing.T) {
 				MetadataURL:         "https://foo.okta.dev/oauth2/default/.well-known/openid-configuration?client_id=foo",
 				ResponseType:        []string{"code"},
 				RequiredTokenFields: []string{"access_token", "id_token"},
-				IconName:            "codepen",
-				IconText:            "okta",
-				IconColor:           "grey darken-3",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-codepen la-2x",
+					Color:           "white",
+					BackgroundColor: "#324960",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 		{
@@ -179,9 +193,13 @@ func TestValidateConfig(t *testing.T) {
 				MetadataURL:         "https://accounts.google.com/.well-known/openid-configuration",
 				ResponseType:        []string{"code"},
 				RequiredTokenFields: []string{"access_token", "id_token"},
-				IconName:            "google",
-				IconText:            "Google",
-				IconColor:           "red darken-1",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-google la-2x",
+					Color:           "white",
+					BackgroundColor: "#e53935",
+					Text:            "Google",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 		{
@@ -209,9 +227,13 @@ func TestValidateConfig(t *testing.T) {
 				RequiredTokenFields: []string{"access_token"},
 				AuthorizationURL:    "https://github.com/login/oauth/authorize",
 				TokenURL:            "https://github.com/login/oauth/access_token",
-				IconName:            "github",
-				IconText:            "Github",
-				IconColor:           "grey darken-3",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-github la-2x",
+					Color:           "#f6f8fa",
+					BackgroundColor: "#24292f",
+					Text:            "Github",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 		{
@@ -249,9 +271,12 @@ func TestValidateConfig(t *testing.T) {
 				MetadataURL:         "https://gitlab.com/.well-known/openid-configuration",
 				ResponseType:        []string{"code"},
 				RequiredTokenFields: []string{"access_token", "id_token"},
-				IconName:            "gitlab",
-				IconText:            "gitlab",
-				IconColor:           "grey darken-3",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-gitlab la-2x",
+					Color:           "white",
+					BackgroundColor: "#fc6d26",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 		{
@@ -278,9 +303,13 @@ func TestValidateConfig(t *testing.T) {
 				MetadataURL:         "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration",
 				ResponseType:        []string{"code"},
 				RequiredTokenFields: []string{"access_token", "id_token"},
-				IconName:            "windows",
-				IconText:            "Azure",
-				IconColor:           "blue",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-windows la-2x",
+					Color:           "white",
+					BackgroundColor: "#03a9f4",
+					Text:            "Azure",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 		{
@@ -319,9 +348,12 @@ func TestValidateConfig(t *testing.T) {
 				MetadataURL:         "https://gitlab.contoso.com/.well-known/openid-configuration",
 				ResponseType:        []string{"code"},
 				RequiredTokenFields: []string{"access_token", "id_token"},
-				IconName:            "gitlab",
-				IconText:            "gitlab",
-				IconColor:           "grey darken-3",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-gitlab la-2x",
+					Color:           "white",
+					BackgroundColor: "#fc6d26",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 		{
@@ -544,9 +576,12 @@ func TestValidateConfig(t *testing.T) {
 				RetryInterval:       10,
 				ResponseType:        []string{"code"},
 				RequiredTokenFields: []string{"access_token", "id_token"},
-				IconName:            "codepen",
-				IconText:            "contoso",
-				IconColor:           "grey darken-3",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-codepen la-2x",
+					Color:           "white",
+					BackgroundColor: "#324960",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 		{
@@ -577,9 +612,12 @@ func TestValidateConfig(t *testing.T) {
 				RetryInterval:       5,
 				ResponseType:        []string{"code"},
 				RequiredTokenFields: []string{"access_token", "id_token"},
-				IconName:            "codepen",
-				IconText:            "contoso",
-				IconColor:           "grey darken-3",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-codepen la-2x",
+					Color:           "white",
+					BackgroundColor: "#324960",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 		{
@@ -618,9 +656,12 @@ func TestValidateConfig(t *testing.T) {
 				ServerName:        "localhost",
 				IdentityTokenName: "id_token",
 				Scopes:            []string{"openid", "email", "profile"},
-				IconName:          "codepen",
-				IconText:          "contoso",
-				IconColor:         "grey darken-3",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-codepen la-2x",
+					Color:           "white",
+					BackgroundColor: "#324960",
+					TextColor:       "#37474f",
+				},
 			},
 		},
 	}

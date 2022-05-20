@@ -67,6 +67,12 @@ func TestAuthenticate(t *testing.T) {
 					"name":  "local_store",
 					"realm": "local",
 					"path":  dbPath,
+					"login_icon": map[string]interface{}{
+						"background_color": string("#324960"),
+						"class_name":       string("las la-key la-2x"),
+						"color":            string("white"),
+						"text_color":       string("#37474f"),
+					},
 				},
 			},
 		},

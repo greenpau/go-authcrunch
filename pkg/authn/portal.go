@@ -19,6 +19,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
@@ -29,6 +30,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
+	"sort"
 
 	"fmt"
 	"github.com/google/uuid"
@@ -267,16 +269,18 @@ func (p *Portal) configureLoginOptions() error {
 	p.loginOptions = make(map[string]interface{})
 	p.loginOptions["form_required"] = "no"
 	p.loginOptions["realm_dropdown_required"] = "no"
+	p.loginOptions["authenticators_required"] = "no"
 	p.loginOptions["identity_required"] = "no"
-	p.loginOptions["external_providers_required"] = "no"
-	p.loginOptions["registration_required"] = "no"
-	p.loginOptions["password_recovery_required"] = "no"
 
 	if err := p.configureIdentityStoreLogin(); err != nil {
 		return err
 	}
 
 	if err := p.configureIdentityProviderLogin(); err != nil {
+		return err
+	}
+
+	if err := p.configureLoginIcons(); err != nil {
 		return err
 	}
 
@@ -288,6 +292,38 @@ func (p *Portal) configureLoginOptions() error {
 		zap.Int("identity_store_count", len(p.config.IdentityStores)),
 		zap.Int("identity_provider_count", len(p.config.IdentityProviders)),
 	)
+
+	return nil
+}
+
+func (p *Portal) configureLoginIcons() error {
+	var entries []*icons.LoginIcon
+
+	for _, store := range p.identityStores {
+		icon := store.GetLoginIcon()
+		entries = append(entries, icon)
+	}
+
+	for _, provider := range p.identityProviders {
+		icon := provider.GetLoginIcon()
+		entries = append(entries, icon)
+	}
+
+	sort.Slice(entries[:], func(i, j int) bool {
+		return entries[i].Priority > entries[j].Priority
+	})
+
+	var iconConfigs []map[string]string
+
+	for i, icon := range entries {
+		iconConfig := icon.GetConfig()
+		iconConfigs = append(iconConfigs, iconConfig)
+		if i == 0 {
+			p.loginOptions["default_realm"] = iconConfig["realm"]
+		}
+	}
+
+	p.loginOptions["authenticators"] = iconConfigs
 
 	return nil
 }
@@ -330,6 +366,20 @@ func (p *Portal) configureIdentityStoreLogin() error {
 
 	if len(stores) > 1 {
 		p.loginOptions["realm_dropdown_required"] = "yes"
+		p.loginOptions["authenticators_required"] = "yes"
+	}
+
+	for _, store := range p.identityStores {
+		icon := store.GetLoginIcon()
+		icon.SetRealm(store.GetRealm())
+		switch store.GetKind() {
+		case "local":
+			icon.RegistrationEnabled = false
+			icon.UsernameRecoveryEnabled = false
+		case "ldap":
+			icon.RegistrationEnabled = false
+			icon.UsernameRecoveryEnabled = false
+		}
 	}
 
 	return nil
@@ -346,27 +396,19 @@ func (p *Portal) configureIdentityProviderLogin() error {
 		zap.String("portal_id", p.id),
 		zap.Int("identity_provider_count", len(p.config.IdentityProviders)),
 	)
-	var providers []map[string]string
 
 	for _, provider := range p.identityProviders {
-		cfg := make(map[string]string)
+		icon := provider.GetLoginIcon()
+		icon.SetRealm(provider.GetRealm())
 		switch provider.GetKind() {
 		case "oauth":
-			cfg["endpoint"] = path.Join(provider.GetKind()+"2", provider.GetRealm())
+			icon.SetEndpoint(path.Join(provider.GetKind()+"2", provider.GetRealm()))
 		default:
-			cfg["endpoint"] = path.Join(provider.GetKind(), provider.GetRealm())
+			icon.SetEndpoint(path.Join(provider.GetKind(), provider.GetRealm()))
 		}
-		cfg["realm"] = provider.GetRealm()
-		cfg["icon"] = provider.GetIconName()
-		cfg["text"] = provider.GetIconText()
-		cfg["color"] = provider.GetIconColor()
-		providers = append(providers, cfg)
 	}
 
-	if len(providers) > 0 {
-		p.loginOptions["external_providers_required"] = "yes"
-		p.loginOptions["external_providers"] = providers
-	}
+	p.loginOptions["authenticators_required"] = "yes"
 
 	return nil
 }
@@ -419,10 +461,6 @@ func (p *Portal) configureUserInterface() error {
 	}
 	if _, exists := ui.Themes[p.config.UI.Theme]; !exists {
 		return errors.ErrUserInterfaceThemeNotFound.WithArgs(p.config.Name, p.config.UI.Theme)
-	}
-
-	if p.config.UI.PasswordRecoveryEnabled {
-		p.loginOptions["password_recovery_required"] = "yes"
 	}
 
 	// User Interface Templates
@@ -514,8 +552,6 @@ func (p *Portal) AddUserRegistry(userRegistry registry.UserRegistry) error {
 	}
 
 	p.userRegistry = userRegistry
-
-	p.loginOptions["registration_required"] = "yes"
 
 	p.logger.Debug(
 		"Configured user registration",

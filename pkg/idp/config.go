@@ -92,9 +92,7 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			"jwks_keys",
 			"tls_insecure_skip_verify",
 			"email_claim_check_disabled",
-			"icon_name",
-			"icon_text",
-			"icon_color",
+			"login_icon",
 			"user_info_fields",
 		}
 	case "saml":
@@ -112,9 +110,7 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			"application_id",
 			"application_name",
 			"tls_insecure_skip_verify",
-			"icon_name",
-			"icon_text",
-			"icon_color",
+			"login_icon",
 		}
 	case "":
 		return errors.ErrIdentityProviderConfigInvalid.WithArgs("empty identity provider type")

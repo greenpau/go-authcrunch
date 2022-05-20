@@ -57,6 +57,13 @@ func (cfg *IdentityStoreConfig) Validate() error {
 		}
 		optionalFields = []string{
 			"users",
+			"login_icon",
+			"registration_enabled",
+			"username_recovery_enabled",
+			"password_recovery_enabled",
+			"contact_support_enabled",
+			"support_link",
+			"support_email",
 		}
 	case "ldap":
 		requiredFields = []string{
@@ -72,6 +79,13 @@ func (cfg *IdentityStoreConfig) Validate() error {
 			"search_base_dn",
 			"search_user_filter",
 			"search_group_filter",
+			"login_icon",
+			"registration_enabled",
+			"username_recovery_enabled",
+			"password_recovery_enabled",
+			"contact_support_enabled",
+			"support_link",
+			"support_email",
 		}
 	case "":
 		return errors.ErrIdentityStoreConfigInvalid.WithArgs("empty identity store type")

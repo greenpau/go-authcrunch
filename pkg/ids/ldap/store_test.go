@@ -112,6 +112,12 @@ func TestNewIdentityStore(t *testing.T) {
 							"roles": []interface{}{"viewer"},
 						},
 					},
+					"login_icon": map[string]interface{}{
+						"background_color": string("#324960"),
+						"class_name":       string("las la-shield-alt la-2x"),
+						"color":            string("white"),
+						"text_color":       string("#37474f"),
+					},
 				},
 				"configured": true,
 			},

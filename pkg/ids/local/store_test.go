@@ -60,6 +60,12 @@ func TestNewIdentityStore(t *testing.T) {
 					"name":  "local_store",
 					"realm": "local",
 					"path":  dbPath,
+					"login_icon": map[string]interface{}{
+						"background_color": string("#324960"),
+						"class_name":       string("las la-key la-2x"),
+						"color":            string("white"),
+						"text_color":       string("#37474f"),
+					},
 				},
 			},
 		},
@@ -81,6 +87,12 @@ func TestNewIdentityStore(t *testing.T) {
 					"name":  "local_store",
 					"realm": "local",
 					"path":  dbPath,
+					"login_icon": map[string]interface{}{
+						"background_color": string("#324960"),
+						"class_name":       string("las la-key la-2x"),
+						"color":            string("white"),
+						"text_color":       string("#37474f"),
+					},
 				},
 				"ops": map[string]bool{
 					"AddAPIKey":       true,
@@ -256,6 +268,12 @@ func TestConfigureIdentityStore(t *testing.T) {
 					"name":  "local_store",
 					"realm": "local",
 					"path":  dbPath,
+					"login_icon": map[string]interface{}{
+						"background_color": string("#324960"),
+						"class_name":       string("las la-key la-2x"),
+						"color":            string("white"),
+						"text_color":       string("#37474f"),
+					},
 				},
 				"local_store_configured": true,
 			},

@@ -16,6 +16,7 @@ package saml
 
 import (
 	"fmt"
+	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
@@ -52,9 +53,8 @@ type Config struct {
 
 	TLSInsecureSkipVerify bool `json:"tls_insecure_skip_verify,omitempty" xml:"tls_insecure_skip_verify,omitempty" yaml:"tls_insecure_skip_verify,omitempty"`
 
-	IconName  string `json:"icon_name,omitempty" xml:"icon_name,omitempty" yaml:"icon_name,omitempty"`
-	IconText  string `json:"icon_text,omitempty" xml:"icon_text,omitempty" yaml:"icon_text,omitempty"`
-	IconColor string `json:"icon_color,omitempty" xml:"icon_color,omitempty" yaml:"icon_color,omitempty"`
+	// LoginIcon is the UI login icon attributes.
+	LoginIcon *icons.LoginIcon `json:"login_icon,omitempty" xml:"login_icon,omitempty" yaml:"login_icon,omitempty"`
 }
 
 // Validate validates identity store configuration.
@@ -108,32 +108,11 @@ func (cfg *Config) Validate() error {
 		return errors.ErrIdentityProviderConfig.WithArgs("IdP Signing Certificate not found")
 	}
 
-	// Configure UI Icons.
-	if cfg.IconName == "" {
-		switch cfg.Driver {
-		case "azure":
-			cfg.IconName = "windows"
-		default:
-			cfg.IconName = "codepen"
-		}
-	}
-
-	if cfg.IconText == "" {
-		switch cfg.Driver {
-		case "azure":
-			cfg.IconText = "Azure"
-		default:
-			cfg.IconText = cfg.Realm
-		}
-	}
-
-	if cfg.IconColor == "" {
-		switch cfg.Driver {
-		case "azure":
-			cfg.IconColor = "blue"
-		default:
-			cfg.IconColor = "grey darken-3"
-		}
+	// Configure UI login icon.
+	if cfg.LoginIcon == nil {
+		cfg.LoginIcon = icons.NewLoginIcon(cfg.Driver)
+	} else {
+		cfg.LoginIcon.Configure(cfg.Driver)
 	}
 
 	return nil

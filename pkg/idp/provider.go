@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	// "fmt"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
 	"github.com/greenpau/go-authcrunch/pkg/idp/saml"
@@ -34,9 +35,7 @@ type IdentityProvider interface {
 	Configure() error
 	Configured() bool
 	Request(operator.Type, *requests.Request) error
-	GetIconName() string
-	GetIconText() string
-	GetIconColor() string
+	GetLoginIcon() *icons.LoginIcon
 }
 
 // NewIdentityProvider returns IdentityProvider instance.
