@@ -96,7 +96,7 @@ qtest: covdir
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewPortal ./pkg/authn/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestServeHTTP ./pkg/authn/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestFactory ./pkg/authn/cookie/*.go
+	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestFactory ./pkg/authn/cookie/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestValidateJwksKey ./pkg/authn/backends/oauth2/jwks*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestTransformData ./pkg/authn/transformer/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/icons/...
@@ -105,7 +105,7 @@ qtest: covdir
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/idp/oauth/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewJwksKeyFromRSAPublicKeyPEM ./pkg/idp/oauth/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewIdentityProviderConfig ./pkg/idp/*.go
-	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/ui/...
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/ui/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/local/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/ldap/*.go

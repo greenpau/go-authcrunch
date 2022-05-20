@@ -24,22 +24,24 @@ import (
 // Config represents a common set of configuration settings
 // applicable to the cookies issued by authn.Authenticator.
 type Config struct {
-	Domains  map[string]*DomainConfig `json:"domains,omitempty" xml:"domains,omitempty" yaml:"domains,omitempty"`
-	Path     string                   `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
-	Lifetime int                      `json:"lifetime,omitempty" xml:"lifetime,omitempty" yaml:"lifetime,omitempty"`
-	Insecure bool                     `json:"insecure,omitempty" xml:"insecure,omitempty" yaml:"insecure,omitempty"`
-	SameSite string                   `json:"same_site,omitempty" xml:"same_site,omitempty" yaml:"same_site,omitempty"`
+	Domains            map[string]*DomainConfig `json:"domains,omitempty" xml:"domains,omitempty" yaml:"domains,omitempty"`
+	Path               string                   `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
+	Lifetime           int                      `json:"lifetime,omitempty" xml:"lifetime,omitempty" yaml:"lifetime,omitempty"`
+	Insecure           bool                     `json:"insecure,omitempty" xml:"insecure,omitempty" yaml:"insecure,omitempty"`
+	SameSite           string                   `json:"same_site,omitempty" xml:"same_site,omitempty" yaml:"same_site,omitempty"`
+	StripDomainEnabled bool                     `json:"strip_domain_enabled,omitempty" xml:"strip_domain_enabled,omitempty" yaml:"strip_domain_enabled,omitempty"`
 }
 
 // DomainConfig represents a common set of configuration settings
 // applicable to the cookies issued by authn.Authenticator.
 type DomainConfig struct {
-	Seq      int    `json:"seq,omitempty" xml:"seq,omitempty" yaml:"seq,omitempty"`
-	Domain   string `json:"domain,omitempty" xml:"domain,omitempty" yaml:"domain,omitempty"`
-	Path     string `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
-	Lifetime int    `json:"lifetime,omitempty" xml:"lifetime,omitempty" yaml:"lifetime,omitempty"`
-	Insecure bool   `json:"insecure,omitempty" xml:"insecure,omitempty" yaml:"insecure,omitempty"`
-	SameSite string `json:"same_site,omitempty" xml:"same_site,omitempty" yaml:"same_site,omitempty"`
+	Seq                int    `json:"seq,omitempty" xml:"seq,omitempty" yaml:"seq,omitempty"`
+	Domain             string `json:"domain,omitempty" xml:"domain,omitempty" yaml:"domain,omitempty"`
+	Path               string `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
+	Lifetime           int    `json:"lifetime,omitempty" xml:"lifetime,omitempty" yaml:"lifetime,omitempty"`
+	Insecure           bool   `json:"insecure,omitempty" xml:"insecure,omitempty" yaml:"insecure,omitempty"`
+	SameSite           string `json:"same_site,omitempty" xml:"same_site,omitempty" yaml:"same_site,omitempty"`
+	StripDomainEnabled bool   `json:"strip_domain_enabled,omitempty" xml:"strip_domain_enabled,omitempty" yaml:"strip_domain_enabled,omitempty"`
 }
 
 // Factory holds configuration and associated finctions
@@ -94,7 +96,7 @@ func (f *Factory) GetCookie(h, k, v string) string {
 	sb.WriteString(k + "=" + v + ";")
 
 	entry := f.evalHost(h)
-	if entry != nil {
+	if entry != nil && entry.Domain != "" {
 		sb.WriteString(fmt.Sprintf(" Domain=%s;", entry.Domain))
 	}
 
@@ -136,7 +138,7 @@ func (f *Factory) GetSessionCookie(h, s string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("%s=%s;", f.SessionID, s))
 	entry := f.evalHost(h)
-	if entry != nil {
+	if entry != nil && entry.Domain != "" {
 		sb.WriteString(fmt.Sprintf(" Domain=%s;", entry.Domain))
 	}
 
@@ -158,7 +160,7 @@ func (f *Factory) GetDeleteCookie(h, s string) string {
 	sb.WriteString(s)
 	sb.WriteString("=delete;")
 	entry := f.evalHost(h)
-	if entry != nil {
+	if entry != nil && entry.Domain != "" {
 		sb.WriteString(fmt.Sprintf(" Domain=%s;", entry.Domain))
 	}
 
@@ -182,7 +184,7 @@ func (f *Factory) GetDeleteSessionCookie(h string) string {
 	sb.WriteString(f.SessionID)
 	sb.WriteString("=delete;")
 	entry := f.evalHost(h)
-	if entry != nil {
+	if entry != nil && entry.Domain != "" {
 		sb.WriteString(fmt.Sprintf(" Domain=%s;", entry.Domain))
 	}
 	sb.WriteString(" Path=/;")
@@ -227,11 +229,16 @@ func (f *Factory) evalHost(h string) *DomainConfig {
 	}
 
 	c := &DomainConfig{}
+
 	if strings.Count(h, ".") == 1 {
 		c.Domain = string(h)
 	} else {
 		i = strings.IndexByte(h, '.')
 		c.Domain = string(h[i+1:])
+	}
+
+	if f.config.StripDomainEnabled {
+		c.Domain = ""
 	}
 
 	c.Path = f.config.Path
