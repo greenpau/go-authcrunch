@@ -15,6 +15,7 @@
 package handlers
 
 import (
+	"fmt"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"html/template"
@@ -117,7 +118,7 @@ func configureRedirect(w http.ResponseWriter, r *http.Request, rr *requests.Auth
 	} else {
 		rr.Redirect.URL = r.RequestURI
 	}
-	
+
 	rr.Redirect.Separator = "?"
 
 	if strings.Contains(rr.Redirect.AuthURL, "?") {
@@ -127,15 +128,13 @@ func configureRedirect(w http.ResponseWriter, r *http.Request, rr *requests.Auth
 	if len(rr.Redirect.LoginHint) > 0 {
 		loginHint := rr.Redirect.LoginHint
 		escapedLoginHint := url.QueryEscape(loginHint)
-		rr.Redirect.AuthURL = rr.Redirect.AuthURL + rr.Redirect.Separator + "login_hint" + "=" + escapedLoginHint
-		rr.Redirect.Separator = "&"
+		rr.Redirect.AuthURL = fmt.Sprintf("%s%slogin_hint=%s", rr.Redirect.AuthURL, rr.Redirect.Separator, escapedLoginHint)
 	}
 
 	if len(rr.Redirect.AdditionalScopes) > 0 {
 		additionalScopes := rr.Redirect.AdditionalScopes
 		escapedAdditionalScopes := url.QueryEscape(additionalScopes)
-		rr.Redirect.AuthURL = rr.Redirect.AuthURL + rr.Redirect.Separator + "additional_scopes" + "=" + escapedAdditionalScopes
-		rr.Redirect.Separator = "&"
+		rr.Redirect.AuthURL = fmt.Sprintf("%s%sadditional_scopes=%s", rr.Redirect.AuthURL, rr.Redirect.Separator, escapedAdditionalScopes)
 	}
 
 	return

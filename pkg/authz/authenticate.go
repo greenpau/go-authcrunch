@@ -319,7 +319,10 @@ func (g *Gatekeeper) handleLoginHint(r *http.Request, ar *requests.Authorization
 func (g *Gatekeeper) handleAdditionalScopes(r *http.Request, ar *requests.AuthorizationRequest) {
 	if additionalScopes := r.URL.Query().Get("additional_scopes"); additionalScopes != "" {
 		if err := validate.AdditionalScopes(additionalScopes); err != nil {
-			g.logger.Warn(err.Error())
+			g.logger.Warn("Provide a valid set of additional scopes in the query parameter (ex.: scope_A scopeB)",
+				zap.String("additional_scopes", additionalScopes),
+				zap.Error(err),
+			)
 		} else {
 			ar.Redirect.AdditionalScopes = additionalScopes
 		}

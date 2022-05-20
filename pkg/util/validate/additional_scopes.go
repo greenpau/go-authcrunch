@@ -5,11 +5,11 @@ import (
 	"regexp"
 )
 
+var pattern = regexp.MustCompile("^[\\w|\\s]+$")
+
 // AdditionalScopes verifies if the provided additional_scopes argument is valid
 func AdditionalScopes(additionalScopes string) error {
-	compile, _ := regexp.Compile("^[\\w|\\s]+$")
-	match := compile.MatchString(additionalScopes)
-	if match == false {
+	if !pattern.MatchString(additionalScopes) {
 		return errors.ErrInvalidAdditionalScopes
 	}
 	return nil
