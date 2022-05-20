@@ -24,6 +24,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	authncache "github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
@@ -65,6 +66,11 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{
+			name:  "test icons.LoginIcon struct",
+			entry: &icons.LoginIcon{},
+			opts:  &Options{},
+		},
 		{
 			name:  "test registry.LocaUserRegistry struct",
 			entry: &registry.LocaUserRegistry{},

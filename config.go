@@ -185,8 +185,9 @@ func (cfg *Config) Validate() error {
 				authByName[storeName] = "identity store in " + realmName + " realm"
 			}
 
-			// Add regustry store if configured.
+			// Add registry store if configured.
 			if v, exists := identityStoreUserRegistry[storeName]; exists {
+				storeConfig.Params["registration_enabled"] = true
 				portalCfg.UserRegistries = append(portalCfg.UserRegistries, v)
 			}
 		}

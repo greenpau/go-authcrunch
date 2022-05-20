@@ -17,6 +17,7 @@ package local
 import (
 	"encoding/json"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
@@ -32,6 +33,23 @@ type Config struct {
 	Realm string  `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
 	Path  string  `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
 	Users []*User `json:"users,omitempty" xml:"users,omitempty" yaml:"users,omitempty"`
+
+	// LoginIcon is the UI login icon attributes.
+	LoginIcon *icons.LoginIcon `json:"login_icon,omitempty" xml:"login_icon,omitempty" yaml:"login_icon,omitempty"`
+
+	// RegistrationEnabled controls whether visitors can registers.
+	RegistrationEnabled bool `json:"registration_enabled,omitempty" xml:"registration_enabled,omitempty" yaml:"registration_enabled,omitempty"`
+	// UsernameRecoveryEnabled controls whether a user could recover username by providing an email address.
+	UsernameRecoveryEnabled bool `json:"username_recovery_enabled,omitempty" xml:"username_recovery_enabled,omitempty" yaml:"username_recovery_enabled,omitempty"`
+	// PasswordRecoveryEnabled controls whether a user could recover password by providing an email address.
+	PasswordRecoveryEnabled bool `json:"password_recovery_enabled,omitempty" xml:"password_recovery_enabled,omitempty" yaml:"password_recovery_enabled,omitempty"`
+	// ContactSupportEnabled controls whether contact support link is available.
+	ContactSupportEnabled bool `json:"contact_support_enabled,omitempty" xml:"contact_support_enabled,omitempty" yaml:"contact_support_enabled,omitempty"`
+
+	// SupportLink is the link to the support portal.
+	SupportLink string `json:"support_link,omitempty" xml:"support_link,omitempty" yaml:"support_link,omitempty"`
+	// SupportEmail is the email address to reach support.
+	SupportEmail string `json:"support_email,omitempty" xml:"support_email,omitempty" yaml:"support_email,omitempty"`
 }
 
 // IdentityStore represents authentication provider with local identity store.
@@ -51,6 +69,13 @@ func NewIdentityStore(cfg *Config, logger *zap.Logger) (*IdentityStore, error) {
 	b := &IdentityStore{
 		config: cfg,
 		logger: logger,
+	}
+
+	// Configure UI login icon.
+	if b.config.LoginIcon == nil {
+		b.config.LoginIcon = icons.NewLoginIcon(storeKind)
+	} else {
+		b.config.LoginIcon.Configure(storeKind)
 	}
 
 	if err := b.config.Validate(); err != nil {
@@ -146,6 +171,7 @@ func (b *IdentityStore) Configure() error {
 		zap.String("name", b.config.Name),
 		zap.String("kind", storeKind),
 		zap.String("db_path", b.config.Path),
+		zap.Any("login_icon", b.config.LoginIcon),
 	)
 
 	b.configured = true
@@ -180,4 +206,16 @@ func (cfg *Config) Validate() error {
 		return errors.ErrIdentityStoreLocalConfigurePathEmpty
 	}
 	return nil
+}
+
+// GetLoginIcon returns the instance of the icon associated with the provider.
+func (b *IdentityStore) GetLoginIcon() *icons.LoginIcon {
+	// Add support and credentials recovery to the UI login icon.
+	b.config.LoginIcon.RegistrationEnabled = b.config.RegistrationEnabled
+	b.config.LoginIcon.UsernameRecoveryEnabled = b.config.UsernameRecoveryEnabled
+	b.config.LoginIcon.PasswordRecoveryEnabled = b.config.PasswordRecoveryEnabled
+	b.config.LoginIcon.ContactSupportEnabled = b.config.ContactSupportEnabled
+	b.config.LoginIcon.SupportLink = b.config.SupportLink
+	b.config.LoginIcon.SupportEmail = b.config.SupportEmail
+	return b.config.LoginIcon
 }

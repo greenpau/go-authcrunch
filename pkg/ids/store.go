@@ -16,8 +16,8 @@ package ids
 
 import (
 	"encoding/json"
-	// "fmt"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/ids/ldap"
 	"github.com/greenpau/go-authcrunch/pkg/ids/local"
@@ -34,6 +34,7 @@ type IdentityStore interface {
 	Configure() error
 	Configured() bool
 	Request(operator.Type, *requests.Request) error
+	GetLoginIcon() *icons.LoginIcon
 }
 
 // NewIdentityStore returns IdentityStore instance.
