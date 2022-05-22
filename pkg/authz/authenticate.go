@@ -204,6 +204,10 @@ func (g *Gatekeeper) handleAuthorizeWithRedirect(w http.ResponseWriter, r *http.
 		g.handleLoginHint(r, ar)
 	}
 
+	if g.config.AdditionalScopes {
+		g.handleAdditionalScopes(r, ar)
+	}
+
 	if g.config.RedirectWithJavascript {
 		g.logger.Debug(
 			"redirecting unauthorized user",
@@ -310,4 +314,18 @@ func (g *Gatekeeper) handleLoginHint(r *http.Request, ar *requests.Authorization
 			ar.Redirect.LoginHint = loginHint
 		}
 	}
+}
+
+func (g *Gatekeeper) handleAdditionalScopes(r *http.Request, ar *requests.AuthorizationRequest) {
+	if additionalScopes := r.URL.Query().Get("additional_scopes"); additionalScopes != "" {
+		if err := validate.AdditionalScopes(additionalScopes); err != nil {
+			g.logger.Warn("Provide a valid set of additional scopes in the query parameter (ex.: scope_A scopeB)",
+				zap.String("additional_scopes", additionalScopes),
+				zap.Error(err),
+			)
+		} else {
+			ar.Redirect.AdditionalScopes = additionalScopes
+		}
+	}
+
 }

@@ -135,4 +135,5 @@ const (
 	// InstanceManager errors.
 	ErrInstanceManagerValidate StandardError = "instance %q validation failed: %v"
 	ErrInvalidLoginHint        StandardError = "login_hint query parameter is not in a valid format"
+	ErrInvalidAdditionalScopes StandardError = "additional_scopes query parameter is not in a valid format"
 )

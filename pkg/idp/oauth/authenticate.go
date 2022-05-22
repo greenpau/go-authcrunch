@@ -37,8 +37,8 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	reqPath := r.Upstream.BaseURL + path.Join(r.Upstream.BasePath, r.Upstream.Method, r.Upstream.Realm)
 	r.Response.Code = http.StatusBadRequest
 
-	var accessTokenExists, idTokenExists, codeExists, stateExists, errorExists, loginHintExists bool
-	var reqParamsAccessToken, reqParamsIDToken, reqParamsState, reqParamsCode, reqParamsError, reqParamsLoginHint string
+	var accessTokenExists, idTokenExists, codeExists, stateExists, errorExists, loginHintExists, additionalScopesExists bool
+	var reqParamsAccessToken, reqParamsIDToken, reqParamsState, reqParamsCode, reqParamsError, reqParamsLoginHint, additionalScopes string
 	reqParams := r.Upstream.Request.URL.Query()
 	if _, exists := reqParams["access_token"]; exists {
 		accessTokenExists = true
@@ -63,6 +63,10 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	if _, exists := reqParams["login_hint"]; exists {
 		loginHintExists = true
 		reqParamsLoginHint = reqParams["login_hint"][0]
+	}
+	if _, exists := reqParams["additional_scopes"]; exists {
+		additionalScopesExists = true
+		additionalScopes = reqParams["additional_scopes"][0]
 	}
 
 	if stateExists || errorExists || codeExists || accessTokenExists {
@@ -191,7 +195,11 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		params.Set("nonce", nonce)
 	}
 	if !b.disableScope {
-		params.Set("scope", strings.Join(b.config.Scopes, " "))
+		scopes := b.config.Scopes
+		if additionalScopesExists {
+			scopes = append(scopes, strings.Split(additionalScopes, " ")...)
+		}
+		params.Set("scope", strings.Join(scopes, " "))
 	}
 
 	if b.config.JsCallbackEnabled {
@@ -206,6 +214,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	if loginHintExists {
 		params.Set("login_hint", reqParamsLoginHint)
 	}
+
 	params.Set("client_id", b.config.ClientID)
 
 	r.Response.RedirectURL = b.authorizationURL + "?" + params.Encode()
