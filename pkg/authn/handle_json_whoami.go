@@ -26,7 +26,8 @@ func (p *Portal) handleJSONWhoami(ctx context.Context, w http.ResponseWriter, r 
 	if usr == nil {
 		return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Access denied")
 	}
-	respBytes, _ := json.Marshal(usr.Claims)
+
+	respBytes, _ := json.Marshal(usr.AsMap())
 	w.WriteHeader(200)
 	w.Write(respBytes)
 	return nil
