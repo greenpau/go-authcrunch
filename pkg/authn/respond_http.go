@@ -36,8 +36,6 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 	case strings.HasSuffix(r.URL.Path, "/portal"):
 		return p.handleHTTPPortal(ctx, w, r, rr, usr)
-	case strings.HasSuffix(r.URL.Path, "/logout"):
-		return p.handleHTTPLogout(ctx, w, r, rr)
 	case strings.HasSuffix(r.URL.Path, "/recover"), strings.HasSuffix(r.URL.Path, "/forgot"):
 		// TODO(greenpau): implement password recovery.
 		return p.handleHTTPRecover(ctx, w, r, rr)
@@ -47,6 +45,8 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 		return p.handleHTTPRegister(ctx, w, r, rr)
 	case strings.HasSuffix(r.URL.Path, "/whoami"):
 		return p.handleHTTPWhoami(ctx, w, r, rr, usr)
+	case strings.Contains(r.URL.Path, "/oauth2/") && strings.HasSuffix(r.URL.Path, "/logout"):
+		return p.handleHTTPExternalLogout(ctx, w, r, rr, "oauth2")
 	case strings.Contains(r.URL.Path, "/saml/"):
 		// TODO(greenpau): implement
 		// p.logRequest("external saml login traceback", r, rr)
@@ -55,6 +55,8 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 		return p.handleHTTPExternalLogin(ctx, w, r, rr, "oauth2")
 	case strings.Contains(r.URL.Path, "/basic/login/"):
 		return p.handleHTTPBasicLogin(ctx, w, r, rr)
+	case strings.HasSuffix(r.URL.Path, "/logout"):
+		return p.handleHTTPLogout(ctx, w, r, rr, usr)
 	case strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon"):
 		return p.handleHTTPStaticAssets(ctx, w, r, rr)
 	case strings.Contains(r.URL.Path, "/sandbox/"):
@@ -164,6 +166,19 @@ func (p *Portal) handleHTTPRedirectSeeOther(ctx context.Context, w http.Response
 		zap.Int("status_code", http.StatusSeeOther),
 	)
 	w.WriteHeader(http.StatusSeeOther)
+	return nil
+}
+
+func (p *Portal) handleHTTPRedirectExternal(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, location string) error {
+	w.Header().Set("Location", location)
+	p.logger.Debug(
+		"External redirect served",
+		zap.String("session_id", rr.Upstream.SessionID),
+		zap.String("request_id", rr.ID),
+		zap.String("redirect_url", location),
+		zap.Int("status_code", http.StatusFound),
+	)
+	w.WriteHeader(http.StatusFound)
 	return nil
 }
 
@@ -291,8 +306,6 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 		rr.Upstream.BasePath = "/auth/"
 	case strings.HasSuffix(r.URL.Path, "/portal"):
 		extractBaseURLPath(ctx, r, rr, "/portal")
-	case strings.HasSuffix(r.URL.Path, "/logout"):
-		extractBaseURLPath(ctx, r, rr, "/logout")
 	case strings.Contains(r.URL.Path, "/sandbox/"):
 		extractBaseURLPath(ctx, r, rr, "/sandbox/")
 	case strings.Contains(r.URL.Path, "/settings"):
@@ -309,6 +322,8 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 		extractBaseURLPath(ctx, r, rr, "/oauth2/")
 	case strings.HasSuffix(r.URL.Path, "/basic/login"):
 		extractBaseURLPath(ctx, r, rr, "/basic/login")
+	case strings.HasSuffix(r.URL.Path, "/logout"):
+		extractBaseURLPath(ctx, r, rr, "/logout")
 	case strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon"):
 		extractBaseURLPath(ctx, r, rr, "/assets/")
 	case strings.HasSuffix(r.URL.Path, "/login"):

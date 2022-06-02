@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -39,6 +40,7 @@ type IdentityProvider struct {
 	authorizationURL string
 	tokenURL         string
 	keysURL          string
+	logoutURL        string
 	// The UserInfo API endpoint URL. Please
 	// see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
 	// for details.
@@ -361,6 +363,14 @@ func (b *IdentityProvider) fetchMetadataURL() error {
 	if _, exists := b.metadata["userinfo_endpoint"]; exists {
 		b.userInfoURL = b.metadata["userinfo_endpoint"].(string)
 	}
+	if _, exists := b.metadata["end_session_endpoint"]; exists {
+		b.logoutURL = b.metadata["end_session_endpoint"].(string)
+	}
+
+	switch b.config.Driver {
+	case "cognito":
+		b.logoutURL = strings.ReplaceAll(b.authorizationURL, "oauth2/authorize", "logout")
+	}
 	return nil
 }
 
@@ -439,4 +449,18 @@ func (b *IdentityProvider) fetchKeysURL() error {
 // GetLoginIcon returns the instance of the icon associated with the provider.
 func (b *IdentityProvider) GetLoginIcon() *icons.LoginIcon {
 	return b.config.LoginIcon
+}
+
+// GetLogoutURL returns the logout URL associated with the provider.
+func (b *IdentityProvider) GetLogoutURL() string {
+	switch b.config.Driver {
+	case "cognito":
+		return b.logoutURL + "?client_id=" + b.config.ClientID
+	}
+	return b.logoutURL
+}
+
+// GetDriver returns the name of the driver associated with the provider.
+func (b *IdentityProvider) GetDriver() string {
+	return b.config.Driver
 }

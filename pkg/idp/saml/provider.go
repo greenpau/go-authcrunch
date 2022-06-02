@@ -204,3 +204,13 @@ func (b *IdentityProvider) Configure() error {
 func (b *IdentityProvider) GetLoginIcon() *icons.LoginIcon {
 	return b.config.LoginIcon
 }
+
+// GetLogoutURL returns the logout URL associated with the provider.
+func (b *IdentityProvider) GetLogoutURL() string {
+	return ""
+}
+
+// GetDriver returns the name of the driver associated with the provider.
+func (b *IdentityProvider) GetDriver() string {
+	return b.config.Driver
+}

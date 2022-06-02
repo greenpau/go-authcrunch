@@ -31,11 +31,13 @@ type IdentityProvider interface {
 	GetRealm() string
 	GetName() string
 	GetKind() string
+	GetDriver() string
 	GetConfig() map[string]interface{}
 	Configure() error
 	Configured() bool
 	Request(operator.Type, *requests.Request) error
 	GetLoginIcon() *icons.LoginIcon
+	GetLogoutURL() string
 }
 
 // NewIdentityProvider returns IdentityProvider instance.

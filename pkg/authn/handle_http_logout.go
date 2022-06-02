@@ -17,9 +17,12 @@ package authn
 import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/user"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
+	"go.uber.org/zap"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 func (p *Portal) deleteAuthCookies(w http.ResponseWriter, r *http.Request) {
@@ -28,7 +31,7 @@ func (p *Portal) deleteAuthCookies(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
+func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, parsedUser *user.User) error {
 	p.disableClientCache(w)
 	p.injectRedirectURL(ctx, w, r, rr)
 	h := addrutil.GetSourceHost(r)
@@ -37,6 +40,25 @@ func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r 
 	}
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.Referer))
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SessionID))
+
+	if parsedUser != nil && parsedUser.Claims != nil {
+		p.logger.Debug(
+			"user logout",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.Any("user", parsedUser.Claims),
+		)
+		if strings.Contains(parsedUser.Claims.Issuer, "/oauth2/") {
+			return p.handleHTTPRedirect(ctx, w, r, rr, extractRealmLogout(parsedUser.Claims.Issuer, "oauth2"))
+		}
+	} else {
+		p.logger.Debug(
+			"user logout",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+		)
+	}
+
 	return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 }
 
@@ -68,4 +90,18 @@ func (p *Portal) handleHTTPLogoutWithLocalRedirect(ctx context.Context, w http.R
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login?redirect_url="+r.RequestURI)
 	}
 	return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
+}
+
+func extractRealmLogout(s, sp string) string {
+	var ready bool
+	for _, k := range strings.Split(s, "/") {
+		if k == sp {
+			ready = true
+			continue
+		}
+		if ready {
+			return "/" + strings.Join([]string{sp, k, "logout"}, "/")
+		}
+	}
+	return "/logout"
 }
