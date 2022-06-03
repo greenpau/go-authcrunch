@@ -67,6 +67,11 @@ func TestTagCompliance(t *testing.T) {
 		err       error
 	}{
 		{
+			name:  "test requests.IdentityTokenCookie struct",
+			entry: &requests.IdentityTokenCookie{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test icons.LoginIcon struct",
 			entry: &icons.LoginIcon{},
 			opts:  &Options{},

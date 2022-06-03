@@ -40,11 +40,14 @@ func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.R
 		return p.handleAPI(ctx, w, r, rr)
 	case strings.Contains(r.URL.Path, "/qrcode/"):
 		return p.handleQRCode(ctx, w, r, rr)
+	case strings.Contains(r.URL.RawQuery, "format=json"):
+		return p.handleJSON(ctx, w, r, rr)
 	}
 
 	switch rr.Upstream.ContentType {
 	case "application/json":
 		return p.handleJSON(ctx, w, r, rr)
 	}
+
 	return p.handleHTTP(ctx, w, r, rr)
 }

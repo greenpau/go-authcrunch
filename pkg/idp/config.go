@@ -83,6 +83,9 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			// AWS Cognito.
 			"user_pool_id",
 			"region",
+			// ID Token.
+			"identity_token_cookie_enabled",
+			"identity_token_cookie_name",
 			// Misc.
 			"required_token_fields",
 			"scopes",

@@ -133,6 +133,23 @@ func (f *Factory) GetCookie(h, k, v string) string {
 	return sb.String()
 }
 
+// GetIdentityTokenCookie returns raw identity token cookie string from key-value input.
+func (f *Factory) GetIdentityTokenCookie(k, v string) string {
+	var sb strings.Builder
+	sb.WriteString(k + "=" + v + ";")
+	sb.WriteString(" Path=/;")
+	if f.config.Lifetime != 0 {
+		sb.WriteString(fmt.Sprintf(" Max-Age=%d;", f.config.Lifetime))
+	}
+	if f.config.SameSite != "" {
+		sb.WriteString(fmt.Sprintf(" SameSite=%s;", f.config.SameSite))
+	}
+	if !f.config.Insecure {
+		sb.WriteString(" Secure; HttpOnly;")
+	}
+	return sb.String()
+}
+
 // GetSessionCookie return cookie holding session information
 func (f *Factory) GetSessionCookie(h, s string) string {
 	var sb strings.Builder
@@ -187,6 +204,16 @@ func (f *Factory) GetDeleteSessionCookie(h string) string {
 	if entry != nil && entry.Domain != "" {
 		sb.WriteString(fmt.Sprintf(" Domain=%s;", entry.Domain))
 	}
+	sb.WriteString(" Path=/;")
+	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
+	return sb.String()
+}
+
+// GetDeleteIdentityTokenCookie returns raw identity token cookie with attributes for delete action.
+func (f *Factory) GetDeleteIdentityTokenCookie(s string) string {
+	var sb strings.Builder
+	sb.WriteString(s)
+	sb.WriteString("=delete;")
 	sb.WriteString(" Path=/;")
 	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
 	return sb.String()

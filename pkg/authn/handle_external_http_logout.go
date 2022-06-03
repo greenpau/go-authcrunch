@@ -33,6 +33,12 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 	if provider == nil {
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 	}
+
+	providerIdentityTokenCookieName := provider.GetIdentityTokenCookieName()
+	if providerIdentityTokenCookieName != "" {
+		w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(providerIdentityTokenCookieName))
+	}
+
 	providerLogoutURL := provider.GetLogoutURL()
 	if providerLogoutURL == "" {
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")

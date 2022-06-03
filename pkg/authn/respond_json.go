@@ -88,6 +88,8 @@ func (p *Portal) handleJSON(ctx context.Context, w http.ResponseWriter, r *http.
 		return p.handleJSONLogin(ctx, w, r, rr)
 	case strings.Contains(r.URL.Path, "/whoami"):
 		return p.handleJSONWhoami(ctx, w, r, rr, usr)
+	case strings.Contains(r.URL.Path, "/beacon"):
+		return p.handleJSONBeacon(ctx, w, r, rr, usr)
 	}
 
 	if usr != nil {

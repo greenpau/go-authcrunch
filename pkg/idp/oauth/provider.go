@@ -464,3 +464,11 @@ func (b *IdentityProvider) GetLogoutURL() string {
 func (b *IdentityProvider) GetDriver() string {
 	return b.config.Driver
 }
+
+// GetIdentityTokenCookieName returns the name of the identity token cookie associated with the provider.
+func (b *IdentityProvider) GetIdentityTokenCookieName() string {
+	if b.config.IdentityTokenCookieEnabled {
+		return b.config.IdentityTokenCookieName
+	}
+	return ""
+}

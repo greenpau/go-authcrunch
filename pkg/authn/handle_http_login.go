@@ -401,8 +401,14 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	rr.Response.Authenticated = true
 	usr.Authorized = true
 	p.sessions.Add(rr.Upstream.SessionID, usr)
+
 	w.Header().Set("Authorization", "Bearer "+usr.Token)
 	w.Header().Set("Set-Cookie", p.cookie.GetCookie(h, usr.TokenName, usr.Token))
+
+	// Add a cookie with identity token, if id_token is available.
+	if rr.Response.IdentityTokenCookie.Enabled {
+		w.Header().Add("Set-Cookie", p.cookie.GetIdentityTokenCookie(rr.Response.IdentityTokenCookie.Name, rr.Response.IdentityTokenCookie.Payload))
+	}
 
 	if rr.Response.Workflow == "json-api" {
 		// Do not perform redirects to API logins.

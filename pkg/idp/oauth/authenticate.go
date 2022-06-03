@@ -155,6 +155,14 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 				)
 			}
 
+			if b.config.IdentityTokenCookieEnabled {
+				if v, exists := accessToken["id_token"]; exists {
+					r.Response.IdentityTokenCookie.Enabled = true
+					r.Response.IdentityTokenCookie.Name = b.config.IdentityTokenCookieName
+					r.Response.IdentityTokenCookie.Payload = v.(string)
+				}
+			}
+
 			r.Response.Payload = m
 			r.Response.Code = http.StatusOK
 			b.logger.Debug(
@@ -175,6 +183,13 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 
 			r.Response.Payload = m
 			r.Response.Code = http.StatusOK
+
+			if b.config.IdentityTokenCookieEnabled {
+				r.Response.IdentityTokenCookie.Enabled = true
+				r.Response.IdentityTokenCookie.Name = b.config.IdentityTokenCookieName
+				r.Response.IdentityTokenCookie.Payload = reqParamsIDToken
+			}
+
 			b.logger.Debug(
 				"decoded claims from OAuth 2.0 authorization server access token",
 				zap.String("request_id", r.ID),

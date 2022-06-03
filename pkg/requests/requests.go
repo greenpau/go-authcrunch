@@ -36,16 +36,24 @@ type Request struct {
 
 // Response hold the response associated with identity database
 type Response struct {
-	Code              int         `json:"code,omitempty" xml:"code,omitempty" yaml:"code,omitempty"`
-	RedirectURL       string      `json:"redirect_url,omitempty" xml:"redirect_url,omitempty" yaml:"redirect_url,omitempty"`
-	Payload           interface{} `json:"-"`
-	RedirectTokenName string      `json:"redirect_token_name,omitempty" xml:"redirect_token_name,omitempty" yaml:"redirect_token_name,omitempty"`
-	Authenticated     bool        `json:"authenticated,omitempty" xml:"authenticated,omitempty" yaml:"authenticated,omitempty"`
-	Authorized        bool        `json:"authorized,omitempty" xml:"authorized,omitempty" yaml:"authorized,omitempty"`
+	Code                int                 `json:"code,omitempty" xml:"code,omitempty" yaml:"code,omitempty"`
+	RedirectURL         string              `json:"redirect_url,omitempty" xml:"redirect_url,omitempty" yaml:"redirect_url,omitempty"`
+	Payload             interface{}         `json:"-"`
+	RedirectTokenName   string              `json:"redirect_token_name,omitempty" xml:"redirect_token_name,omitempty" yaml:"redirect_token_name,omitempty"`
+	Authenticated       bool                `json:"authenticated,omitempty" xml:"authenticated,omitempty" yaml:"authenticated,omitempty"`
+	Authorized          bool                `json:"authorized,omitempty" xml:"authorized,omitempty" yaml:"authorized,omitempty"`
+	IdentityTokenCookie IdentityTokenCookie `json:"-" xml:"-" yaml:"-"`
 	// Workflow is the type of workflow the response should follow.
 	Workflow string `json:"workflow,omitempty" xml:"workflow,omitempty" yaml:"workflow,omitempty"`
 	Title    string `json:"title,omitempty" xml:"title,omitempty" yaml:"title,omitempty"`
 	Message  string `json:"message,omitempty" xml:"message,omitempty" yaml:"message,omitempty"`
+}
+
+// IdentityTokenCookie holds the id_token cookie name and payload.
+type IdentityTokenCookie struct {
+	Name    string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Payload string `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
+	Enabled bool   `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
 }
 
 // Upstream hold the upstream request handler metadata.

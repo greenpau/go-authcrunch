@@ -38,6 +38,7 @@ type IdentityProvider interface {
 	Request(operator.Type, *requests.Request) error
 	GetLoginIcon() *icons.LoginIcon
 	GetLogoutURL() string
+	GetIdentityTokenCookieName() string
 }
 
 // NewIdentityProvider returns IdentityProvider instance.
