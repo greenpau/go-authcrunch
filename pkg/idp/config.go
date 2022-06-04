@@ -76,6 +76,7 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			// Enabled features.
 			"accept_header_enabled",
 			"js_callback_enabled",
+			"logout_enabled",
 			// Retry and delay.
 			"delay_start",
 			"retry_attempts",

@@ -120,9 +120,6 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 		if v, exists := data["id_token"]; exists {
 			if tp, err := kms.ParsePayloadFromToken(v.(string)); err == nil {
 				for k, val := range tp {
-					if !strings.HasPrefix(k, "custom:") {
-						continue
-					}
 					switch k {
 					case "custom:roles":
 						roles := []string{}
@@ -131,6 +128,10 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 						}
 						m["roles"] = roles
 					case "custom:timezone":
+						m["timezone"] = val.(string)
+					case "cognito:username":
+						m["username"] = val.(string)
+					case "zoneinfo":
 						m["timezone"] = val.(string)
 					}
 				}

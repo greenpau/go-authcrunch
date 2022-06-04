@@ -17,8 +17,8 @@ package authn
 import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/util"
 	"net/http"
+	"path"
 	"strings"
 )
 
@@ -39,6 +39,16 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(providerIdentityTokenCookieName))
 	}
 
+	cfg := provider.GetConfig()
+	logoutEnabled := false
+	if v, exists := cfg["logout_enabled"]; exists {
+		logoutEnabled = v.(bool)
+	}
+
+	if !logoutEnabled {
+		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
+	}
+
 	providerLogoutURL := provider.GetLogoutURL()
 	if providerLogoutURL == "" {
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
@@ -47,7 +57,7 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 	switch provider.GetDriver() {
 	case "cognito":
 		// Add redirect_uri to the logout URL.
-		providerLogoutURL += "&logout_uri=" + util.GetCurrentBaseURL(r) + "/logout"
+		providerLogoutURL += "&logout_uri=" + rr.Upstream.BaseURL + path.Join(rr.Upstream.BasePath, "/logout")
 	}
 
 	return p.handleHTTPRedirectExternal(ctx, w, r, rr, providerLogoutURL)

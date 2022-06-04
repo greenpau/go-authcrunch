@@ -81,6 +81,9 @@ type Config struct {
 
 	JsCallbackEnabled bool `json:"js_callback_enabled,omitempty" xml:"js_callback_enabled,omitempty" yaml:"js_callback_enabled,omitempty"`
 
+	// If enabled, portal redirects to identity provider logout URL. This would end the session with the provider.
+	LogoutEnabled bool `json:"logout_enabled,omitempty" xml:"logout_enabled,omitempty" yaml:"logout_enabled,omitempty"`
+
 	ResponseType []string `json:"response_type,omitempty" xml:"response_type,omitempty" yaml:"response_type,omitempty"`
 
 	AuthorizationURL string `json:"authorization_url,omitempty" xml:"authorization_url,omitempty" yaml:"authorization_url,omitempty"`
