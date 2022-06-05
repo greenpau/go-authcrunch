@@ -34,7 +34,7 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 	case r.URL.Path == "/" || r.URL.Path == "/auth" || r.URL.Path == "/auth/":
 		p.injectRedirectURL(ctx, w, r, rr)
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
-	case strings.HasSuffix(r.URL.Path, "/portal"):
+	case strings.Contains(r.URL.Path, "/portal"):
 		return p.handleHTTPPortal(ctx, w, r, rr, usr)
 	case strings.HasSuffix(r.URL.Path, "/recover"), strings.HasSuffix(r.URL.Path, "/forgot"):
 		// TODO(greenpau): implement password recovery.
@@ -134,6 +134,11 @@ func (p *Portal) handleHTTPGeneric(ctx context.Context, w http.ResponseWriter, r
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
 	resp.PageTitle = msg
+	switch code {
+	case http.StatusServiceUnavailable:
+		resp.Data["message"] = "This service is not available to you."
+	}
+
 	resp.Data["authenticated"] = rr.Response.Authenticated
 	resp.Data["go_back_url"] = rr.Upstream.BasePath
 	content, err := p.ui.Render("generic", resp)

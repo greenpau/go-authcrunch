@@ -48,19 +48,6 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 		return p.handleHTTPLogoutWithLocalRedirect(ctx, w, r, rr)
 	}
 
-	backend := p.getIdentityStoreByRealm(usr.Authenticator.Realm)
-	if backend == nil {
-		p.logger.Warn(
-			"backend not found",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-			zap.String("realm", usr.Authenticator.Realm),
-			zap.String("jti", parsedUser.Claims.ID),
-			zap.String("source_address", addrutil.GetSourceAddress(r)),
-		)
-		return p.handleHTTPLogoutWithLocalRedirect(ctx, w, r, rr)
-	}
-
 	if permitted := usr.HasRole("authp/admin", "authp/user"); !permitted {
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
 	}
@@ -74,6 +61,20 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 	endpoint, err := getEndpoint(r.URL.Path, "/settings")
 	if err != nil {
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
+	}
+
+	backend := p.getIdentityStoreByRealm(usr.Authenticator.Realm)
+	if backend == nil {
+		p.logger.Warn(
+			"backend not found",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.String("realm", usr.Authenticator.Realm),
+			zap.String("jti", parsedUser.Claims.ID),
+			zap.String("source_address", addrutil.GetSourceAddress(r)),
+			zap.Any("XXX", usr.Authenticator),
+		)
+		return p.handleHTTPLogoutWithLocalRedirect(ctx, w, r, rr)
 	}
 
 	p.logger.Debug(
