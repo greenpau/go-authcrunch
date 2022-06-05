@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>{{ .Title }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Authentication Portal">
-    <meta name="author" content="Paul Greenberg github.com/greenpau">
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
     <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
 
@@ -38,7 +38,7 @@
                   {{ if .LogoURL }}
                   <img class="d-block mx-auto mb-2" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" width="72" height="72">
                   {{ end }}
-                  <h4>{{ .Title }}</h4>
+                  <h4>{{ .PageTitle }}</h4>
                 </div>
               </span>
               {{ if eq .Data.view "register" }}

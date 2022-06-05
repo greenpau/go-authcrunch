@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-blue-100">
   <head>
-    <title>{{ .Title }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="description" content="Authentication Portal" />
-    <meta name="author" content="Paul Greenberg github.com/greenpau" />
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
     <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
@@ -29,7 +29,7 @@
               </div>
             {{ end }}
             <div class="col-span-3 self-end">
-              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .Title }}</h2>
+              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
             </div>
           </div>
 

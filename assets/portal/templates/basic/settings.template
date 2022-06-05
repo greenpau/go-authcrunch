@@ -1,13 +1,12 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>{{ .Title }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-    <meta name="description" content="Authentication Portal">
-    <meta name="author" content="Paul Greenberg github.com/greenpau">
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
     <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
 
@@ -40,7 +39,7 @@
             {{ if .LogoURL }}
             <img src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
             {{ end }}
-            <a href="#" class="brand-logo">{{ .Title }}</a>
+            <a href="#" class="brand-logo">{{ .PageTitle }}</a>
             <ul id="nav-mobile" class="right hide-on-med-and-down">
               <li>
                 <a href="{{ pathjoin .ActionEndpoint "/portal" }}">

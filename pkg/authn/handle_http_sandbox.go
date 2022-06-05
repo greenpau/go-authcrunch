@@ -177,9 +177,9 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 
 	// Handle the processing of user views, e.g. app or U2F tokens, etc.
 	resp := p.ui.GetArgs()
-	resp.Title = "User Authorization"
+	resp.PageTitle = "User Authorization"
 	if _, exists := data["title"]; exists {
-		resp.Title = data["title"].(string)
+		resp.PageTitle = data["title"].(string)
 	}
 	resp.BaseURL(rr.Upstream.BasePath)
 	resp.Data["id"] = sandboxID

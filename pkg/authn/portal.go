@@ -448,6 +448,24 @@ func (p *Portal) configureUserInterface() error {
 		p.ui.LogoURL = path.Join(p.ui.LogoURL)
 	}
 
+	if p.config.UI.MetaTitle != "" {
+		p.ui.MetaTitle = p.config.UI.MetaTitle
+	} else {
+		p.ui.MetaTitle = "Authentication Portal"
+	}
+
+	if p.config.UI.MetaAuthor != "" {
+		p.ui.MetaAuthor = p.config.UI.MetaAuthor
+	} else {
+		p.ui.MetaAuthor = "Paul Greenberg github.com/greenpau"
+	}
+
+	if p.config.UI.MetaDescription != "" {
+		p.ui.MetaDescription = p.config.UI.MetaDescription
+	} else {
+		p.ui.MetaDescription = "Performs user authentication."
+	}
+
 	if len(p.config.UI.PrivateLinks) > 0 {
 		p.ui.PrivateLinks = p.config.UI.PrivateLinks
 	}

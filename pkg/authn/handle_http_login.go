@@ -48,9 +48,9 @@ func (p *Portal) handleHTTPLoginScreen(ctx context.Context, w http.ResponseWrite
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
 	if p.config.UI.Title == "" {
-		resp.Title = "Sign In"
+		resp.PageTitle = "Sign In"
 	} else {
-		resp.Title = p.config.UI.Title
+		resp.PageTitle = p.config.UI.Title
 	}
 	resp.Data["authenticated"] = rr.Response.Authenticated
 	resp.Data["login_options"] = p.loginOptions

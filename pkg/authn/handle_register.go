@@ -75,7 +75,7 @@ func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http
 
 	switch reg.view {
 	case "register":
-		resp.Title = p.userRegistry.GetTitle()
+		resp.PageTitle = p.userRegistry.GetTitle()
 		if p.userRegistry.GetRequireAcceptTerms() {
 			resp.Data["require_accept_terms"] = true
 		}
@@ -104,15 +104,15 @@ func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http
 			resp.Message = reg.message
 		}
 	case "registered":
-		resp.Title = "Thank you!"
+		resp.PageTitle = "Thank you!"
 	case "ackfail":
-		resp.Title = "Registration"
+		resp.PageTitle = "Registration"
 		resp.Data["message"] = reg.message
 	case "ack":
-		resp.Title = "Registration"
+		resp.PageTitle = "Registration"
 		resp.Data["registration_id"] = reg.registrationID
 	case "acked":
-		resp.Title = "Registration"
+		resp.PageTitle = "Registration"
 	}
 
 	content, err := p.ui.Render("register", resp)

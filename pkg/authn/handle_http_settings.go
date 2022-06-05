@@ -87,7 +87,7 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 	)
 
 	resp := p.ui.GetArgs()
-	resp.Title = "Settings"
+	resp.PageTitle = "Settings"
 	resp.BaseURL(rr.Upstream.BasePath)
 
 	// Populate username (sub) and email address (email)

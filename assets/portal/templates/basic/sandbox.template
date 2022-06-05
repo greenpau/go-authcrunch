@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>{{ .Title }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Authentication Portal">
-    <meta name="author" content="Paul Greenberg github.com/greenpau">
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
     <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
     <!-- Matrialize CSS -->
@@ -38,7 +38,7 @@
             </div>
             {{ end }}
             <div class"row center">
-              <h5>{{ .Title }}</h5>
+              <h5>{{ .PageTitle }}</h5>
             </div>
           </div>
           {{ if or (eq .Data.view "mfa_mixed_auth") (eq .Data.view "mfa_mixed_register") }}

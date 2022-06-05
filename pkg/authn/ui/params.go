@@ -23,6 +23,9 @@ type Parameters struct {
 	Title                   string            `json:"title,omitempty" xml:"title,omitempty" yaml:"title,omitempty"`
 	LogoURL                 string            `json:"logo_url,omitempty" xml:"logo_url,omitempty" yaml:"logo_url,omitempty"`
 	LogoDescription         string            `json:"logo_description,omitempty" xml:"logo_description,omitempty" yaml:"logo_description,omitempty"`
+	MetaTitle               string            `json:"meta_title,omitempty" xml:"meta_title,omitempty" yaml:"meta_title,omitempty"`
+	MetaDescription         string            `json:"meta_description,omitempty" xml:"meta_description,omitempty" yaml:"meta_description,omitempty"`
+	MetaAuthor              string            `json:"meta_author,omitempty" xml:"meta_author,omitempty" yaml:"meta_author,omitempty"`
 	PrivateLinks            []Link            `json:"private_links,omitempty" xml:"private_links,omitempty" yaml:"private_links,omitempty"`
 	AutoRedirectURL         string            `json:"auto_redirect_url,omitempty" xml:"auto_redirect_url,omitempty" yaml:"auto_redirect_url,omitempty"`
 	Realms                  []UserRealm       `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`

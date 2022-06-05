@@ -19,12 +19,12 @@ var PageTemplates = map[string]string{
 	"basic/login": `<!DOCTYPE html>
 <html lang="en" class="h-full bg-blue-100">
   <head>
-    <title>{{ .Title }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="description" content="Authentication Portal" />
-    <meta name="author" content="Paul Greenberg github.com/greenpau" />
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
     <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
@@ -47,7 +47,7 @@ var PageTemplates = map[string]string{
             {{ if .LogoURL }}
               <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
             {{ end }}
-            <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .Title }}</h2>
+            <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
           </div>
 
           {{ if eq .Data.login_options.form_required "yes" }}
@@ -195,12 +195,12 @@ var PageTemplates = map[string]string{
 	"basic/portal": `<!DOCTYPE html>
 <html lang="en" class="h-full bg-blue-100">
   <head>
-    <title>{{ .Title }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="description" content="Authentication Portal" />
-    <meta name="author" content="Paul Greenberg github.com/greenpau" />
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
     <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
@@ -222,7 +222,7 @@ var PageTemplates = map[string]string{
               </div>
             {{ end }}
             <div class="col-span-3 self-end">
-              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .Title }}</h2>
+              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
             </div>
           </div>
           <div>
@@ -271,12 +271,12 @@ var PageTemplates = map[string]string{
 	"basic/whoami": `<!DOCTYPE html>
 <html lang="en" class="h-full bg-blue-100">
   <head>
-    <title>{{ .Title }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="description" content="Authentication Portal" />
-    <meta name="author" content="Paul Greenberg github.com/greenpau" />
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
     <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
@@ -299,7 +299,7 @@ var PageTemplates = map[string]string{
               </div>
             {{ end }}
             <div class="col-span-3 self-end">
-              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .Title }}</h2>
+              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
             </div>
           </div>
 
@@ -330,12 +330,12 @@ var PageTemplates = map[string]string{
 	"basic/register": `<!doctype html>
 <html lang="en">
   <head>
-    <title>{{ .Title }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Authentication Portal">
-    <meta name="author" content="Paul Greenberg github.com/greenpau">
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
     <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
 
@@ -367,7 +367,7 @@ var PageTemplates = map[string]string{
                   {{ if .LogoURL }}
                   <img class="d-block mx-auto mb-2" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" width="72" height="72">
                   {{ end }}
-                  <h4>{{ .Title }}</h4>
+                  <h4>{{ .PageTitle }}</h4>
                 </div>
               </span>
               {{ if eq .Data.view "register" }}
@@ -523,76 +523,71 @@ var PageTemplates = map[string]string{
     {{ end }}
   </body>
 </html>`,
-	"basic/generic": `<!doctype html>
-<html lang="en">
+	"basic/generic": `<!DOCTYPE html>
+<html lang="en" class="h-full bg-blue-100">
   <head>
-    <title>{{ .Title }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Authentication Portal">
-    <meta name="author" content="Paul Greenberg github.com/greenpau">
-    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
-    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
-
-    <!-- Matrialize CSS -->
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/materialize-css/css/materialize.css" }}" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
+    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/styles.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/generic.css" }}" />
     {{ if eq .Data.ui_options.custom_css_required "yes" }}
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
+      <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
     {{ end }}
   </head>
-  <body class="app-body">
-    <div class="container">
-      <div class="row">
-        <div class="col s12 m12 l6 offset-l3">
-          <div class="card card-large app-card">
-            <div class="card-content">
-              <span class="card-title center-align">
-                <div class="section app-header">
-                  {{ if .LogoURL }}
-                  <a href="{{ pathjoin .ActionEndpoint }}">
-                    <img class="d-block mx-auto mb-2" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" width="72" height="72">
-                  </a>
+
+  <body class="h-full">
+    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
+      <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md md:max-w-2xl lg:max-w-2xl lg:mt-8">
+        <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
+          <div class="bg-white min-h-full px-4 py-16 sm:px-6 sm:py-24 md:grid md:place-items-center lg:px-8">
+            <div class="max-w-max mx-auto">
+              <main class="sm:flex">
+                {{ if .LogoURL }}
+                  <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+                {{ end }}
+                <div class="sm:ml-6">
+                  <div class="sm:border-l sm:border-gray-200 sm:pl-6">
+                    <h1 class="text-4xl font-extrabold text-primary-700 tracking-tight sm:text-5xl">{{ .PageTitle }}</h1>
+                    <p class="mt-1 text-base text-primary-500">{{ .Data.message }}</p>
+                  </div>
+                  {{ if .Data.go_back_url }}
+                    <div class="mt-10 flex space-x-3 sm:border-l sm:border-transparent sm:pl-6">
+                      <a href="{{ .Data.go_back_url }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"> Go back </a>
+                    </div>
                   {{ end }}
-                  <h4>{{ .Title }}</h4>
                 </div>
-              </span>
-            </div>
-            <div class="card-action right-align">
-              {{ if .Data.go_back_url }}
-              <a href="{{ .Data.go_back_url }}" class="navbtn-last">
-                <button type="button" class="btn waves-effect waves-light navbtn active navbtn-last app-btn">
-                  <i class="las la-undo left app-btn-icon"></i>
-                  <span class="app-btn-text">Go Back</span>
-                </button>
-              </a>
-              {{ end }}
+              </main>
             </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Optional JavaScript -->
-    <script src="{{ pathjoin .ActionEndpoint "/assets/materialize-css/js/materialize.js" }}"></script>
+    <!-- JavaScript -->
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/generic.js" }}"></script>
     {{ if eq .Data.ui_options.custom_js_required "yes" }}
-    <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
+      <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
     {{ end }}
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
   </body>
 </html>`,
 	"basic/settings": `<!doctype html>
 <html lang="en">
   <head>
-    <title>{{ .Title }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-    <meta name="description" content="Authentication Portal">
-    <meta name="author" content="Paul Greenberg github.com/greenpau">
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
     <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
 
@@ -625,7 +620,7 @@ var PageTemplates = map[string]string{
             {{ if .LogoURL }}
             <img src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
             {{ end }}
-            <a href="#" class="brand-logo">{{ .Title }}</a>
+            <a href="#" class="brand-logo">{{ .PageTitle }}</a>
             <ul id="nav-mobile" class="right hide-on-med-and-down">
               <li>
                 <a href="{{ pathjoin .ActionEndpoint "/portal" }}">
@@ -1505,12 +1500,12 @@ function u2f_token_authenticate(formID, btnID) {
 	"basic/sandbox": `<!doctype html>
 <html lang="en">
   <head>
-    <title>{{ .Title }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Authentication Portal">
-    <meta name="author" content="Paul Greenberg github.com/greenpau">
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
     <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
     <!-- Matrialize CSS -->
@@ -1542,7 +1537,7 @@ function u2f_token_authenticate(formID, btnID) {
             </div>
             {{ end }}
             <div class"row center">
-              <h5>{{ .Title }}</h5>
+              <h5>{{ .PageTitle }}</h5>
             </div>
           </div>
           {{ if or (eq .Data.view "mfa_mixed_auth") (eq .Data.view "mfa_mixed_register") }}

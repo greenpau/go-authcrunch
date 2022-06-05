@@ -98,13 +98,17 @@ func (p *Portal) handleHTTPError(ctx context.Context, w http.ResponseWriter, r *
 	p.disableClientCache(w)
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
-	resp.Title = http.StatusText(code)
+	resp.PageTitle = http.StatusText(code)
 
 	switch code {
 	case http.StatusForbidden:
-		resp.Title = "Access Denied"
+		resp.PageTitle = "Access Denied"
+		resp.Data["message"] = "Please contact support if you believe this is an error."
+	case http.StatusNotFound:
+		resp.PageTitle = "Page Not Found"
+		resp.Data["message"] = "The page you are looking for could not be found."
 	default:
-		resp.Title = http.StatusText(code)
+		resp.PageTitle = http.StatusText(code)
 	}
 
 	resp.Data["authenticated"] = rr.Response.Authenticated
@@ -129,7 +133,7 @@ func (p *Portal) handleHTTPGeneric(ctx context.Context, w http.ResponseWriter, r
 	p.disableClientCache(w)
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
-	resp.Title = msg
+	resp.PageTitle = msg
 	resp.Data["authenticated"] = rr.Response.Authenticated
 	resp.Data["go_back_url"] = rr.Upstream.BasePath
 	content, err := p.ui.Render("generic", resp)

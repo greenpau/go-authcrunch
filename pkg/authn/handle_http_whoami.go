@@ -33,7 +33,7 @@ func (p *Portal) handleHTTPWhoami(ctx context.Context, w http.ResponseWriter, r 
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 	}
 	resp := p.ui.GetArgs()
-	resp.Title = "User Identity"
+	resp.PageTitle = "User Identity"
 	resp.BaseURL(rr.Upstream.BasePath)
 	tokenMap := make(map[string]interface{})
 	for k, v := range usr.AsMap() {
