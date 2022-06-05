@@ -29,4 +29,5 @@ type Parameters struct {
 	PasswordRecoveryEnabled bool              `json:"password_recovery_enabled,omitempty" xml:"password_recovery_enabled,omitempty" yaml:"password_recovery_enabled,omitempty"`
 	CustomCSSPath           string            `json:"custom_css_path,omitempty" xml:"custom_css_path,omitempty" yaml:"custom_css_path,omitempty"`
 	CustomJsPath            string            `json:"custom_js_path,omitempty" xml:"custom_js_path,omitempty" yaml:"custom_js_path,omitempty"`
+	Language                string            `json:"language,omitempty" xml:"language,omitempty" yaml:"language,omitempty"`
 }

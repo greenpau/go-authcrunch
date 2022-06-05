@@ -1,79 +1,76 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-blue-100">
   <head>
     <title>{{ .Title }}</title>
     <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Authentication Portal">
-    <meta name="author" content="Paul Greenberg github.com/greenpau">
-    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
-    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
-    <!-- Matrialize CSS -->
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/materialize-css/css/materialize.css" }}" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="Authentication Portal" />
+    <meta name="author" content="Paul Greenberg github.com/greenpau" />
+    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/styles.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/portal.css" }}" />
     {{ if eq .Data.ui_options.custom_css_required "yes" }}
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
+      <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
     {{ end }}
   </head>
-  <body class="app-body">
-    <div class="container">
-      <div class="row">
-        <div class="col s12 m6 offset-m3 l4 offset-l4 app-card-container">
-          <div class="row app-header center">
+
+  <body class="h-full">
+    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
+      <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md lg:mt-8">
+        <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
+          <div class="grid grid-cols-4 gap-2 pb-4 sm:mx-auto sm:w-full sm:max-w-md">
             {{ if .LogoURL }}
-            <div class="col">
-              <img class="d-block mx-auto mb-2" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" width="72" height="72">
-            </div>
-            <div class="col">
-              <h4>{{ .Title }}</h4>
-            </div>
-            {{ else }}
-              <h4>{{ .Title }}</h4>
+              <div>
+                <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+              </div>
             {{ end }}
+            <div class="col-span-3 self-end">
+              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .Title }}</h2>
+            </div>
           </div>
-          <div class="row">
-            <p class="app-text">Access the following services.</p>
-            <ul class="collection">
-              {{range .PrivateLinks}}
-              <li class="collection-item">
-                {{ if .IconEnabled -}}
-                <i class="{{ .IconName }}"></i>
-                {{- end }}
-                <a href="{{ .Link }}"{{ if .TargetEnabled }} target="{{ .Target }}"{{ end }}>{{ .Title }}</a>
-              </li>
-              {{ end }}
-            </ul>
+          <div>
+            <p class="block pb-2 text-lg font-sans font-medium text-primary-700">Access the following services.</p>
           </div>
-          <div class="row right">
-            <a href="{{ pathjoin .ActionEndpoint "/logout" }}" class="navbtn-last">
-              <button type="button" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
-                <i class="las la-sign-out-alt left app-btn-icon"></i>
-                <span class="app-btn-text">Logout</span>
-              </button>
-            </a>
+          <div class="mt-3 grid">
+            {{ range .PrivateLinks }}
+              <div class="pb-2">
+                <a href="{{ .Link }}" {{ if .TargetEnabled }}target="{{ .Target }}"{{ end }}>
+                  <div class="w-full flex border border-primary-50 rounded-md">
+                    <div class="p-4 bg-primary-100 text-primary-600 shadow-sm rounded-l-md text-2xl">
+                      {{ if .IconEnabled -}}
+                        <i class="{{ .IconName }}"></i>
+                      {{- end }}
+                    </div>
+                    <div class="p-4 grow hover:bg-primary-100 shadow-sm rounded-r-md text-primary-600 text-2xl">
+                      <span>{{ .Title }}</span>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            {{ end }}
+            <div class="pb-2">
+              <a href="{{ pathjoin .ActionEndpoint "/logout" }}">
+                <div class="w-full flex border border-primary-50 rounded-md">
+                  <div class="p-4 bg-primary-100 text-primary-600 shadow-sm rounded-l-md text-2xl">
+                    <i class="las la-sign-out-alt"></i>
+                  </div>
+                  <div class="p-4 grow hover:bg-primary-100 shadow-sm rounded-r-md text-primary-600 text-2xl">
+                    <span>Sign Out</span>
+                  </div>
+                </div>
+              </a>
+            </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Optional JavaScript -->
-    <script src="{{ pathjoin .ActionEndpoint "/assets/materialize-css/js/materialize.js" }}"></script>
+    <!-- JavaScript -->
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/portal.js" }}"></script>
     {{ if eq .Data.ui_options.custom_js_required "yes" }}
-    <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
-    {{ end }}
-    {{ if .Message }}
-    <script>
-    var toastHTML = '<span>{{ .Message }}</span><button class="btn-flat toast-action" onclick="M.Toast.dismissAll();">Close</button>';
-    toastElement = M.toast({
-      html: toastHTML,
-      classes: 'toast-error'
-    });
-    const appContainer = document.querySelector('.app-card-container')
-    appContainer.prepend(toastElement.el)
-    </script>
+      <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
     {{ end }}
   </body>
 </html>

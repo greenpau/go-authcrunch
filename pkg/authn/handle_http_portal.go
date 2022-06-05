@@ -63,7 +63,7 @@ func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWrit
 	}
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
-	resp.Title = "Welcome"
+	resp.Title = "Applications"
 	if len(usr.FrontendLinks) > 0 {
 		// Add additional frontend links.
 		resp.AddFrontendLinks(usr.FrontendLinks)
