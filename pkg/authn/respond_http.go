@@ -34,6 +34,8 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 	case r.URL.Path == "/" || r.URL.Path == "/auth" || r.URL.Path == "/auth/":
 		p.injectRedirectURL(ctx, w, r, rr)
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
+	case strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon"):
+		return p.handleHTTPStaticAssets(ctx, w, r, rr)
 	case strings.Contains(r.URL.Path, "/portal"):
 		return p.handleHTTPPortal(ctx, w, r, rr, usr)
 	case strings.HasSuffix(r.URL.Path, "/recover"), strings.HasSuffix(r.URL.Path, "/forgot"):
@@ -57,8 +59,6 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 		return p.handleHTTPBasicLogin(ctx, w, r, rr)
 	case strings.HasSuffix(r.URL.Path, "/logout"):
 		return p.handleHTTPLogout(ctx, w, r, rr, usr)
-	case strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon"):
-		return p.handleHTTPStaticAssets(ctx, w, r, rr)
 	case strings.Contains(r.URL.Path, "/sandbox/"):
 		return p.handleHTTPSandbox(ctx, w, r, rr)
 	case strings.HasSuffix(r.URL.Path, "/login"):
@@ -207,12 +207,23 @@ func (p *Portal) handleHTTPRenderError(ctx context.Context, w http.ResponseWrite
 		"Failed HTML response rendering",
 		zap.String("session_id", rr.Upstream.SessionID),
 		zap.String("request_id", rr.ID),
-		zap.String("error", err.Error()),
+		zap.Error(err),
 	)
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte(http.StatusText(http.StatusInternalServerError)))
-	return nil
+
+	resp := p.ui.GetArgs()
+	resp.BaseURL(rr.Upstream.BasePath)
+	resp.PageTitle = http.StatusText(http.StatusInternalServerError)
+	resp.Data["go_back_url"] = "/"
+	resp.Data["message"] = "Unexpected server error occurred. If persists, please contact support."
+
+	content, err := p.ui.Render("generic", resp)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(http.StatusText(http.StatusInternalServerError)))
+		return nil
+	}
+	return p.handleHTTPRenderHTML(ctx, w, http.StatusInternalServerError, content.Bytes())
 }
 
 func (p *Portal) handleHTTPRenderHTML(ctx context.Context, w http.ResponseWriter, code int, body []byte) error {

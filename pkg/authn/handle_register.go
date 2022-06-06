@@ -126,7 +126,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 	var message string
 	var maxBytesLimit int64 = 1000
 	var minBytesLimit int64 = 15
-	var userHandle, userMail, userSecret, userSecretConfirm, userCode string
+	var userHandle, userMail, userSecret, userCode string
 	var violations []string
 	var userAccept, validUserRegistration bool
 	validUserRegistration = true
@@ -172,8 +172,6 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 				userHandle = v[0]
 			case "registrant_password":
 				userSecret = v[0]
-			case "registrant_password_confirm":
-				userSecretConfirm = v[0]
 			case "registrant_email":
 				userMail = v[0]
 			case "registrant_code":
@@ -188,11 +186,6 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 
 	if validUserRegistration {
 		// Inspect registration values.
-		if userSecret != userSecretConfirm {
-			validUserRegistration = false
-			message = "Failed processing the registration form due to mismatched passwords"
-		}
-
 		if p.userRegistry.GetCode() != "" {
 			if userCode != p.userRegistry.GetCode() {
 				validUserRegistration = false

@@ -1,101 +1,159 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-blue-100">
   <head>
     <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="description" content="{{ .MetaDescription }}" />
     <meta name="author" content="{{ .MetaAuthor }}" />
-    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
-    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
-
-		<!-- Matrialize CSS -->
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/materialize-css/css/materialize.css" }}" />
+    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/montserrat.css" }}" />
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/styles.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/register.css" }}" />
     {{ if eq .Data.ui_options.custom_css_required "yes" }}
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
+      <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
     {{ end }}
   </head>
-  <body class="app-body">
-    <div class="container">
-      <div class="row">
-        <div class="col s12 m12 l6 offset-l3 registration-container">
-          {{ if eq .Data.view "register" }}
-          <form action="{{ pathjoin .ActionEndpoint "/register" }}" method="POST">
-          {{ end }}
-          {{ if eq .Data.view "ack" }}
-          <form action="{{ pathjoin .ActionEndpoint "/register/ack" .Data.registration_id }}" method="POST">
-          {{ end }}
-          <div class="card card-large app-card">
-            <div class="card-content">
-              <span class="card-title center-align">
-                <div class="section app-header">
-                  {{ if .LogoURL }}
-                  <img class="d-block mx-auto mb-2" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" width="72" height="72">
-                  {{ end }}
-                  <h4>{{ .PageTitle }}</h4>
+
+  <body class="h-full">
+    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
+      <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md md:max-w-2xl lg:max-w-4xl lg:mt-8">
+        <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
+          <div class="grid grid-cols-4 gap-2 pb-4 sm:mx-auto sm:w-full sm:max-w-md">
+            {{ if .LogoURL }}
+              <div>
+                <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+              </div>
+            {{ end }}
+            <div class="col-span-3 self-end">
+              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
+            </div>
+          </div>
+
+          {{ if .Message }}
+          <div id="alerts" class="rounded-md bg-red-50 p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <!-- Heroicon name: solid/x-circle -->
+                  <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm font-medium text-red-800">{{ .Message }}</p>
+              </div>
+              <div class="ml-auto pl-3">
+                <div class="-mx-1.5 -my-1.5">
+                  <button type="button" onclick="hideAlert(); return false;" class="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600">
+                    <span class="sr-only">Dismiss</span>
+                    <!-- Heroicon name: solid/x -->
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
                 </div>
-              </span>
+              </div>
+            </div>
+          </div>
+        {{ end }}
+
+          <div class="mt-3">
               {{ if eq .Data.view "register" }}
-              <div class="input-field">
-                <input id="registrant" name="registrant" type="text" class="validate"
-                  pattern="{{ .Data.username_validate_pattern }}"
-                  title="{{ .Data.username_validate_title }}"
-                  autocorrect="off" autocapitalize="off" spellcheck="false"
-                  autocomplete="off"
-                  required />
-                <label for="registrant">Username</label>
-              </div>
-              <div class="input-field">
-                <input id="registrant_email" name="registrant_email" type="email" class="validate"
-                  autocorrect="off" autocapitalize="off" spellcheck="false"
-                  autocomplete="off"
-                  required />
-                <label for="registrant_email">Email Address</label>
-              </div>
-              <div class="input-field">
-                <input id="registrant_password" name="registrant_password" type="password" class="validate"
-                  pattern="{{ .Data.password_validate_pattern }}"
-                  title="{{ .Data.password_validate_title }}"
-                  autocorrect="off" autocapitalize="off" spellcheck="false"
-                  autocomplete="off"
-                  required />
-                <label for="registrant_password">Password</label>
-              </div>
-              <div class="input-field">
-                <input id="registrant_password_confirm" name="registrant_password_confirm" type="password" class="validate"
-                  pattern="{{ .Data.password_validate_pattern }}"
-                  title="{{ .Data.password_validate_title }}"
-                  autocorrect="off" autocapitalize="off" spellcheck="false"
-                  autocomplete="off"
-                  required />
-                <label for="registrant_password_confirm">Confirm Password</label>
-              </div>
-              {{ if .Data.require_registration_code }}
-              <div class="input-field">
-                <input id="registrant_code" name="registrant_code" type="text" class="validate"
-                  autocorrect="off" autocapitalize="off" spellcheck="false"
-                  autocomplete="off"
-                  required />
-                <label for="registrant_code">Registration Code</label>
-              </div>
+              <form method="POST" action="{{ pathjoin .ActionEndpoint "/register" }}" class="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-8">
               {{ end }}
-              {{ if .Data.require_accept_terms }}
-              <p>
-                <label>
-                  <input type="checkbox" id="accept_terms" name="accept_terms" required />
-                  <span>I agree to
-                    <a href="{{ .Data.terms_conditions_link }}" target="_blank">Terms and Conditions</a> and
-                    <a href="{{ .Data.privacy_policy_link }}" target="_blank">Privacy Policy</a>.
-                  </span>
-                </label>
-              </p>
+
+              {{ if eq .Data.view "ack" }}
+              <form method="POST" action="{{ pathjoin .ActionEndpoint "/register/ack" .Data.registration_id }}" class="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-8">
               {{ end }}
+
+              {{ if eq .Data.view "register" }}
+                <div>
+                  <label for="registrant" class="block text-sm font-medium text-gray-700">Username</label>
+                  <div class="mt-1">
+                    <input id="registrant" name="registrant" type="text" 
+                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md validate"
+                      pattern="{{ .Data.username_validate_pattern }}"
+                      title="{{ .Data.username_validate_title }}"
+                      autocorrect="off" autocapitalize="off" autocomplete="username" spellcheck="false"
+                      required
+                      />
+                  </div>
+                </div>
+                <div>
+                  <label for="registrant_password" class="block text-sm font-medium text-gray-700">Password</label>
+                  <div class="mt-1">
+                    <input type="password" name="registrant_password" id="registrant_password"
+                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md validate"
+                      pattern="{{ .Data.password_validate_pattern }}"
+                      title="{{ .Data.password_validate_title }}"
+                      autocorrect="off" autocapitalize="off" autocomplete="current-password" spellcheck="false"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label for="registrant_email" class="block text-sm font-medium text-gray-700">Email</label>
+                  <div class="mt-1">
+                    <input id="registrant_email" name="registrant_email" type="email" autocomplete="email"
+                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md validate" 
+                      autocorrect="off" autocapitalize="off" autocomplete="email" spellcheck="false"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label for="first_name" class="block text-sm font-medium text-gray-700">First name</label>
+                  <div class="mt-1">
+                    <input type="text" name="first_name" id="first_name"
+                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md"
+                      autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label for="last_name" class="block text-sm font-medium text-gray-700">Last name</label>
+                  <div class="mt-1">
+                    <input type="text" name="last_name" id="last_name"
+                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md"
+                      autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false"
+                    />
+                  </div>
+                </div>
+
+                {{ if .Data.require_registration_code }}
+                <div>
+                  <label for="registrant_code" class="block text-sm font-medium text-gray-700">Registration Code</label>
+                  <div class="mt-1">
+                    <input type="text" name="registrant_code" id="registrant_code"
+                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md validate"
+                      autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false"
+                    />
+                  </div>
+                </div>
+                {{ end }}
+
+                {{ if .Data.require_accept_terms }}
+                <div class="sm:col-span-2">
+                  <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                      <input id="accept_terms" name="accept_terms" type="checkbox" 
+                        aria-describedby="comments-description"
+                        class="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded"
+                        required
+                      />
+                    </div>
+                    <div class="ml-3">
+                      <p class="text-base text-gray-500">
+                        By selecting this, you agree to the
+                        <a href="{{ .Data.terms_conditions_link }}" target="_blank" class="font-medium text-gray-700 underline">Terms and Conditions</a>
+                        and
+                        <a href="{{ .Data.privacy_policy_link }}" target="_blank" class="font-medium text-gray-700 underline">Privacy Policy</a>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {{ end }}
               {{ end }}
 
               {{ if eq .Data.view "registered" }}
@@ -106,16 +164,19 @@
                 <li>If you still don't see it, please email support so we can resend it to you.</li>
               </ol>
               {{ end }}
+
               {{ if eq .Data.view "ack" }}
-              <p style="margin-bottom: 1em; text-align: center;">Please provide the registration code you received.</p>
-              <div class="register-ctrl">
-                <input id="registration_code" name="registration_code" type="text" class="register-code validate"
-                  autocorrect="off" autocapitalize="off" spellcheck="false"
-                  pattern="[A-Za-z0-9]{6,8}" maxlength="8" placeholder="________"
-                  title="The registration code should be 6-8 characters long."
-                  autocomplete="off"
-                  required />
-              </div>
+              <div>
+                <label for="registration_code" class="block text-sm font-medium text-gray-700">Password</label>
+                <div class="mt-1">
+                  <input type="text" name="registration_code" id="registration_code"
+                    class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md validate"
+                    pattern="[A-Za-z0-9]{6,8}" maxlength="8" placeholder="123456"
+                    title="The registration code should be 6-8 characters long."
+                    autocorrect="off" autocapitalize="off" autocomplete="one-time-code" spellcheck="false"
+                    required
+                  />
+                </div>
               {{ end }}
 
               {{ if eq .Data.view "ackfail" }}
@@ -129,67 +190,50 @@
                 credentials right away.
               </p>
               {{ end }}
-            </div>
-            <div class="card-action right-align">
-              {{ if eq .Data.view "register" }}
-              <button type="reset" name="reset" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1 app-btn">
-                <i class="las la-redo-alt app-btn-icon"></i>
-                <span class="app-btn-text">Clear</span>
-              </button>
 
-              <a href="{{ .ActionEndpoint }}" class="navbtn-last">
-                <button type="button" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
-                  <i class="las la-undo left app-btn-icon"></i>
-                  <span class="app-btn-text">Back</span>
-                </button>
-              </a>
-              <button type="submit" name="submit" class="waves-effect waves-light btn navbtn active navbtn-last app-btn">
-                <i class="las la-chevron-circle-right app-btn-icon"></i>
-                <span class="app-btn-text">Submit</span>
-              </button>
+
+              {{ if eq .Data.view "register" }}
+              <div class="sm:col-span-2 text-right">
+                <a href="{{ .ActionEndpoint }}">
+                  <button type="button" name="portal" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Portal</button>
+                </a>
+                <button type="reset" name="reset" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Clear</button>
+                <button type="submit" name="submit" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Submit</button>
+              </div>
               {{ end }}
 
               {{ if ne .Data.view "register" }}
-              <a href="{{ .ActionEndpoint }}" class="navbtn-last">
-                <button type="button" class="btn waves-effect waves-light navbtn active navbtn-last app-btn">
-                  <i class="las la-home left app-btn-icon"></i>
-                  <span class="app-btn-text">Portal</span>
-                </button>
-              </a>
+              <div class="sm:col-span-2 text-right">
+                <a href="{{ .ActionEndpoint }}">
+                  <button type="button" name="portal" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Portal</button>
+                </a>
+              </div>
+              {{ end }}
+
               {{ if eq .Data.view "ack" }}
-              <button type="reset" name="reset" class="btn waves-effect waves-light navbtn active navbtn-last red lighten-1 app-btn">
-                <i class="las la-redo-alt left app-btn-icon"></i>
-              </button>
-              <button type="submit" name="submit" class="btn waves-effect waves-light navbtn active navbtn-last app-btn">
-                <i class="las la-check-square left app-btn-icon"></i>
-                <span class="app-btn-text">Submit</span>
-              </button>
-              {{ end }}
-              {{ end }}
+              <button type="reset" name="reset" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Clear</button>
+              <button type="submit" name="submit" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Submit</button>
             </div>
+              {{ end }}
+
+            {{ if or (eq .Data.view "register") (eq .Data.view "ack") }}
+            </form>
+            {{ end }}
+            
           </div>
-          {{ if or (eq .Data.view "register") (eq .Data.view "ack") }}
-          </form>
-          {{ end }}
         </div>
       </div>
     </div>
-
-    <!-- Optional JavaScript -->
-    <script src="{{ pathjoin .ActionEndpoint "/assets/materialize-css/js/materialize.js" }}"></script>
+    <!-- JavaScript -->
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/register.js" }}"></script>
     {{ if eq .Data.ui_options.custom_js_required "yes" }}
-    <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
+      <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
     {{ end }}
     {{ if .Message }}
     <script>
-    var toastHTML = '<span>{{ .Message }}</span><button class="btn-flat toast-action" onclick="M.Toast.dismissAll();">Close</button>';
-    toastElement = M.toast({
-      html: toastHTML,
-      classes: 'toast-error',
-      displayLength: 10000
-    });
-    const appContainer = document.querySelector('.registration-container')
-    appContainer.prepend(toastElement.el)
+    function hideAlert() {
+      document.getElementById("alerts").remove();
+    }
     </script>
     {{ end }}
   </body>
