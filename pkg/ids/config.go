@@ -86,6 +86,7 @@ func (cfg *IdentityStoreConfig) Validate() error {
 			"contact_support_enabled",
 			"support_link",
 			"support_email",
+			"fallback_roles",
 		}
 	case "":
 		return errors.ErrIdentityStoreConfigInvalid.WithArgs("empty identity store type")

@@ -65,6 +65,9 @@ type Config struct {
 	SupportLink string `json:"support_link,omitempty" xml:"support_link,omitempty" yaml:"support_link,omitempty"`
 	// SupportEmail is the email address to reach support.
 	SupportEmail string `json:"support_email,omitempty" xml:"support_email,omitempty" yaml:"support_email,omitempty"`
+
+	// The roles assigned to a user when no matching LDAP groups found.
+	FallbackRoles []string `json:"fallback_roles,omitempty" xml:"fallback_roles,omitempty" yaml:"fallback_roles,omitempty"`
 }
 
 // UserGroup represent the binding between BaseDN and a serarch filter.

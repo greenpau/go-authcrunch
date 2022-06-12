@@ -42,6 +42,7 @@ type Authenticator struct {
 	searchUserFilter  string
 	searchGroupFilter string
 	userAttributes    UserAttributes
+	fallbackRoles     []string
 	rootCAs           *x509.CertPool
 	groups            []*UserGroup
 	logger            *zap.Logger
@@ -217,6 +218,10 @@ func (sa *Authenticator) ConfigureSearch(cfg *Config) error {
 		attr.Email = "mail"
 		cfg.Attributes.Email = attr.Email
 	}
+
+	if len(cfg.FallbackRoles) > 0 {
+		sa.fallbackRoles = cfg.FallbackRoles
+	}
 	sa.logger.Info(
 		"LDAP plugin configuration",
 		zap.String("phase", "search"),
@@ -233,6 +238,10 @@ func (sa *Authenticator) ConfigureSearch(cfg *Config) error {
 	sa.searchUserFilter = searchUserFilter
 	sa.searchGroupFilter = searchGroupFilter
 	sa.userAttributes = attr
+
+	if len(cfg.FallbackRoles) > 0 {
+		sa.fallbackRoles = cfg.FallbackRoles
+	}
 
 	return nil
 }
@@ -675,25 +684,32 @@ func (sa *Authenticator) findUser(ldapConnection *ldap.Conn, server *AuthServer,
 		}
 	}
 
-	if len(userRoles) == 0 {
+	switch {
+	case len(userRoles) == 0 && len(sa.fallbackRoles) == 0:
 		return errors.ErrIdentityStoreLdapAuthFailed.WithArgs("no matched groups")
+	case len(userRoles) == 0:
+		for _, role := range sa.fallbackRoles {
+			r.User.Roles = append(r.User.Roles, role)
+		}
+	default:
+		for role := range userRoles {
+			r.User.Roles = append(r.User.Roles, role)
+		}
 	}
-
-	sa.logger.Debug(
-		"LDAP user match",
-		zap.String("server", server.Address),
-		zap.String("name", userFullName),
-		zap.String("username", userAccountName),
-		zap.String("email", userMail),
-		zap.Any("roles", userRoles),
-	)
 
 	r.User.Username = userAccountName
 	r.User.Email = userMail
 	r.User.FullName = userFullName
-	for role := range userRoles {
-		r.User.Roles = append(r.User.Roles, role)
-	}
+
+	sa.logger.Debug(
+		"LDAP user match",
+		zap.String("server", server.Address),
+		zap.String("name", r.User.FullName),
+		zap.String("username", r.User.Username),
+		zap.String("email", r.User.Email),
+		zap.Any("roles", r.User.Roles),
+	)
+
 	r.User.Challenges = []string{"password"}
 	r.Response.Code = 200
 	return nil
