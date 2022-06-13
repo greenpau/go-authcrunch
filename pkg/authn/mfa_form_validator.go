@@ -79,7 +79,7 @@ func validateAddU2FTokenForm(r *http.Request, rr *requests.Request) error {
 	if err := r.ParseForm(); err != nil {
 		return fmt.Errorf("Failed parsing submitted form")
 	}
-	for _, k := range []string{"webauthn_register", "webauthn_challenge", "comment"} {
+	for _, k := range []string{"webauthn_register", "webauthn_challenge"} {
 		v := strings.TrimSpace(r.PostFormValue(k))
 		if v == "" {
 			return fmt.Errorf("Required form %s field not found", k)
@@ -89,8 +89,6 @@ func validateAddU2FTokenForm(r *http.Request, rr *requests.Request) error {
 			rr.WebAuthn.Register = v
 		case "webauthn_challenge":
 			rr.WebAuthn.Challenge = v
-		case "comment":
-			rr.MfaToken.Comment = v
 		}
 	}
 	rr.MfaToken.Type = "u2f"

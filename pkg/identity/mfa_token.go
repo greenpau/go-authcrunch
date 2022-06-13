@@ -282,6 +282,9 @@ func NewMfaToken(req *requests.Request) (*MfaToken, error) {
 		p.Parameters["curve_ycoord"] = curveYcoord
 		//return nil, fmt.Errorf("XXX: %v", r.AttestationObject.AttestationStatement.Certificates)
 		//return nil, fmt.Errorf("XXX: %v", r.AttestationObject.AuthData.CredentialData)
+		if p.Comment == "" {
+			p.Comment = fmt.Sprintf("T%d", time.Now().UTC().Unix())
+		}
 	case "":
 		return nil, errors.ErrMfaTokenTypeEmpty
 	default:

@@ -16,7 +16,7 @@ envvar:
 	@echo "Version: $(APP_VERSION), Branch: $(GIT_BRANCH), Revision: $(GIT_COMMIT)"
 	@echo "Build on $(BUILD_DATE) by $(BUILD_USER)"
 
-build: templates license
+build: templates
 	@mkdir -p bin/
 	@rm -rf ./bin/*
 	@versioned -sync ./pkg/identity/database.go
@@ -43,10 +43,10 @@ gtest:
 	@go test $(VERBOSE) -coverprofile=.coverage/coverage.out ./...
 	@echo "$@: complete"
 
-test: templates license envvar covdir linter gtest coverage
+test: templates envvar covdir linter gtest coverage
 	@echo "$@: complete"
 
-ctest: templates license covdir linter
+ctest: templates covdir linter
 	@richgo version || go get -u github.com/kyoh86/richgo
 	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./...
 	@echo "$@: complete"
@@ -63,9 +63,16 @@ coverage:
 	@go tool cover -func=.coverage/coverage.out | grep -v "100.0"
 	@echo "$@: complete"
 
-templates:
+ui-templates:
 	@./assets/scripts/generate_ui.sh
+	@echo "$@: complete"
+
+email-templates:
 	@./assets/scripts/generate_email_templates.sh
+	@echo "$@: complete"
+
+templates: ui-templates email-templates license
+	@echo "$@: complete"
 
 docs:
 	@mkdir -p .doc

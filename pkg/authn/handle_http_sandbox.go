@@ -235,7 +235,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					m["view"] = "password_recovery"
 					m["action"] = "auth"
 				default:
-					m["title"] = "Password Authentication"
+					m["title"] = "Authentication"
 					m["view"] = "password_auth"
 					m["action"] = "auth"
 				}
@@ -329,7 +329,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				m["view"] = "mfa_mixed_auth"
 				m["action"] = "auth"
 			case appConfigured && (action == "mfa-app-auth" || action == ""):
-				m["title"] = "Portal App"
+				m["title"] = "Authenticator App"
 				m["view"] = "mfa_app_auth"
 				m["action"] = "auth"
 				if r.Method != "POST" {
@@ -425,7 +425,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				m["webauthn_tx_auth_simple"] = "Could you please verify yourself?"
 				m["webauthn_credentials"] = creds
 			case !appConfigured && (action == "mfa-app-register"):
-				m["title"] = "Portal App Registration"
+				m["title"] = "Authenticator App Registration"
 				m["view"] = "mfa_app_register"
 				m["action"] = "register"
 				if r.Method == "POST" {

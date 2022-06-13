@@ -44,7 +44,7 @@
                           <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                       </div>
-                      <input id="username" name="username" type="text" autocorrect="off" autocapitalize="off" spellcheck="false" required class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-10 px-4 py-4 border-primary-300 focus:text-xl" />
+                      <input id="username" name="username" type="text" autocorrect="off" autocapitalize="off" spellcheck="false" autofocus required class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl" />
                     </div>
                   </div>
 
