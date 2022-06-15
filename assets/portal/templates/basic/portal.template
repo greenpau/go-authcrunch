@@ -18,48 +18,38 @@
   </head>
 
   <body class="h-full">
-    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
-      <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md lg:mt-8">
-        <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
-          <div class="grid grid-cols-4 gap-2 pb-4 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="app-page">
+      <div class="app-content">
+        <div class="app-container">
+          <div class="logo-col-box">
             {{ if .LogoURL }}
               <div>
-                <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+                <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
               </div>
             {{ end }}
-            <div class="col-span-3 self-end">
-              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
+            <div>
+              <h2 class="logo-col-txt">{{ .PageTitle }}</h2>
             </div>
           </div>
           <div>
-            <p class="block pb-2 text-lg font-sans font-medium text-primary-700">Access the following services.</p>
+            <p class="app-inp-lbl">Access the following services.</p>
           </div>
           <div class="mt-3 grid">
             {{ range .PrivateLinks }}
               <div class="pb-2">
                 <a href="{{ .Link }}" {{ if .TargetEnabled }}target="{{ .Target }}"{{ end }}>
-                  <div class="w-full flex border border-primary-50 rounded-md">
-                    <div class="p-4 bg-primary-100 text-primary-600 shadow-sm rounded-l-md text-2xl">
-                      {{ if .IconEnabled -}}
-                        <i class="{{ .IconName }}"></i>
-                      {{- end }}
-                    </div>
-                    <div class="p-4 grow hover:bg-primary-100 shadow-sm rounded-r-md text-primary-600 text-2xl">
-                      <span>{{ .Title }}</span>
-                    </div>
+                  <div class="app-portal-btn-box">
+                    <div class="app-portal-btn-img">{{ if .IconEnabled -}}<i class="{{ .IconName }}"></i>{{- end }}</div>
+                    <div class="app-portal-btn-txt"><span>{{ .Title }}</span></div>
                   </div>
                 </a>
               </div>
             {{ end }}
             <div class="pb-2">
               <a href="{{ pathjoin .ActionEndpoint "/logout" }}">
-                <div class="w-full flex border border-primary-50 rounded-md">
-                  <div class="p-4 bg-primary-100 text-primary-600 shadow-sm rounded-l-md text-2xl">
-                    <i class="las la-sign-out-alt"></i>
-                  </div>
-                  <div class="p-4 grow hover:bg-primary-100 shadow-sm rounded-r-md text-primary-600 text-2xl">
-                    <span>Sign Out</span>
-                  </div>
+                <div class="app-portal-btn-box">
+                  <div class="app-portal-btn-img"><i class="las la-sign-out-alt"></i></div>
+                  <div class="app-portal-btn-txt"><span>Sign Out</span></div>
                 </div>
               </a>
             </div>

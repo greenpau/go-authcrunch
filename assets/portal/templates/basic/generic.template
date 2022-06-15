@@ -18,23 +18,23 @@
   </head>
 
   <body class="h-full">
-    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
-      <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md md:max-w-2xl lg:max-w-2xl lg:mt-8">
+    <div class="app-page">
+      <div class="app-content md:max-w-2xl lg:max-w-2xl">
         <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
           <div class="bg-white min-h-full px-4 py-16 sm:px-6 sm:py-24 md:grid md:place-items-center lg:px-8">
             <div class="max-w-max mx-auto">
               <main class="sm:flex">
                 {{ if .LogoURL }}
-                  <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+                  <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
                 {{ end }}
                 <div class="sm:ml-6">
-                  <div class="sm:border-l sm:border-gray-200 sm:pl-6">
-                    <h1 class="text-4xl font-extrabold text-primary-700 tracking-tight sm:text-5xl">{{ .PageTitle }}</h1>
-                    <p class="mt-1 text-base text-primary-500">{{ .Data.message }}</p>
+                  <div class="app-gen-banner-box">
+                    <h1 class="app-gen-banner-header">{{ .PageTitle }}</h1>
+                    <p class="app-gen-banner-message">{{ .Data.message }}</p>
                   </div>
                   {{ if .Data.go_back_url }}
-                    <div class="mt-10 flex space-x-3 sm:border-l sm:border-transparent sm:pl-6">
-                      <a href="{{ .Data.go_back_url }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"> Go back </a>
+                    <div class="app-gen-btn-box">
+                      <a href="{{ .Data.go_back_url }}" class="app-gen-btn-txt"> Go back </a>
                     </div>
                   {{ end }}
                 </div>
@@ -49,8 +49,5 @@
     {{ if eq .Data.ui_options.custom_js_required "yes" }}
       <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
     {{ end }}
-    <script>
-      hljs.initHighlightingOnLoad();
-    </script>
   </body>
 </html>

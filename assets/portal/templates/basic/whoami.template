@@ -19,17 +19,17 @@
   </head>
 
   <body class="h-full">
-    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
-      <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md md:max-w-2xl lg:max-w-4xl lg:mt-8">
-        <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
-          <div class="grid grid-cols-4 gap-2 pb-4 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="app-page">
+      <div class="app-content md:max-w-2xl lg:max-w-4xl">
+        <div class="app-container">
+          <div class="logo-col-box">
             {{ if .LogoURL }}
               <div>
-                <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+                <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
               </div>
             {{ end }}
-            <div class="col-span-3 self-end">
-              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
+            <div>
+              <h2 class="logo-col-txt">{{ .PageTitle }}</h2>
             </div>
           </div>
 

@@ -25,18 +25,18 @@
     {{ end }}
   </head>
   <body class="h-full">
-    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
-      <div class="mt-2 pb-8 sm:mx-auto sm:w-full sm:max-w-md lg:mt-8">
-        <div class="bg-white py-8 px-4 pb-8 shadow-lg sm:rounded-lg sm:px-10">
-          <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="app-page">
+      <div class="app-content">
+        <div class="app-container">
+          <div class="logo-box">
             {{ if .LogoURL }}
-              <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+              <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
             {{ end }}
-            <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
+            <h2 class="logo-txt">{{ .PageTitle }}</h2>
           </div>
 
           {{ if or (eq .Data.view "mfa_mixed_auth") (eq .Data.view "mfa_mixed_register") }}
-          <div class="space-y-6 pb-4 text-lg leading-7 text-primary-600">
+          <div class="app-txt-section">
             <p>Your session requires multi-factor authentication.</p>
             {{ if eq .Data.view "mfa_mixed_register" }}
             <p>However, you do not have second factor authentication method configured.</p>
@@ -50,9 +50,9 @@
               <i class="las la-mobile text-2xl text-primary-500"></i>
               <div class="ml-3">
                 {{ if eq .Data.view "mfa_mixed_register" }}
-                <a class="text-2xl text-primary-600" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-register" }}"><span>Authenticator App</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-register" }}"><span>Authenticator App</a>
                 {{ else }}
-                <a class="text-2xl text-primary-600" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-auth" }}">Authenticator App</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-auth" }}">Authenticator App</a>
                 {{ end }}
               </div>
             </li>
@@ -60,9 +60,9 @@
               <i class="las la-microchip text-2xl text-primary-500"></i>
               <div class="ml-3">
                 {{ if eq .Data.view "mfa_mixed_register" }}
-                <a class="text-2xl text-primary-600" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-register" }}">Hardware Token</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-register" }}">Hardware Token</a>
                 {{ else }}
-                <a class="text-2xl text-primary-600" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-auth" }}">Hardware Token</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-auth" }}">Hardware Token</a>
                 {{ end }}
               </div>
             </li>
@@ -75,15 +75,14 @@
                   autocomplete="off"
                   >
               <div>
-                <label for="secret" class="block text-center pb-2 text-lg font-sans font-medium text-primary-700">Please provide your password</label>
-                <div class="mt-1 relative rounded-md shadow-sm">
-                  <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-primary-700">
+                <label for="secret" class="app-inp-lbl text-center">Please provide your password</label>
+                <div class="app-inp-box">
+                  <div class="app-inp-prf-img">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                     </svg>
                   </div>
-                  <input id="secret" name="secret" type="password"
-                         class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl"
+                  <input id="secret" name="secret" type="password" class="app-inp-txt"
                          autocorrect="off" autocapitalize="off" spellcheck="false" autofocus required />
                 </div>
               </div>
@@ -95,7 +94,7 @@
               <div class="flex gap-4">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-center">
+                    <button type="button" class="app-btn-sec">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -105,7 +104,7 @@
                   </a>
                 </div>
                 <div class="flex-none">
-                  <button type="reset" name="reset" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-center">
+                  <button type="reset" name="reset" class="app-btn-sec">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -115,7 +114,7 @@
                 </div>
 
                 <div class="grow">
-                  <button type="submit" name="submit" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                  <button type="submit" name="submit" class="app-btn-pri">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -139,10 +138,10 @@
                   autocomplete="off"
                   >
               <div class="py-4">
-                <label for="email" class="block pb-2 text-lg font-sans font-medium text-primary-700">Email Address</label>
-                <div class="mt-1 relative rounded-md shadow-sm">
+                <label for="email" class="app-inp-lbl">Email Address</label>
+                <div class="app-inp-box">
                   <input id="email" name="email" type="text"
-                         class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl"
+                         class="app-inp-txt"
                          autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
                          required />
                 </div>
@@ -153,7 +152,7 @@
               <div class="flex gap-4">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-center">
+                    <button type="button" class="app-btn-sec">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -163,7 +162,7 @@
                   </a>
                 </div>
                 <div class="grow">
-                  <button type="submit" name="submit" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                  <button type="submit" name="submit" class="app-btn-pri">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -187,10 +186,10 @@
                   autocomplete="off"
                   >
               <div class="py-4">
-                <label for="passcode" class="block pb-2 text-lg font-sans font-medium text-primary-700">Passcode</label>
-                <div class="mt-1 relative rounded-md shadow-sm">
+                <label for="passcode" class="app-inp-lbl">Passcode</label>
+                <div class="app-inp-box">
                   <input id="passcode" name="passcode" type="text"
-                         class="font-['Montserrat'] tracking-widest text-3xl text-center text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md px-4 py-4 border-primary-300 focus:text-3xl validate"
+                         class="font-['Montserrat'] app-inp-code-txt validate"
                          pattern="[0-9]{4,8}" maxlength="8"
                          title="Authentication code should contain 4-8 characters and consists of 0-9 characters."
                          autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
@@ -200,7 +199,7 @@
               <div class="flex gap-4">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-center">
+                    <button type="button" class="app-btn-sec">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -210,7 +209,7 @@
                   </a>
                 </div>
                 <div class="flex-none">
-                  <button type="reset" name="reset" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-  center">
+                  <button type="reset" name="reset" class="app-btn-sec">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -219,7 +218,7 @@
                   </button>
                 </div>
                 <div class="grow">
-                  <button type="submit" name="submit" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:  ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                  <button type="submit" name="submit" class="app-btn-pri">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -242,15 +241,14 @@
                   >
               <input id="webauthn_request" name="webauthn_request" type="hidden" value="" />
               <input id="sandbox_id" name="sandbox_id" type="hidden" value="{{ .Data.id }}" />
-              <div class="space-y-6 pb-4 text-lg leading-7 text-primary-600">
+              <div class="app-txt-section">
                 <p>Insert your hardware token into a USB port. When prompted, touch,
                 or otherwise trigger the hardware token.</p>
               </div>
             </form>
             <div id="mfa-u2f-auth-form-rst" class="pt-4 hidden">
               <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id }}">
-                <button type="button" name="button"
-                  class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:  ring-2 focus:ring-offset-2 focus: ring-primary-500 items-center">
+                <button type="button" name="button" class="app-btn-pri">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -269,7 +267,7 @@
                   autocomplete="off"
                   >
               <div id="token-params">
-                <div class="space-y-6 pb-4 text-lg leading-7 text-primary-600">
+                <div class="app-txt-section">
                   <p><b>Step 1</b>: If necessary, amend the label and comment associated with the authenticator.
                     The label is what you would see in your authenticator app.
                     The comment is what you would see in this portal.
@@ -277,15 +275,15 @@
                 </div>
 
                 <div>
-                  <label for="label" class="block pb-2 text-lg font-sans font-medium text-primary-700">Name</label>
-                  <div class="mt-1 relative rounded-md shadow-sm">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-primary-700">
+                  <label for="label" class="app-inp-lbl">Name</label>
+                  <div class="app-inp-box">
+                    <div class="app-inp-prf-img">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                       </svg>
                     </div>
                     <input id="label" name="label" type="text"
-                           class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl validate"
+                           class="app-inp-txt validate"
                            value="{{ .Data.mfa_label }}" pattern="[A-Za-z0-9]{4,25}" maxlength="25"
                            title="Name should contain 4-25 characters and consists of A-Z, a-z, 0-9 characters."
                            autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
@@ -294,15 +292,15 @@
                 </div>
 
                 <div class="pt-4">
-                  <label for="comment" class="block pb-2 text-lg font-sans font-medium text-primary-700">Comment</label>
-                  <div class="mt-1 relative rounded-md shadow-sm">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-primary-700">
+                  <label for="comment" class="app-inp-lbl">Comment</label>
+                  <div class="app-inp-box">
+                    <div class="app-inp-prf-img">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                       </svg>
                     </div>
                     <input id="comment" name="comment" type="text"
-                           class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl validate"
+                           class="app-inp-txt validate"
                            value="{{ .Data.mfa_comment }}" pattern="[A-Za-z0-9 -]{4,25}" maxlength="50"
                            title="Comment should contain 4-50 characters and consists of A-Z, a-z, 0-9, space, and dash characters."
                            autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
@@ -310,7 +308,7 @@
                   </div>
                 </div>
 
-                <div class="space-y-6 pt-4 text-lg leading-7 text-primary-600">
+                <div class="app-txt-section">
                   <p><b>Step 1a</b> (<i>optional</i>): If necessary, click
                     <a class="text-secondary-500 hover:text-primary-500" href="#advanced-setup-all" 
                       onclick="toggleAdvancedSetupMode(); return false;">here</a>
@@ -318,33 +316,33 @@
                   </p>
                 </div>
 
-                <div id="advanced-setup-all" class="space-y-6 pb-4 text-lg leading-7 text-primary-600 hidden">
+                <div id="advanced-setup-all" class="app-txt-section hidden">
                   <div class="pt-4">
-                    <label for="secret" class="block pb-2 text-lg font-sans font-medium text-primary-700">Token Secret</label>
-                    <div class="mt-1 relative rounded-md shadow-sm">
-                      <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-primary-700">
+                    <label for="secret" class="app-inp-lbl">Token Secret</label>
+                    <div class="app-inp-box">
+                      <div class="app-inp-prf-img">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                         </svg>
                       </div>
                       <input id="secret" name="secret" type="text"
-                             class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl validate"
+                             class="app-inp-txt validate"
                              value="{{ .Data.mfa_secret }}" pattern="[A-Za-z0-9]{10,100}" maxlength="100"
                              title="Token secret should contain 10-200 characters and consists of A-Z and 0-9 characters only."
                              autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
                              required />
                     </div>
                   </div>
-                  <div class="mt-1 relative rounded-md shadow-sm">
-                    <select id="period" name="period" class="mt-1 block w-full pl-3 pr-10 py-2 text-xl border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md">
+                  <div class="app-inp-box">
+                    <select id="period" name="period" class="app-inp-sel">
                       <option value="15" {{ if eq .Data.mfa_period "15" }} selected{{ end }}>15 Seconds Lifetime</option>
                       <option value="30" {{ if eq .Data.mfa_period "30" }} selected{{ end }}>30 Seconds Lifetime</option>
                       <option value="60" {{ if eq .Data.mfa_period "60" }} selected{{ end }}>60 Seconds Lifetime</option>
                       <option value="90" {{ if eq .Data.mfa_period "90" }} selected{{ end }}>90 Seconds Lifetime</option>
                     </select>
                   </div>
-                  <div class="mt-1 relative rounded-md shadow-sm">
-                    <select id="digits" name="digits" class="mt-1 block w-full pl-3 pr-10 py-2 text-xl border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md">
+                  <div class="app-inp-box">
+                    <select id="digits" name="digits" class="app-inp-sel">
                       <option value="4" {{ if eq .Data.mfa_digits "4" }} selected{{ end }}>4 Digit Code</option>
                       <option value="6" {{ if eq .Data.mfa_digits "6" }} selected{{ end }}>6 Digit Code</option>
                       <option value="8" {{ if eq .Data.mfa_digits "8" }} selected{{ end }}>8 Digit Code</option>
@@ -352,7 +350,7 @@
                   </div>
                 </div>
 
-                <div class="space-y-6 pt-4 text-lg leading-7 text-primary-600">
+                <div class="app-txt-section">
                   <p><b>Step 2</b>: Open your MFA authenticator application, e.g. Microsoft/Google Authenticator, Authy, etc.,
                     add new entry and click the "Get QR" link.
                   </p>
@@ -366,14 +364,14 @@
                 <div id="mfa-qr-code-image" class="flex items-center justify-center">
                   <img src="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-barcode" .Data.code_uri_encoded }}.png" alt="QR Code" />
                 </div>
-                <div class="space-y-6 pt-4 text-lg leading-7 text-primary-600">
+                <div class="app-txt-section">
                   <p>&raquo; Can't scan? Click or copy the link below.</p>
                 </div>
-                <div id="mfa-no-camera-link" class="space-y-6 pt-4 text-lg leading-7 text-primary-600 text-center">
+                <div id="mfa-no-camera-link" class="app-txt-section text-center">
                   <a class="text-secondary-500 hover:text-primary-500" href="{{ .Data.code_uri }}">No Camera Link</a>
                 </div>
 
-                <div class="space-y-6 pt-4 text-lg leading-7 text-primary-600">
+                <div class="app-txt-section">
                   <p><b>Step 3</b>: Enter the authentication code you see in the app and click "Add".</p>
                 </div>
 
@@ -382,10 +380,10 @@
                 <input id="barcode_uri" name "barcode_uri" type="hidden" value="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-barcode" }}" />
 
                 <div class="py-4">
-                  <label for="passcode" class="block pb-2 text-lg font-sans font-medium text-primary-700">Passcode</label>
-                  <div class="mt-1 relative rounded-md shadow-sm">
+                  <label for="passcode" class="app-inp-lbl">Passcode</label>
+                  <div class="app-inp-box">
                     <input id="passcode" name="passcode" type="text"
-                           class="font-['Montserrat'] text-3xl text-center text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md px-4 py-4 border-primary-300 focus:text-3xl validate"
+                           class="font-['Montserrat'] app-inp-code-txt validate"
                            pattern="[0-9]{4,8}" maxlength="8"
                            title="Authentication code should contain 4-8 characters and consists of 0-9 characters."
                            autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
@@ -395,8 +393,7 @@
 
                 <div class="flex gap-4">
                   <div class="grow">
-                    <button type="submit" name="submit"
-                      class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2      focus:ring-primary-500 items-center">
+                    <button type="submit" name="submit" class="app-btn-pri">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                       </svg>
@@ -425,15 +422,15 @@
               <input class="hidden" id="webauthn_challenge" name="webauthn_challenge" type="text" value="{{ .Data.webauthn_challenge }}" />
 
               <div>
-                <label for="comment" class="block pb-2 text-lg font-sans font-medium text-primary-700">Name your token (optional)</label>
-                <div class="mt-1 relative rounded-md shadow-sm">
-                  <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-primary-700">
+                <label for="comment" class="app-inp-lbl">Name your token (optional)</label>
+                <div class="app-inp-box">
+                  <div class="app-inp-prf-img">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                     </svg>
                   </div>
                   <input id="comment" name="comment" type="text"
-                         class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl validate"
+                         class="app-inp-txt validate"
                          pattern="[A-Za-z0-9 -]{4,25}" maxlength="25"
                          title="A comment should contain 4-25 characters and consists of A-Z, a-z, 0-9, space, and dash characters."
                          autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off" />
@@ -443,7 +440,7 @@
               <div class="flex gap-4">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-center">
+                    <button type="button" class="app-btn-sec">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -453,7 +450,7 @@
                   </a>
                 </div>
                 <div class="flex-none">
-                  <button type="reset" name="reset" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-  center">
+                  <button type="reset" name="reset" class="app-btn-sec">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -463,9 +460,8 @@
                 </div>
 
                 <div class="grow">
-                  <button id="mfa-add-u2f-button" type="button" name="action"
-                    onclick="u2f_token_register('mfa-add-u2f-form', 'mfa-add-u2f-button'); return false;"
-                    class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:  ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                  <button id="mfa-add-u2f-button" type="button" name="action" class="app-btn-pri"
+                    onclick="u2f_token_register('mfa-add-u2f-form', 'mfa-add-u2f-button'); return false;">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -481,8 +477,7 @@
 
             <div id="mfa-add-u2f-form-rst" class="hidden">
               <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id }}">
-                <button type="button" name="button"
-                  class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:  ring-2 focus:ring-offset-2 focus: ring-primary-500 items-center">
+                <button type="button" name="button" class="app-btn-pri">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -494,14 +489,13 @@
             </div>
           </div>
           {{ else if eq .Data.view "terminate" }}
-          <div class="space-y-6 pb-8 text-lg leading-7 text-primary-600">
+          <div class="app-txt-section">
             <p>{{ .Data.error }}.</p>
           </div>
           <div class="flex gap-4">
             <div class="grow">
               <a href="{{ pathjoin .ActionEndpoint "login" }}">
-                <button type="button"
-                        class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                <button type="button" class="app-btn-pri">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -513,15 +507,14 @@
             </div>
           </div>
           {{ else if eq .Data.view "error" }}
-          <div class="space-y-6 pb-8 text-lg leading-7 text-primary-600">
+          <div class="app-txt-section">
             <p>Your session failed to meet authorization requirements.</p>
             <p>{{ .Data.error }}.</p>
           </div>
           <div class="flex gap-4">
             <div class="grow">
               <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id }}">
-                <button type="button"
-                        class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                <button type="button" class="app-btn-pri">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -533,7 +526,7 @@
             </div>
           </div>
           {{ else }}
-          <div class="space-y-6 pb-8 text-lg leading-7 text-primary-600">
+          <div class="app-txt-section">
             <p>The {{ .Data.view }} view is unsupported.</p>
           </div>
           {{ end }}

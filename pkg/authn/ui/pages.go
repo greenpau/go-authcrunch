@@ -40,14 +40,14 @@ var PageTemplates = map[string]string{
 
 
   <body class="h-full">
-    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
-      <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md lg:mt-8">
-        <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
-          <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="app-page">
+      <div class="app-content">
+        <div class="app-container">
+          <div class="logo-box">
             {{ if .LogoURL }}
-              <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+              <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
             {{ end }}
-            <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
+            <h2 class="logo-txt">{{ .PageTitle }}</h2>
           </div>
 
           {{ if eq .Data.login_options.form_required "yes" }}
@@ -56,19 +56,15 @@ var PageTemplates = map[string]string{
                 <form class="space-y-6" action="{{ pathjoin .ActionEndpoint "/login" }}" method="POST">
                   <div>
                     <label for="username" class="block text-center pb-2 text-lg font-sans font-medium text-primary-700">Please provide username or email address</label>
-                    <div class="mt-1 relative rounded-md shadow-sm">
-                      <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-primary-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                      <input id="username" name="username" type="text" autocorrect="off" autocapitalize="off" spellcheck="false" autofocus required class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl" />
+                    <div class="app-inp-box">
+                      <div class="app-inp-prf-img"><i class="las la-user"></i></div>
+                      <input class="app-inp-txt" id="username" name="username" type="text" autocorrect="off" autocapitalize="off" spellcheck="false" autofocus required />
                     </div>
                   </div>
 
                   {{ if eq .Data.login_options.realm_dropdown_required "yes" }}
                     <div class="hidden">
-                      <select id="realm" name="realm" class="browser-default">
+                      <select id="realm" name="realm" class="app-inp-sel">
                         {{ range .Data.login_options.realms }}
                           {{ if eq .default "yes" }}
                             <option value="{{ .realm }}" selected>{{ .label }}</option>
@@ -90,28 +86,16 @@ var PageTemplates = map[string]string{
                   <div class="flex gap-4">
                     {{ if ne $authenticatorCount 1 }}
                       <div class="flex-none">
-                        <button type="button" onclick="hideLoginForm();return false;" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-center">
-                          <div>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-                            </svg>
-                          </div>
-                          <div class="pl-1 pr-2">
-                            <span>Back</span>
-                          </div>
+                        <button type="button" onclick="hideLoginForm();return false;" class="app-btn-sec">
+                          <div><i class="las la-caret-left"></i></div>
+                          <div class="pl-1 pr-2"><span>Back</span></div>
                         </button>
                       </div>
                     {{ end }}
                     <div class="grow">
-                      <button type="submit" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
-                        <div>
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                          </svg>
-                        </div>
-                        <div class="pl-2">
-                          <span>Proceed</span>
-                        </div>
+                      <button type="submit" class="app-btn-pri">
+                        <div><i class="las la-check-circle"></i></div>
+                        <div class="pl-2"><span>Proceed</span></div>
                       </button>
                     </div>
                   </div>
@@ -147,22 +131,22 @@ var PageTemplates = map[string]string{
                 <div>
                   {{ if .endpoint }}
                     <a href="{{ .endpoint }}">
-                      <div class="w-full flex border border-primary-50 rounded-md">
+                      <div class="app-login-btn-box">
                         <div class="p-4 bg-[{{ .background_color }}] text-[{{ .color }}] shadow-sm rounded-l-md text-2xl">
                           <i class="{{ .class_name }}"></i>
                         </div>
-                        <div class="p-4 grow bg-primary-50 hover:bg-primary-100 shadow-sm rounded-r-md text-center text-primary-600 text-2xl font-medium">
+                        <div class="app-login-btn-txt">
                           <span class="uppercase leading-loose">{{ .text }}</span>
                         </div>
                       </div>
                     </a>
                   {{ else }}
                     <a href="#" onclick="showLoginForm('{{ .realm }}', '{{ .registration_enabled }}', '{{ .username_recovery_enabled }}', '{{ .contact_support_enabled }}', '{{ .ActionEndpoint }}');return false;">
-                      <div class="w-full flex border border-primary-50 rounded-md">
+                      <div class="app-login-btn-box">
                         <div class="p-4 bg-[{{ .background_color }}] text-[{{ .color }}] shadow-sm rounded-l-md text-2xl">
                           <i class="{{ .class_name }}"></i>
                         </div>
-                        <div class="p-4 grow bg-primary-50 hover:bg-primary-100 shadow-sm rounded-r-md text-center text-primary-600 text-2xl font-medium">
+                        <div class="app-login-btn-txt">
                           <span class="uppercase leading-loose">{{ .text }}</span>
                         </div>
                       </div>
@@ -174,13 +158,11 @@ var PageTemplates = map[string]string{
           {{ end }}
         </div>
         <div id="bookmarks" class="px-4 hidden sm:block">
-          <div onclick="showQRCode('{{ $qrCodeLink }}');return false;" class="bg-[#24292f] text-[#f6f8fa] py-1 px-1 shadow-xl rounded-b-lg pb-2" style="max-width: 3em;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="{2}">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-            </svg>
+          <div onclick="showQRCode('{{ $qrCodeLink }}');return false;" class="bg-[#24292f] text-[#f6f8fa] py-1 px-1 shadow-xl rounded-b-lg pb-2 text-center" style="max-width: 3em;">
+            <i class="las la-qrcode text-3xl"></i>
           </div>
         </div>
-        <div id="qr" class="px-4 flex justify-center	hidden">
+        <div id="qr" class="px-4 flex justify-center hidden">
           <div id="qrcode" onclick="hideQRCode();return false;" class="bg-white border border-t-2 py-1 px-1 shadow-xl rounded-b-lg pb-2 max-w-xs inline-flex"></div>
         </div>
       </div>
@@ -212,48 +194,38 @@ var PageTemplates = map[string]string{
   </head>
 
   <body class="h-full">
-    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
-      <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md lg:mt-8">
-        <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
-          <div class="grid grid-cols-4 gap-2 pb-4 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="app-page">
+      <div class="app-content">
+        <div class="app-container">
+          <div class="logo-col-box">
             {{ if .LogoURL }}
               <div>
-                <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+                <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
               </div>
             {{ end }}
-            <div class="col-span-3 self-end">
-              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
+            <div>
+              <h2 class="logo-col-txt">{{ .PageTitle }}</h2>
             </div>
           </div>
           <div>
-            <p class="block pb-2 text-lg font-sans font-medium text-primary-700">Access the following services.</p>
+            <p class="app-inp-lbl">Access the following services.</p>
           </div>
           <div class="mt-3 grid">
             {{ range .PrivateLinks }}
               <div class="pb-2">
                 <a href="{{ .Link }}" {{ if .TargetEnabled }}target="{{ .Target }}"{{ end }}>
-                  <div class="w-full flex border border-primary-50 rounded-md">
-                    <div class="p-4 bg-primary-100 text-primary-600 shadow-sm rounded-l-md text-2xl">
-                      {{ if .IconEnabled -}}
-                        <i class="{{ .IconName }}"></i>
-                      {{- end }}
-                    </div>
-                    <div class="p-4 grow hover:bg-primary-100 shadow-sm rounded-r-md text-primary-600 text-2xl">
-                      <span>{{ .Title }}</span>
-                    </div>
+                  <div class="app-portal-btn-box">
+                    <div class="app-portal-btn-img">{{ if .IconEnabled -}}<i class="{{ .IconName }}"></i>{{- end }}</div>
+                    <div class="app-portal-btn-txt"><span>{{ .Title }}</span></div>
                   </div>
                 </a>
               </div>
             {{ end }}
             <div class="pb-2">
               <a href="{{ pathjoin .ActionEndpoint "/logout" }}">
-                <div class="w-full flex border border-primary-50 rounded-md">
-                  <div class="p-4 bg-primary-100 text-primary-600 shadow-sm rounded-l-md text-2xl">
-                    <i class="las la-sign-out-alt"></i>
-                  </div>
-                  <div class="p-4 grow hover:bg-primary-100 shadow-sm rounded-r-md text-primary-600 text-2xl">
-                    <span>Sign Out</span>
-                  </div>
+                <div class="app-portal-btn-box">
+                  <div class="app-portal-btn-img"><i class="las la-sign-out-alt"></i></div>
+                  <div class="app-portal-btn-txt"><span>Sign Out</span></div>
                 </div>
               </a>
             </div>
@@ -289,17 +261,17 @@ var PageTemplates = map[string]string{
   </head>
 
   <body class="h-full">
-    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
-      <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md md:max-w-2xl lg:max-w-4xl lg:mt-8">
-        <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
-          <div class="grid grid-cols-4 gap-2 pb-4 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="app-page">
+      <div class="app-content md:max-w-2xl lg:max-w-4xl">
+        <div class="app-container">
+          <div class="logo-col-box">
             {{ if .LogoURL }}
               <div>
-                <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+                <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
               </div>
             {{ end }}
-            <div class="col-span-3 self-end">
-              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
+            <div>
+              <h2 class="logo-col-txt">{{ .PageTitle }}</h2>
             </div>
           </div>
 
@@ -338,7 +310,9 @@ var PageTemplates = map[string]string{
     <meta name="author" content="{{ .MetaAuthor }}" />
     <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/montserrat.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/register.css" }}" />
     {{ if eq .Data.ui_options.custom_css_required "yes" }}
       <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
@@ -346,46 +320,36 @@ var PageTemplates = map[string]string{
   </head>
 
   <body class="h-full">
-    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
-      <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md md:max-w-2xl lg:max-w-4xl lg:mt-8">
-        <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
-          <div class="grid grid-cols-4 gap-2 pb-4 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="app-page">
+      <div class="app-content {{ if eq .Data.view "register" }}md:max-w-2xl lg:max-w-4xl{{ end }}">
+        <div class="app-container">
+          <div class="logo-col-box">
             {{ if .LogoURL }}
               <div>
-                <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+                <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
               </div>
             {{ end }}
-            <div class="col-span-3 self-end">
-              <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
+            <div>
+              <h2 class="logo-col-txt">{{ .PageTitle }}</h2>
             </div>
           </div>
 
           {{ if .Message }}
           <div id="alerts" class="rounded-md bg-red-50 p-4">
-            <div class="flex">
-              <div class="flex-shrink-0">
-                <!-- Heroicon name: solid/x-circle -->
-                  <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                  </svg>
-              </div>
-              <div class="ml-3">
-                <p class="text-sm font-medium text-red-800">{{ .Message }}</p>
-              </div>
+            <div class="flex items-center">
+              <div class="flex-shrink-0"><i class="las la-exclamation-triangle text-2xl text-red-600"></i></div>
+              <div class="ml-3"><p class="text-sm font-medium text-red-800">{{ .Message }}</p></div>
               <div class="ml-auto pl-3">
                 <div class="-mx-1.5 -my-1.5">
-                  <button type="button" onclick="hideAlert(); return false;" class="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600">
+                  <button type="button" onclick="hideAlert(); return false;" class="app-alert-banner">
                     <span class="sr-only">Dismiss</span>
-                    <!-- Heroicon name: solid/x -->
-                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
+                    <i class="las la-times text-2xl text-red-600"></i>
                   </button>
                 </div>
               </div>
             </div>
           </div>
-        {{ end }}
+          {{ end }}
 
           <div class="mt-3">
               {{ if eq .Data.view "register" }}
@@ -393,15 +357,15 @@ var PageTemplates = map[string]string{
               {{ end }}
 
               {{ if eq .Data.view "ack" }}
-              <form method="POST" action="{{ pathjoin .ActionEndpoint "/register/ack" .Data.registration_id }}" class="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-8">
+              <form method="POST" action="{{ pathjoin .ActionEndpoint "/register/ack" .Data.registration_id }}">
               {{ end }}
 
               {{ if eq .Data.view "register" }}
                 <div>
-                  <label for="registrant" class="block text-sm font-medium text-gray-700">Username</label>
+                  <label for="registrant" class="app-gen-inp-lbl">Username</label>
                   <div class="mt-1">
                     <input id="registrant" name="registrant" type="text" 
-                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md validate"
+                      class="app-gen-inp-txt validate"
                       pattern="{{ .Data.username_validate_pattern }}"
                       title="{{ .Data.username_validate_title }}"
                       autocorrect="off" autocapitalize="off" autocomplete="username" spellcheck="false"
@@ -410,10 +374,10 @@ var PageTemplates = map[string]string{
                   </div>
                 </div>
                 <div>
-                  <label for="registrant_password" class="block text-sm font-medium text-gray-700">Password</label>
+                  <label for="registrant_password" class="app-gen-inp-lbl">Password</label>
                   <div class="mt-1">
                     <input type="password" name="registrant_password" id="registrant_password"
-                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md validate"
+                      class="app-gen-inp-txt validate"
                       pattern="{{ .Data.password_validate_pattern }}"
                       title="{{ .Data.password_validate_title }}"
                       autocorrect="off" autocapitalize="off" autocomplete="current-password" spellcheck="false"
@@ -422,29 +386,29 @@ var PageTemplates = map[string]string{
                   </div>
                 </div>
                 <div>
-                  <label for="registrant_email" class="block text-sm font-medium text-gray-700">Email</label>
+                  <label for="registrant_email" class="app-gen-inp-lbl">Email</label>
                   <div class="mt-1">
                     <input id="registrant_email" name="registrant_email" type="email" autocomplete="email"
-                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md validate" 
+                      class="app-gen-inp-txt validate" 
                       autocorrect="off" autocapitalize="off" autocomplete="email" spellcheck="false"
                       required
                     />
                   </div>
                 </div>
                 <div>
-                  <label for="first_name" class="block text-sm font-medium text-gray-700">First name</label>
+                  <label for="first_name" class="app-gen-inp-lbl">First name</label>
                   <div class="mt-1">
                     <input type="text" name="first_name" id="first_name"
-                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md"
+                      class="app-gen-inp-txt"
                       autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false"
                     />
                   </div>
                 </div>
                 <div>
-                  <label for="last_name" class="block text-sm font-medium text-gray-700">Last name</label>
+                  <label for="last_name" class="app-gen-inp-lbl">Last name</label>
                   <div class="mt-1">
                     <input type="text" name="last_name" id="last_name"
-                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md"
+                      class="app-gen-inp-txt"
                       autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false"
                     />
                   </div>
@@ -452,10 +416,10 @@ var PageTemplates = map[string]string{
 
                 {{ if .Data.require_registration_code }}
                 <div>
-                  <label for="registrant_code" class="block text-sm font-medium text-gray-700">Registration Code</label>
+                  <label for="registrant_code" class="app-gen-inp-lbl">Registration Code</label>
                   <div class="mt-1">
-                    <input type="text" name="registrant_code" id="registrant_code"
-                      class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md validate"
+                    <input type="text" id="registrant_code" name="registrant_code"
+                      class="app-gen-inp-txt validate"
                       autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false"
                     />
                   </div>
@@ -486,64 +450,92 @@ var PageTemplates = map[string]string{
               {{ end }}
 
               {{ if eq .Data.view "registered" }}
-              <p style="margin-bottom: 1em">Thank you for registering and we hope you enjoy the experience!</p>
-              <p style="margin-bottom: 1em">Here are a few things to keep in mind:</p>
-              <ol style="margin-right: 3em">
-                <li>You should receive your confirmation email within the next 15 minutes.</li>
-                <li>If you still don't see it, please email support so we can resend it to you.</li>
-              </ol>
+              <div class="app-txt-section">
+                <p>Thank you for registering and we hope you enjoy the experience!</p>
+                <p>Here are a few things to keep in mind:</p>
+                <ol class="list-decimal pl-8">
+                  <li>You should receive your confirmation email within the next 15 minutes.</li>
+                  <li>If you still don't see it, please email support so we can resend it to you.</li>
+                </ol>
+              </div>
               {{ end }}
 
               {{ if eq .Data.view "ack" }}
-              <div>
-                <label for="registration_code" class="block text-sm font-medium text-gray-700">Password</label>
-                <div class="mt-1">
-                  <input type="text" name="registration_code" id="registration_code"
-                    class="py-3 px-4 block w-full shadow-sm focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md validate"
-                    pattern="[A-Za-z0-9]{6,8}" maxlength="8" placeholder="123456"
-                    title="The registration code should be 6-8 characters long."
-                    autocorrect="off" autocapitalize="off" autocomplete="one-time-code" spellcheck="false"
-                    required
-                  />
+              <div class="pb-4">
+                <label for="registration_code" class="app-inp-lbl">Passcode</label>
+                <div class="app-inp-box">
+                  <input id="registration_code" name="registration_code" type="text"
+                         class="font-['Montserrat'] app-inp-code-txt validate"
+                         pattern="[A-Za-z0-9]{6,8}" maxlength="8"
+                         title="The registration code should be 6-8 characters long."
+                         autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
+                         required />
                 </div>
+              </div>
               {{ end }}
 
               {{ if eq .Data.view "ackfail" }}
-              <p>Unfortunately, things did not go as expected. {{ .Data.message }}.</p>
+              <div class="app-txt-section">
+                <p>Unfortunately, things did not go as expected. {{ .Data.message }}.</p>
+              </div>
               {{ end }}
 
               {{ if eq .Data.view "acked" }}
-              <p style="margin-bottom: 1em">Thank you for confirming your registration and validating your email address!</p>
-              <p>At this point, once an administrator approves or disapproves your registration,
-                you will get an email about that decision. If approved, you will be able to login with your
-                credentials right away.
-              </p>
-              {{ end }}
 
-
-              {{ if eq .Data.view "register" }}
-              <div class="sm:col-span-2 text-right">
-                <a href="{{ .ActionEndpoint }}">
-                  <button type="button" name="portal" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Portal</button>
-                </a>
-                <button type="reset" name="reset" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Clear</button>
-                <button type="submit" name="submit" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Submit</button>
+              <div class="app-txt-section">
+                <p>Thank you for confirming your registration and validating your email address!</p>
+                <p>At this point, once an administrator approves or disapproves your registration,
+                  you will get an email about that decision. If approved, you will be able to login with your
+                  credentials right away.
+                </p>
               </div>
               {{ end }}
 
-              {{ if ne .Data.view "register" }}
-              <div class="sm:col-span-2 text-right">
-                <a href="{{ .ActionEndpoint }}">
-                  <button type="button" name="portal" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Portal</button>
-                </a>
-              </div>
-              {{ end }}
+              <div class="sm:col-span-2">
+                <div class="flex gap-4 justify-end">
+                  {{ if eq .Data.view "register" }}
+                  <a href="{{ .ActionEndpoint }}">
+                    <button type="button" name="portal" class="app-btn-sec">
+                      <div><i class="las la-home"></i></div>
+                      <div class="pl-1 pr-2"><span>Home</span></div>
+                    </button>
+                  </a>
+                  <button type="reset" name="reset" class="app-btn-sec">
+                    <div><i class="las la-redo-alt"></i></i></div>
+                    <div class="pl-1 pr-2"><span>Clear</span></div>
+                  </button>
+                  <button type="submit" name="submit" class="app-btn-pri">
+                    <div><i class="las la-check"></i></div>
+                    <div class="pl-1 pr-2"><span>Submit</span></div>
+                  </button>
+                  {{ end }}
 
-              {{ if eq .Data.view "ack" }}
-              <button type="reset" name="reset" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Clear</button>
-              <button type="submit" name="submit" class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Submit</button>
-            </div>
-              {{ end }}
+                  {{ if and (ne .Data.view "register") (ne .Data.view "ack") }}
+                  <a href="{{ .ActionEndpoint }}">
+                    <button type="button" name="portal" class="app-btn-sec">
+                      <div><i class="las la-home"></i></div>
+                      <div class="pl-1 pr-2"><span>Home</span></div>
+                    </button>
+                  </a>
+                  {{ end }}
+
+                  {{ if eq .Data.view "ack" }}
+                  <a href="{{ .ActionEndpoint }}">
+                    <button type="button" name="portal" class="app-btn-sec">
+                      <div><i class="las la-home"></i></div>
+                    </button>
+                  </a>
+                  <button type="reset" name="reset" class="app-btn-sec">
+                    <div><i class="las la-redo-alt"></i></i></div>
+                    <div class="pl-1 pr-2"><span>Clear</span></div>
+                  </button>
+                  <button type="submit" name="submit" class="app-btn-pri">
+                    <div><i class="las la-check"></i></div>
+                    <div class="pl-1 pr-2"><span>Submit</span></div>
+                  </button>
+                  {{ end }}
+                </div>
+              </div>
 
             {{ if or (eq .Data.view "register") (eq .Data.view "ack") }}
             </form>
@@ -587,23 +579,23 @@ var PageTemplates = map[string]string{
   </head>
 
   <body class="h-full">
-    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
-      <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md md:max-w-2xl lg:max-w-2xl lg:mt-8">
+    <div class="app-page">
+      <div class="app-content md:max-w-2xl lg:max-w-2xl">
         <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
           <div class="bg-white min-h-full px-4 py-16 sm:px-6 sm:py-24 md:grid md:place-items-center lg:px-8">
             <div class="max-w-max mx-auto">
               <main class="sm:flex">
                 {{ if .LogoURL }}
-                  <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+                  <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
                 {{ end }}
                 <div class="sm:ml-6">
-                  <div class="sm:border-l sm:border-gray-200 sm:pl-6">
-                    <h1 class="text-4xl font-extrabold text-primary-700 tracking-tight sm:text-5xl">{{ .PageTitle }}</h1>
-                    <p class="mt-1 text-base text-primary-500">{{ .Data.message }}</p>
+                  <div class="app-gen-banner-box">
+                    <h1 class="app-gen-banner-header">{{ .PageTitle }}</h1>
+                    <p class="app-gen-banner-message">{{ .Data.message }}</p>
                   </div>
                   {{ if .Data.go_back_url }}
-                    <div class="mt-10 flex space-x-3 sm:border-l sm:border-transparent sm:pl-6">
-                      <a href="{{ .Data.go_back_url }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"> Go back </a>
+                    <div class="app-gen-btn-box">
+                      <a href="{{ .Data.go_back_url }}" class="app-gen-btn-txt"> Go back </a>
                     </div>
                   {{ end }}
                 </div>
@@ -618,9 +610,6 @@ var PageTemplates = map[string]string{
     {{ if eq .Data.ui_options.custom_js_required "yes" }}
       <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
     {{ end }}
-    <script>
-      hljs.initHighlightingOnLoad();
-    </script>
   </body>
 </html>`,
 	"basic/settings": `<!doctype html>
@@ -1568,18 +1557,18 @@ function u2f_token_authenticate(formID, btnID) {
     {{ end }}
   </head>
   <body class="h-full">
-    <div class="min-h-full flex flex-col px-2 sm:px-6 lg:px-8">
-      <div class="mt-2 pb-8 sm:mx-auto sm:w-full sm:max-w-md lg:mt-8">
-        <div class="bg-white py-8 px-4 pb-8 shadow-lg sm:rounded-lg sm:px-10">
-          <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="app-page">
+      <div class="app-content">
+        <div class="app-container">
+          <div class="logo-box">
             {{ if .LogoURL }}
-              <img class="mx-auto h-24 w-auto" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+              <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
             {{ end }}
-            <h2 class="mt-4 mb-8 text-center text-3xl font-extrabold text-primary-600">{{ .PageTitle }}</h2>
+            <h2 class="logo-txt">{{ .PageTitle }}</h2>
           </div>
 
           {{ if or (eq .Data.view "mfa_mixed_auth") (eq .Data.view "mfa_mixed_register") }}
-          <div class="space-y-6 pb-4 text-lg leading-7 text-primary-600">
+          <div class="app-txt-section">
             <p>Your session requires multi-factor authentication.</p>
             {{ if eq .Data.view "mfa_mixed_register" }}
             <p>However, you do not have second factor authentication method configured.</p>
@@ -1593,9 +1582,9 @@ function u2f_token_authenticate(formID, btnID) {
               <i class="las la-mobile text-2xl text-primary-500"></i>
               <div class="ml-3">
                 {{ if eq .Data.view "mfa_mixed_register" }}
-                <a class="text-2xl text-primary-600" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-register" }}"><span>Authenticator App</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-register" }}"><span>Authenticator App</a>
                 {{ else }}
-                <a class="text-2xl text-primary-600" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-auth" }}">Authenticator App</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-auth" }}">Authenticator App</a>
                 {{ end }}
               </div>
             </li>
@@ -1603,9 +1592,9 @@ function u2f_token_authenticate(formID, btnID) {
               <i class="las la-microchip text-2xl text-primary-500"></i>
               <div class="ml-3">
                 {{ if eq .Data.view "mfa_mixed_register" }}
-                <a class="text-2xl text-primary-600" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-register" }}">Hardware Token</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-register" }}">Hardware Token</a>
                 {{ else }}
-                <a class="text-2xl text-primary-600" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-auth" }}">Hardware Token</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-auth" }}">Hardware Token</a>
                 {{ end }}
               </div>
             </li>
@@ -1618,15 +1607,14 @@ function u2f_token_authenticate(formID, btnID) {
                   autocomplete="off"
                   >
               <div>
-                <label for="secret" class="block text-center pb-2 text-lg font-sans font-medium text-primary-700">Please provide your password</label>
-                <div class="mt-1 relative rounded-md shadow-sm">
-                  <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-primary-700">
+                <label for="secret" class="app-inp-lbl text-center">Please provide your password</label>
+                <div class="app-inp-box">
+                  <div class="app-inp-prf-img">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                     </svg>
                   </div>
-                  <input id="secret" name="secret" type="password"
-                         class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl"
+                  <input id="secret" name="secret" type="password" class="app-inp-txt"
                          autocorrect="off" autocapitalize="off" spellcheck="false" autofocus required />
                 </div>
               </div>
@@ -1638,7 +1626,7 @@ function u2f_token_authenticate(formID, btnID) {
               <div class="flex gap-4">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-center">
+                    <button type="button" class="app-btn-sec">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -1648,7 +1636,7 @@ function u2f_token_authenticate(formID, btnID) {
                   </a>
                 </div>
                 <div class="flex-none">
-                  <button type="reset" name="reset" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-center">
+                  <button type="reset" name="reset" class="app-btn-sec">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1658,7 +1646,7 @@ function u2f_token_authenticate(formID, btnID) {
                 </div>
 
                 <div class="grow">
-                  <button type="submit" name="submit" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                  <button type="submit" name="submit" class="app-btn-pri">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -1682,10 +1670,10 @@ function u2f_token_authenticate(formID, btnID) {
                   autocomplete="off"
                   >
               <div class="py-4">
-                <label for="email" class="block pb-2 text-lg font-sans font-medium text-primary-700">Email Address</label>
-                <div class="mt-1 relative rounded-md shadow-sm">
+                <label for="email" class="app-inp-lbl">Email Address</label>
+                <div class="app-inp-box">
                   <input id="email" name="email" type="text"
-                         class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl"
+                         class="app-inp-txt"
                          autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
                          required />
                 </div>
@@ -1696,7 +1684,7 @@ function u2f_token_authenticate(formID, btnID) {
               <div class="flex gap-4">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-center">
+                    <button type="button" class="app-btn-sec">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -1706,7 +1694,7 @@ function u2f_token_authenticate(formID, btnID) {
                   </a>
                 </div>
                 <div class="grow">
-                  <button type="submit" name="submit" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                  <button type="submit" name="submit" class="app-btn-pri">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -1730,10 +1718,10 @@ function u2f_token_authenticate(formID, btnID) {
                   autocomplete="off"
                   >
               <div class="py-4">
-                <label for="passcode" class="block pb-2 text-lg font-sans font-medium text-primary-700">Passcode</label>
-                <div class="mt-1 relative rounded-md shadow-sm">
+                <label for="passcode" class="app-inp-lbl">Passcode</label>
+                <div class="app-inp-box">
                   <input id="passcode" name="passcode" type="text"
-                         class="font-['Montserrat'] tracking-widest text-3xl text-center text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md px-4 py-4 border-primary-300 focus:text-3xl validate"
+                         class="font-['Montserrat'] app-inp-code-txt validate"
                          pattern="[0-9]{4,8}" maxlength="8"
                          title="Authentication code should contain 4-8 characters and consists of 0-9 characters."
                          autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
@@ -1743,7 +1731,7 @@ function u2f_token_authenticate(formID, btnID) {
               <div class="flex gap-4">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-center">
+                    <button type="button" class="app-btn-sec">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -1753,7 +1741,7 @@ function u2f_token_authenticate(formID, btnID) {
                   </a>
                 </div>
                 <div class="flex-none">
-                  <button type="reset" name="reset" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-  center">
+                  <button type="reset" name="reset" class="app-btn-sec">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1762,7 +1750,7 @@ function u2f_token_authenticate(formID, btnID) {
                   </button>
                 </div>
                 <div class="grow">
-                  <button type="submit" name="submit" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:  ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                  <button type="submit" name="submit" class="app-btn-pri">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1785,15 +1773,14 @@ function u2f_token_authenticate(formID, btnID) {
                   >
               <input id="webauthn_request" name="webauthn_request" type="hidden" value="" />
               <input id="sandbox_id" name="sandbox_id" type="hidden" value="{{ .Data.id }}" />
-              <div class="space-y-6 pb-4 text-lg leading-7 text-primary-600">
+              <div class="app-txt-section">
                 <p>Insert your hardware token into a USB port. When prompted, touch,
                 or otherwise trigger the hardware token.</p>
               </div>
             </form>
             <div id="mfa-u2f-auth-form-rst" class="pt-4 hidden">
               <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id }}">
-                <button type="button" name="button"
-                  class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:  ring-2 focus:ring-offset-2 focus: ring-primary-500 items-center">
+                <button type="button" name="button" class="app-btn-pri">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -1812,7 +1799,7 @@ function u2f_token_authenticate(formID, btnID) {
                   autocomplete="off"
                   >
               <div id="token-params">
-                <div class="space-y-6 pb-4 text-lg leading-7 text-primary-600">
+                <div class="app-txt-section">
                   <p><b>Step 1</b>: If necessary, amend the label and comment associated with the authenticator.
                     The label is what you would see in your authenticator app.
                     The comment is what you would see in this portal.
@@ -1820,15 +1807,15 @@ function u2f_token_authenticate(formID, btnID) {
                 </div>
 
                 <div>
-                  <label for="label" class="block pb-2 text-lg font-sans font-medium text-primary-700">Name</label>
-                  <div class="mt-1 relative rounded-md shadow-sm">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-primary-700">
+                  <label for="label" class="app-inp-lbl">Name</label>
+                  <div class="app-inp-box">
+                    <div class="app-inp-prf-img">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                       </svg>
                     </div>
                     <input id="label" name="label" type="text"
-                           class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl validate"
+                           class="app-inp-txt validate"
                            value="{{ .Data.mfa_label }}" pattern="[A-Za-z0-9]{4,25}" maxlength="25"
                            title="Name should contain 4-25 characters and consists of A-Z, a-z, 0-9 characters."
                            autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
@@ -1837,15 +1824,15 @@ function u2f_token_authenticate(formID, btnID) {
                 </div>
 
                 <div class="pt-4">
-                  <label for="comment" class="block pb-2 text-lg font-sans font-medium text-primary-700">Comment</label>
-                  <div class="mt-1 relative rounded-md shadow-sm">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-primary-700">
+                  <label for="comment" class="app-inp-lbl">Comment</label>
+                  <div class="app-inp-box">
+                    <div class="app-inp-prf-img">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                       </svg>
                     </div>
                     <input id="comment" name="comment" type="text"
-                           class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl validate"
+                           class="app-inp-txt validate"
                            value="{{ .Data.mfa_comment }}" pattern="[A-Za-z0-9 -]{4,25}" maxlength="50"
                            title="Comment should contain 4-50 characters and consists of A-Z, a-z, 0-9, space, and dash characters."
                            autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
@@ -1853,7 +1840,7 @@ function u2f_token_authenticate(formID, btnID) {
                   </div>
                 </div>
 
-                <div class="space-y-6 pt-4 text-lg leading-7 text-primary-600">
+                <div class="app-txt-section">
                   <p><b>Step 1a</b> (<i>optional</i>): If necessary, click
                     <a class="text-secondary-500 hover:text-primary-500" href="#advanced-setup-all" 
                       onclick="toggleAdvancedSetupMode(); return false;">here</a>
@@ -1861,33 +1848,33 @@ function u2f_token_authenticate(formID, btnID) {
                   </p>
                 </div>
 
-                <div id="advanced-setup-all" class="space-y-6 pb-4 text-lg leading-7 text-primary-600 hidden">
+                <div id="advanced-setup-all" class="app-txt-section hidden">
                   <div class="pt-4">
-                    <label for="secret" class="block pb-2 text-lg font-sans font-medium text-primary-700">Token Secret</label>
-                    <div class="mt-1 relative rounded-md shadow-sm">
-                      <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-primary-700">
+                    <label for="secret" class="app-inp-lbl">Token Secret</label>
+                    <div class="app-inp-box">
+                      <div class="app-inp-prf-img">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                         </svg>
                       </div>
                       <input id="secret" name="secret" type="text"
-                             class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl validate"
+                             class="app-inp-txt validate"
                              value="{{ .Data.mfa_secret }}" pattern="[A-Za-z0-9]{10,100}" maxlength="100"
                              title="Token secret should contain 10-200 characters and consists of A-Z and 0-9 characters only."
                              autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
                              required />
                     </div>
                   </div>
-                  <div class="mt-1 relative rounded-md shadow-sm">
-                    <select id="period" name="period" class="mt-1 block w-full pl-3 pr-10 py-2 text-xl border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md">
+                  <div class="app-inp-box">
+                    <select id="period" name="period" class="app-inp-sel">
                       <option value="15" {{ if eq .Data.mfa_period "15" }} selected{{ end }}>15 Seconds Lifetime</option>
                       <option value="30" {{ if eq .Data.mfa_period "30" }} selected{{ end }}>30 Seconds Lifetime</option>
                       <option value="60" {{ if eq .Data.mfa_period "60" }} selected{{ end }}>60 Seconds Lifetime</option>
                       <option value="90" {{ if eq .Data.mfa_period "90" }} selected{{ end }}>90 Seconds Lifetime</option>
                     </select>
                   </div>
-                  <div class="mt-1 relative rounded-md shadow-sm">
-                    <select id="digits" name="digits" class="mt-1 block w-full pl-3 pr-10 py-2 text-xl border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md">
+                  <div class="app-inp-box">
+                    <select id="digits" name="digits" class="app-inp-sel">
                       <option value="4" {{ if eq .Data.mfa_digits "4" }} selected{{ end }}>4 Digit Code</option>
                       <option value="6" {{ if eq .Data.mfa_digits "6" }} selected{{ end }}>6 Digit Code</option>
                       <option value="8" {{ if eq .Data.mfa_digits "8" }} selected{{ end }}>8 Digit Code</option>
@@ -1895,7 +1882,7 @@ function u2f_token_authenticate(formID, btnID) {
                   </div>
                 </div>
 
-                <div class="space-y-6 pt-4 text-lg leading-7 text-primary-600">
+                <div class="app-txt-section">
                   <p><b>Step 2</b>: Open your MFA authenticator application, e.g. Microsoft/Google Authenticator, Authy, etc.,
                     add new entry and click the "Get QR" link.
                   </p>
@@ -1909,14 +1896,14 @@ function u2f_token_authenticate(formID, btnID) {
                 <div id="mfa-qr-code-image" class="flex items-center justify-center">
                   <img src="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-barcode" .Data.code_uri_encoded }}.png" alt="QR Code" />
                 </div>
-                <div class="space-y-6 pt-4 text-lg leading-7 text-primary-600">
+                <div class="app-txt-section">
                   <p>&raquo; Can't scan? Click or copy the link below.</p>
                 </div>
-                <div id="mfa-no-camera-link" class="space-y-6 pt-4 text-lg leading-7 text-primary-600 text-center">
+                <div id="mfa-no-camera-link" class="app-txt-section text-center">
                   <a class="text-secondary-500 hover:text-primary-500" href="{{ .Data.code_uri }}">No Camera Link</a>
                 </div>
 
-                <div class="space-y-6 pt-4 text-lg leading-7 text-primary-600">
+                <div class="app-txt-section">
                   <p><b>Step 3</b>: Enter the authentication code you see in the app and click "Add".</p>
                 </div>
 
@@ -1925,10 +1912,10 @@ function u2f_token_authenticate(formID, btnID) {
                 <input id="barcode_uri" name "barcode_uri" type="hidden" value="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-barcode" }}" />
 
                 <div class="py-4">
-                  <label for="passcode" class="block pb-2 text-lg font-sans font-medium text-primary-700">Passcode</label>
-                  <div class="mt-1 relative rounded-md shadow-sm">
+                  <label for="passcode" class="app-inp-lbl">Passcode</label>
+                  <div class="app-inp-box">
                     <input id="passcode" name="passcode" type="text"
-                           class="font-['Montserrat'] text-3xl text-center text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md px-4 py-4 border-primary-300 focus:text-3xl validate"
+                           class="font-['Montserrat'] app-inp-code-txt validate"
                            pattern="[0-9]{4,8}" maxlength="8"
                            title="Authentication code should contain 4-8 characters and consists of 0-9 characters."
                            autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
@@ -1938,8 +1925,7 @@ function u2f_token_authenticate(formID, btnID) {
 
                 <div class="flex gap-4">
                   <div class="grow">
-                    <button type="submit" name="submit"
-                      class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2      focus:ring-primary-500 items-center">
+                    <button type="submit" name="submit" class="app-btn-pri">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                       </svg>
@@ -1968,15 +1954,15 @@ function u2f_token_authenticate(formID, btnID) {
               <input class="hidden" id="webauthn_challenge" name="webauthn_challenge" type="text" value="{{ .Data.webauthn_challenge }}" />
 
               <div>
-                <label for="comment" class="block pb-2 text-lg font-sans font-medium text-primary-700">Name your token (optional)</label>
-                <div class="mt-1 relative rounded-md shadow-sm">
-                  <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-primary-700">
+                <label for="comment" class="app-inp-lbl">Name your token (optional)</label>
+                <div class="app-inp-box">
+                  <div class="app-inp-prf-img">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                     </svg>
                   </div>
                   <input id="comment" name="comment" type="text"
-                         class="text-xl text-primary-700 focus:ring-blue-500 focus:border-blue-400 block w-full rounded-md pl-12 px-4 py-4 border-primary-300 focus:text-xl validate"
+                         class="app-inp-txt validate"
                          pattern="[A-Za-z0-9 -]{4,25}" maxlength="25"
                          title="A comment should contain 4-25 characters and consists of A-Z, a-z, 0-9, space, and dash characters."
                          autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off" />
@@ -1986,7 +1972,7 @@ function u2f_token_authenticate(formID, btnID) {
               <div class="flex gap-4">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-center">
+                    <button type="button" class="app-btn-sec">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -1996,7 +1982,7 @@ function u2f_token_authenticate(formID, btnID) {
                   </a>
                 </div>
                 <div class="flex-none">
-                  <button type="reset" name="reset" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-gray-400 hover:bg-secondary-400 focus:outline-none items-  center">
+                  <button type="reset" name="reset" class="app-btn-sec">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -2006,9 +1992,8 @@ function u2f_token_authenticate(formID, btnID) {
                 </div>
 
                 <div class="grow">
-                  <button id="mfa-add-u2f-button" type="button" name="action"
-                    onclick="u2f_token_register('mfa-add-u2f-form', 'mfa-add-u2f-button'); return false;"
-                    class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:  ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                  <button id="mfa-add-u2f-button" type="button" name="action" class="app-btn-pri"
+                    onclick="u2f_token_register('mfa-add-u2f-form', 'mfa-add-u2f-button'); return false;">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -2024,8 +2009,7 @@ function u2f_token_authenticate(formID, btnID) {
 
             <div id="mfa-add-u2f-form-rst" class="hidden">
               <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id }}">
-                <button type="button" name="button"
-                  class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:  ring-2 focus:ring-offset-2 focus: ring-primary-500 items-center">
+                <button type="button" name="button" class="app-btn-pri">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -2037,14 +2021,13 @@ function u2f_token_authenticate(formID, btnID) {
             </div>
           </div>
           {{ else if eq .Data.view "terminate" }}
-          <div class="space-y-6 pb-8 text-lg leading-7 text-primary-600">
+          <div class="app-txt-section">
             <p>{{ .Data.error }}.</p>
           </div>
           <div class="flex gap-4">
             <div class="grow">
               <a href="{{ pathjoin .ActionEndpoint "login" }}">
-                <button type="button"
-                        class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                <button type="button" class="app-btn-pri">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -2056,15 +2039,14 @@ function u2f_token_authenticate(formID, btnID) {
             </div>
           </div>
           {{ else if eq .Data.view "error" }}
-          <div class="space-y-6 pb-8 text-lg leading-7 text-primary-600">
+          <div class="app-txt-section">
             <p>Your session failed to meet authorization requirements.</p>
             <p>{{ .Data.error }}.</p>
           </div>
           <div class="flex gap-4">
             <div class="grow">
               <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id }}">
-                <button type="button"
-                        class="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-xl font-medium text-white bg-primary-600 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 items-center">
+                <button type="button" class="app-btn-pri">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -2076,7 +2058,7 @@ function u2f_token_authenticate(formID, btnID) {
             </div>
           </div>
           {{ else }}
-          <div class="space-y-6 pb-8 text-lg leading-7 text-primary-600">
+          <div class="app-txt-section">
             <p>The {{ .Data.view }} view is unsupported.</p>
           </div>
           {{ end }}
