@@ -197,7 +197,7 @@ var PageTemplates = map[string]string{
     <div class="app-page">
       <div class="app-content">
         <div class="app-container">
-          <div class="logo-col-box">
+          <div class="logo-col-box justify-center">
             {{ if .LogoURL }}
               <div>
                 <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
@@ -264,7 +264,7 @@ var PageTemplates = map[string]string{
     <div class="app-page">
       <div class="app-content md:max-w-2xl lg:max-w-4xl">
         <div class="app-container">
-          <div class="logo-col-box">
+          <div class="logo-col-box justify-center">
             {{ if .LogoURL }}
               <div>
                 <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
@@ -275,14 +275,23 @@ var PageTemplates = map[string]string{
             </div>
           </div>
 
-          <div class="text-right">
-            <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/portal" }}">
-              <i class="las la-angle-left"></i>
-              <span class="text-lg">Back</span>
-            </a>
-          </div>
           <div class="mt-3">
             <pre><code class="language-json hljs">{{ .Data.token }}</code></pre>
+          </div>
+
+          <div class="flex flex-wrap pt-6 justify-center gap-4">
+            <div id="forgot_username_link">
+              <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/portal" }}">
+                <i class="las la-layer-group"></i>
+                <span class="text-lg">Portal</span>
+              </a>
+            </div>
+            <div id="contact_support_link">
+              <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/logout" }}">
+                <i class="las la-times-circle"></i>
+                <span class="text-lg">Sign Out</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -323,7 +332,7 @@ var PageTemplates = map[string]string{
     <div class="app-page">
       <div class="app-content {{ if eq .Data.view "register" }}md:max-w-2xl lg:max-w-4xl{{ end }}">
         <div class="app-container">
-          <div class="logo-col-box">
+          <div class="logo-col-box justify-center">
             {{ if .LogoURL }}
               <div>
                 <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
@@ -2146,6 +2155,161 @@ function u2f_token_authenticate(formID, btnID) {
     const appContainer = document.querySelector('.app-card-container')
     appContainer.prepend(toastElement.el)
     </script>
+    {{ end }}
+  </body>
+</html>`,
+	"basic/apps_aws_sso": `<!DOCTYPE html>
+<html lang="en" class="h-full bg-blue-100">
+  <head>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
+    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/apps_aws_sso.css" }}" />
+    {{ if eq .Data.ui_options.custom_css_required "yes" }}
+      <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
+    {{ end }}
+  </head>
+
+  <body class="h-full">
+    <div class="app-page">
+      <div class="app-content">
+        <div class="app-container">
+          <div class="logo-col-box justify-center">
+            {{ if .LogoURL }}
+              <div>
+                <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+              </div>
+            {{ end }}
+            <div>
+              <h2 class="logo-col-txt">{{ .PageTitle }}</h2>
+            </div>
+          </div>
+
+          {{ if gt .Data.role_count 0 }}
+            <div class="pb-4 pt-4">
+              <p class="app-inp-lbl">Assume the following roles on the associated AWS accounts.</p>
+            </div>
+
+            <div class="flex flex-col">
+              <div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+                  <table class="min-w-full divide-y divide-gray-300">
+                    <thead>
+                      <tr>
+                        <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary-700 sm:pl-6 md:pl-0">Role Name</th>
+                        <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-primary-700">Account ID</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                      {{ range .Data.roles }}
+                        <tr>
+                          <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-primary-700 sm:pl-6 md:pl-0 leading-none">
+                            <span>{{ brsplitline .Name }}</span>
+                          </td>
+                          <td class="whitespace-nowrap py-4 px-3 text-sm text-primary-500">{{ .AccountID }}</td>
+                        </tr>
+                      {{ end }}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          {{ else }}
+            <div class="pb-4 pt-4">
+              <p class="app-inp-lbl">Your user identity has no roles associated with AWS accounts.</p>
+            </div>
+          {{ end }}
+
+
+          <div class="flex flex-wrap {{ if gt .Data.role_count 0 }}pt-6{{ end }} justify-center gap-4">
+            <div id="forgot_username_link">
+              <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/portal" }}">
+                <i class="las la-layer-group"></i>
+                <span class="text-lg">Portal</span>
+              </a>
+            </div>
+            <div id="contact_support_link">
+              <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/logout" }}">
+                <i class="las la-times-circle"></i>
+                <span class="text-lg">Sign Out</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- JavaScript -->
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/apps_aws_sso.js" }}"></script>
+    {{ if eq .Data.ui_options.custom_js_required "yes" }}
+      <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
+    {{ end }}
+  </body>
+</html>`,
+	"basic/apps_mobile_access": `<!DOCTYPE html>
+<html lang="en" class="h-full bg-blue-100">
+  <head>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="{{ .MetaDescription }}" />
+    <meta name="author" content="{{ .MetaAuthor }}" />
+    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/apps_mobile_access.css" }}" />
+    {{ if eq .Data.ui_options.custom_css_required "yes" }}
+      <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
+    {{ end }}
+  </head>
+
+  <body class="h-full">
+    <div class="app-page">
+      <div class="app-content">
+        <div class="app-container">
+          <div class="logo-col-box">
+            {{ if .LogoURL }}
+              <div>
+                <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
+              </div>
+            {{ end }}
+            <div>
+              <h2 class="logo-col-txt">{{ .PageTitle }}</h2>
+            </div>
+          </div>
+          <div>
+            <p class="app-inp-lbl">Scan the below QR code and follow the link to perform one-time passwordless login.</p>
+          </div>
+
+          <div class="flex flex-wrap pt-6 justify-center gap-4">
+            <div id="forgot_username_link">
+              <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/portal" }}">
+                <i class="las la-layer-group"></i>
+                <span class="text-lg">Portal</span>
+              </a>
+            </div>
+            <div id="contact_support_link">
+              <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/logout" }}">
+                <i class="las la-times-circle"></i>
+                <span class="text-lg">Sign Out</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- JavaScript -->
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/apps_mobile_access.js" }}"></script>
+    {{ if eq .Data.ui_options.custom_js_required "yes" }}
+      <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
     {{ end }}
   </body>
 </html>`,

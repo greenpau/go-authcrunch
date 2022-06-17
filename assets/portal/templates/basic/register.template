@@ -22,7 +22,7 @@
     <div class="app-page">
       <div class="app-content {{ if eq .Data.view "register" }}md:max-w-2xl lg:max-w-4xl{{ end }}">
         <div class="app-container">
-          <div class="logo-col-box">
+          <div class="logo-col-box justify-center">
             {{ if .LogoURL }}
               <div>
                 <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
