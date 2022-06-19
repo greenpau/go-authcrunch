@@ -39,8 +39,6 @@ var PageTemplates = map[string]string{
   {{ $qrCodeLink := pathjoin .ActionEndpoint "/qrcode/login.png" }}
 
 
-  <!-- {{ printf "%v" .Data.login_options }} -->
-
   <body class="h-full">
     <div class="app-page">
       <div class="app-content">
