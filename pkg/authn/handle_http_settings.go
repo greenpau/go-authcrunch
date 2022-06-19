@@ -72,7 +72,6 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 			zap.String("realm", usr.Authenticator.Realm),
 			zap.String("jti", parsedUser.Claims.ID),
 			zap.String("source_address", addrutil.GetSourceAddress(r)),
-			zap.Any("XXX", usr.Authenticator),
 		)
 		return p.handleHTTPLogoutWithLocalRedirect(ctx, w, r, rr)
 	}
@@ -97,28 +96,46 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 
 	switch {
 	case strings.HasPrefix(endpoint, "/password"):
+		if p.config.UI.IsDisabledPage("settings/password") {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
+		}
 		if err := p.handleHTTPPasswordSettings(ctx, r, rr, usr, backend, resp.Data); err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 		}
 	case strings.HasPrefix(endpoint, "/apikeys"):
+		if p.config.UI.IsDisabledPage("settings/apikeys") {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
+		}
 		if err := p.handleHTTPAPIKeysSettings(ctx, r, rr, usr, backend, resp.Data); err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 		}
 	case strings.HasPrefix(endpoint, "/sshkeys"):
+		if p.config.UI.IsDisabledPage("settings/sshkeys") {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
+		}
 		if err := p.handleHTTPSSHKeysSettings(ctx, r, rr, usr, backend, resp.Data); err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 		}
 	case strings.HasPrefix(endpoint, "/gpgkeys"):
+		if p.config.UI.IsDisabledPage("settings/gpgkeys") {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
+		}
 		if err := p.handleHTTPGPGKeysSettings(ctx, r, rr, usr, backend, resp.Data); err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 		}
 	case strings.HasPrefix(endpoint, "/mfa/barcode/"):
 		return p.handleHTTPMfaBarcode(ctx, w, r, endpoint)
 	case strings.HasPrefix(endpoint, "/mfa"):
+		if p.config.UI.IsDisabledPage("settings/mfa") {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
+		}
 		if err := p.handleHTTPMfaSettings(ctx, r, rr, usr, backend, resp.Data); err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 		}
 	case strings.HasPrefix(endpoint, "/connected"):
+		if p.config.UI.IsDisabledPage("settings/connected") {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
+		}
 		resp.Data["view"] = "connected"
 	default:
 		if err := p.handleHTTPGeneralSettings(ctx, r, rr, usr, backend, resp.Data); err != nil {

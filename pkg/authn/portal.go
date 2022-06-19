@@ -325,6 +325,27 @@ func (p *Portal) configureLoginIcons() error {
 
 	p.loginOptions["authenticators"] = iconConfigs
 
+	if len(iconConfigs) == 1 {
+		p.loginOptions["hide_contact_support_link"] = "yes"
+		p.loginOptions["hide_forgot_username_link"] = "yes"
+		p.loginOptions["hide_register_link"] = "yes"
+		p.loginOptions["hide_links"] = "yes"
+		for _, iconConfig := range iconConfigs {
+			if v, exists := iconConfig["contact_support_enabled"]; exists && v == "yes" {
+				p.loginOptions["hide_contact_support_link"] = "no"
+				p.loginOptions["hide_links"] = "no"
+			}
+			if v, exists := iconConfig["registration_enabled"]; exists && v == "yes" {
+				p.loginOptions["hide_register_link"] = "no"
+				p.loginOptions["hide_links"] = "no"
+			}
+			if v, exists := iconConfig["username_recovery_enabled"]; exists && v == "yes" {
+				p.loginOptions["hide_forgot_username_link"] = "no"
+				p.loginOptions["hide_links"] = "no"
+			}
+		}
+	}
+
 	return nil
 }
 

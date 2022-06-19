@@ -14,6 +14,10 @@
 
 package ui
 
+import (
+	"fmt"
+)
+
 // Parameters represent a common set of configuration settings
 // for HTML UI.
 type Parameters struct {
@@ -33,4 +37,41 @@ type Parameters struct {
 	CustomCSSPath           string            `json:"custom_css_path,omitempty" xml:"custom_css_path,omitempty" yaml:"custom_css_path,omitempty"`
 	CustomJsPath            string            `json:"custom_js_path,omitempty" xml:"custom_js_path,omitempty" yaml:"custom_js_path,omitempty"`
 	Language                string            `json:"language,omitempty" xml:"language,omitempty" yaml:"language,omitempty"`
+	DisabledPages           map[string]bool   `json:"disabled_pages,omitempty" xml:"disabled_pages,omitempty" yaml:"disabled_pages,omitempty"`
+}
+
+// DisablePage disables a specific page.
+func (p *Parameters) DisablePage(args []string) error {
+	pages := map[string]bool{
+		"settings": true,
+	}
+
+	if len(args) < 2 {
+		return fmt.Errorf("invalid syntax: too few arguments")
+	}
+
+	if _, exists := pages[args[0]]; !exists {
+		return fmt.Errorf("invalid syntax: %s is not supported", args[0])
+	}
+
+	if p.DisabledPages == nil {
+		p.DisabledPages = make(map[string]bool)
+	}
+
+	for _, arg := range args[1:] {
+		p.DisabledPages[args[0]+"/"+arg] = true
+	}
+
+	return nil
+}
+
+// IsDisabledPage checks whether a specific page is disabled.
+func (p *Parameters) IsDisabledPage(s string) bool {
+	if p.DisabledPages == nil {
+		return false
+	}
+	if _, exists := p.DisabledPages[s]; !exists {
+		return false
+	}
+	return true
 }
