@@ -74,6 +74,7 @@ type UserRealm struct {
 // that needs to be passed to Render method.
 type Args struct {
 	PageTitle               string                 `json:"page_title,omitempty" xml:"page_title,omitempty" yaml:"page_title,omitempty"`
+	NavItems                []*NavigationItem      `json:"nav_items,omitempty" xml:"nav_items,omitempty" yaml:"nav_items,omitempty"`
 	LogoURL                 string                 `json:"logo_url,omitempty" xml:"logo_url,omitempty" yaml:"logo_url,omitempty"`
 	LogoDescription         string                 `json:"logo_description,omitempty" xml:"logo_description,omitempty" yaml:"logo_description,omitempty"`
 	MetaTitle               string                 `json:"meta_title,omitempty" xml:"meta_title,omitempty" yaml:"meta_title,omitempty"`

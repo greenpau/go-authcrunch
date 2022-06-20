@@ -18,6 +18,14 @@ import (
 	"fmt"
 )
 
+// NavigationItem represents side navigation menu item.
+type NavigationItem struct {
+	Name     string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Path     string `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
+	Active   bool   `json:"active,omitempty" xml:"active,omitempty" yaml:"active,omitempty"`
+	IconName string `json:"icon_name,omitempty" xml:"icon_name,omitempty" yaml:"icon_name,omitempty"`
+}
+
 // Parameters represent a common set of configuration settings
 // for HTML UI.
 type Parameters struct {
@@ -74,4 +82,53 @@ func (p *Parameters) IsDisabledPage(s string) bool {
 		return false
 	}
 	return true
+}
+
+// GetNavigationItems return items for nav menu.
+func (p *Parameters) GetNavigationItems(s string) []*NavigationItem {
+	var navItems []*NavigationItem
+	for _, entry := range []string{
+		"settings/",
+		"settings/sshkeys",
+		"settings/gpgkeys",
+		"settings/apikeys",
+		"settings/mfa",
+		"settings/password",
+		"settings/connected",
+	} {
+		if p.IsDisabledPage(entry) {
+			continue
+		}
+		navItem := &NavigationItem{
+			Path: "/" + entry,
+		}
+		if s == entry {
+			navItem.Active = true
+		}
+		switch entry {
+		case "settings/":
+			navItem.Name = "Profile"
+			navItem.IconName = "las la-user-circle"
+		case "settings/sshkeys":
+			navItem.Name = "SSH Keys"
+			navItem.IconName = "las la-server"
+		case "settings/gpgkeys":
+			navItem.Name = "GPG Keys"
+			navItem.IconName = "las la-key"
+		case "settings/apikeys":
+			navItem.Name = "API Keys"
+			navItem.IconName = "las la-stream"
+		case "settings/mfa":
+			navItem.Name = "MFA"
+			navItem.IconName = "las la-microchip"
+		case "settings/password":
+			navItem.Name = "Password"
+			navItem.IconName = "las la-fingerprint"
+		case "settings/connected":
+			navItem.Name = "Connected Accounts"
+			navItem.IconName = "las la-share-alt"
+		}
+		navItems = append(navItems, navItem)
+	}
+	return navItems
 }

@@ -87,7 +87,7 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 	)
 
 	resp := p.ui.GetArgs()
-	resp.PageTitle = "Settings"
+	resp.PageTitle = "Profile"
 	resp.BaseURL(rr.Upstream.BasePath)
 
 	// Populate username (sub) and email address (email)
@@ -96,6 +96,8 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 
 	switch {
 	case strings.HasPrefix(endpoint, "/password"):
+		resp.PageTitle = "Password Management"
+		resp.NavItems = p.config.UI.GetNavigationItems("settings/password")
 		if p.config.UI.IsDisabledPage("settings/password") {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
 		}
@@ -103,6 +105,8 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 		}
 	case strings.HasPrefix(endpoint, "/apikeys"):
+		resp.PageTitle = "API Key Management"
+		resp.NavItems = p.config.UI.GetNavigationItems("settings/apikeys")
 		if p.config.UI.IsDisabledPage("settings/apikeys") {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
 		}
@@ -110,6 +114,8 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 		}
 	case strings.HasPrefix(endpoint, "/sshkeys"):
+		resp.PageTitle = "SSH Key Management"
+		resp.NavItems = p.config.UI.GetNavigationItems("settings/sshkeys")
 		if p.config.UI.IsDisabledPage("settings/sshkeys") {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
 		}
@@ -117,6 +123,8 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 		}
 	case strings.HasPrefix(endpoint, "/gpgkeys"):
+		resp.PageTitle = "GPG Key Management"
+		resp.NavItems = p.config.UI.GetNavigationItems("settings/gpgkeys")
 		if p.config.UI.IsDisabledPage("settings/gpgkeys") {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
 		}
@@ -126,6 +134,8 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 	case strings.HasPrefix(endpoint, "/mfa/barcode/"):
 		return p.handleHTTPMfaBarcode(ctx, w, r, endpoint)
 	case strings.HasPrefix(endpoint, "/mfa"):
+		resp.PageTitle = "Multi-Factor Authentication"
+		resp.NavItems = p.config.UI.GetNavigationItems("settings/mfa")
 		if p.config.UI.IsDisabledPage("settings/mfa") {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
 		}
@@ -133,11 +143,14 @@ func (p *Portal) handleHTTPSettings(ctx context.Context, w http.ResponseWriter, 
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 		}
 	case strings.HasPrefix(endpoint, "/connected"):
+		resp.PageTitle = "Connected Accounts"
+		resp.NavItems = p.config.UI.GetNavigationItems("settings/connected")
 		if p.config.UI.IsDisabledPage("settings/connected") {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
 		}
 		resp.Data["view"] = "connected"
 	default:
+		resp.NavItems = p.config.UI.GetNavigationItems("settings/")
 		if err := p.handleHTTPGeneralSettings(ctx, r, rr, usr, backend, resp.Data); err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 		}
