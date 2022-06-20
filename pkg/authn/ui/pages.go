@@ -102,22 +102,22 @@ var PageTemplates = map[string]string{
                 </form>
               </div>
 
-              <div id="user_actions" class="flex flex-wrap pt-6 justify-center gap-4{{ if or (ne $authenticatorCount 1) (eq .Data.login_options.hide_links "yes") }}hidden{{ end -}}">
-                <div id="user_register_link" {{ if eq .Data.login_options.hide_register_link "yes" }}class="hidden"{{ end -}}>
+              <div id="user_actions" class="flex flex-wrap pt-6 justify-center gap-4{{ if or (ne $authenticatorCount 1) (eq .Data.login_options.hide_links "yes") }} hidden{{ end -}}">
+                <div id="user_register_link"{{ if eq .Data.login_options.hide_register_link "yes" }} class="hidden"{{ end -}}>
                   <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/register" .Data.login_options.default_realm }}">
                     <i class="las la-book"></i>
                     <span class="text-lg">Register</span>
                   </a>
                 </div>
 
-                <div id="forgot_username_link" {{ if eq .Data.login_options.hide_forgot_username_link "yes" }}class="hidden"{{ end -}}>
+                <div id="forgot_username_link"{{ if eq .Data.login_options.hide_forgot_username_link "yes" }} class="hidden"{{ end -}}>
                   <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/forgot" .Data.login_options.default_realm }}">
                     <i class="las la-unlock"></i>
                     <span class="text-lg">Forgot Username?</span>
                   </a>
                 </div>
 
-                <div id="contact_support_link" {{ if eq .Data.login_options.hide_contact_support_link "yes" }}class="hidden"{{ end -}}>
+                <div id="contact_support_link"{{ if eq .Data.login_options.hide_contact_support_link "yes" }} class="hidden"{{ end -}}>
                   <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/help" .Data.login_options.default_realm }}">
                     <i class="las la-info-circle"></i>
                     <span class="text-lg">Contact Support</span>
