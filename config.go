@@ -24,16 +24,18 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
+	"github.com/greenpau/go-authcrunch/pkg/sso"
 )
 
 // Config is a configuration of Server.
 type Config struct {
-	Credentials               *credentials.Config           `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
-	Messaging                 *messaging.Config             `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
-	AuthenticationPortals     []*authn.PortalConfig         `json:"authentication_portals,omitempty" xml:"authentication_portals,omitempty" yaml:"authentication_portals,omitempty"`
-	AuthorizationPolicies     []*authz.PolicyConfig         `json:"authorization_policies,omitempty" xml:"authorization_policies,omitempty" yaml:"authorization_policies,omitempty"`
-	IdentityStores            []*ids.IdentityStoreConfig    `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
-	IdentityProviders         []*idp.IdentityProviderConfig `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
+	Credentials               *credentials.Config               `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
+	Messaging                 *messaging.Config                 `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
+	AuthenticationPortals     []*authn.PortalConfig             `json:"authentication_portals,omitempty" xml:"authentication_portals,omitempty" yaml:"authentication_portals,omitempty"`
+	AuthorizationPolicies     []*authz.PolicyConfig             `json:"authorization_policies,omitempty" xml:"authorization_policies,omitempty" yaml:"authorization_policies,omitempty"`
+	IdentityStores            []*ids.IdentityStoreConfig        `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
+	IdentityProviders         []*idp.IdentityProviderConfig     `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
+	SingleSignOnProviders     []*sso.SingleSignOnProviderConfig `json:"sso_providers,omitempty" xml:"sso_providers,omitempty" yaml:"sso_providers,omitempty"`
 	disabledIdentityStores    map[string]interface{}
 	disabledIdentityProviders map[string]interface{}
 	UserRegistries            []*registry.UserRegistryConfig `json:"user_registries,omitempty" xml:"user_registries,omitempty" yaml:"user_registries,omitempty"`
@@ -77,6 +79,16 @@ func (cfg *Config) AddIdentityProvider(name, kind string, data map[string]interf
 		return err
 	}
 	cfg.IdentityProviders = append(cfg.IdentityProviders, provider)
+	return nil
+}
+
+// AddSingleSignOnProvider adds a single sign-on provider configuration.
+func (cfg *Config) AddSingleSignOnProvider(data map[string]interface{}) error {
+	provider, err := sso.NewSingleSignOnProviderConfig(data)
+	if err != nil {
+		return err
+	}
+	cfg.SingleSignOnProviders = append(cfg.SingleSignOnProviders, provider)
 	return nil
 }
 
@@ -228,6 +240,20 @@ func (cfg *Config) Validate() error {
 				}
 				authByRealm[realmName] = providerName
 				authByName[providerName] = "identity provider in " + realmName + " realm"
+			}
+		}
+
+		// Iterate over SSO providers.
+		for _, providerName := range portalCfg.SingleSignOnProviders {
+			var providerFound bool
+			for _, entry := range cfg.SingleSignOnProviders {
+				if providerName == entry.Name {
+					providerFound = true
+					break
+				}
+			}
+			if !providerFound {
+				return fmt.Errorf("sso provider %q configuration not found", providerName)
 			}
 		}
 	}

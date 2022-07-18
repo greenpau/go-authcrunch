@@ -24,6 +24,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
+	"github.com/greenpau/go-authcrunch/pkg/sso"
 	"go.uber.org/zap"
 )
 
@@ -32,6 +33,7 @@ type refMap struct {
 	gatekeepers       map[string]*authz.Gatekeeper
 	identityStores    map[string]ids.IdentityStore
 	identityProviders map[string]idp.IdentityProvider
+	ssoProviders      map[string]sso.SingleSignOnProvider
 	userRegistries    map[string]registry.UserRegistry
 }
 
@@ -42,6 +44,7 @@ type Server struct {
 	gatekeepers       []*authz.Gatekeeper
 	identityStores    []ids.IdentityStore
 	identityProviders []idp.IdentityProvider
+	ssoProviders      []sso.SingleSignOnProvider
 	userRegistries    []registry.UserRegistry
 	nameRefs          refMap
 	realmRefs         refMap
@@ -54,6 +57,7 @@ func newRefMap() refMap {
 		gatekeepers:       make(map[string]*authz.Gatekeeper),
 		identityStores:    make(map[string]ids.IdentityStore),
 		identityProviders: make(map[string]idp.IdentityProvider),
+		ssoProviders:      make(map[string]sso.SingleSignOnProvider),
 		userRegistries:    make(map[string]registry.UserRegistry),
 	}
 }
@@ -110,6 +114,21 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		srv.identityStores = append(srv.identityStores, store)
 	}
 
+	for _, cfg := range config.SingleSignOnProviders {
+		provider, err := sso.NewSingleSignOnProvider(cfg, logger)
+		if err != nil {
+			return nil, errors.ErrNewServer.WithArgs("failed initializing sso provider", err)
+		}
+		if _, exists := srv.nameRefs.ssoProviders[provider.GetName()]; exists {
+			return nil, errors.ErrNewServer.WithArgs("duplicate sso provider name", provider.GetName())
+		}
+		if err := provider.Configure(); err != nil {
+			return nil, errors.ErrNewServer.WithArgs("failed configuring sso provider", err)
+		}
+		srv.nameRefs.ssoProviders[provider.GetName()] = provider
+		srv.ssoProviders = append(srv.ssoProviders, provider)
+	}
+
 	for _, cfg := range config.UserRegistries {
 		userRegistry, err := registry.NewUserRegistry(cfg, logger)
 		if err != nil {
@@ -124,10 +143,11 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 
 	for _, cfg := range config.AuthenticationPortals {
 		params := authn.PortalParameters{
-			Config:            cfg,
-			Logger:            logger,
-			IdentityStores:    srv.identityStores,
-			IdentityProviders: srv.identityProviders,
+			Config:                cfg,
+			Logger:                logger,
+			IdentityStores:        srv.identityStores,
+			IdentityProviders:     srv.identityProviders,
+			SingleSignOnProviders: srv.ssoProviders,
 		}
 		portal, err := authn.NewPortal(params)
 		if err != nil {

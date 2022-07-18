@@ -29,6 +29,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
+	"github.com/greenpau/go-authcrunch/pkg/sso"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"sort"
 
@@ -54,6 +55,7 @@ type Portal struct {
 	keystore          *kms.CryptoKeyStore
 	identityStores    []ids.IdentityStore
 	identityProviders []idp.IdentityProvider
+	ssoProviders      []sso.SingleSignOnProvider
 	cookie            *cookie.Factory
 	transformer       *transformer.Factory
 	ui                *ui.Factory
@@ -66,10 +68,11 @@ type Portal struct {
 
 // PortalParameters are input parameters for NewPortal.
 type PortalParameters struct {
-	Config            *PortalConfig          `json:"config,omitempty" xml:"config,omitempty" yaml:"config,omitempty"`
-	Logger            *zap.Logger            `json:"logger,omitempty" xml:"logger,omitempty" yaml:"logger,omitempty"`
-	IdentityStores    []ids.IdentityStore    `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
-	IdentityProviders []idp.IdentityProvider `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
+	Config                *PortalConfig              `json:"config,omitempty" xml:"config,omitempty" yaml:"config,omitempty"`
+	Logger                *zap.Logger                `json:"logger,omitempty" xml:"logger,omitempty" yaml:"logger,omitempty"`
+	IdentityStores        []ids.IdentityStore        `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
+	IdentityProviders     []idp.IdentityProvider     `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
+	SingleSignOnProviders []sso.SingleSignOnProvider `json:"sso_providers,omitempty" xml:"sso_providers,omitempty" yaml:"sso_providers,omitempty"`
 }
 
 // NewPortal returns an instance of Portal.
@@ -128,6 +131,27 @@ func NewPortal(params PortalParameters) (*Portal, error) {
 		if !providerFound {
 			return nil, errors.ErrNewPortal.WithArgs(
 				fmt.Errorf("identity provider %q not found", providerName),
+			)
+		}
+	}
+
+	for _, providerName := range params.Config.SingleSignOnProviders {
+		var providerFound bool
+		for _, provider := range params.SingleSignOnProviders {
+			if provider.GetName() == providerName {
+				if !provider.Configured() {
+					return nil, errors.ErrNewPortal.WithArgs(
+						fmt.Errorf("sso provider %q not configured", providerName),
+					)
+				}
+				p.ssoProviders = append(p.ssoProviders, provider)
+				providerFound = true
+				break
+			}
+		}
+		if !providerFound {
+			return nil, errors.ErrNewPortal.WithArgs(
+				fmt.Errorf("sso provider %q not found", providerName),
 			)
 		}
 	}

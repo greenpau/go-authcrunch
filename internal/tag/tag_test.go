@@ -47,6 +47,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/sso"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
@@ -66,6 +67,16 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{
+			name:  "test sso.Provider struct",
+			entry: &sso.Provider{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test sso.SingleSignOnProviderConfig struct",
+			entry: &sso.SingleSignOnProviderConfig{},
+			opts:  &Options{},
+		},
 		{
 			name:  "test ui.NavigationItem struct",
 			entry: &ui.NavigationItem{},
@@ -104,7 +115,12 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test authn.PortalParameters struct",
 			entry: &authn.PortalParameters{},
-			opts:  &Options{},
+			opts: &Options{
+				AllowFieldMismatch: true,
+				AllowedFields: map[string]interface{}{
+					"sso_providers": true,
+				},
+			},
 		},
 		{
 			name:  "test idp.IdentityProviderConfig struct",
@@ -386,7 +402,12 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test authn.PortalConfig struct",
 			entry: &authn.PortalConfig{},
-			opts:  &Options{},
+			opts: &Options{
+				AllowFieldMismatch: true,
+				AllowedFields: map[string]interface{}{
+					"sso_providers": true,
+				},
+			},
 		},
 		{
 			name:  "test requests.AuthorizationRequest struct",
@@ -622,6 +643,7 @@ func TestTagCompliance(t *testing.T) {
 				AllowedFields: map[string]interface{}{
 					"auth_portal_configs":  true,
 					"authz_policy_configs": true,
+					"sso_providers":        true,
 				},
 			},
 		},

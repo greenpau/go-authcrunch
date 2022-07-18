@@ -102,22 +102,22 @@ var PageTemplates = map[string]string{
                 </form>
               </div>
 
-              <div id="user_actions" class="flex flex-wrap pt-6 justify-center gap-4{{ if or (ne $authenticatorCount 1) (eq .Data.login_options.hide_links "yes") }} hidden{{ end -}}">
-                <div id="user_register_link"{{ if eq .Data.login_options.hide_register_link "yes" }} class="hidden"{{ end -}}>
+              <div id="user_actions" class="flex flex-wrap pt-6 justify-center gap-4 {{ if or (ne $authenticatorCount 1) (eq .Data.login_options.hide_links "yes") }}hidden{{ end -}}">
+                <div id="user_register_link" {{ if eq .Data.login_options.hide_register_link "yes" }}class="hidden"{{ end -}}>
                   <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/register" .Data.login_options.default_realm }}">
                     <i class="las la-book"></i>
                     <span class="text-lg">Register</span>
                   </a>
                 </div>
 
-                <div id="forgot_username_link"{{ if eq .Data.login_options.hide_forgot_username_link "yes" }} class="hidden"{{ end -}}>
+                <div id="forgot_username_link" {{ if eq .Data.login_options.hide_forgot_username_link "yes" }}class="hidden"{{ end -}}>
                   <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/forgot" .Data.login_options.default_realm }}">
                     <i class="las la-unlock"></i>
                     <span class="text-lg">Forgot Username?</span>
                   </a>
                 </div>
 
-                <div id="contact_support_link"{{ if eq .Data.login_options.hide_contact_support_link "yes" }} class="hidden"{{ end -}}>
+                <div id="contact_support_link" {{ if eq .Data.login_options.hide_contact_support_link "yes" }}class="hidden"{{ end -}}>
                   <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/help" .Data.login_options.default_realm }}">
                     <i class="las la-info-circle"></i>
                     <span class="text-lg">Contact Support</span>
@@ -2160,7 +2160,7 @@ function u2f_token_authenticate(formID, btnID) {
     {{ end }}
   </body>
 </html>`,
-	"basic/apps_aws_sso": `<!DOCTYPE html>
+	"basic/apps_sso": `<!DOCTYPE html>
 <html lang="en" class="h-full bg-blue-100">
   <head>
     <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
@@ -2173,7 +2173,7 @@ function u2f_token_authenticate(formID, btnID) {
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/apps_aws_sso.css" }}" />
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/apps_sso.css" }}" />
     {{ if eq .Data.ui_options.custom_css_required "yes" }}
       <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
     {{ end }}
@@ -2248,7 +2248,7 @@ function u2f_token_authenticate(formID, btnID) {
       </div>
     </div>
     <!-- JavaScript -->
-    <script src="{{ pathjoin .ActionEndpoint "/assets/js/apps_aws_sso.js" }}"></script>
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/apps_sso.js" }}"></script>
     {{ if eq .Data.ui_options.custom_js_required "yes" }}
       <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
     {{ end }}

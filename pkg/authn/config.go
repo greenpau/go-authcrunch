@@ -39,6 +39,8 @@ type PortalConfig struct {
 	IdentityStores []string `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
 	// The names of identity providers.
 	IdentityProviders []string `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
+	// The names of SSO providers.
+	SingleSignOnProviders []string `json:"sso_providers,omitempty" xml:"sso_providers,omitempty" yaml:"sso_providers,omitempty"`
 	// The names of user registries.
 	UserRegistries []string `json:"user_registries,omitempty" xml:"user_registries,omitempty" yaml:"user_registries,omitempty"`
 	// AccessListConfigs hold the configurations for the ACL of the token validator.

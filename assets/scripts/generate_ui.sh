@@ -16,7 +16,7 @@ _PAGES[${#_PAGES[@]}]="register"
 _PAGES[${#_PAGES[@]}]="generic"
 _PAGES[${#_PAGES[@]}]="settings"
 _PAGES[${#_PAGES[@]}]="sandbox"
-_PAGES[${#_PAGES[@]}]="apps_aws_sso"
+_PAGES[${#_PAGES[@]}]="apps_sso"
 _PAGES[${#_PAGES[@]}]="apps_mobile_access"
 
 printf "package ui\n\n" > ${UI_FILE}

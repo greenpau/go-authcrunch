@@ -47,15 +47,13 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 		return p.handleHTTPRegister(ctx, w, r, rr)
 	case strings.HasSuffix(r.URL.Path, "/whoami"):
 		return p.handleHTTPWhoami(ctx, w, r, rr, usr)
-	case strings.Contains(r.URL.Path, "/apps/aws-sso"):
-		return p.handleHTTPAppsAwsSso(ctx, w, r, rr, usr)
+	case strings.Contains(r.URL.Path, "/apps/sso"):
+		return p.handleHTTPAppsSingleSignOn(ctx, w, r, rr, usr)
 	case strings.Contains(r.URL.Path, "/apps/mobile-access"):
 		return p.handleHTTPAppsMobileAccess(ctx, w, r, rr, usr)
 	case strings.Contains(r.URL.Path, "/oauth2/") && strings.HasSuffix(r.URL.Path, "/logout"):
 		return p.handleHTTPExternalLogout(ctx, w, r, rr, "oauth2")
 	case strings.Contains(r.URL.Path, "/saml/"):
-		// TODO(greenpau): implement
-		// p.logRequest("external saml login traceback", r, rr)
 		return p.handleHTTPExternalLogin(ctx, w, r, rr, "saml")
 	case strings.Contains(r.URL.Path, "/oauth2/"):
 		return p.handleHTTPExternalLogin(ctx, w, r, rr, "oauth2")
