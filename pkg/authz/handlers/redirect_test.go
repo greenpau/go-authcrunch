@@ -49,13 +49,13 @@ func (w *customResponseWriter) WriteHeader(statusCode int) {
 func TestRedirect(t *testing.T) {
 	var testcases = []struct {
 		name              string
-		expectedAuthUrl   string
+		expectedAuthURL   string
 		expectedSeparator string
 		testCase          requests.AuthorizationRequest
 	}{
 		{
 			name:              "returns a AuthUrl as it is",
-			expectedAuthUrl:   "something.com",
+			expectedAuthURL:   "something.com",
 			expectedSeparator: "?",
 			testCase: requests.AuthorizationRequest{
 				Redirect: requests.RedirectResponse{
@@ -66,7 +66,7 @@ func TestRedirect(t *testing.T) {
 		},
 		{
 			name:              "returns a AuthUrl with loginHint only",
-			expectedAuthUrl:   "something.com?login_hint=fakemail%40byom.de",
+			expectedAuthURL:   "something.com?login_hint=fakemail%40byom.de",
 			expectedSeparator: "&",
 			testCase: requests.AuthorizationRequest{
 				Redirect: requests.RedirectResponse{
@@ -78,7 +78,7 @@ func TestRedirect(t *testing.T) {
 		},
 		{
 			name:              "returns a AuthUrl with additional scopes only",
-			expectedAuthUrl:   "something.com?additional_scopes=scopeA+scopeB",
+			expectedAuthURL:   "something.com?additional_scopes=scopeA+scopeB",
 			expectedSeparator: "&",
 			testCase: requests.AuthorizationRequest{
 				Redirect: requests.RedirectResponse{
@@ -90,7 +90,7 @@ func TestRedirect(t *testing.T) {
 		},
 		{
 			name:              "returns a AuthUrl with additional scopes and login hint",
-			expectedAuthUrl:   "something.com?login_hint=fakemail%40byom.de&additional_scopes=scopeA+scopeB",
+			expectedAuthURL:   "something.com?login_hint=fakemail%40byom.de&additional_scopes=scopeA+scopeB",
 			expectedSeparator: "&",
 			testCase: requests.AuthorizationRequest{
 				Redirect: requests.RedirectResponse{
@@ -106,7 +106,7 @@ func TestRedirect(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			r, _ := http.NewRequest("GET", "https://foo.bar", nil)
 			configureRedirect(buildCustomResponseWriter(), r, &tc.testCase)
-			tests.EvalObjects(t, "check the expected AuthUrl", tc.expectedAuthUrl, tc.testCase.Redirect.AuthURL)
+			tests.EvalObjects(t, "check the expected AuthUrl", tc.expectedAuthURL, tc.testCase.Redirect.AuthURL)
 			tests.EvalObjects(t, "check the expected Separator", tc.expectedSeparator, tc.testCase.Redirect.Separator)
 		})
 	}
