@@ -129,12 +129,14 @@ func configureRedirect(w http.ResponseWriter, r *http.Request, rr *requests.Auth
 		loginHint := rr.Redirect.LoginHint
 		escapedLoginHint := url.QueryEscape(loginHint)
 		rr.Redirect.AuthURL = fmt.Sprintf("%s%slogin_hint=%s", rr.Redirect.AuthURL, rr.Redirect.Separator, escapedLoginHint)
+		rr.Redirect.Separator = "&"
 	}
 
 	if len(rr.Redirect.AdditionalScopes) > 0 {
 		additionalScopes := rr.Redirect.AdditionalScopes
 		escapedAdditionalScopes := url.QueryEscape(additionalScopes)
 		rr.Redirect.AuthURL = fmt.Sprintf("%s%sadditional_scopes=%s", rr.Redirect.AuthURL, rr.Redirect.Separator, escapedAdditionalScopes)
+		rr.Redirect.Separator = "&"
 	}
 
 	return
