@@ -16,7 +16,7 @@ package identity
 
 // CreditCardAssociations is a collection of most popular credit card issuers.
 var CreditCardAssociations = []*CreditCardAssociation{
-	&CreditCardAssociation{
+	{
 		Name:       "American Express",
 		CodeName:   "CID",
 		CodeFormat: "NNNN",
@@ -24,7 +24,7 @@ var CreditCardAssociations = []*CreditCardAssociation{
 			"amex", "AMEX",
 		},
 	},
-	&CreditCardAssociation{
+	{
 		Name: "Diners Club",
 		Aliases: []string{
 			"diners",
@@ -32,7 +32,7 @@ var CreditCardAssociations = []*CreditCardAssociation{
 		CodeName:   "Security Code",
 		CodeFormat: "NNN",
 	},
-	&CreditCardAssociation{
+	{
 		Name: "Discover",
 		Aliases: []string{
 			"discover",
@@ -40,7 +40,7 @@ var CreditCardAssociations = []*CreditCardAssociation{
 		CodeName:   "CID",
 		CodeFormat: "NNN",
 	},
-	&CreditCardAssociation{
+	{
 		Name: "Mastercard",
 		Aliases: []string{
 			"mastercard",
@@ -48,7 +48,7 @@ var CreditCardAssociations = []*CreditCardAssociation{
 		CodeName:   "CVC2",
 		CodeFormat: "NNN",
 	},
-	&CreditCardAssociation{
+	{
 		Name: "Visa",
 		Aliases: []string{
 			"visa",

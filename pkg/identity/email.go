@@ -15,9 +15,10 @@
 package identity
 
 import (
-	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"regexp"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
 var emailRegex *regexp.Regexp
@@ -35,7 +36,7 @@ type EmailAddress struct {
 	Address   string `json:"address,omitempty" xml:"address,omitempty" yaml:"address,omitempty"`
 	Confirmed bool   `json:"confirmed,omitempty" xml:"confirmed,omitempty" yaml:"confirmed,omitempty"`
 	Domain    string `json:"domain,omitempty" xml:"domain,omitempty" yaml:"domain,omitempty"`
-	isPrimary bool   `json:"is_primary,omitempty" xml:"is_primary,omitempty" yaml:"is_primary,omitempty"`
+	isPrimary bool
 }
 
 // NewEmailAddress returns an instance of EmailAddress.
