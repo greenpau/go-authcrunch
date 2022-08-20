@@ -47,7 +47,7 @@ test: templates envvar covdir linter gtest coverage
 	@echo "$@: complete"
 
 ctest: templates covdir linter
-	@richgo version || go get -u github.com/kyoh86/richgo
+	@richgo version || go install github.com/kyoh86/richgo@latest
 	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./...
 	@echo "$@: complete"
 
@@ -139,13 +139,13 @@ qtest: covdir
 
 dep:
 	@echo "Making dependencies check ..."
-	@golint || go get -u golang.org/x/lint/golint
-	@go get -u github.com/kyoh86/richgo
-	@versioned || go get -u github.com/greenpau/versioned/cmd/versioned
+	@golint || go install golang.org/x/lint/golint@latest
+	@go install github.com/kyoh86/richgo@latest
+	@versioned || go install github.com/greenpau/versioned/cmd/versioned@latest
 	@echo "$@: complete"
 
 license:
-	@versioned || go get -u github.com/greenpau/versioned/cmd/versioned
+	@versioned || go install github.com/greenpau/versioned/cmd/versioned@latest
 	@for f in `find ./ -type f -name '*.go'`; do versioned -addlicense -copyright="Paul Greenberg greenpau@outlook.com" -year=2022 -filepath=$$f; done
 	@#for f in `find ./ -type f -name '*.go'`; do versioned -striplicense -filepath=$$f; done
 	@echo "$@: complete"
