@@ -16,6 +16,8 @@ package authn
 
 import (
 	"context"
+	"sort"
+
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
@@ -31,14 +33,14 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"sort"
 
 	"fmt"
-	"github.com/google/uuid"
-	"go.uber.org/zap"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 const (

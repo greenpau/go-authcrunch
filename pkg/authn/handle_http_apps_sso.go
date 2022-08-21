@@ -17,17 +17,22 @@ package authn
 import (
 	"context"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/user"
-	"go.uber.org/zap"
 	"net/http"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/sso"
+	"github.com/greenpau/go-authcrunch/pkg/user"
+	"go.uber.org/zap"
 )
 
-func (p *Portal) handleHTTPAppsSingleSignOn(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, parsedUser *user.User) error {
-	var assumedRole, authorizedRole bool
-	var accountID, roleName string
+type assumeRoleEntry struct {
+	Name         string
+	AccountID    string
+	ProviderName string
+}
 
+func (p *Portal) handleHTTPAppsSingleSignOn(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, parsedUser *user.User) error {
 	p.disableClientCache(w)
 	p.injectRedirectURL(ctx, w, r, rr)
 
@@ -54,55 +59,69 @@ func (p *Portal) handleHTTPAppsSingleSignOn(ctx context.Context, w http.Response
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 	}
 
-	resp := p.ui.GetArgs()
-	resp.PageTitle = "AWS SSO"
-	resp.BaseURL(rr.Upstream.BasePath)
-
-	if strings.Contains(r.URL.Path, "/apps/sso") && strings.Contains(r.URL.Path, "metadata.xml") {
-		// TODO(greenpau): add metadata for realm.
+	// Parse SSO provider name from URL.
+	req, err := sso.ParseRequestURL(r)
+	if err != nil {
+		return p.handleHTTPRenderError(ctx, w, r, rr, err)
 	}
 
-	if strings.Contains(r.URL.Path, "/apps/sso/assume") {
-		accountRole, err := getEndpoint(r.URL.Path, "/apps/sso/assume/")
-		if err != nil {
-			p.logger.Warn(
-				"SSO request failed",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.String("error", "malformed SSO request"),
-			)
-		} else {
-			assumedRole = true
-			arr := strings.SplitN(accountRole, "/", 2)
-			if len(arr) != 2 {
-				return p.handleHTTPRenderError(ctx, w, r, rr, fmt.Errorf("Malformed SSO request"))
+	// Check whether the requested SSO provider exists.
+	provider, err := p.fetchSingleSignOnProvider(req.ProviderName)
+	if err != nil {
+		return p.handleHTTPRenderError(ctx, w, r, rr, err)
+	}
+
+	roles := fetchSingleSignOnRoles(provider.GetName(), usr)
+
+	switch req.Kind {
+	case sso.MetadataRequest:
+		return p.handleHTTPAppsSingleSignOnMetadata(ctx, w, r, rr, provider, roles)
+	case sso.AssumeRoleRequest:
+		return p.handleHTTPAppsSingleSignOnAssumeRole(ctx, w, r, rr, provider, roles, usr)
+	case sso.MenuRequest:
+		return p.handleHTTPAppsSingleSignOnMenu(ctx, w, r, rr, provider, roles, usr)
+	}
+	return p.handleHTTPAppsSingleSignOnMenu(ctx, w, r, rr, provider, roles, usr)
+}
+
+// handleHTTPAppsSingleSignOnMetadata renders metadata.xml content. It is only available to admin users.
+func (p *Portal) handleHTTPAppsSingleSignOnMetadata(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request,
+	provider sso.SingleSignOnProvider, roles []*assumeRoleEntry) error {
+	// body := []byte("METADATA")
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	// w.Write(body)
+	w.Write(provider.GetMetadata())
+	return nil
+}
+
+func (p *Portal) handleHTTPAppsSingleSignOnAssumeRole(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request,
+	provider sso.SingleSignOnProvider, roles []*assumeRoleEntry, usr *user.User) error {
+
+	/*
+		if strings.Contains(r.URL.Path, "/apps/sso/assume") {
+			accountRole, err := getEndpoint(r.URL.Path, "/apps/sso/assume/")
+			if err != nil {
+				p.logger.Warn(
+					"SSO request failed",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("error", "malformed SSO request"),
+				)
+			} else {
+				assumedRole = true
+				arr := strings.SplitN(accountRole, "/", 2)
+				if len(arr) != 2 {
+					return p.handleHTTPRenderError(ctx, w, r, rr, fmt.Errorf("Malformed SSO request"))
+				}
+				accountID = arr[0]
+				roleName = arr[1]
 			}
-			accountID = arr[0]
-			roleName = arr[1]
 		}
-	}
+	*/
 
-	type roleEntry struct {
-		Name      string
-		AccountID string
-	}
-
-	roles := []*roleEntry{}
-	for _, entry := range usr.Claims.Roles {
-		arr := strings.Split(entry, "/")
-		if len(arr) != 3 {
-			continue
-		}
-		if arr[0] != "aws" {
-			continue
-		}
-		role := &roleEntry{
-			Name:      arr[2],
-			AccountID: arr[1],
-		}
-		roles = append(roles, role)
-
-		if assumedRole {
+	/*
+			if assumedRole {
 			if (role.Name == roleName) && (role.AccountID == accountID) {
 				authorizedRole = true
 				p.logger.Debug(
@@ -114,22 +133,39 @@ func (p *Portal) handleHTTPAppsSingleSignOn(ctx context.Context, w http.Response
 				)
 			}
 		}
-	}
+	*/
 
-	if assumedRole {
-		if !authorizedRole {
-			p.logger.Debug(
-				"Unauthorized SSO assume role request",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.String("role_name", roleName),
-				zap.String("account_id", accountID),
-			)
-			return p.handleHTTPRenderError(ctx, w, r, rr, fmt.Errorf("Unauthorized SSO assume role request"))
+	/*
+			if assumedRole {
+			if !authorizedRole {
+				p.logger.Debug(
+					"Unauthorized SSO assume role request",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("role_name", roleName),
+					zap.String("account_id", accountID),
+				)
+				return p.handleHTTPRenderError(ctx, w, r, rr, fmt.Errorf("Unauthorized SSO assume role request"))
+			}
+			p.logger.Debug("Redirecting to SAML endpoint")
 		}
-		p.logger.Debug("Redirecting to SAML endpoint")
-	}
 
+	*/
+
+	body := []byte("ASSUME ROLE")
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write(body)
+	return nil
+}
+
+// handleHTTPAppsSingleSignOnMenu renders SSO provider role selection page.
+func (p *Portal) handleHTTPAppsSingleSignOnMenu(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request,
+	provider sso.SingleSignOnProvider, roles []*assumeRoleEntry, usr *user.User) error {
+
+	resp := p.ui.GetArgs()
+	resp.PageTitle = "AWS SSO"
+	resp.BaseURL(rr.Upstream.BasePath)
 	resp.Data["role_count"] = len(roles)
 	resp.Data["roles"] = roles
 
@@ -138,4 +174,37 @@ func (p *Portal) handleHTTPAppsSingleSignOn(ctx context.Context, w http.Response
 		return p.handleHTTPRenderError(ctx, w, r, rr, err)
 	}
 	return p.handleHTTPRenderHTML(ctx, w, http.StatusOK, content.Bytes())
+}
+
+func (p *Portal) fetchSingleSignOnProvider(providerName string) (sso.SingleSignOnProvider, error) {
+	for _, provider := range p.ssoProviders {
+		if provider.GetName() == providerName {
+			return provider, nil
+		}
+	}
+	return nil, fmt.Errorf("provider name not found")
+}
+
+func (p *Portal) parseSingleSignOnProviderName() (string, string, error) {
+	return "aws", "metadata", nil
+}
+
+func fetchSingleSignOnRoles(providerName string, usr *user.User) []*assumeRoleEntry {
+	roles := []*assumeRoleEntry{}
+	for _, entry := range usr.Claims.Roles {
+		arr := strings.Split(entry, "/")
+		if len(arr) != 3 {
+			continue
+		}
+		if arr[0] != "aws" {
+			continue
+		}
+		role := &assumeRoleEntry{
+			Name:      arr[2],
+			AccountID: arr[1],
+			ProviderName: providerName,
+		}
+		roles = append(roles, role)
+	}
+	return roles
 }

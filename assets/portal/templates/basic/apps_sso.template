@@ -34,7 +34,7 @@
 
           {{ if gt .Data.role_count 0 }}
             <div class="pb-4 pt-4">
-              <p class="app-inp-lbl">Assume the following roles on the associated AWS accounts.</p>
+              <p class="app-inp-lbl">Assume any of the following roles on the associated AWS accounts by clicking the name of the role.</p>
             </div>
 
             <div class="flex flex-col">
@@ -51,7 +51,7 @@
                       {{ range .Data.roles }}
                         <tr>
                           <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-primary-700 sm:pl-6 md:pl-0 leading-none">
-                            <span>{{ brsplitline .Name }}</span>
+                            <a href="{{ pathjoin $.ActionEndpoint "/apps/sso" .ProviderName "assume" .AccountID .Name }}">{{ brsplitline .Name }}</a>
                           </td>
                           <td class="whitespace-nowrap py-4 px-3 text-sm text-primary-500">{{ .AccountID }}</td>
                         </tr>

@@ -16,6 +16,7 @@ package sso
 
 import (
 	"encoding/json"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -27,11 +28,12 @@ type SingleSignOnProvider interface {
 	GetConfig() map[string]interface{}
 	Configure() error
 	Configured() bool
+	GetMetadata() []byte
 }
 
 // Provider represents sso provider.
 type Provider struct {
-	config     *SingleSignOnProviderConfig `json:"config,omitempty" xml:"config,omitempty" yaml:"config,omitempty"`
+	config     *SingleSignOnProviderConfig
 	configured bool
 	logger     *zap.Logger
 }
@@ -85,4 +87,9 @@ func NewSingleSignOnProvider(cfg *SingleSignOnProviderConfig, logger *zap.Logger
 	p = prv
 
 	return p, nil
+}
+
+// GetDriver returns the name of the driver associated with the provider.
+func (p *Provider) GetMetadata() []byte {
+	return []byte("METADATA")
 }

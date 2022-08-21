@@ -78,6 +78,11 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
+			name:  "test sso.Request struct",
+			entry: &sso.Request{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test ui.NavigationItem struct",
 			entry: &ui.NavigationItem{},
 			opts:  &Options{},

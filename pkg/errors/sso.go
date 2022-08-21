@@ -18,4 +18,6 @@ package errors
 const (
 	ErrSingleSignOnProviderConfigInvalid           StandardError = "invalid sso provider config: %v: %v"
 	ErrSingleSignOnProviderConfigureLoggerNotFound StandardError = "sso provider configuration has no logger"
+	ErrSingleSignOnProviderRequestMalformed        StandardError = "malformed sso provider request"
+	// ErrSingleSignOnProviderRequestInvalid          StandardError = "invalid sso provider request: %v"
 )

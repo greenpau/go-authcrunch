@@ -17,6 +17,7 @@ package authcrunch
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
@@ -149,6 +150,7 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 			IdentityProviders:     srv.identityProviders,
 			SingleSignOnProviders: srv.ssoProviders,
 		}
+
 		portal, err := authn.NewPortal(params)
 		if err != nil {
 			return nil, err

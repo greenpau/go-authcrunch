@@ -88,7 +88,7 @@ clean:
 
 qtest: covdir
 	@echo "Perform quick tests ..."
-	@time richgo test -v -coverprofile=.coverage/coverage.out internal/tag/*.go
+	@#time richgo test -v -coverprofile=.coverage/coverage.out internal/tag/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/util/data/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewConfig ./*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewServer ./*.go
@@ -105,7 +105,8 @@ qtest: covdir
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestServeHTTP ./pkg/authn/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestFactory ./pkg/authn/cookie/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewSingleSignOnProviderConfig ./pkg/sso/*.go
-	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewSingleSignOnProvider ./pkg/sso/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewSingleSignOnProvider ./pkg/sso/*.go
+	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestParseRequestURL ./pkg/sso/request*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestValidateJwksKey ./pkg/authn/backends/oauth2/jwks*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestTransformData ./pkg/authn/transformer/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/icons/...
