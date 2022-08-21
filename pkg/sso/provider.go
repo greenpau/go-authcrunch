@@ -89,7 +89,7 @@ func NewSingleSignOnProvider(cfg *SingleSignOnProviderConfig, logger *zap.Logger
 	return p, nil
 }
 
-// GetDriver returns the name of the driver associated with the provider.
+// GetMetadata returns the contents of metadata.xml.
 func (p *Provider) GetMetadata() []byte {
 	return []byte("METADATA")
 }
