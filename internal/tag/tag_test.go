@@ -68,6 +68,62 @@ func TestTagCompliance(t *testing.T) {
 		err       error
 	}{
 		{
+			name:  "test sso.KeyInfo struct",
+			entry: &sso.KeyInfo{},
+			opts: &Options{
+				Disabled: true,
+			},
+		},
+		{
+			name:  "test sso.SingleSignOnService struct",
+			entry: &sso.SingleSignOnService{},
+			opts: &Options{
+				Disabled: true,
+			},
+		},
+		{
+			name:  "test sso.EntityDescriptor struct",
+			entry: &sso.EntityDescriptor{},
+			opts: &Options{
+				Disabled: true,
+			},
+		},
+		{
+			name:  "test sso.X509Data struct",
+			entry: &sso.X509Data{},
+			opts: &Options{
+				Disabled: true,
+			},
+		},
+		{
+			name:  "test sso.IDPEntityDescriptor struct",
+			entry: &sso.IDPEntityDescriptor{},
+			opts: &Options{
+				Disabled: true,
+			},
+		},
+		{
+			name:  "test sso.Service struct",
+			entry: &sso.Service{},
+			opts: &Options{
+				Disabled: true,
+			},
+		},
+		{
+			name:  "test sso.IDPSSODescriptor struct",
+			entry: &sso.IDPSSODescriptor{},
+			opts: &Options{
+				Disabled: true,
+			},
+		},
+		{
+			name:  "test sso.KeyDescriptor struct",
+			entry: &sso.KeyDescriptor{},
+			opts: &Options{
+				Disabled: true,
+			},
+		},
+		{
 			name:  "test sso.Provider struct",
 			entry: &sso.Provider{},
 			opts:  &Options{},

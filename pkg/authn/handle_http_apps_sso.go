@@ -87,11 +87,13 @@ func (p *Portal) handleHTTPAppsSingleSignOn(ctx context.Context, w http.Response
 // handleHTTPAppsSingleSignOnMetadata renders metadata.xml content. It is only available to admin users.
 func (p *Portal) handleHTTPAppsSingleSignOnMetadata(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request,
 	provider sso.SingleSignOnProvider, roles []*assumeRoleEntry) error {
-	// body := []byte("METADATA")
-	w.Header().Set("Content-Type", "text/html")
+	metadata, err := provider.GetMetadata()
+	if err != nil {
+		return p.handleHTTPRenderError(ctx, w, r, rr, err)
+	}
+	w.Header().Set("Content-Type", "application/xml")
 	w.WriteHeader(http.StatusOK)
-	// w.Write(body)
-	w.Write(provider.GetMetadata())
+	w.Write(metadata)
 	return nil
 }
 
@@ -200,8 +202,8 @@ func fetchSingleSignOnRoles(providerName string, usr *user.User) []*assumeRoleEn
 			continue
 		}
 		role := &assumeRoleEntry{
-			Name:      arr[2],
-			AccountID: arr[1],
+			Name:         arr[2],
+			AccountID:    arr[1],
 			ProviderName: providerName,
 		}
 		roles = append(roles, role)
