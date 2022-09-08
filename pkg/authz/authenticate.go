@@ -16,6 +16,11 @@ package authz
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/url"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
 	"github.com/greenpau/go-authcrunch/pkg/authz/handlers"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -25,9 +30,6 @@ import (
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"github.com/greenpau/go-authcrunch/pkg/util/validate"
 	"go.uber.org/zap"
-	"net/http"
-	"net/url"
-	"strings"
 )
 
 var (
@@ -36,6 +38,10 @@ var (
 		"url",
 	}
 )
+
+type ErrorMessage struct {
+	Detail string `json:"detail"`
+}
 
 // Authenticate authorizes HTTP requests.
 func (g *Gatekeeper) Authenticate(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
@@ -122,9 +128,9 @@ func (g *Gatekeeper) handleUnauthorizedUser(w http.ResponseWriter, r *http.Reque
 
 	if !g.config.AuthRedirectDisabled {
 		return g.handleAuthorizeWithRedirect(w, r, ar)
+	} else {
+		return g.handleAuthorizeWithOther(w, r, ar)
 	}
-
-	return err
 }
 
 // expireAuthCookies sends cookie delete in HTTP response.
@@ -147,8 +153,9 @@ func (g *Gatekeeper) expireAuthCookies(w http.ResponseWriter, r *http.Request) {
 // basic authentication and API keys.
 func (g *Gatekeeper) handleAuthorizeWithAuthFailed(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
 	g.expireAuthCookies(w, r)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
-	w.Write([]byte(`401 Unauthorized`))
+	json.NewEncoder(w).Encode(ErrorMessage{"Unauthorized"})
 	return ar.Response.Error
 }
 
@@ -156,16 +163,28 @@ func (g *Gatekeeper) handleAuthorizeWithAuthFailed(w http.ResponseWriter, r *htt
 // user data was insufficient to establish a user.
 func (g *Gatekeeper) handleAuthorizeWithBadRequest(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
 	g.expireAuthCookies(w, r)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
-	w.Write([]byte(`400 Bad Request`))
+	json.NewEncoder(w).Encode(ErrorMessage{"Bad Request"})
+	return ar.Response.Error
+}
+
+// handleAuthorizeWithOther handles failed authorization requests where
+// other reasons.
+func (g *Gatekeeper) handleAuthorizeWithOther(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
+	g.expireAuthCookies(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	json.NewEncoder(w).Encode(ErrorMessage{"Unauthorized"})
 	return ar.Response.Error
 }
 
 // handleAuthorizeWithForbidden handles forbidden responses.
 func (g *Gatekeeper) handleAuthorizeWithForbidden(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
 	if g.config.ForbiddenURL == "" {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(403)
-		w.Write([]byte(`Forbidden`))
+		json.NewEncoder(w).Encode(ErrorMessage{"Forbidden"})
 		return ar.Response.Error
 	}
 
@@ -184,8 +203,9 @@ func (g *Gatekeeper) handleAuthorizeWithForbidden(w http.ResponseWriter, r *http
 	} else {
 		w.Header().Set("Location", g.config.ForbiddenURL)
 	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(303)
-	w.Write([]byte(`Forbidden`))
+	json.NewEncoder(w).Encode(ErrorMessage{"Forbidden"})
 	return ar.Response.Error
 }
 
