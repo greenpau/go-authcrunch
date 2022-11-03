@@ -412,11 +412,11 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 	}
 
 	for _, guild := range guilds {
-		guild_id := guild["id"].(string)
+		guildID := guild["id"].(string)
 		// Exclude org from processing if it does not match org filters.
 		included := false
 		for _, rp := range b.userGroupFilters {
-			if rp.MatchString(guild_id) {
+			if rp.MatchString(guildID) {
 				included = true
 				break
 			}
@@ -432,11 +432,11 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 				continue
 			}
 			if (perm & 0x08) == 0x08 { // Check for admin privileges
-				data.Groups = append(data.Groups, fmt.Sprintf("discord.com/%s/admins", guild_id))
+				data.Groups = append(data.Groups, fmt.Sprintf("discord.com/%s/admins", guildID))
 			}
 		}
 
-		data.Groups = append(data.Groups, fmt.Sprintf("discord.com/%s/members", guild_id))
+		data.Groups = append(data.Groups, fmt.Sprintf("discord.com/%s/members", guildID))
 	}
 
 	b.logger.Debug(
