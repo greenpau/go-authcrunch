@@ -158,6 +158,8 @@ func (cfg *Config) Validate() error {
 			cfg.Scopes = []string{"openid", "email", "profile"}
 		case "cognito":
 			cfg.Scopes = []string{"openid", "email", "profile"}
+		case "discord":
+			cfg.Scopes = []string{"identify"}
 		default:
 			cfg.Scopes = []string{"openid", "email", "profile"}
 		}
@@ -242,6 +244,11 @@ func (cfg *Config) Validate() error {
 	case "nextcloud":
 		cfg.AuthorizationURL = fmt.Sprintf("%s/apps/oauth2/authorize", cfg.BaseAuthURL)
 		cfg.TokenURL = fmt.Sprintf("%s/apps/oauth2/api/v1/token", cfg.BaseAuthURL)
+	case "discord":
+		cfg.BaseAuthURL = "https://discord.com/oauth2"
+		cfg.AuthorizationURL = "https://discord.com/oauth2/authorize"
+		cfg.TokenURL = "https://discord.com/api/oauth2/token"
+		cfg.RequiredTokenFields = []string{"access_token"}
 	case "generic":
 	case "":
 		return errors.ErrIdentityProviderConfig.WithArgs("driver name not found")
@@ -266,6 +273,7 @@ func (cfg *Config) Validate() error {
 	case "github":
 	case "facebook":
 	case "nextcloud":
+	case "discord":
 	default:
 		if len(cfg.JwksKeys) > 0 && cfg.AuthorizationURL != "" && cfg.TokenURL != "" {
 			for kid, fp := range cfg.JwksKeys {

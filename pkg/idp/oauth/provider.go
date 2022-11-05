@@ -207,6 +207,10 @@ func (b *IdentityProvider) Configure() error {
 		b.disableResponseType = true
 		b.disableNonce = true
 		b.enableAcceptHeader = true
+	case "discord":
+		b.disableKeyVerification = true
+		b.disableNonce = true
+		b.enableAcceptHeader = true
 	case "nextcloud":
 		b.disableKeyVerification = true
 	}

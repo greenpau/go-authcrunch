@@ -97,6 +97,39 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "validate discord oauth config",
+			config: &Config{
+				Name:         "discord",
+				Realm:        "discord",
+				Driver:       "discord",
+				ClientID:     "foo",
+				ClientSecret: "bar",
+			},
+			want: &Config{
+				Name:         "discord",
+				Realm:        "discord",
+				Driver:       "discord",
+				ClientID:     "foo",
+				ClientSecret: "bar",
+				// After the validation.
+				ServerName:          "discord.com",
+				IdentityTokenName:   "id_token", // maybe change this to access_token
+				Scopes:              []string{"identify"},
+				BaseAuthURL:         "https://discord.com/oauth2",
+				ResponseType:        []string{"code"},
+				RequiredTokenFields: []string{"access_token"},
+				AuthorizationURL:    "https://discord.com/oauth2/authorize",
+				TokenURL:            "https://discord.com/api/oauth2/token",
+				LoginIcon: &icons.LoginIcon{
+					ClassName:       "lab la-discord la-2x",
+					Color:           "white",
+					Text: 					 "Discord",
+					BackgroundColor: "#5865f2",
+					TextColor:       "#37474f",
+				},
+			},
+		},
+		{
 			name: "validate nextcloud oauth config",
 			config: &Config{
 				Name:         "nextcloud",
