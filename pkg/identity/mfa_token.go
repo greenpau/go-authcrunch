@@ -18,6 +18,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/hmac"
+	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -61,7 +62,8 @@ type MfaToken struct {
 	Parameters       map[string]string `json:"parameters,omitempty" xml:"parameters,omitempty" yaml:"parameters,omitempty"`
 	Flags            map[string]bool   `json:"flags,omitempty" xml:"flags,omitempty" yaml:"flags,omitempty"`
 	SignatureCounter uint32            `json:"signature_counter,omitempty" xml:"signature_counter,omitempty" yaml:"signature_counter,omitempty"`
-	pubkey           *ecdsa.PublicKey
+	pubkeyECDSA      *ecdsa.PublicKey
+	pubkeyRSA        *rsa.PublicKey
 }
 
 // MfaDevice is the hardware device associated with MfaToken.
@@ -226,6 +228,8 @@ func NewMfaToken(req *requests.Request) (*MfaToken, error) {
 			switch v.(float64) {
 			case 2:
 				keyType = "ec2"
+			case 3:
+				keyType = "rsa"
 			default:
 				return nil, errors.ErrWebAuthnRegisterPublicKeyUnsupported.WithArgs(v)
 			}
@@ -239,6 +243,8 @@ func NewMfaToken(req *requests.Request) (*MfaToken, error) {
 			switch v.(float64) {
 			case -7:
 				keyAlgo = "es256"
+			case -257:
+				keyAlgo = "rs256"
 			default:
 				return nil, errors.ErrWebAuthnRegisterPublicKeyAlgorithmUnsupported.WithArgs(v)
 			}
@@ -246,29 +252,42 @@ func NewMfaToken(req *requests.Request) (*MfaToken, error) {
 			return nil, errors.ErrWebAuthnRegisterPublicKeyAlgorithmNotFound
 		}
 
-		// See https://www.iana.org/assignments/cose/cose.xhtml#elliptic-curves
-		var curveType, curveXcoord, curveYcoord string
-		if v, exists := r.AttestationObject.AuthData.CredentialData.PublicKey["curve_type"]; exists {
-			switch v.(float64) {
-			case 1:
-				curveType = "p256"
-			default:
-				return nil, errors.ErrWebAuthnRegisterPublicKeyCurveUnsupported.WithArgs(v)
-			}
-		}
-		if v, exists := r.AttestationObject.AuthData.CredentialData.PublicKey["curve_x"]; exists {
-			curveXcoord = v.(string)
-		}
-		if v, exists := r.AttestationObject.AuthData.CredentialData.PublicKey["curve_y"]; exists {
-			curveYcoord = v.(string)
-		}
-
 		switch keyType {
 		case "ec2":
 			switch keyAlgo {
 			case "es256":
+				// See https://www.iana.org/assignments/cose/cose.xhtml#elliptic-curves
+				var curveType, curveXcoord, curveYcoord string
+				if v, exists := r.AttestationObject.AuthData.CredentialData.PublicKey["curve_type"]; exists {
+					switch v.(float64) {
+					case 1:
+						curveType = "p256"
+					default:
+						return nil, errors.ErrWebAuthnRegisterPublicKeyCurveUnsupported.WithArgs(v)
+					}
+				}
+				if v, exists := r.AttestationObject.AuthData.CredentialData.PublicKey["curve_x"]; exists {
+					curveXcoord = v.(string)
+				}
+				if v, exists := r.AttestationObject.AuthData.CredentialData.PublicKey["curve_y"]; exists {
+					curveYcoord = v.(string)
+				}
+				p.Parameters["curve_type"] = curveType
+				p.Parameters["curve_xcoord"] = curveXcoord
+				p.Parameters["curve_ycoord"] = curveYcoord
 			default:
 				return nil, errors.ErrWebAuthnRegisterPublicKeyTypeAlgorithmUnsupported.WithArgs(keyType, keyAlgo)
+			}
+		default:
+			if v, exists := r.AttestationObject.AuthData.CredentialData.PublicKey["exponent"]; exists {
+				p.Parameters["exponent"] = v.(string)
+			} else {
+				return nil, errors.ErrWebAuthnRegisterPublicKeyParamNotFound.WithArgs(keyType, keyAlgo, "exponent")
+			}
+			if v, exists := r.AttestationObject.AuthData.CredentialData.PublicKey["modulus"]; exists {
+				p.Parameters["modulus"] = v.(string)
+			} else {
+				return nil, errors.ErrWebAuthnRegisterPublicKeyParamNotFound.WithArgs(keyType, keyAlgo, "modulus")
 			}
 		}
 
@@ -277,11 +296,9 @@ func NewMfaToken(req *requests.Request) (*MfaToken, error) {
 		p.Parameters["u2f_transports"] = strings.Join(r.Transports, ",")
 		p.Parameters["key_type"] = keyType
 		p.Parameters["key_algo"] = keyAlgo
-		p.Parameters["curve_type"] = curveType
-		p.Parameters["curve_xcoord"] = curveXcoord
-		p.Parameters["curve_ycoord"] = curveYcoord
 		//return nil, fmt.Errorf("XXX: %v", r.AttestationObject.AttestationStatement.Certificates)
 		//return nil, fmt.Errorf("XXX: %v", r.AttestationObject.AuthData.CredentialData)
+
 		if p.Comment == "" {
 			p.Comment = fmt.Sprintf("T%d", time.Now().UTC().Unix())
 		}
@@ -310,7 +327,13 @@ func (p *MfaToken) WebAuthnRequest(payload string) (*WebAuthnAuthenticateRequest
 
 	switch p.Parameters["key_type"] {
 	case "ec2":
-		if p.pubkey == nil {
+		if p.pubkeyECDSA == nil {
+			if err := p.derivePublicKey(p.Parameters); err != nil {
+				return nil, err
+			}
+		}
+	case "rsa":
+		if p.pubkeyRSA == nil {
 			if err := p.derivePublicKey(p.Parameters); err != nil {
 				return nil, err
 			}
@@ -414,13 +437,21 @@ func (p *MfaToken) WebAuthnRequest(payload string) (*WebAuthnAuthenticateRequest
 
 	// Verify signature.
 	signedData := append(authDataBytes, clientDataHash[:]...)
-	crt := &x509.Certificate{
-		PublicKey: p.pubkey,
+	crt := &x509.Certificate{}
+	switch p.Parameters["key_type"] {
+	case "ec2":
+		crt.PublicKey = p.pubkeyECDSA
+	case "rsa":
+		crt.PublicKey = p.pubkeyRSA
 	}
 
 	switch p.Parameters["key_algo"] {
 	case "es256":
 		if err := crt.CheckSignature(x509.ECDSAWithSHA256, signedData, signatureBytes); err != nil {
+			return r, errors.ErrWebAuthnRequest.WithArgs(err)
+		}
+	case "rs256":
+		if err := crt.CheckSignature(x509.SHA256WithRSA, signedData, signatureBytes); err != nil {
 			return r, errors.ErrWebAuthnRequest.WithArgs(err)
 		}
 	default:
@@ -510,32 +541,57 @@ func generateMfaCode(secret, algo string, digits int, ts uint64) (string, error)
 }
 
 func (p *MfaToken) derivePublicKey(params map[string]string) error {
-	for _, reqParam := range []string{"curve_xcoord", "curve_ycoord", "key_algo"} {
+	for _, reqParam := range []string{"key_algo"} {
 		if _, exists := params[reqParam]; !exists {
 			return errors.ErrWebAuthnRequest.WithArgs(reqParam + " not found")
 		}
 	}
-
-	var coords []*big.Int
-	for _, ltr := range []string{"x", "y"} {
-		coord := "curve_" + ltr + "coord"
-		b, err := base64.StdEncoding.DecodeString(params[coord])
-		if err != nil {
-			return errors.ErrWebAuthnRegisterPublicKeyCurveCoord.WithArgs(ltr, err)
-		}
-		if len(b) != 32 {
-			return errors.ErrWebAuthnRegisterPublicKeyCurveCoord.WithArgs(ltr, "not 32 bytes in length")
-		}
-		i := new(big.Int)
-		i.SetBytes(b)
-		coords = append(coords, i)
-	}
-
 	switch params["key_algo"] {
 	case "es256":
-		p.pubkey = &ecdsa.PublicKey{Curve: elliptic.P256(), X: coords[0], Y: coords[1]}
-	default:
-		return errors.ErrWebAuthnRegisterPublicKeyAlgorithmUnsupported.WithArgs(params["key_algo"])
+		for _, reqParam := range []string{"curve_xcoord", "curve_ycoord"} {
+			if _, exists := params[reqParam]; !exists {
+				return errors.ErrWebAuthnRequest.WithArgs(reqParam + " not found")
+			}
+		}
+		var coords []*big.Int
+		for _, ltr := range []string{"x", "y"} {
+			coord := "curve_" + ltr + "coord"
+			b, err := base64.StdEncoding.DecodeString(params[coord])
+			if err != nil {
+				return errors.ErrWebAuthnRegisterPublicKeyCurveCoord.WithArgs(ltr, err)
+			}
+			if len(b) != 32 {
+				return errors.ErrWebAuthnRegisterPublicKeyCurveCoord.WithArgs(ltr, "not 32 bytes in length")
+			}
+			i := new(big.Int)
+			i.SetBytes(b)
+			coords = append(coords, i)
+		}
+		p.pubkeyECDSA = &ecdsa.PublicKey{Curve: elliptic.P256(), X: coords[0], Y: coords[1]}
+	case "rs256":
+		for _, reqParam := range []string{"exponent", "modulus"} {
+			if _, exists := params[reqParam]; !exists {
+				return errors.ErrWebAuthnRequest.WithArgs(reqParam + " not found")
+			}
+		}
+		nb, err := base64.StdEncoding.DecodeString(params["modulus"])
+		if err != nil {
+			return errors.ErrWebAuthnRegisterPublicKeyMaterial.WithArgs("modulus", err)
+		}
+		n := new(big.Int)
+		n.SetBytes(nb)
+
+		/*
+			ne, err := base64.StdEncoding.DecodeString(params["exponent"])
+			if err != nil {
+				return errors.ErrWebAuthnRegisterPublicKeyMaterial.WithArgs("exponent", err)
+			}
+		*/
+		p.pubkeyRSA = &rsa.PublicKey{
+			N: n,
+			E: 65537,
+		}
+		// return errors.ErrWebAuthnRegisterPublicKeyAlgorithmUnsupported.WithArgs(params["key_algo"])
 	}
 	return nil
 }

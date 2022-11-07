@@ -1498,12 +1498,6 @@ function u2f_token_register(formID, btnID) {
     user_display_name: "{{ .Data.webauthn_user_display_name }}",
     user_verification: "{{ .Data.webauthn_user_verification }}",
     attestation: "{{ .Data.webauthn_attestation }}",
-    pubkey_cred_params: [
-      {
-        type: "public-key",
-        alg: -7,
-      },
-    ]
   };
   register_u2f_token(formID, btnID, params);
 }
@@ -2105,12 +2099,6 @@ function u2f_token_authenticate(formID, btnID) {
         user_display_name: "{{ .Data.webauthn_user_display_name }}",
         user_verification: "{{ .Data.webauthn_user_verification }}",
         attestation: "{{ .Data.webauthn_attestation }}",
-        pubkey_cred_params: [
-          {
-            type: "public-key",
-            alg: -7,
-          },
-        ]
       };
       register_u2f_token(formID, btnID, params);
     }
