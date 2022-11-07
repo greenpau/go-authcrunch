@@ -15,18 +15,13 @@
 package kms
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/pem"
+	"strings"
+
 	jwtlib "github.com/golang-jwt/jwt/v4"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/shared"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"go.uber.org/zap"
-	"strings"
 )
 
 var (
@@ -83,8 +78,6 @@ func (ks *CryptoKeyStore) AddDefaults(m map[string]interface{}) error {
 // AutoGenerate auto-generates public-private key pair capable of both
 // signing and verifying tokens.
 func (ks *CryptoKeyStore) AutoGenerate(tag, algo string) error {
-	var generated bool
-	var kb string
 	cfg := &CryptoKeyConfig{
 		ID:            "0",
 		Usage:         "sign-verify",
@@ -107,60 +100,9 @@ func (ks *CryptoKeyStore) AutoGenerate(tag, algo string) error {
 		return errors.ErrCryptoKeyStoreAutoGenerateNotAvailable
 	}
 
-	generateES512Key := func() ([]byte, error) {
-		c := elliptic.P521()
-		priv, err := ecdsa.GenerateKey(c, rand.Reader)
-		if err != nil {
-			return nil, err
-		}
-		if !c.IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y) {
-			return nil, err
-		}
-		derBytes, err := x509.MarshalECPrivateKey(priv)
-		if err != nil {
-			return nil, err
-		}
-		pemBytes := pem.EncodeToMemory(
-			&pem.Block{
-				Type:  "EC PRIVATE KEY",
-				Bytes: derBytes,
-			},
-		)
-		return pemBytes, nil
-	}
-	var generateKey func() ([]byte, error)
-	switch algo {
-	case "ES512":
-		generateKey = generateES512Key
-	default:
-		return errors.ErrCryptoKeyStoreAutoGenerateAlgo.WithArgs(algo)
-	}
-	for i := 1; i < 5; i++ {
-		pemBytes, err := generateKey()
-		if err != nil || pemBytes == nil {
-			// try again
-			continue
-		}
-		kb = string(pemBytes)
-		generated = true
-	}
-
-	if !generated {
-		return errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs("failed")
-	}
-
-	if err := shared.Buffer.Add(tag, kb); err != nil {
-		if err.Error() != "not empty" {
-			return errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs(err)
-		}
-		kb, err = shared.Buffer.Get(tag)
-		if err != nil {
-			return errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs(err)
-		}
-	}
-	key, err := extractKey([]byte(kb), cfg)
+	key, err := generateKey(cfg, tag, algo)
 	if err != nil {
-		return errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs(err)
+		return err
 	}
 
 	key.enableUsage()
