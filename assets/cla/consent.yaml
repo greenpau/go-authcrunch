@@ -5,6 +5,10 @@
 #  email: foo@bar.com
 #  company: Contoso Inc.
 #
+- name: Samuel Hitz
+  email: hitz@anapaya.net
+  company: Anapaya Systems AG
+
 # By adding your name and email below, you I hereby consent to the Individual
 # CLA provided in assets/cla/individual_cla.md.
 #
