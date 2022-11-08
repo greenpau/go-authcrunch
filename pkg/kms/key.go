@@ -154,6 +154,8 @@ func GetKeysFromConfig(cfg *CryptoKeyConfig) ([]*CryptoKey, error) {
 		default:
 			return nil, fmt.Errorf("unsupported env config type %s", cfg.EnvVarType)
 		}
+	default:
+		return nil, fmt.Errorf("unsupported source: '%s'", cfg.Source)
 	}
 
 	for _, k := range keys {
