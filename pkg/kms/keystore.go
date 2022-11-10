@@ -107,35 +107,42 @@ func (ks *CryptoKeyStore) AutoGenerate(tag, algo string) error {
 		return errors.ErrCryptoKeyStoreAutoGenerateNotAvailable
 	}
 
-	for i := 1; i < 5; i++ {
-		switch algo {
-		case "ES512":
-			c := elliptic.P521()
-			priv, err := ecdsa.GenerateKey(c, rand.Reader)
-			if err != nil {
-				break
-			}
-			if !c.IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y) {
-				break
-			}
-			derBytes, err := x509.MarshalECPrivateKey(priv)
-			if err != nil {
-				break
-			}
-			pemBytes := pem.EncodeToMemory(
-				&pem.Block{
-					Type:  "EC PRIVATE KEY",
-					Bytes: derBytes,
-				},
-			)
-			if pemBytes == nil {
-				break
-			}
-			kb = string(pemBytes)
-			generated = true
-		default:
-			return errors.ErrCryptoKeyStoreAutoGenerateAlgo.WithArgs(algo)
+	generateES512Key := func() ([]byte, error) {
+		c := elliptic.P521()
+		priv, err := ecdsa.GenerateKey(c, rand.Reader)
+		if err != nil {
+			return nil, err
 		}
+		if !c.IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y) {
+			return nil, err
+		}
+		derBytes, err := x509.MarshalECPrivateKey(priv)
+		if err != nil {
+			return nil, err
+		}
+		pemBytes := pem.EncodeToMemory(
+			&pem.Block{
+				Type:  "EC PRIVATE KEY",
+				Bytes: derBytes,
+			},
+		)
+		return pemBytes, nil
+	}
+	var generateKey func() ([]byte, error)
+	switch algo {
+	case "ES512":
+		generateKey = generateES512Key
+	default:
+		return errors.ErrCryptoKeyStoreAutoGenerateAlgo.WithArgs(algo)
+	}
+	for i := 1; i < 5; i++ {
+		pemBytes, err := generateKey()
+		if err != nil || pemBytes == nil {
+			// try again
+			continue
+		}
+		kb = string(pemBytes)
+		generated = true
 	}
 
 	if !generated {
