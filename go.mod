@@ -3,7 +3,7 @@ module github.com/greenpau/go-authcrunch
 go 1.18
 
 require (
-	github.com/crewjam/saml v0.4.6
+	github.com/crewjam/saml v0.4.9
 	github.com/emersion/go-sasl v0.0.0-20220912192320-0145f2c60ead
 	github.com/emersion/go-smtp v0.15.0
 	github.com/go-ldap/ldap/v3 v3.4.4
