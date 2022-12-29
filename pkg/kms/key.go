@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
@@ -26,13 +27,15 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	jwtlib "github.com/golang-jwt/jwt/v4"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/user"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
+	jwtlib "github.com/golang-jwt/jwt/v4"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/shared"
+	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
 // CryptoKey contains a crypto graphic key and associated metadata.
@@ -153,6 +156,18 @@ func GetKeysFromConfig(cfg *CryptoKeyConfig) ([]*CryptoKey, error) {
 			keys = append(keys, dirKeys...)
 		default:
 			return nil, fmt.Errorf("unsupported env config type %s", cfg.EnvVarType)
+		}
+	case "generate":
+		switch cfg.Algorithm {
+		case "ecdsa":
+			cfg.parsed = true
+			key, err := generateKey(cfg, cfg.ID, "ES512")
+			if err != nil {
+				return nil, fmt.Errorf("generating key failed: %v", err)
+			}
+			keys = append(keys, key)
+		default:
+			return nil, fmt.Errorf("unsupported algorithm for generate: %s", cfg.Algorithm)
 		}
 	default:
 		return nil, fmt.Errorf("unsupported source: '%s'", cfg.Source)
@@ -587,4 +602,67 @@ func (k *CryptoKey) signHMAC(method, data string) (interface{}, error) {
 	hf := hmac.New(h.New, pk)
 	hf.Write([]byte(data))
 	return data + "." + base64.RawURLEncoding.EncodeToString(hf.Sum(nil)), nil
+}
+
+func generateKey(cfg *CryptoKeyConfig, tag, algo string) (*CryptoKey, error) {
+	generateES512Key := func() ([]byte, error) {
+		c := elliptic.P521()
+		priv, err := ecdsa.GenerateKey(c, rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		if !c.IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y) {
+			return nil, err
+		}
+		derBytes, err := x509.MarshalECPrivateKey(priv)
+		if err != nil {
+			return nil, err
+		}
+		pemBytes := pem.EncodeToMemory(
+			&pem.Block{
+				Type:  "EC PRIVATE KEY",
+				Bytes: derBytes,
+			},
+		)
+		return pemBytes, nil
+	}
+	var (
+		generateKey func() ([]byte, error)
+		generated   bool
+		kb          string
+	)
+	switch algo {
+	case "ES512":
+		generateKey = generateES512Key
+	default:
+		return nil, errors.ErrCryptoKeyStoreAutoGenerateAlgo.WithArgs(algo)
+	}
+	for i := 1; i < 5; i++ {
+		pemBytes, err := generateKey()
+		if err != nil || pemBytes == nil {
+			// try again
+			continue
+		}
+		kb = string(pemBytes)
+		generated = true
+	}
+
+	if !generated {
+		return nil, errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs("failed")
+	}
+	if err := shared.Buffer.Add(tag, kb); err != nil {
+		if err.Error() != "not empty" {
+			return nil, errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs(err)
+		}
+		kb, err = shared.Buffer.Get(tag)
+		if err != nil {
+			return nil, errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs(err)
+		}
+	}
+	key, err := extractKey([]byte(kb), cfg)
+	if err != nil {
+		return nil, errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs(err)
+	}
+
+	return key, nil
 }
