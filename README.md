@@ -12,9 +12,21 @@ Mux (Gorilla). Originally, the library was a part of the development
 of Caddy v2 `caddy-auth-portal`, `caddy-auth-jwt`, and
 `caddy-authorize` plugins.
 
-**Documentation**: [authp.github.io](https://authp.github.io/)
+## Documentation
 
-**Issues**:
+Please browse to [authp.github.io](https://authp.github.io/).
+
+## Issues
 
 * Caddy-specific: [Open](https://github.com/greenpau/caddy-security/issues/new/choose)
 * Other Go-frameworks: [Open](https://github.com/greenpau/go-authcrunch/issues/new/choose)
+
+## Plugins
+
+* Identity Stores:
+  - [`go-authcrunch-ids-consul`](https://github.com/greenpau/go-authcrunch-ids-consul): Identity Store Plugin for Consul Key/Value (KV) Store Integration
+  - [`go-authcrunch-ids-dynamodb`](https://github.com/greenpau/go-authcrunch-ids-dynamodb): Identity Store Plugin for Amazon DynamoDB Integration
+
+* Credentials:
+  - [`go-authcrunch-creds-aws-secrets-manager`](https://github.com/greenpau/go-authcrunch-creds-aws-secrets-manager): Credentials Plugin for AWS Secrets Manager Integration
+  - [`go-authcrunch-creds-aws-ssm-parameter-store`](https://github.com/greenpau/go-authcrunch-creds-aws-ssm-parameter-store): Credentials Plugin for AWS SSM Parameter Store Integration
