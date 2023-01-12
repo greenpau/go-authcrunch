@@ -3,7 +3,7 @@ module github.com/greenpau/go-authcrunch
 go 1.18
 
 require (
-	github.com/crewjam/saml v0.4.10
+	github.com/crewjam/saml v0.4.11-0.20230112210550-cfc9c7538d2c
 	github.com/emersion/go-sasl v0.0.0-20220912192320-0145f2c60ead
 	github.com/emersion/go-smtp v0.15.0
 	github.com/go-ldap/ldap/v3 v3.4.4
@@ -40,5 +40,3 @@ require (
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 )
-
-replace github.com/crewjam/saml v0.4.10 => github.com/greenpau/origin_crewjam_saml v0.4.11-0.20221229165346-936eba92623a
