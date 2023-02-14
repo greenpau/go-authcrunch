@@ -113,7 +113,7 @@ func extractUserInfoRoles(m map[string]interface{}) []string {
 	entries := make(map[string]interface{})
 	var roles []string
 	for k, v := range m {
-		if !strings.HasSuffix(k, "roles") && !strings.HasSuffix(k, "groups") {
+		if !strings.HasSuffix(k, "roles") && !strings.HasSuffix(k, "groups") && !strings.HasSuffix(k, "role") && !strings.HasSuffix(k, "group") {
 			continue
 		}
 		switch values := v.(type) {
