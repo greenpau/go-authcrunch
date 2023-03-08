@@ -103,6 +103,7 @@ type Config struct {
 	LoginIcon *icons.LoginIcon `json:"login_icon,omitempty" xml:"login_icon,omitempty" yaml:"login_icon,omitempty"`
 
 	UserInfoFields []string `json:"user_info_fields,omitempty" xml:"user_info_fields,omitempty" yaml:"user_info_fields,omitempty"`
+	UserInfoRolesFieldName string `json:"user_info_roles_field_name,omitempty" xml:"user_info_roles_field_name,omitempty" yaml:"user_info_roles_field_name,omitempty"`
 
 	// The name of the cookie storing id_token from OAuth provider.
 	IdentityTokenCookieName string `json:"identity_token_cookie_name,omitempty" xml:"identity_token_cookie_name,omitempty" yaml:"identity_token_cookie_name,omitempty"`
