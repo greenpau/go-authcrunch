@@ -98,6 +98,7 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			"email_claim_check_disabled",
 			"login_icon",
 			"user_info_fields",
+			"user_info_roles_field_name",
 		}
 	case "saml":
 		requiredFields = []string{
