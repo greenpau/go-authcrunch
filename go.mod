@@ -3,7 +3,7 @@ module github.com/greenpau/go-authcrunch
 go 1.18
 
 require (
-	github.com/crewjam/saml v0.4.11-0.20230112210550-cfc9c7538d2c
+	github.com/crewjam/saml v0.4.13
 	github.com/emersion/go-sasl v0.0.0-20220912192320-0145f2c60ead
 	github.com/emersion/go-smtp v0.15.0
 	github.com/go-ldap/ldap/v3 v3.4.4
@@ -28,12 +28,10 @@ require (
 	github.com/crewjam/httperr v0.2.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
 	github.com/jonboulle/clockwork v0.3.0 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattermost/xml-roundtrip-validator v0.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/russellhaering/goxmldsig v1.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/goleak v1.2.0 // indirect
