@@ -15,11 +15,12 @@
 package identity
 
 import (
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"golang.org/x/crypto/bcrypt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Password is a memorized secret, typically a string of characters,

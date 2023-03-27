@@ -1,4 +1,3 @@
-.PHONY: test ctest covdir coverage docs linter qtest clean dep release license envvar templates
 APP_VERSION:=$(shell cat VERSION | head -1)
 GIT_COMMIT:=$(shell git describe --dirty --always)
 GIT_BRANCH:=$(shell git rev-parse --abbrev-ref HEAD -- | head -1)
@@ -12,10 +11,12 @@ endif
 all: envvar build
 	@echo "$@: complete"
 
+.PHONY: envvar
 envvar:
 	@echo "Version: $(APP_VERSION), Branch: $(GIT_BRANCH), Revision: $(GIT_COMMIT)"
 	@echo "Build on $(BUILD_DATE) by $(BUILD_USER)"
 
+.PHONY: build
 build: templates
 	@mkdir -p bin/
 	@rm -rf ./bin/*
@@ -34,28 +35,34 @@ build: templates
 	@./bin/authdbctl --help
 	@echo "$@: complete"
 
+.PHONY: linter
 linter:
 	@echo "Running lint checks"
 	@golint -set_exit_status ./...
 	@echo "$@: complete"
 
+.PHONY: gtest
 gtest:
 	@go test $(VERBOSE) -coverprofile=.coverage/coverage.out ./...
 	@echo "$@: complete"
 
+.PHONY: test
 test: templates envvar covdir linter gtest coverage
 	@echo "$@: complete"
 
+.PHONY: ctest
 ctest: templates covdir linter
 	@richgo version || go install github.com/kyoh86/richgo@latest
 	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./...
 	@echo "$@: complete"
 
+.PHONY: covdir
 covdir:
 	@echo "Creating .coverage/ directory"
 	@mkdir -p .coverage
 	@echo "$@: complete"
 
+.PHONY: coverage
 coverage:
 	@#go tool cover -help
 	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
@@ -63,29 +70,35 @@ coverage:
 	@go tool cover -func=.coverage/coverage.out | grep -v "100.0"
 	@echo "$@: complete"
 
+.PHONY: ui-templates
 ui-templates:
 	@./assets/scripts/generate_ui.sh
 	@echo "$@: complete"
 
+.PHONY: email-templates
 email-templates:
 	@./assets/scripts/generate_email_templates.sh
 	@echo "$@: complete"
 
+.PHONY: templates
 templates: ui-templates email-templates license
 	@echo "$@: complete"
 
+.PHONY: docs
 docs:
 	@mkdir -p .doc
 	@go doc -all > .doc/index.txt
 	@cat .doc/index.txt
 	@echo "$@: complete"
 
+.PHONY: clean
 clean:
 	@rm -rf .doc
 	@rm -rf .coverage
 	@rm -rf bin/
 	@echo "$@: complete"
 
+.PHONY: qtest
 qtest: covdir
 	@echo "Perform quick tests ..."
 	@#time richgo test -v -coverprofile=.coverage/coverage.out internal/tag/*.go
@@ -107,7 +120,7 @@ qtest: covdir
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewSingleSignOnProviderConfig ./pkg/sso/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewSingleSignOnProvider ./pkg/sso/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestParseRequestURL ./pkg/sso/request*.go
-	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestGetMetadata ./pkg/sso/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestGetMetadata ./pkg/sso/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestValidateJwksKey ./pkg/authn/backends/oauth2/jwks*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestTransformData ./pkg/authn/transformer/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/icons/...
@@ -134,11 +147,13 @@ qtest: covdir
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authproxy/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/identity/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/backends/...
+	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run NewAPIKey ./pkg/identity/...
 	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
 	@#go tool cover -func=.coverage/coverage.out | grep -v "100.0"
 	@go tool cover -func=.coverage/coverage.out
 	@echo "$@: complete"
 
+.PHONY: dep
 dep:
 	@echo "Making dependencies check ..."
 	@golint || go install golang.org/x/lint/golint@latest
@@ -146,12 +161,14 @@ dep:
 	@versioned || go install github.com/greenpau/versioned/cmd/versioned@latest
 	@echo "$@: complete"
 
+.PHONY: license
 license:
 	@versioned || go install github.com/greenpau/versioned/cmd/versioned@latest
 	@for f in `find ./ -type f -name '*.go'`; do versioned -addlicense -copyright="Paul Greenberg greenpau@outlook.com" -year=2022 -filepath=$$f; done
 	@#for f in `find ./ -type f -name '*.go'`; do versioned -striplicense -filepath=$$f; done
 	@echo "$@: complete"
 
+.PHONY: release
 release:
 	@echo "Making release"
 	@go mod tidy
