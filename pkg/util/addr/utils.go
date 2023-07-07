@@ -169,6 +169,10 @@ func GetCurrentURLWithSuffix(r *http.Request, suffix string) (string, error) {
 			u += ":" + port
 		}
 	}
+
+	prefix := r.Header.Get("X-Forwarded-Prefix")
+	u += prefix
+
 	if suffix != "" {
 		i := strings.Index(r.RequestURI, suffix)
 		if i < 0 {
