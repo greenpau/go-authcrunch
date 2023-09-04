@@ -69,7 +69,7 @@ func (e *EmailProvider) Send(req *EmailProviderSendInput) error {
 	}
 
 	for _, rcpt := range req.Recipients {
-		if err := c.Rcpt(rcpt); err != nil {
+		if err := c.Rcpt(rcpt, nil); err != nil {
 			return err
 		}
 	}
