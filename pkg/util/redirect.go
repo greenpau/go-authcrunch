@@ -96,6 +96,8 @@ func GetCurrentBaseURL(r *http.Request) string {
 			redirectBaseURL += ":" + redirPort
 		}
 	}
+	redirPrefix := r.Header.Get("X-Forwarded-Prefix")
+	redirectBaseURL += redirPrefix
 
 	return redirectBaseURL
 }
