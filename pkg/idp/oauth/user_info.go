@@ -85,7 +85,7 @@ func (b *IdentityProvider) fetchUserInfo(tokenData, userData map[string]interfac
 
 	var roles []string
 	if _, exists := b.userInfoFields["all"]; exists {
-		roles = extractUserInfoRoles(userinfo)
+		roles = extractUserInfoRoles(userinfo, b.userInfoRolesFieldName)
 		if len(userinfo) > 0 {
 			userData["userinfo"] = userinfo
 		}
@@ -96,7 +96,7 @@ func (b *IdentityProvider) fetchUserInfo(tokenData, userData map[string]interfac
 			}
 		}
 		if len(userinfo) > 0 {
-			roles = extractUserInfoRoles(userinfo)
+			roles = extractUserInfoRoles(userinfo, b.userInfoRolesFieldName)
 			if len(userinfo) > 0 {
 				userData["userinfo"] = userinfo
 			}
@@ -109,11 +109,11 @@ func (b *IdentityProvider) fetchUserInfo(tokenData, userData map[string]interfac
 	return nil
 }
 
-func extractUserInfoRoles(m map[string]interface{}) []string {
+func extractUserInfoRoles(m map[string]interface{}, rolesFieldName string) []string {
 	entries := make(map[string]interface{})
 	var roles []string
 	for k, v := range m {
-		if !strings.HasSuffix(k, "roles") && !strings.HasSuffix(k, "groups") {
+		if !strings.HasSuffix(k, rolesFieldName) && !strings.HasSuffix(k, "groups") {
 			continue
 		}
 		switch values := v.(type) {
