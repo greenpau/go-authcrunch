@@ -17,16 +17,19 @@ package identity
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/internal/utils"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/versioned"
+
+	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
+
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/versioned"
 )
 
 var (
@@ -141,7 +144,7 @@ func NewDatabase(fp string) (*Database, error) {
 		if fileInfo.IsDir() {
 			return nil, errors.ErrNewDatabase.WithArgs(fp, "path points to a directory")
 		}
-		b, err := utils.ReadFileBytes(fp)
+		b, err := fileutil.ReadFileBytes(fp)
 		if err != nil {
 			return nil, errors.ErrNewDatabase.WithArgs(fp, err)
 		}
