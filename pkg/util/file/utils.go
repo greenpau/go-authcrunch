@@ -98,7 +98,7 @@ func expandHomePath(fp string) (string, error) {
 // ReadFileBytes expands home directory and reads a file.
 func ReadFileBytes(fp string) ([]byte, error) {
 	if fp == "" {
-		return []byte{}, fmt.Errorf("cannot expand an empty string")
+		return nil, fmt.Errorf("cannot expand an empty string")
 	}
 	fp, err := expandHomePath(fp)
 	if err != nil {
