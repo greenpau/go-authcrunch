@@ -17,6 +17,7 @@ package errors
 // Portal errors.
 const (
 	ErrStaticAssetAddFailed                  StandardError = "failed adding custom static asset %s (%s) from %s for %s portal: %v"
+	ErrCustomHTMLHeaderNotReadable           StandardError = "failed to read custom HTML header file %s for %s portal: %v"
 	ErrUserInterfaceThemeNotFound            StandardError = "user interface validation for %s portal failed: %s theme not found"
 	ErrUserInterfaceBuiltinTemplateAddFailed StandardError = "user interface validation for %s portal failed for built-in template %s in %s theme: %v"
 	ErrUserInterfaceCustomTemplateAddFailed  StandardError = "user interface validation for %s portal failed for custom template %s in %s: %v"

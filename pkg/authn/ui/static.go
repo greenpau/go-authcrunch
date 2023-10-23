@@ -19,7 +19,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 )
 
 // StaticAssets is an instance of StaticAssetLibrary.
@@ -28,6 +28,7 @@ var StaticAssets *StaticAssetLibrary
 // StaticAsset is a single static web asset.
 type StaticAsset struct {
 	Path           string `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
+	FsPath         string `json:"fs_path,omitempty" xml:"fs_path,omitempty" yaml:"fs_path,omitempty"`
 	Restricted     bool   `json:"restricted,omitempty" xml:"restricted,omitempty" yaml:"restricted,omitempty"`
 	ContentType    string `json:"content_type,omitempty" xml:"content_type,omitempty" yaml:"content_type,omitempty"`
 	Content        string `json:"content,omitempty" xml:"content,omitempty" yaml:"content,omitempty"`
@@ -76,7 +77,7 @@ func (sal *StaticAssetLibrary) GetAsset(path string) (*StaticAsset, error) {
 
 // AddAsset adds asset to StaticAssetLibrary
 func (sal *StaticAssetLibrary) AddAsset(path, contentType, fsPath string) error {
-	rawContent, err := ioutil.ReadFile(fsPath)
+	rawContent, err := os.ReadFile(fsPath)
 	if err != nil {
 		return fmt.Errorf("failed to load asset file %s: %s", fsPath, err)
 	}

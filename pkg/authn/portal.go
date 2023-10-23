@@ -16,6 +16,7 @@ package authn
 
 import (
 	"context"
+	"os"
 	"sort"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
@@ -485,6 +486,27 @@ func (p *Portal) configureUserInterface() error {
 		p.ui.CustomJsPath = p.config.UI.CustomJsPath
 		if err := ui.StaticAssets.AddAsset("assets/js/custom.js", "application/javascript", p.config.UI.CustomJsPath); err != nil {
 			return errors.ErrStaticAssetAddFailed.WithArgs("assets/js/custom.js", "application/javascript", p.config.UI.CustomJsPath, p.config.Name, err)
+		}
+	}
+
+	if p.config.UI.CustomHTMLHeaderPath != "" {
+		b, err := os.ReadFile(p.config.UI.CustomHTMLHeaderPath)
+		if err != nil {
+			return errors.ErrCustomHTMLHeaderNotReadable.WithArgs(p.config.UI.CustomHTMLHeaderPath, p.config.Name, err)
+		}
+		for k, v := range ui.PageTemplates {
+			headIndex := strings.Index(v, "<meta name=\"description\"")
+			if headIndex < 1 {
+				continue
+			}
+			v = v[:headIndex] + string(b) + v[headIndex:]
+			ui.PageTemplates[k] = v
+		}
+	}
+
+	for _, staticAsset := range p.config.UI.StaticAssets {
+		if err := ui.StaticAssets.AddAsset(staticAsset.Path, staticAsset.ContentType, staticAsset.FsPath); err != nil {
+			return errors.ErrStaticAssetAddFailed.WithArgs(staticAsset.Path, staticAsset.ContentType, staticAsset.FsPath, p.config.Name, err)
 		}
 	}
 
