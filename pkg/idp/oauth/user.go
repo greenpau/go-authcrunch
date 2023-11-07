@@ -139,7 +139,6 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 	switch b.config.Driver {
 	case "github", "gitlab", "discord":
 		req, err = http.NewRequest("GET", userURL, nil)
-
 		if err != nil {
 			return nil, err
 		}
