@@ -436,11 +436,39 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 			}
 		}
 
-		data.Groups = append(data.Groups, fmt.Sprintf("discord.com/%s/members", guildID))
+		data.Groups = append(data.Groups, fmt.Sprintf("discord.com/%s/roles", guildID))
+		// Fetch roles for the guild
+		reqURL = fmt.Sprintf("https://discord.com/api/v10/guilds/%s/roles", guildID)
+		req, err = http.NewRequest("GET", reqURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Accept", "application/json")
+		req.Header.Add("Authorization", "Bearer " + authToken)
+
+		resp, err = cli.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		respBody, err = ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+		return nil, err
+		}
+
+		roles := []map[string]interface{}{}
+		if err := json.Unmarshal(respBody, &roles); err != nil {
+			return nil, err
+		}
+
+		for _, role := range roles {
+			roleID := role["id"].(string)
+			data.Groups = append(data.Groups, fmt.Sprintf("discord.com/%s/roles/%s", guildID, roleID))
+		}
 	}
 
 	b.logger.Debug(
-		"Parsed additional user data",
+		"Parsed additional discord user data",
 		zap.String("url", reqURL),
 		zap.Any("data", data),
 	)
