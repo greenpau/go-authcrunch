@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/ssh"
 	"strconv"
@@ -87,7 +88,7 @@ func (b *PublicKeyBundle) Size() int {
 func NewPublicKey(r *requests.Request) (*PublicKey, error) {
 	p := &PublicKey{
 		Comment:   r.Key.Comment,
-		ID:        GetRandomString(40),
+		ID:        util.GetRandomString(40),
 		Payload:   r.Key.Payload,
 		Usage:     r.Key.Usage,
 		CreatedAt: time.Now().UTC(),

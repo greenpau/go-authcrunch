@@ -20,6 +20,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/utils"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/greenpau/versioned"
 	"io/ioutil"
 	"os"
@@ -566,7 +567,7 @@ func (db *Database) AddAPIKey(r *requests.Request) error {
 	if err != nil {
 		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, err)
 	}
-	s := GetRandomStringFromRange(72, 96)
+	s := util.GetRandomStringFromRange(72, 96)
 	failCount := 0
 	for {
 		hk, err := NewPassword(s)

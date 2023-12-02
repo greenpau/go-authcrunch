@@ -21,6 +21,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
 func TestNewAPIKey(t *testing.T) {
@@ -37,7 +38,7 @@ func TestNewAPIKey(t *testing.T) {
 				Key: requests.Key{
 					Usage:   "api",
 					Comment: "jsmith-api-key",
-					Payload: GetRandomStringFromRange(54, 72),
+					Payload: util.GetRandomStringFromRange(54, 72),
 				},
 			},
 			want: map[string]interface{}{
@@ -53,7 +54,7 @@ func TestNewAPIKey(t *testing.T) {
 					Usage:    "api",
 					Comment:  "jsmith-api-key",
 					Disabled: true,
-					Payload:  GetRandomStringFromRange(54, 72),
+					Payload:  util.GetRandomStringFromRange(54, 72),
 				},
 			},
 			want: map[string]interface{}{
@@ -91,7 +92,7 @@ func TestNewAPIKey(t *testing.T) {
 			req: &requests.Request{
 				Key: requests.Key{
 					Comment:  "jsmith-api-key",
-					Payload:  GetRandomStringFromRange(54, 72),
+					Payload:  util.GetRandomStringFromRange(54, 72),
 					Disabled: true,
 				},
 			},
@@ -104,7 +105,7 @@ func TestNewAPIKey(t *testing.T) {
 				Key: requests.Key{
 					Usage:    "foo",
 					Comment:  "jsmith-api-key",
-					Payload:  GetRandomStringFromRange(54, 72),
+					Payload:  util.GetRandomStringFromRange(54, 72),
 					Disabled: true,
 				},
 			},
@@ -116,7 +117,7 @@ func TestNewAPIKey(t *testing.T) {
 			req: &requests.Request{
 				Key: requests.Key{
 					Usage:    "api",
-					Payload:  GetRandomStringFromRange(54, 72),
+					Payload:  util.GetRandomStringFromRange(54, 72),
 					Disabled: true,
 				},
 			},

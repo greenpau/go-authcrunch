@@ -15,8 +15,10 @@
 package tests
 
 import (
+	"crypto/rand"
 	"github.com/google/uuid"
-	"math/rand"
+	"io"
+	mathrand "math/rand"
 	"strings"
 )
 
@@ -28,12 +30,24 @@ func NewID() string {
 // NewRandomString returns a random string.
 func NewRandomString(length int) string {
 	chars := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+	charsLen := byte(36)
+
 	if length == 0 {
 		length = 32
 	}
-	var b strings.Builder
-	for i := 0; i < length; i++ {
-		b.WriteRune(chars[rand.Intn(len(chars))])
+
+	b := make([]byte, length)
+	if _, err := io.ReadFull(rand.Reader, b); err != nil {
+		var sb strings.Builder
+		for i := 0; i < length; i++ {
+			sb.WriteRune(chars[mathrand.Intn(len(chars))])
+		}
+		return sb.String()
 	}
-	return b.String()
+
+	for i, char := range b {
+		b[i] = byte(chars[char%charsLen])
+	}
+
+	return string(b)
 }

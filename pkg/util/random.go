@@ -15,9 +15,12 @@
 package util
 
 import (
+	"crypto/rand"
 	"encoding/base32"
-	"math/rand"
-	"time"
+	"io"
+	//	"math"
+	"math/big"
+	mathrand "math/rand"
 	"unicode"
 )
 
@@ -33,15 +36,32 @@ var charsetTable = &unicode.RangeTable{
 	LatinOffset: 1,
 }
 
-var seed *rand.Rand = rand.New(
-	rand.NewSource(time.Now().UnixNano()),
-)
-
-func gen(length int, charset string) string {
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[seed.Intn(len(charset))]
+func genRandInt(i int) uint32 {
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(i)))
+	if err != nil {
+		return uint32(mathrand.Intn(i))
 	}
+	//if n.Uint64() > math.MaxUint32+1 {
+	//	return uint32(n.Uint64() & uint32(0xFFFFFFFF))
+	//}
+	return uint32(n.Uint64())
+}
+
+func gen(length uint32, charset string) string {
+	charsetLen := byte(len(charset))
+	b := make([]byte, length)
+	if _, err := io.ReadFull(rand.Reader, b); err != nil {
+		// for i uint32 := 0; i < length; i++ {
+		for i := uint32(0); i < length; {
+			b[i] = charset[mathrand.Intn(len(charset))]
+		}
+		return string(b)
+	}
+
+	for i, char := range b {
+		b[i] = byte(charset[char%charsetLen])
+	}
+
 	return string(b)
 }
 
@@ -50,17 +70,17 @@ func GetRandomString(i int) string {
 	if i < 1 {
 		i = 40
 	}
-	return gen(i, charset)
+	return gen(uint32(i), charset)
 }
 
 // GetRandomStringFromRange generates random string of a random length. The
 // random lenght is bounded by a and b.
 func GetRandomStringFromRange(a, b int) string {
-	var i int
+	var i uint32
 	if a > b {
-		i = rand.Intn(a-b) + b
+		i = genRandInt(a-b) + uint32(b)
 	} else {
-		i = rand.Intn(b-a) + a
+		i = genRandInt(b-a) + uint32(a)
 	}
 	return gen(i, charset)
 }
@@ -75,11 +95,11 @@ func GetRandomEncodedStringFromRange(a, b int) string {
 // GetRandomStringFromRangeWithCharset generates random string of a random length. The
 // random lenght is bounded by a and b. The charset is provided.
 func GetRandomStringFromRangeWithCharset(a, b int, cs string) string {
-	var i int
+	var i uint32
 	if a > b {
-		i = rand.Intn(a-b) + b
+		i = genRandInt(a-b) + uint32(b)
 	} else {
-		i = rand.Intn(b-a) + a
+		i = genRandInt(b-a) + uint32(a)
 	}
 	return gen(i, cs)
 }
