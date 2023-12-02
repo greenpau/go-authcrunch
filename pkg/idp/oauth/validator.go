@@ -126,7 +126,7 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 						switch values := val.(type) {
 						case string:
 							if k == "custom:roles" {
-								for _, roleName := range strings.Split(values.(string), "|") {
+								for _, roleName := range strings.Split(values, "|") {
 									roles = append(roles, roleName)
 								}
 							} else {
