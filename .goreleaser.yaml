@@ -1,4 +1,4 @@
-project_name: authp
+project_name: go-authcrunch
 
 release:
   github:
