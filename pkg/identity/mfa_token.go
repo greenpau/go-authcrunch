@@ -36,6 +36,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
 // MfaTokenBundle is a collection of public keys.
@@ -99,7 +100,7 @@ func (b *MfaTokenBundle) Size() int {
 // NewMfaToken returns an instance of MfaToken.
 func NewMfaToken(req *requests.Request) (*MfaToken, error) {
 	p := &MfaToken{
-		ID:         GetRandomString(40),
+		ID:         util.GetRandomString(40),
 		CreatedAt:  time.Now().UTC(),
 		Parameters: make(map[string]string),
 		Flags:      make(map[string]bool),

@@ -17,6 +17,7 @@ package identity
 import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 )
@@ -80,7 +81,7 @@ func NewAPIKey(r *requests.Request) (*APIKey, error) {
 	}
 	p := &APIKey{
 		Comment:   r.Key.Comment,
-		ID:        GetRandomString(40),
+		ID:        util.GetRandomString(40),
 		Prefix:    r.Key.Prefix,
 		Payload:   r.Key.Payload,
 		Usage:     r.Key.Usage,

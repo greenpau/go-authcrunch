@@ -17,9 +17,6 @@ package identity
 import (
 	"encoding/json"
 	"fmt"
-
-	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
-
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -29,6 +26,8 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/util"
+	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
 	"github.com/greenpau/versioned"
 )
 
@@ -64,9 +63,9 @@ func init() {
 	app = versioned.NewPackageManager("authdb")
 	app.Description = "authdb"
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
-	app.SetVersion(appVersion, "1.0.41")
+	app.SetVersion(appVersion, "1.0.46")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.0.40-3-g5b7a408")
+	app.SetGitCommit(gitCommit, "v1.0.45-1-g04ef714")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
@@ -569,7 +568,7 @@ func (db *Database) AddAPIKey(r *requests.Request) error {
 	if err != nil {
 		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, err)
 	}
-	s := GetRandomStringFromRange(72, 96)
+	s := util.GetRandomString(72)
 	failCount := 0
 	for {
 		hk, err := NewPassword(s)
