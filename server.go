@@ -48,7 +48,6 @@ type Server struct {
 	ssoProviders      []sso.SingleSignOnProvider
 	userRegistries    []registry.UserRegistry
 	nameRefs          refMap
-	realmRefs         refMap
 	logger            *zap.Logger
 }
 
@@ -74,7 +73,6 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		config:    config,
 		logger:    logger,
 		nameRefs:  newRefMap(),
-		realmRefs: newRefMap(),
 	}
 
 	for _, cfg := range config.IdentityProviders {
@@ -85,14 +83,10 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		if _, exists := srv.nameRefs.identityProviders[provider.GetName()]; exists {
 			return nil, errors.ErrNewServer.WithArgs("duplicate identity provider name", provider.GetName())
 		}
-		if _, exists := srv.realmRefs.identityProviders[provider.GetRealm()]; exists {
-			return nil, errors.ErrNewServer.WithArgs("duplicate identity provider realm", provider.GetRealm())
-		}
 		if err := provider.Configure(); err != nil {
 			return nil, errors.ErrNewServer.WithArgs("failed configuring identity provider", err)
 		}
 		srv.nameRefs.identityProviders[provider.GetName()] = provider
-		srv.realmRefs.identityProviders[provider.GetRealm()] = provider
 		srv.identityProviders = append(srv.identityProviders, provider)
 	}
 
@@ -104,14 +98,10 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		if _, exists := srv.nameRefs.identityStores[store.GetName()]; exists {
 			return nil, errors.ErrNewServer.WithArgs("duplicate identity store name", store.GetName())
 		}
-		if _, exists := srv.realmRefs.identityStores[store.GetRealm()]; exists {
-			return nil, errors.ErrNewServer.WithArgs("duplicate identity store realm", store.GetRealm())
-		}
 		if err := store.Configure(); err != nil {
 			return nil, errors.ErrNewServer.WithArgs("failed configuring identity store", err)
 		}
 		srv.nameRefs.identityStores[store.GetName()] = store
-		srv.realmRefs.identityStores[store.GetRealm()] = store
 		srv.identityStores = append(srv.identityStores, store)
 	}
 
