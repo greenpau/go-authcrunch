@@ -17,6 +17,7 @@ package file
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -80,6 +81,9 @@ func ReadFile(filePath string) (string, error) {
 }
 
 func expandHomePath(fp string) (string, error) {
+	if fp == "" {
+		return fp, fmt.Errorf("cannot expand an empty string")
+	}
 	if fp[0] != '~' {
 		return fp, nil
 	}
@@ -93,8 +97,10 @@ func expandHomePath(fp string) (string, error) {
 
 // ReadFileBytes expands home directory and reads a file.
 func ReadFileBytes(fp string) ([]byte, error) {
-	var err error
-	fp, err = expandHomePath(fp)
+	if fp == "" {
+		return nil, fmt.Errorf("cannot expand an empty string")
+	}
+	fp, err := expandHomePath(fp)
 	if err != nil {
 		return nil, err
 	}
