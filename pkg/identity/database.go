@@ -17,17 +17,18 @@ package identity
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/internal/utils"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/util"
-	"github.com/greenpau/versioned"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/util"
+	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
+	"github.com/greenpau/versioned"
 )
 
 var (
@@ -62,9 +63,9 @@ func init() {
 	app = versioned.NewPackageManager("authdb")
 	app.Description = "authdb"
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
-	app.SetVersion(appVersion, "1.0.46")
+	app.SetVersion(appVersion, "1.0.47")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.0.45-1-g04ef714")
+	app.SetGitCommit(gitCommit, "v1.0.46-7-g3d57676")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
@@ -142,7 +143,7 @@ func NewDatabase(fp string) (*Database, error) {
 		if fileInfo.IsDir() {
 			return nil, errors.ErrNewDatabase.WithArgs(fp, "path points to a directory")
 		}
-		b, err := utils.ReadFileBytes(fp)
+		b, err := fileutil.ReadFileBytes(fp)
 		if err != nil {
 			return nil, errors.ErrNewDatabase.WithArgs(fp, err)
 		}

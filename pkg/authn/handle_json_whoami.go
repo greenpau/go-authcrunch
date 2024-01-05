@@ -22,11 +22,28 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func (p *Portal) handleJSONWhoami(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
 	if usr == nil {
 		return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Access denied")
+	}
+
+	// Check whether probe is being requested.
+	probeEnabled := r.URL.Query().Get("probe")
+	if probeEnabled == "true" && usr.Claims != nil {
+		respMap := make(map[string]interface{})
+		for k, v := range usr.AsMap() {
+			respMap[k] = v
+		}
+		expiresIn := usr.Claims.ExpiresAt - time.Now().Unix()
+		respMap["authenticated"] = true
+		respMap["expires_in"] = expiresIn
+		respBytes, _ := json.Marshal(respMap)
+		w.WriteHeader(200)
+		w.Write(respBytes)
+		return nil
 	}
 
 	// Check whether id_token is being requested.
