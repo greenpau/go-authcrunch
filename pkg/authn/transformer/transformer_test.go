@@ -93,6 +93,60 @@ func TestFactory(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "drop any role without words authp/admin or authp/user",
+			user: map[string]interface{}{
+				"email": "greenpau@outlook.com",
+				"roles": []string{
+					"authp/admin",
+					"authp/editor",
+					"authp/viewer",
+					"authp/user",
+				},
+			},
+			keys: []string{
+				"roles",
+			},
+			configs: []*Config{
+				{
+					Matchers: []string{
+						"no regex match any role ^authp/(admin|user)$",
+					},
+					Actions: []string{
+						"action drop matched role",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"roles": []string{
+					"authp/admin",
+					"authp/user",
+				},
+			},
+		},
+		{
+			name: "drop any role without words authp/admin or authp/user and no roles found",
+			user: map[string]interface{}{
+				"email": "greenpau@outlook.com",
+				"roles": []string{"authp/editor"},
+			},
+			keys: []string{
+				"roles",
+			},
+			configs: []*Config{
+				{
+					Matchers: []string{
+						"no regex match any role ^authp/(admin|user)$",
+					},
+					Actions: []string{
+						"action drop matched role",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"roles": []string(nil),
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

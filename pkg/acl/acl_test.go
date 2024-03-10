@@ -286,6 +286,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeStr",
                         "field": "roles",
                         "input_data_type": "dataTypeListStr",
+						"match_any": false,
                         "match_strategy": "fieldMatchExact",
                         "regex_enabled": false,
                         "values": [
@@ -347,6 +348,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeStr",
                         "field": "email",
                         "input_data_type": "dataTypeStr",
+						"match_any": false,
                         "match_strategy": "fieldMatchSuffix",
                         "regex_enabled": false,
                         "values": [
@@ -359,6 +361,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeStr",
                         "field": "roles",
                         "input_data_type": "dataTypeListStr",
+						"match_any": false,
                         "match_strategy": "fieldMatchExact",
                         "regex_enabled": false,
                         "values": [
@@ -387,6 +390,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeAny",
                         "field": "exp",
                         "input_data_type": "dataTypeAny",
+						"match_any": false,
                         "match_strategy": "fieldMatchAlways",
                         "regex_enabled": false
                       }
@@ -446,6 +450,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeAny",
                         "field": "roles",
                         "input_data_type": "dataTypeAny",
+						"match_any": false,
                         "match_strategy": "fieldFound",
                         "regex_enabled": false
                       },
@@ -455,6 +460,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeStr",
                         "field": "email",
                         "input_data_type": "dataTypeStr",
+						"match_any": false,
                         "match_strategy": "fieldMatchSuffix",
                         "regex_enabled": false,
                         "values": [
@@ -481,6 +487,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeAny",
                         "field": "exp",
                         "input_data_type": "dataTypeAny",
+						"match_any": false,
                         "match_strategy": "fieldMatchAlways",
                         "regex_enabled": false
                       }
@@ -540,6 +547,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeAny",
                         "field": "roles",
                         "input_data_type": "dataTypeAny",
+						"match_any": false,
                         "match_strategy": "fieldFound",
                         "regex_enabled": false
                       },
@@ -549,6 +557,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeStr",
                         "field": "email",
                         "input_data_type": "dataTypeStr",
+						"match_any": false,
                         "match_strategy": "fieldMatchSuffix",
                         "regex_enabled": false,
                         "values": [
@@ -575,6 +584,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeAny",
                         "field": "exp",
                         "input_data_type": "dataTypeAny",
+						"match_any": false,
                         "match_strategy": "fieldMatchAlways",
                         "regex_enabled": false
                       }
@@ -656,6 +666,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeAny",
                         "field": "roles",
                         "input_data_type": "dataTypeAny",
+						"match_any": false,
                         "match_strategy": "fieldFound",
                         "regex_enabled": false
                       }
@@ -681,6 +692,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeAny",
                         "field": "exp",
                         "input_data_type": "dataTypeAny",
+						"match_any": false,
                         "match_strategy": "fieldMatchAlways",
                         "regex_enabled": false
                       }
@@ -739,6 +751,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeAny",
                         "field": "roles",
                         "input_data_type": "dataTypeAny",
+						"match_any": false,
                         "match_strategy": "fieldNotFound",
                         "regex_enabled": false
                       }
@@ -763,6 +776,7 @@ func TestCustomAccessList(t *testing.T) {
                         "expr_data_type": "dataTypeAny",
                         "field": "exp",
                         "input_data_type": "dataTypeAny",
+						"match_any": false,
                         "match_strategy": "fieldMatchAlways",
                         "regex_enabled": false
                       }
