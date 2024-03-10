@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"testing"
 )
 
@@ -66,6 +67,32 @@ func TestFactory(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "drop existing authp/viewer role",
+			user: map[string]interface{}{
+				"email": "greenpau@outlook.com",
+				"roles": []string{"authp/admin", "authp/editor", "authp/viewer"},
+			},
+			keys: []string{
+				"roles",
+			},
+			configs: []*Config{
+				{
+					Matchers: []string{
+						"regex match role viewer",
+					},
+					Actions: []string{
+						"action drop matched role",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"roles": []string{
+					"authp/admin",
+					"authp/editor",
+				},
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -96,6 +123,7 @@ func TestTransformData(t *testing.T) {
 	var testcases = []struct {
 		name      string
 		args      []string
+		matcher   *acl.AccessList
 		user      map[string]interface{}
 		want      map[string]interface{}
 		shouldErr bool
@@ -233,7 +261,7 @@ func TestTransformData(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
 			got := deepCopy(tc.user)
-			if err := transformData(tc.args, got); err != nil {
+			if err := transformData(tc.args, got, tc.matcher); err != nil {
 				if tests.EvalErrWithLog(t, err, "transformer", tc.shouldErr, tc.err, msgs) {
 					return
 				}

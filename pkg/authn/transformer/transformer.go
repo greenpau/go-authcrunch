@@ -78,7 +78,7 @@ func NewFactory(cfgs []*Config) (*Factory, error) {
 				default:
 					return nil, fmt.Errorf("transformer for %q erred: invalid ui config", encodedArgs)
 				}
-			case "add", "overwrite":
+			case "add", "overwrite", "drop":
 				if len(args) < 3 {
 					return nil, fmt.Errorf("transformer for %q erred: invalid add/overwrite config", encodedArgs)
 				}
@@ -93,7 +93,7 @@ func NewFactory(cfgs []*Config) (*Factory, error) {
 					return nil, fmt.Errorf("transformer for %q erred: action config too short", encodedArgs)
 				}
 				switch args[1] {
-				case "add", "overwrite", "delete":
+				case "add", "overwrite", "delete", "drop":
 				default:
 					return nil, fmt.Errorf("transformer for %q erred: invalid action config", encodedArgs)
 				}
@@ -141,7 +141,7 @@ func (f *Factory) Transform(m map[string]interface{}) error {
 			case "link":
 				frontendLinks = append(frontendLinks, cfgutil.EncodeArgs(args[1:]))
 			default:
-				if err := transformData(args, m); err != nil {
+				if err := transformData(args, m, transform.matcher); err != nil {
 					return fmt.Errorf("transformer for %v erred: %v", args, err)
 				}
 			}
@@ -153,15 +153,16 @@ func (f *Factory) Transform(m map[string]interface{}) error {
 	if len(frontendLinks) > 0 {
 		m["frontend_links"] = frontendLinks
 	}
+
 	return nil
 }
 
-func transformData(args []string, m map[string]interface{}) error {
+func transformData(args []string, m map[string]interface{}, matcher *acl.AccessList) error {
 	if len(args) < 3 {
 		return fmt.Errorf("too short")
 	}
 	switch args[0] {
-	case "add", "delete", "overwrite":
+	case "add", "delete", "overwrite", "drop":
 	default:
 		return fmt.Errorf("unsupported action %v", args[0])
 	}
@@ -261,6 +262,45 @@ func transformData(args []string, m map[string]interface{}) error {
 			m[k] = strings.Join(args[2:], " ")
 		default:
 			return fmt.Errorf("unsupported %q field for %q action in %v", k, args[0], args)
+		}
+	case "drop":
+		if len(args) != 3 {
+			return fmt.Errorf("malformed %q action in %v", args[0], args)
+		}
+		if args[1] != "matched" || args[2] != "role" {
+			return fmt.Errorf("malformed %q action in %v", args[0], args)
+		}
+
+		if args[1] == "matched" && args[2] == "role" {
+			if _, exists := m["roles"]; exists {
+				var entries, newEntries []string
+				switch val := m["roles"].(type) {
+				case []string:
+					entries = val
+				case []interface{}:
+					for _, entry := range val {
+						switch e := entry.(type) {
+						case string:
+							entries = append(entries, e)
+						}
+						return fmt.Errorf("failed to %q action in %v due to unsupported data type inside the input data", args[0], args)
+					}
+				default:
+					return fmt.Errorf("failed to %q action in %v due to unsupported data type inside the input data", args[0], args)
+				}
+
+				for _, e := range entries {
+					em := map[string]interface{}{
+						"roles": []string{e},
+					}
+					if matched := matcher.Allow(context.Background(), em); matched {
+						continue
+					}
+					newEntries = append(newEntries, e)
+
+				}
+				m["roles"] = newEntries
+			}
 		}
 	default:
 		return fmt.Errorf("unsupported %q action in %v", args[0], args)
