@@ -47,7 +47,7 @@ gtest:
 	@echo "$@: complete"
 
 .PHONY: test
-test: templates envvar covdir linter gtest coverage
+test: templates info covdir linter gtest coverage
 	@echo "$@: complete"
 
 .PHONY: ctest
