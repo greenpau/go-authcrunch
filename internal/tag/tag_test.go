@@ -45,6 +45,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/ids/local"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
@@ -870,6 +871,11 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test requests.AuthorizationToken struct",
 			entry: &requests.AuthorizationToken{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test redirects.RedirectURIMatchConfig struct",
+			entry: &redirects.RedirectURIMatchConfig{},
 			opts:  &Options{},
 		},
 	}
