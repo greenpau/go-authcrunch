@@ -153,7 +153,7 @@ qtest: covdir
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/backends/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run NewAPIKey ./pkg/identity/...
 	@#
-	@#go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html;
+	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html;
 	@#go tool cover -func=.coverage/coverage.out | grep -v "100.0"
 	@#go tool cover -func=.coverage/coverage.out;
 	@echo "$@: complete"

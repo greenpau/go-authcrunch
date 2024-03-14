@@ -81,8 +81,5 @@ func Match(u *url.URL, cfgs []*RedirectURIMatchConfig) bool {
 			break
 		}
 	}
-	if !domainMatched {
-		return false
-	}
-	return true
+	return domainMatched
 }

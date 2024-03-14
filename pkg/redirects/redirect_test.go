@@ -40,6 +40,54 @@ func TestNewRedirectURIMatchConfig(t *testing.T) {
 				"path":              "/path/to",
 			},
 		},
+		{
+			name:      "test undefined redirect uri domain",
+			config:    []string{"exact", " ", "exact", "/path/to"},
+			shouldErr: true,
+			err:       fmt.Errorf("undefined redirect uri domain"),
+		},
+		{
+			name:      "test undefined redirect uri domain name match type",
+			config:    []string{"", "authcrunch.com", "exact", "/path/to"},
+			shouldErr: true,
+			err:       fmt.Errorf("undefined redirect uri domain name match type"),
+		},
+		{
+			name:      "test unsupported redirect uri domain name match type",
+			config:    []string{"foo", "authcrunch.com", "exact", "/path/to"},
+			shouldErr: true,
+			err:       fmt.Errorf("invalid %q redirect uri domain name match type", "foo"),
+		},
+		{
+			name:      "test bad redirect uri domain name regex",
+			config:    []string{"regex", "[.", "exact", "/path/to"},
+			shouldErr: true,
+			err:       fmt.Errorf("error parsing regexp: missing closing ]: `[.`"),
+		},
+		{
+			name:      "test undefined redirect uri path",
+			config:    []string{"exact", "authcrunch.com", "exact", " "},
+			shouldErr: true,
+			err:       fmt.Errorf("undefined redirect uri path"),
+		},
+		{
+			name:      "test undefined redirect uri path match type",
+			config:    []string{"exact", "authcrunch.com", "", "/path/to"},
+			shouldErr: true,
+			err:       fmt.Errorf("undefined redirect uri path match type"),
+		},
+		{
+			name:      "test unsupported redirect uri path match type",
+			config:    []string{"exact", "authcrunch.com", "foo", "/path/to"},
+			shouldErr: true,
+			err:       fmt.Errorf("invalid %q redirect uri path match type", "foo"),
+		},
+		{
+			name:      "test bad redirect uri path regex",
+			config:    []string{"regex", "authcrunch.rocks", "exact", "[."},
+			shouldErr: true,
+			err:       fmt.Errorf("error parsing regexp: missing closing ]: `[.`"),
+		},
 		/*
 			{
 				name: "test invalid config",
@@ -55,10 +103,6 @@ func TestNewRedirectURIMatchConfig(t *testing.T) {
 			msgs = append(msgs, fmt.Sprintf("config:\n%v", tc.config))
 
 			c, err := NewRedirectURIMatchConfig(tc.config[0], tc.config[1], tc.config[2], tc.config[3])
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			if tests.EvalErrWithLog(t, err, "Match", tc.shouldErr, tc.err, msgs) {
 				return
 			}

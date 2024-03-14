@@ -47,10 +47,10 @@ type RedirectURIMatchConfig struct {
 // NewRedirectURIMatchConfig return an instance of *RedirectURIMatchConfig.
 func NewRedirectURIMatchConfig(domainMatchType, domain, pathMatchType, path string) (*RedirectURIMatchConfig, error) {
 	c := &RedirectURIMatchConfig{
-		PathMatchType:   pathMatchType,
-		Path:            path,
-		DomainMatchType: domainMatchType,
-		Domain:          domain,
+		PathMatchType:   strings.TrimSpace(pathMatchType),
+		Path:            strings.TrimSpace(path),
+		DomainMatchType: strings.TrimSpace(domainMatchType),
+		Domain:          strings.TrimSpace(domain),
 	}
 	if err := c.Validate(); err != nil {
 		return nil, err
@@ -72,9 +72,9 @@ func (c *RedirectURIMatchConfig) Validate() error {
 	case "regex":
 		c.pathMatch = matchRegex
 	case "":
-		return fmt.Errorf("undefined path match type")
+		return fmt.Errorf("undefined redirect uri path match type")
 	default:
-		return fmt.Errorf("invalid %q path match type", c.PathMatchType)
+		return fmt.Errorf("invalid %q redirect uri path match type", c.PathMatchType)
 	}
 
 	switch c.DomainMatchType {
@@ -89,20 +89,20 @@ func (c *RedirectURIMatchConfig) Validate() error {
 	case "regex":
 		c.domainMatch = matchRegex
 	case "":
-		return fmt.Errorf("undefined domain name match type")
+		return fmt.Errorf("undefined redirect uri domain name match type")
 	default:
-		return fmt.Errorf("invalid %q domain name match type", c.DomainMatchType)
+		return fmt.Errorf("invalid %q redirect uri domain name match type", c.DomainMatchType)
 	}
 
 	c.Path = strings.TrimSpace(c.Path)
 	c.Domain = strings.TrimSpace(c.Domain)
 
 	if c.Path == "" {
-		return fmt.Errorf("undefined path")
+		return fmt.Errorf("undefined redirect uri path")
 	}
 
 	if c.Domain == "" {
-		return fmt.Errorf("undefined domain")
+		return fmt.Errorf("undefined redirect uri domain")
 	}
 
 	if c.pathRegex == nil {

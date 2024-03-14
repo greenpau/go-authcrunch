@@ -15,24 +15,31 @@
 package redirects
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 )
 
 // ParseRedirectURI parses redirect_uri from URL string.
-func ParseRedirectURI(s string) *url.URL {
+func ParseRedirectURI(s string) (*url.URL, error) {
 	parsedURL, err := url.Parse(s)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("failed to parse base uri")
+	}
+	if parsedURL.Scheme == "" || parsedURL.Host == "" || parsedURL.Path == "" {
+		return nil, fmt.Errorf("non compliant base uri")
 	}
 	queryParams := parsedURL.Query()
 	rawRedirectURI := queryParams.Get("redirect_uri")
 	if strings.HasPrefix(rawRedirectURI, "/") {
-		return nil
+		return nil, fmt.Errorf("redirect uri is not url")
 	}
 	parsedRedirectURI, err := url.Parse(rawRedirectURI)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("failed to parse redirect uri")
 	}
-	return parsedRedirectURI
+	if parsedRedirectURI.Scheme == "" || parsedRedirectURI.Host == "" || parsedRedirectURI.Path == "" {
+		return nil, fmt.Errorf("non compliant redirect uri")
+	}
+	return parsedRedirectURI, nil
 }

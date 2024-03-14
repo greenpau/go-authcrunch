@@ -44,33 +44,107 @@ func TestMatch(t *testing.T) {
 				"path":   "/path/to/login",
 			},
 		},
-		// {
-		// 	name:   "text exact domain and partial path match",
-		// 	config: []string{"exact", "authcrunch.com", "partial", "/to/"},
-		// 	input:  testInput1,
-		// 	want: map[string]interface{}{
-		// 		"match":  true,
-		// 		"domain": "authcrunch.com",
-		// 		"path":   "/path/to/login",
-		// 	},
-		// },
-		// {
-		// 	name:   "text exact domain and prefix path match",
-		// 	config: []string{"exact", "authcrunch.com", "prefix", "/path/to"},
-		// 	input:  testInput1,
-		// 	want: map[string]interface{}{
-		// 		"match":  true,
-		// 		"domain": "authcrunch.com",
-		// 		"path":   "/path/to/login",
-		// 	},
-		// },
-		/*
-			{
-				name: "test invalid config",
-				shouldErr: true,
-				err:       fmt.Errorf("TBD"),
+		{
+			name:   "test exact domain and partial path match",
+			config: []string{"exact", "authcrunch.com", "partial", "/to/"},
+			input:  testInput1,
+			want: map[string]interface{}{
+				"match":  true,
+				"domain": "authcrunch.com",
+				"path":   "/path/to/login",
 			},
-		*/
+		},
+		{
+			name:   "test exact domain and prefix path match",
+			config: []string{"exact", "authcrunch.com", "prefix", "/path/to"},
+			input:  testInput1,
+			want: map[string]interface{}{
+				"match":  true,
+				"domain": "authcrunch.com",
+				"path":   "/path/to/login",
+			},
+		},
+		{
+			name:   "test exact domain and suffix path match",
+			config: []string{"exact", "authcrunch.com", "suffix", "/to/login"},
+			input:  testInput1,
+			want: map[string]interface{}{
+				"match":  true,
+				"domain": "authcrunch.com",
+				"path":   "/path/to/login",
+			},
+		},
+		{
+			name:   "test exact domain and regex path match",
+			config: []string{"exact", "authcrunch.com", "regex", "/path.*login"},
+			input:  testInput1,
+			want: map[string]interface{}{
+				"match":  true,
+				"domain": "authcrunch.com",
+				"path":   "/path/to/login",
+			},
+		},
+		{
+			name:   "test unmatched path",
+			config: []string{"exact", "authcrunch.com", "exact", "foo"},
+			input:  testInput1,
+			want: map[string]interface{}{
+				"match":  false,
+				"domain": "authcrunch.com",
+				"path":   "/path/to/login",
+			},
+		},
+
+		{
+			name:   "test partial domain and exact path match",
+			config: []string{"partial", "authcrunch.com", "exact", "/path/to/login"},
+			input:  testInput1,
+			want: map[string]interface{}{
+				"match":  true,
+				"domain": "authcrunch.com",
+				"path":   "/path/to/login",
+			},
+		},
+		{
+			name:   "test prefix domain and exact path match",
+			config: []string{"prefix", "auth", "exact", "/path/to/login"},
+			input:  testInput1,
+			want: map[string]interface{}{
+				"match":  true,
+				"domain": "authcrunch.com",
+				"path":   "/path/to/login",
+			},
+		},
+		{
+			name:   "test suffix domain and exact path match",
+			config: []string{"suffix", "crunch.com", "exact", "/path/to/login"},
+			input:  testInput1,
+			want: map[string]interface{}{
+				"match":  true,
+				"domain": "authcrunch.com",
+				"path":   "/path/to/login",
+			},
+		},
+		{
+			name:   "test regex domain and exact path match",
+			config: []string{"regex", "auth.*com", "exact", "/path/to/login"},
+			input:  testInput1,
+			want: map[string]interface{}{
+				"match":  true,
+				"domain": "authcrunch.com",
+				"path":   "/path/to/login",
+			},
+		},
+		{
+			name:   "test unmatched domain",
+			config: []string{"exact", "authcrunch.rocks", "exact", "/path/to/login"},
+			input:  testInput1,
+			want: map[string]interface{}{
+				"match":  false,
+				"domain": "authcrunch.com",
+				"path":   "/path/to/login",
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -83,9 +157,9 @@ func TestMatch(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			redirURI := ParseRedirectURI(tc.input)
-			if redirURI == nil {
-				t.Fatalf("redirect uri not found in the input: %s", tc.input)
+			redirURI, err := ParseRedirectURI(tc.input)
+			if err != nil {
+				t.Fatalf("redirect uri not found in the input: %v", err)
 			}
 
 			got["match"] = Match(redirURI, []*RedirectURIMatchConfig{c})

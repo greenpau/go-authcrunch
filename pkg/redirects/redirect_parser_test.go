@@ -24,43 +24,70 @@ import (
 
 func TestParseRedirectURI(t *testing.T) {
 
-	testInput1 := "https://authcrunch.com/?redirect_uri=https://authcrunch.com/path/to/login"
-
 	testcases := []struct {
 		name      string
 		input     string
 		want      map[string]interface{}
 		shouldErr bool
 		err       error
+		disabled  bool
 	}{
 		{
-			name:  "text valid redirect uri",
-			input: testInput1,
+			name:     "test valid redirect uri",
+			disabled: false,
+			input:    "https://authcrunch.com/?redirect_uri=https://authcrunch.com/path/to/login",
 			want: map[string]interface{}{
 				"redirect_uri": "https://authcrunch.com/path/to/login",
 			},
 		},
-		/*
-			{
-				name: "test invalid config",
-				shouldErr: true,
-				err:       fmt.Errorf("TBD"),
-			},
-		*/
+		{
+			name:      "test parse invalid base uri",
+			disabled:  false,
+			input:     "http://authcrunch.com.%24/?redirect_uri=https://authcrunch.com/path/to/login",
+			shouldErr: true,
+			err:       fmt.Errorf("failed to parse base uri"),
+		},
+		{
+			name:      "test parse non compliant base uri",
+			disabled:  false,
+			input:     "http:authcrunch.com/?redirect_uri=https://authcrunch.com/path/to/login",
+			shouldErr: true,
+			err:       fmt.Errorf("non compliant base uri"),
+		},
+		// {
+		// 	name:      "test parse invalid redirect uri",
+		// 	disabled:  false,
+		// 	input:     "http://authcrunch.com/?redirect_uri=https://authcrunch.com.%24/path/to/login",
+		// 	shouldErr: true,
+		// 	err:       fmt.Errorf("failed to parse redirect uri"),
+		// },
+		{
+			name:      "test parse redirect uri without host",
+			disabled:  false,
+			input:     "https://authcrunch.com/?redirect_uri=/foo/bar",
+			shouldErr: true,
+			err:       fmt.Errorf("redirect uri is not url"),
+		},
+		{
+			name:      "test parse non compliant redirect uri",
+			disabled:  false,
+			input:     "http://authcrunch.com/?redirect_uri=authcrunch.com/path/to/login",
+			shouldErr: true,
+			err:       fmt.Errorf("non compliant redirect uri"),
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.disabled {
+				return
+			}
 			var err error
 			got := make(map[string]interface{})
 			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
 			msgs = append(msgs, fmt.Sprintf("input:\n%s", tc.input))
 
-			redirURI := ParseRedirectURI(tc.input)
-			if redirURI == nil {
-				err = fmt.Errorf("redirect uri not found")
-			}
-
-			if tests.EvalErrWithLog(t, err, "Match", tc.shouldErr, tc.err, msgs) {
+			redirURI, err := ParseRedirectURI(tc.input)
+			if tests.EvalErrWithLog(t, err, "RedirectURI", tc.shouldErr, tc.err, msgs) {
 				return
 			}
 
