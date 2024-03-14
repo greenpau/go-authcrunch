@@ -66,7 +66,7 @@ func TestParseRedirectURI(t *testing.T) {
 			disabled:  false,
 			input:     "https://authcrunch.com/?redirect_uri=/foo/bar",
 			shouldErr: true,
-			err:       fmt.Errorf("redirect uri is not url"),
+			err:       fmt.Errorf("redirect uri has no scheme and host"),
 		},
 		{
 			name:      "test parse non compliant redirect uri",

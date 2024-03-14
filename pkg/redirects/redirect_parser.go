@@ -29,10 +29,13 @@ func ParseRedirectURI(s string) (*url.URL, error) {
 	if parsedURL.Scheme == "" || parsedURL.Host == "" || parsedURL.Path == "" {
 		return nil, fmt.Errorf("non compliant base uri")
 	}
+	if !HasRedirectURI(parsedURL) {
+		return nil, fmt.Errorf("redirect uri is not url")
+	}
 	queryParams := parsedURL.Query()
 	rawRedirectURI := queryParams.Get("redirect_uri")
 	if strings.HasPrefix(rawRedirectURI, "/") {
-		return nil, fmt.Errorf("redirect uri is not url")
+		return nil, fmt.Errorf("redirect uri has no scheme and host")
 	}
 	parsedRedirectURI, err := url.Parse(rawRedirectURI)
 	if err != nil {
@@ -42,4 +45,43 @@ func ParseRedirectURI(s string) (*url.URL, error) {
 		return nil, fmt.Errorf("non compliant redirect uri")
 	}
 	return parsedRedirectURI, nil
+}
+
+// GetRedirectURI returns redirect_uri value from query parameters.
+func GetRedirectURI(u *url.URL) *url.URL {
+	queryParams := u.Query()
+	if queryParams == nil {
+		return nil
+	}
+	rawRedirectURI := queryParams.Get("redirect_uri")
+	parsedRedirectURI, err := url.Parse(rawRedirectURI)
+	if err != nil {
+		return nil
+	}
+	if parsedRedirectURI.Scheme == "" || parsedRedirectURI.Host == "" || parsedRedirectURI.Path == "" {
+		return nil
+	}
+	return parsedRedirectURI
+}
+
+// GetRawRedirectURI returns raw redirect_uri value from query parameters.
+func GetRawRedirectURI(u *url.URL) string {
+	queryParams := u.Query()
+	if queryParams == nil {
+		return ""
+	}
+	return queryParams.Get("redirect_uri")
+}
+
+// HasRedirectURI check whether URL has redirect_uri in query parameters.
+func HasRedirectURI(u *url.URL) bool {
+	queryParams := u.Query()
+	if queryParams == nil {
+		return false
+	}
+	rawRedirectURI := queryParams.Get("redirect_uri")
+	if rawRedirectURI == "" {
+		return false
+	}
+	return true
 }

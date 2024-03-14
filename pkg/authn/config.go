@@ -133,6 +133,12 @@ func (cfg *PortalConfig) Validate() error {
 		return err
 	}
 
+	for _, redirURIConfig := range cfg.TrustedLogoutRedirectURIConfigs {
+		if err := redirURIConfig.Validate(); err != nil {
+			return err
+		}
+	}
+
 	// Inialize user interface settings
 	if cfg.UI == nil {
 		cfg.UI = &ui.Parameters{}
