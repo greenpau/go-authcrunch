@@ -16,7 +16,6 @@ package redirects
 
 import (
 	"fmt"
-	"net/url"
 	"regexp"
 	"strings"
 )
@@ -43,6 +42,20 @@ type RedirectURIMatchConfig struct {
 	pathRegex   *regexp.Regexp
 	domainMatch matchStrategy
 	domainRegex *regexp.Regexp
+}
+
+// NewRedirectURIMatchConfig return an instance of *RedirectURIMatchConfig.
+func NewRedirectURIMatchConfig(domainMatchType, domain, pathMatchType, path string) (*RedirectURIMatchConfig, error) {
+	c := &RedirectURIMatchConfig{
+		PathMatchType:   pathMatchType,
+		Path:            path,
+		DomainMatchType: domainMatchType,
+		Domain:          domain,
+	}
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 // Validate validates RedirectURIMatchConfig.
@@ -109,74 +122,4 @@ func (c *RedirectURIMatchConfig) Validate() error {
 	}
 
 	return nil
-}
-
-// Match matches HTTP URL to the bypass configuration.
-func Match(u *url.URL, cfgs []*RedirectURIMatchConfig) bool {
-	pathMatched := false
-	domainMatched := false
-
-	for _, cfg := range cfgs {
-		switch cfg.pathMatch {
-		case matchExact:
-			if cfg.Path == u.Path {
-				pathMatched = true
-			}
-		case matchPartial:
-			if strings.Contains(u.Path, cfg.Path) {
-				pathMatched = true
-			}
-		case matchPrefix:
-			if strings.HasPrefix(u.Path, cfg.Path) {
-				pathMatched = true
-			}
-		case matchSuffix:
-			if strings.HasSuffix(u.Path, cfg.Path) {
-				pathMatched = true
-			}
-		case matchRegex:
-			if cfg.pathRegex.MatchString(u.Path) {
-				pathMatched = true
-			}
-		}
-		if pathMatched {
-			break
-		}
-	}
-	if !pathMatched {
-		return false
-	}
-
-	for _, cfg := range cfgs {
-		switch cfg.domainMatch {
-		case matchExact:
-			if cfg.Domain == u.Host {
-				domainMatched = true
-			}
-		case matchPartial:
-			if strings.Contains(u.Host, cfg.Domain) {
-				domainMatched = true
-			}
-		case matchPrefix:
-			if strings.HasPrefix(u.Host, cfg.Domain) {
-				domainMatched = true
-			}
-		case matchSuffix:
-			if strings.HasSuffix(u.Host, cfg.Domain) {
-				domainMatched = true
-			}
-		case matchRegex:
-			if cfg.domainRegex.MatchString(u.Host) {
-				domainMatched = true
-			}
-		}
-		if domainMatched {
-			break
-		}
-	}
-	if !domainMatched {
-		return false
-	}
-
-	return false
 }
