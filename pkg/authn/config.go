@@ -15,6 +15,8 @@
 package authn
 
 import (
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
@@ -24,7 +26,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"strings"
 )
 
 // PortalConfig represents Portal configuration.
@@ -54,17 +55,14 @@ type PortalConfig struct {
 	CryptoKeyStoreConfig map[string]interface{} `json:"crypto_key_store_config,omitempty" xml:"crypto_key_store_config,omitempty" yaml:"crypto_key_store_config,omitempty"`
 	// TokenGrantorOptions holds the configuration for the tokens issues by Authenticator.
 	TokenGrantorOptions *options.TokenGrantorOptions `json:"token_grantor_options,omitempty" xml:"token_grantor_options,omitempty" yaml:"token_grantor_options,omitempty"`
-	// TrustedRedirectURIConfigs holds the configuration of trusted redirect URIs.
-	TrustedRedirectURIConfigs []*redirects.RedirectURIMatchConfig `json:"trusted_redirect_uri_configs,omitempty" xml:"trusted_redirect_uri_configs,omitempty" yaml:"trusted_redirect_uri_configs,omitempty"`
+	// TrustedLogoutRedirectURIConfigs holds the configuration of trusted logout redirect URIs.
+	TrustedLogoutRedirectURIConfigs []*redirects.RedirectURIMatchConfig `json:"trusted_logout_redirect_uri_configs,omitempty" xml:"trusted_logout_redirect_uri_configs,omitempty" yaml:"trusted_logout_redirect_uri_configs,omitempty"`
 
 	// API holds the configuration for API endpoints.
 	API *APIConfig `json:"api,omitempty" xml:"api,omitempty" yaml:"api,omitempty"`
 
 	// Holds raw crypto configuration.
 	cryptoRawConfigs []string
-
-	// Holds raw trusted redirect URI configirations.
-	trustedRedirectURIRawConfigs []string
 
 	// Indicated that the config was successfully validated.
 	validated bool
@@ -73,11 +71,6 @@ type PortalConfig struct {
 // AddRawCryptoConfigs adds raw crypto configs.
 func (cfg *PortalConfig) AddRawCryptoConfigs(s string) {
 	cfg.cryptoRawConfigs = append(cfg.cryptoRawConfigs, s)
-}
-
-// AddRawTrustedRedirectURIConfig adds raw trusted redirect URI config.
-func (cfg *PortalConfig) AddRawTrustedRedirectURIConfig(s string) {
-	cfg.trustedRedirectURIRawConfigs = append(cfg.trustedRedirectURIRawConfigs, s)
 }
 
 // parseRawCryptoConfigs parses raw crypto configs into CryptoKeyConfigs
@@ -123,51 +116,6 @@ func (cfg *PortalConfig) parseRawCryptoConfigs() error {
 	return nil
 }
 
-// parseRawTrustedRedirectURIConfigs parses raw trusted redirect URI configirations
-// into TrustedRedirectURIConfigs.
-func (cfg *PortalConfig) parseRawTrustedRedirectURIConfigs() error {
-	/*
-			var cryptoKeyConfig, cryptoKeyStoreConfig []string
-		    var cryptoKeyConfigFound, cryptoKeyStoreConfigFound bool
-		    for _, encodedArgs := range cfg.cryptoRawConfigs {
-		        args, err := cfgutil.DecodeArgs(encodedArgs)
-		        if err != nil {
-		            return errors.ErrConfigDirectiveFail.WithArgs("crypto", encodedArgs, err)
-		        }
-		        if len(args) < 3 {
-		            return errors.ErrConfigDirectiveShort.WithArgs("crypto", args)
-		        }
-		        cryptoKeyConfig = append(cryptoKeyConfig, encodedArgs)
-		        switch args[0] {
-		        case "key":
-		            cryptoKeyConfigFound = true
-		        case "default":
-		            cryptoKeyStoreConfig = append(cryptoKeyStoreConfig, encodedArgs)
-		            cryptoKeyStoreConfigFound = true
-		        default:
-		            return errors.ErrConfigDirectiveValueUnsupported.WithArgs("crypto", args)
-		        }
-		    }
-
-		    if cryptoKeyConfigFound {
-		        configs, err := kms.ParseCryptoKeyConfigs(strings.Join(cryptoKeyConfig, "\n"))
-		        if err != nil {
-		            return errors.ErrConfigDirectiveFail.WithArgs("crypto.key", cryptoKeyConfig, err)
-		        }
-		        cfg.CryptoKeyConfigs = configs
-		    }
-
-		    if cryptoKeyStoreConfigFound {
-		        configs, err := kms.ParseCryptoKeyStoreConfig(strings.Join(cryptoKeyStoreConfig, "\n"))
-		        if err != nil {
-		            return errors.ErrConfigDirectiveFail.WithArgs("crypto.keystore", cryptoKeyStoreConfig, err)
-		        }
-		        cfg.CryptoKeyStoreConfig = configs
-		    }
-	*/
-	return nil
-}
-
 // Validate validates PortalConfig.
 func (cfg *PortalConfig) Validate() error {
 	if cfg.validated {
@@ -182,10 +130,6 @@ func (cfg *PortalConfig) Validate() error {
 	// }
 
 	if err := cfg.parseRawCryptoConfigs(); err != nil {
-		return err
-	}
-
-	if err := cfg.parseRawTrustedRedirectURIConfigs(); err != nil {
 		return err
 	}
 
