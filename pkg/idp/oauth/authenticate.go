@@ -125,7 +125,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 			var m map[string]interface{}
 
 			switch b.config.Driver {
-			case "github", "gitlab", "facebook", "discord":
+			case "github", "gitlab", "facebook", "discord", "linkedin":
 				m, err = b.fetchClaims(accessToken)
 				if err != nil {
 					return errors.ErrIdentityProviderOauthFetchClaimsFailed.WithArgs(err)

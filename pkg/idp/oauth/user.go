@@ -127,6 +127,8 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 	switch b.config.Driver {
 	case "github":
 		userURL = "https://api.github.com/user"
+	case "linkedin":
+		userURL = "https://api.linkedin.com/v2/userinfo"
 	case "gitlab":
 		userURL = b.userInfoURL
 	case "facebook":
@@ -137,7 +139,7 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 
 	// Setup http request for the URL.
 	switch b.config.Driver {
-	case "github", "gitlab", "discord":
+	case "github", "gitlab", "discord", "linkedin":
 		req, err = http.NewRequest("GET", userURL, nil)
 		if err != nil {
 			return nil, err
@@ -165,7 +167,7 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 	switch b.config.Driver {
 	case "github":
 		req.Header.Add("Authorization", "token "+tokenString)
-	case "gitlab", "discord":
+	case "gitlab", "discord", "linkedin":
 		req.Header.Add("Authorization", "Bearer "+tokenString)
 	}
 
@@ -193,6 +195,10 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 	}
 
 	switch b.config.Driver {
+	case "linkedin":
+		if _, exists := data["sub"]; !exists {
+			return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, profile field not found")
+		}
 	case "gitlab":
 		if _, exists := data["profile"]; !exists {
 			return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, profile field not found")
@@ -205,7 +211,7 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 			return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, login field not found")
 		}
 	case "discord":
-		if _,exists := data["id"]; !exists {
+		if _, exists := data["id"]; !exists {
 			return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, id field not found")
 		}
 	case "facebook":
@@ -367,6 +373,16 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 		}
 		m["sub"] = data["id"]
 		m["name"] = data["name"]
+	case "linkedin":
+		for _, k := range []string{"name", "picture", "sub", "email"} {
+			if _, exists := data[k]; !exists {
+				continue
+			}
+			switch v := data[k].(type) {
+			case string:
+				m[k] = v
+			}
+		}
 	}
 
 	if len(userGroups) > 0 {
@@ -391,7 +407,7 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Add("Authorization", "Bearer " + authToken)
+	req.Header.Add("Authorization", "Bearer "+authToken)
 
 	// Fetch data from the URL.
 	resp, err := cli.Do(req)
@@ -443,9 +459,9 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 					"Error converting Guild permissions to integer",
 					zap.Any("error", err),
 				)
- 			} else if (perm & 0x08) == 0x08 { // Check for admin privileges
+			} else if (perm & 0x08) == 0x08 { // Check for admin privileges
 				data.Groups = append(data.Groups, fmt.Sprintf("discord.com/%s/admins", guildID))
-    			}
+			}
 		}
 
 		data.Groups = append(data.Groups, fmt.Sprintf("discord.com/%s/members", guildID))
@@ -457,7 +473,7 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 				return nil, err
 			}
 			req.Header.Set("Accept", "application/json")
-			req.Header.Add("Authorization", "Bearer " + authToken)
+			req.Header.Add("Authorization", "Bearer "+authToken)
 
 			resp, err = cli.Do(req)
 			if err != nil {
