@@ -174,8 +174,8 @@ func (cfg *Config) Validate() error {
 
 			var storeConfig *ids.IdentityStoreConfig
 			for _, entry := range cfg.IdentityStores {
-				storeConfig = entry
 				if entry.Name == storeName {
+					storeConfig = entry
 					break
 				}
 			}
