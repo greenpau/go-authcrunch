@@ -38,30 +38,63 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	usr, err := p.authorizeRequest(ctx, w, r, rr)
 	if err != nil {
+		p.logger.Debug(
+			"API authorization failed",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.Error(err),
+		)
 		return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 	}
 
 	if !rr.Response.Authenticated {
+		p.logger.Debug(
+			"User is not authorized to use API",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+		)
 		return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 	}
 
 	if !usr.HasRole("authp/admin") {
+		p.logger.Debug(
+			"API is not available because user has no admin privileges",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+		)
 		return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusForbidden, http.StatusText(http.StatusForbidden))
 	}
 
-	if p.config.API == nil || (p.config.API != nil && !p.config.API.Enabled) {
+	if p.config.API == nil || (p.config.API != nil && !p.config.API.ProfileEnabled && !p.config.API.AdminEnabled) {
+		p.logger.Debug(
+			"API is not available",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.Any("api_config", p.config.API),
+		)
 		return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
 	}
 
 	switch {
-	case strings.HasSuffix(r.URL.Path, "/api/metadata"):
+	case p.config.API.AdminEnabled && strings.HasSuffix(r.URL.Path, "/api/metadata"):
 		return p.handleAPIMetadata(ctx, w, r, rr, usr)
-	case strings.Contains(r.URL.Path, "/api/orgs"):
+	case p.config.API.AdminEnabled && strings.Contains(r.URL.Path, "/api/orgs"):
 		return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
-	case strings.Contains(r.URL.Path, "/api/teams"):
+	case p.config.API.AdminEnabled && strings.Contains(r.URL.Path, "/api/teams"):
 		return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
-	case strings.Contains(r.URL.Path, "/api/users"):
+	case p.config.API.AdminEnabled && strings.Contains(r.URL.Path, "/api/users"):
 		return p.handleAPIListUsers(ctx, w, r, rr, usr)
+	case p.config.API.ProfileEnabled && r.Method == "POST" && strings.Contains(r.URL.Path, "/api/profile"):
+		return p.handleAPIProfile(ctx, w, r, rr, usr)
+	default:
+		p.logger.Debug(
+			"API endpoint is not supported",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.Any("api_config", p.config.API),
+			zap.String("endpoint_path", r.URL.Path),
+			zap.String("endpoint_method", r.Method),
+		)
 	}
 
 	return p.handleJSONError(ctx, w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))

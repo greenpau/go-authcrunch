@@ -18,6 +18,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
@@ -27,8 +30,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/skip2/go-qrcode"
 	"go.uber.org/zap"
-	"net/http"
-	"strings"
 )
 
 func (p *Portal) handleHTTPMfaBarcode(ctx context.Context, w http.ResponseWriter, r *http.Request, endpoint string) error {
@@ -55,9 +56,16 @@ func (p *Portal) handleHTTPMfaSettings(
 	var status bool
 	entrypoint := "mfa"
 	data["view"] = entrypoint
-	endpoint, err := getEndpoint(r.URL.Path, "/"+entrypoint)
+	var endpoint string
+	var err error
+	endpoint, err = getEndpoint(r.URL.Path, "/"+entrypoint)
 	if err != nil {
-		return err
+		if v, exists := data["endpoint"]; exists {
+			endpoint = v.(string)
+			delete(data, "endpoint")
+		} else {
+			return err
+		}
 	}
 
 	switch {

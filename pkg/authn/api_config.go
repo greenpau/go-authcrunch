@@ -16,5 +16,6 @@ package authn
 
 // APIConfig holds the configuration for API endpoints.
 type APIConfig struct {
-	Enabled bool `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
+	ProfileEnabled bool `json:"profile_enabled,omitempty" xml:"profile_enabled,omitempty" yaml:"profile_enabled,omitempty"`
+	AdminEnabled   bool `json:"admin_enabled,omitempty" xml:"admin_enabled,omitempty" yaml:"admin_enabled,omitempty"`
 }
