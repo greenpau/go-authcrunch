@@ -63,8 +63,11 @@ type MfaToken struct {
 	Parameters       map[string]string `json:"parameters,omitempty" xml:"parameters,omitempty" yaml:"parameters,omitempty"`
 	Flags            map[string]bool   `json:"flags,omitempty" xml:"flags,omitempty" yaml:"flags,omitempty"`
 	SignatureCounter uint32            `json:"signature_counter,omitempty" xml:"signature_counter,omitempty" yaml:"signature_counter,omitempty"`
-	pubkeyECDSA      *ecdsa.PublicKey
-	pubkeyRSA        *rsa.PublicKey
+	Tags             []Tag             `json:"tags,omitempty" xml:"tags,omitempty" yaml:"tags,omitempty"`
+	Labels           []string          `json:"labels,omitempty" xml:"labels,omitempty" yaml:"labels,omitempty"`
+
+	pubkeyECDSA *ecdsa.PublicKey
+	pubkeyRSA   *rsa.PublicKey
 }
 
 // MfaDevice is the hardware device associated with MfaToken.

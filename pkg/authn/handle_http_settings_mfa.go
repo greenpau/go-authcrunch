@@ -32,7 +32,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (p *Portal) handleHTTPMfaBarcode(ctx context.Context, w http.ResponseWriter, r *http.Request, endpoint string) error {
+func (p *Portal) handleHTTPMfaBarcode(ctx context.Context, w http.ResponseWriter, _ *http.Request, endpoint string) error {
 	qrCodeEncoded := strings.TrimPrefix(endpoint, "/mfa/barcode/")
 	qrCodeEncoded = strings.TrimSuffix(qrCodeEncoded, ".png")
 	codeURI, err := base64.StdEncoding.DecodeString(qrCodeEncoded)
@@ -49,7 +49,7 @@ func (p *Portal) handleHTTPMfaBarcode(ctx context.Context, w http.ResponseWriter
 }
 
 func (p *Portal) handleHTTPMfaSettings(
-	ctx context.Context, r *http.Request, rr *requests.Request,
+	_ context.Context, r *http.Request, rr *requests.Request,
 	usr *user.User, store ids.IdentityStore, data map[string]interface{},
 ) error {
 	var action string

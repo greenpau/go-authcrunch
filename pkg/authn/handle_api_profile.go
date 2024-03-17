@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -67,13 +68,42 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return handleAPIProfileResponse(w, rr, http.StatusForbidden, resp)
 	}
 
-	reqKind := "fetch_user_dashboard_data"
+	// Unpack the request and determine the type of the request.
+	var reqKind = "unknown"
+
+	// Read the request body
+	defer r.Body.Close()
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		resp["message"] = "Profile API failed to parse request body"
+		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+	}
+	var bodyData map[string]interface{}
+	if err := json.Unmarshal(body, &bodyData); err != nil {
+		resp["message"] = "Profile API failed to parse request JSON body"
+		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+	}
+
+	if v, exists := bodyData["kind"]; exists {
+		reqKind = v.(string)
+	}
+
+	switch reqKind {
+	case "fetch_user_dashboard_data":
+	case "delete_user_multi_factor_verifier":
+	case "fetch_user_multi_factor_verifiers":
+	default:
+		resp["message"] = "Profile API recieved unsupported request type"
+		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+	}
+
+	// Determine supported authentication methods.
 
 	switch usr.Authenticator.Method {
 	case "local":
 	default:
 		resp["message"] = fmt.Sprintf("%s is not supported with profile API", usr.Authenticator.Method)
-		return handleAPIProfileResponse(w, rr, 501, resp)
+		return handleAPIProfileResponse(w, rr, http.StatusNotImplemented, resp)
 	}
 
 	backend := p.getIdentityStoreByRealm(usr.Authenticator.Realm)
@@ -219,8 +249,50 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		entry["connected_accounts"] = []interface{}{}
 		resp["entry"] = entry
 		return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
+	case "fetch_user_multi_factor_verifiers":
+		fetchedData := make(map[string]interface{})
+		fetchedData["endpoint"] = "/list"
+		if err := p.handleHTTPMfaSettings(ctx, r, rr, usr, backend, fetchedData); err != nil {
+			resp["message"] = "failed to extract user MFA/2FA"
+			p.logger.Debug(
+				"failed to extract user MFA/2FA",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.Error(err),
+			)
+			return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
+		}
+
+		if mfaTokens, exists := fetchedData["mfa_tokens"]; exists {
+			resp["entries"] = mfaTokens
+		} else {
+			resp["entries"] = []string{}
+		}
+		return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
+	case "delete_user_multi_factor_verifier":
+		fetchedData := make(map[string]interface{})
+		var verifierID string
+		if v, exists := bodyData["id"]; exists {
+			verifierID = v.(string)
+		} else {
+			resp["message"] = "Profile API did not find id in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		fetchedData["endpoint"] = fmt.Sprintf("/delete/%s", verifierID)
+		if err := p.handleHTTPMfaSettings(ctx, r, rr, usr, backend, fetchedData); err != nil {
+			resp["message"] = "failed to delete user MFA/2FA"
+			p.logger.Debug(
+				"failed to delete user MFA/2FA",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.Error(err),
+			)
+			return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
+		}
+		resp["entry"] = verifierID
+		return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 	default:
 		resp["message"] = fmt.Sprintf("unsupported %s request kind with profile API", reqKind)
-		return handleAPIProfileResponse(w, rr, 501, resp)
+		return handleAPIProfileResponse(w, rr, http.StatusNotImplemented, resp)
 	}
 }

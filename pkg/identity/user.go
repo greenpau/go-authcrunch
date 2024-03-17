@@ -15,10 +15,11 @@
 package identity
 
 import (
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"strings"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 // UserMetadata is metadata associated with a user.
@@ -206,18 +207,12 @@ func (user *User) AddEmailAddress(s string) error {
 
 // HasEmailAddresses checks whether a user has email address.
 func (user *User) HasEmailAddresses() bool {
-	if len(user.EmailAddresses) == 0 {
-		return false
-	}
-	return true
+	return len(user.EmailAddresses) != 0
 }
 
 // HasRoles checks whether a user has a role.
 func (user *User) HasRoles() bool {
-	if len(user.Roles) == 0 {
-		return false
-	}
-	return true
+	return len(user.Roles) != 0
 }
 
 // HasRole checks whether a user has a specific role.
