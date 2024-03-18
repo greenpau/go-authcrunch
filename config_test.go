@@ -396,3 +396,9 @@ func TestNewConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateNilConfig(t *testing.T) {
+	var cfg *Config
+	err := cfg.Validate()
+	tests.EvalErrWithLog(t, err, "Validate", true, fmt.Errorf("config is nil"), nil)
+}
