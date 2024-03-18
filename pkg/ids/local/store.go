@@ -16,6 +16,7 @@ package local
 
 import (
 	"encoding/json"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -135,6 +136,8 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 		return b.authenticator.GetAPIKeys(r)
 	case operator.GetMfaTokens:
 		return b.authenticator.GetMfaTokens(r)
+	case operator.GetMfaToken:
+		return b.authenticator.GetMfaToken(r)
 	case operator.AddUser:
 		return b.authenticator.AddUser(r)
 	case operator.GetUsers:

@@ -16,6 +16,10 @@ package local
 
 import (
 	"fmt"
+	"path"
+	"path/filepath"
+	"testing"
+
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
@@ -23,9 +27,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
-	"path"
-	"path/filepath"
-	"testing"
 )
 
 func TestNewIdentityStore(t *testing.T) {
@@ -107,6 +108,7 @@ func TestNewIdentityStore(t *testing.T) {
 					"DeleteUser":      true,
 					"GetAPIKeys":      false,
 					"GetMfaTokens":    false,
+					"GetMfaToken":     true,
 					"GetPublicKeys":   false,
 					"GetUser":         false,
 					"GetUsers":        false,
@@ -183,6 +185,7 @@ func TestNewIdentityStore(t *testing.T) {
 					operator.DeletePublicKey,
 					operator.AddMfaToken,
 					operator.GetMfaTokens,
+					operator.GetMfaToken,
 					operator.DeleteMfaToken,
 					operator.AddUser,
 					operator.GetUser,

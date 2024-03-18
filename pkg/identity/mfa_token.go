@@ -112,6 +112,8 @@ func NewMfaToken(req *requests.Request) (*MfaToken, error) {
 		Comment:     req.MfaToken.Comment,
 		Type:        req.MfaToken.Type,
 		Description: req.MfaToken.Description,
+		Tags:        req.MfaToken.Tags,
+		Labels:      req.MfaToken.Labels,
 	}
 
 	if req.MfaToken.Disabled {

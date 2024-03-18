@@ -44,6 +44,8 @@ const (
 	DeleteAPIKey
 	// GetMfaTokens operator signals the retrieval of MFA tokens.
 	GetMfaTokens
+	// GetMfaToken operator signals the retrieval of a single MFA token.
+	GetMfaToken
 	// AddMfaToken operator signals the addition of an MFA token.
 	AddMfaToken
 	// DeleteMfaToken operator signals the deletion of an MFA token.
@@ -83,6 +85,8 @@ func (e Type) String() string {
 		return "DeletePublicKey"
 	case GetMfaTokens:
 		return "GetMfaTokens"
+	case GetMfaToken:
+		return "GetMfaToken"
 	case AddMfaToken:
 		return "AddMfaToken"
 	case DeleteMfaToken:

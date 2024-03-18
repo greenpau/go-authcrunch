@@ -765,6 +765,27 @@ func (db *Database) GetMfaTokens(r *requests.Request) error {
 	return nil
 }
 
+// GetMfaToken returns a single MFA token associated with a user.
+func (db *Database) GetMfaToken(r *requests.Request) error {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+	user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
+	if err != nil {
+		return errors.ErrGetMfaTokens.WithArgs(err)
+	}
+	for _, token := range user.MfaTokens {
+		if token.Disabled {
+			continue
+		}
+		if token.ID != r.MfaToken.ID {
+			continue
+		}
+		r.Response.Payload = token
+		return nil
+	}
+	return errors.ErrGetMfaToken.WithArgs("not found")
+}
+
 // DeleteMfaToken deletes MFA token associated with a user by token id.
 func (db *Database) DeleteMfaToken(r *requests.Request) error {
 	db.mu.Lock()

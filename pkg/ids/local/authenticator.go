@@ -15,12 +15,13 @@
 package local
 
 import (
+	"os"
+	"sync"
+
 	"github.com/google/uuid"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
-	"os"
-	"sync"
 )
 
 // Authenticator represents database connector.
@@ -241,6 +242,13 @@ func (sa *Authenticator) GetMfaTokens(r *requests.Request) error {
 	sa.mux.Lock()
 	defer sa.mux.Unlock()
 	return sa.db.GetMfaTokens(r)
+}
+
+// GetMfaToken returns a single MFA token associated with a user.
+func (sa *Authenticator) GetMfaToken(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.GetMfaToken(r)
 }
 
 // IdentifyUser returns user challenges.

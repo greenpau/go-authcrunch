@@ -15,68 +15,181 @@
 package tagging
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
 )
 
-func TestNewTag(t *testing.T) {
-	// testFailed := 0
-	// tests := []struct {
-	// 	addr   string
-	// 	hname  string
-	// 	hvalue string
-	// 	result string
-	// }{
-	// 	{
-	// 		addr:   "192.168.99.40:23467",
-	// 		result: "192.168.99.40",
-	// 	},
-	// 	{
-	// 		addr:   "192.168.99.40:23467",
-	// 		hname:  "x-real-ip",
-	// 		hvalue: "10.10.10.10",
-	// 		result: "10.10.10.10",
-	// 	},
-	// 	{
-	// 		addr:   "192.168.99.40:23467",
-	// 		hname:  "X-real-IP",
-	// 		hvalue: "10.10.10.10",
-	// 		result: "10.10.10.10",
-	// 	},
-	// 	{
-	// 		addr:   "192.168.99.40:23467",
-	// 		hname:  "X-Forwarded-For",
-	// 		hvalue: "100.100.2.2, 192.168.0.10",
-	// 		result: "100.100.2.2",
-	// 	},
-	// 	{
-	// 		addr:   "192.168.99.40:23467",
-	// 		hname:  "X-Forwarded-For",
-	// 		hvalue: "192.168.0.10",
-	// 		result: "192.168.0.10",
-	// 	},
-	// }
-	// for i, test := range tests {
-	// 	r, err := http.NewRequest("GET", "127.0.0.1", nil)
-	// 	if err != nil {
-	// 		t.Fatalf("Failed creating HTTP request")
-	// 	}
-	// 	r.RemoteAddr = test.addr
-	// 	testDescr := fmt.Sprintf("Test %d, addr: %s, result: %s", i, test.addr, test.result)
-	// 	if test.hname != "" {
-	// 		testDescr += fmt.Sprintf(", header: %s, value, %s", test.hname, test.hvalue)
-	// 		r.Header.Add(test.hname, test.hvalue)
-	// 	}
+func TestExtractTags(t *testing.T) {
 
-	// 	addr := GetSourceAddress(r)
-	// 	if addr != test.result {
-	// 		t.Logf("FAIL: %s, received: %s", testDescr, addr)
-	// 		testFailed++
-	// 		continue
-	// 	}
-	// 	t.Logf("PASS: %s", testDescr)
-	// }
+	testcases := []struct {
+		name      string
+		input     string
+		want      []*Tag
+		shouldErr bool
+		err       error
+		disabled  bool
+	}{
+		{
+			name:     "test extract tags with one tag",
+			disabled: false,
+			input: `{
+				"tags": [
+					{
+						"key": "foo",
+						"value": "bar"
+					}
+				]
+			}`,
+			want: []*Tag{
+				{
+					Key:   "foo",
+					Value: "bar",
+				},
+			},
+		},
+		{
+			name:     "test extract tags with multiple tags",
+			disabled: false,
+			input: `{
+				"tags": [
+					{
+						"key": "foo",
+						"value": "bar"
+					},
+					{
+						"key": "bar",
+						"value": "baz"
+					}
+				]
+			}`,
+			want: []*Tag{
+				{
+					Key:   "foo",
+					Value: "bar",
+				},
+				{
+					Key:   "bar",
+					Value: "baz",
+				},
+			},
+		},
+		{
+			name:     "test extract tags without any tags",
+			disabled: false,
+			input: `{
+				"tags": [
+				]
+			}`,
+			want: []*Tag{},
+		},
+		{
+			name:     "test map without tags field",
+			disabled: false,
+			input:    `{}`,
+			want:     []*Tag{},
+		},
+		{
+			name:     "test tag without key field",
+			disabled: false,
+			input: `{
+				"tags": [
+					{
+						"foo": "foo",
+						"value": "bar"
+					}
+				]
+			}`,
+			shouldErr: true,
+			err:       fmt.Errorf("malformed extracted tags: %s", "tag has no key"),
+		},
+		{
+			name:     "test tag without value field",
+			disabled: false,
+			input: `{
+				"tags": [
+					{
+						"key": "foo",
+						"foo": "bar"
+					}
+				]
+			}`,
+			shouldErr: true,
+			err:       fmt.Errorf("malformed extracted tags: %s", "tag has no value"),
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.disabled {
+				return
+			}
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+			msgs = append(msgs, fmt.Sprintf("input:\n%v", tc.input))
+			input, err := tests.UnpackDict(tc.input)
+			if err != nil {
+				t.Fatalf("prereq failed: %v", err)
+			}
+			got, err := ExtractTags(input)
+			if tests.EvalErrWithLog(t, err, "ExtractTags", tc.shouldErr, tc.err, msgs) {
+				return
+			}
+			tests.EvalObjectsWithLog(t, "ExtractTags", tc.want, got, msgs)
+		})
+	}
+}
 
-	// if testFailed > 0 {
-	// 	t.Fatalf("Failed %d tests", testFailed)
-	// }
+func TestExtractLabels(t *testing.T) {
+
+	testcases := []struct {
+		name      string
+		input     string
+		want      []string
+		shouldErr bool
+		err       error
+		disabled  bool
+	}{
+		{
+			name:     "test extract labels with one label",
+			disabled: false,
+			input: `{
+				"labels": ["foo"]
+			}`,
+			want: []string{"foo"},
+		},
+		{
+			name:     "test extract labels with multiple labels",
+			disabled: false,
+			input: `{
+				"labels": ["foo", "bar"]
+			}`,
+			want: []string{"foo", "bar"},
+		},
+		{
+			name:     "test extract labels without any labels",
+			disabled: false,
+			input: `{
+				"labels": []
+			}`,
+			want: []string{},
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.disabled {
+				return
+			}
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+			msgs = append(msgs, fmt.Sprintf("input:\n%v", tc.input))
+			input, err := tests.UnpackDict(tc.input)
+			if err != nil {
+				t.Fatalf("prereq failed: %v", err)
+			}
+			got, err := ExtractLabels(input)
+			if tests.EvalErrWithLog(t, err, "ExtractLabels", tc.shouldErr, tc.err, msgs) {
+				return
+			}
+			tests.EvalObjectsWithLog(t, "ExtractLabels", tc.want, got, msgs)
+		})
+	}
 }
