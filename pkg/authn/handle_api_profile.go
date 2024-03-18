@@ -22,13 +22,24 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/tagging"
+	"github.com/greenpau/go-authcrunch/pkg/util"
+
+	"regexp"
 
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
 )
+
+var tokenSecretRegexPattern = regexp.MustCompile(`^[A-Za-z0-9]{10,200}$`)
+var tokenIssuerRegexPattern = regexp.MustCompile(`^[A-Za-z0-9]{3,50}$`)
+var tokenDescriptionRegexPattern = regexp.MustCompile(`[\W\s]{3,255}$`)
+var tokenPasscodeRegexPattern = regexp.MustCompile(`^[0-9]{4,8}$`)
 
 func handleAPIProfileResponse(w http.ResponseWriter, rr *requests.Request, code int, resp map[string]interface{}) error {
 	resp["status"] = code
@@ -92,6 +103,9 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	case "fetch_user_dashboard_data":
 	case "delete_user_multi_factor_verifier":
 	case "fetch_user_multi_factor_verifiers":
+	case "fetch_user_app_multi_factor_verifier_code":
+	case "test_user_app_multi_factor_verifier":
+	case "add_user_app_multi_factor_verifier":
 	default:
 		resp["message"] = "Profile API recieved unsupported request type"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
@@ -291,8 +305,279 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		}
 		resp["entry"] = verifierID
 		return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
-	default:
-		resp["message"] = fmt.Sprintf("unsupported %s request kind with profile API", reqKind)
-		return handleAPIProfileResponse(w, rr, http.StatusNotImplemented, resp)
+
+	case "fetch_user_app_multi_factor_verifier_code":
+		var tokenLifetime, tokenDigits int
+		var tokenIssuer, tokenSecret string
+
+		// Extract data.
+		if v, exists := bodyData["period"]; exists {
+			switch exp := v.(type) {
+			case float64:
+				tokenLifetime = int(exp)
+			case int:
+				tokenLifetime = exp
+			case int64:
+				tokenLifetime = int(exp)
+			case json.Number:
+				i, _ := exp.Int64()
+				tokenLifetime = int(i)
+			}
+		} else {
+			resp["message"] = "Profile API did not find period in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if v, exists := bodyData["digits"]; exists {
+			switch exp := v.(type) {
+			case float64:
+				tokenDigits = int(exp)
+			case int:
+				tokenDigits = exp
+			case int64:
+				tokenDigits = int(exp)
+			case json.Number:
+				i, _ := exp.Int64()
+				tokenDigits = int(i)
+			}
+		} else {
+			resp["message"] = "Profile API did not find digits in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if v, exists := bodyData["issuer"]; exists {
+			tokenIssuer = v.(string)
+		} else {
+			resp["message"] = "Profile API did not find issuer in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if v, exists := bodyData["secret"]; exists {
+			tokenSecret = v.(string)
+		} else {
+			resp["message"] = "Profile API did not find secret in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+
+		// Validate data.
+		if !tokenIssuerRegexPattern.MatchString(tokenIssuer) {
+			resp["message"] = "Profile API found non-compliant token issuer value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if !tokenSecretRegexPattern.MatchString(tokenSecret) {
+			resp["message"] = "Profile API found non-compliant token secret value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if tokenLifetime != 15 && tokenLifetime != 30 && tokenLifetime != 60 && tokenLifetime != 90 {
+			resp["message"] = "Profile API found non-compliant token lifetime value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if tokenDigits != 4 && tokenDigits != 6 && tokenDigits != 8 {
+			resp["message"] = "Profile API found non-compliant token digits value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+
+		code := qr.NewCode()
+		code.Secret = tokenSecret
+		code.Type = "totp"
+		code.Period = tokenLifetime
+		code.Issuer = fmt.Sprintf("AuthCrunch@%s", tokenIssuer)
+		code.Label = fmt.Sprintf("%s:%s", code.Issuer, usr.Claims.Email)
+		code.Digits = tokenDigits
+		if err := code.Build(); err != nil {
+			resp["message"] = "Profile API failed to build QR code"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		codeData := make(map[string]interface{})
+		codeData["uri"] = code.Get()
+		codeData["uri_encoded"] = code.GetEncoded()
+		resp["entry"] = codeData
+		return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
+	case "test_user_app_multi_factor_verifier":
+		var tokenLifetime, tokenDigits int
+		var tokenSecret, tokenPasscode string
+
+		// Extract data.
+		if v, exists := bodyData["period"]; exists {
+			switch exp := v.(type) {
+			case float64:
+				tokenLifetime = int(exp)
+			case int:
+				tokenLifetime = exp
+			case int64:
+				tokenLifetime = int(exp)
+			case json.Number:
+				i, _ := exp.Int64()
+				tokenLifetime = int(i)
+			}
+		} else {
+			resp["message"] = "Profile API did not find period in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if v, exists := bodyData["digits"]; exists {
+			switch exp := v.(type) {
+			case float64:
+				tokenDigits = int(exp)
+			case int:
+				tokenDigits = exp
+			case int64:
+				tokenDigits = int(exp)
+			case json.Number:
+				i, _ := exp.Int64()
+				tokenDigits = int(i)
+			}
+		} else {
+			resp["message"] = "Profile API did not find digits in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if v, exists := bodyData["secret"]; exists {
+			tokenSecret = v.(string)
+		} else {
+			resp["message"] = "Profile API did not find secret in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if v, exists := bodyData["passcode"]; exists {
+			tokenPasscode = v.(string)
+		} else {
+			resp["message"] = "Profile API did not find passcode in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+
+		// Validate data.
+		if !tokenSecretRegexPattern.MatchString(tokenSecret) {
+			resp["message"] = "Profile API found non-compliant token secret value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if !tokenPasscodeRegexPattern.MatchString(tokenPasscode) {
+			resp["message"] = "Profile API found non-compliant token passcode value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if tokenLifetime != 15 && tokenLifetime != 30 && tokenLifetime != 60 && tokenLifetime != 90 {
+			resp["message"] = "Profile API found non-compliant token lifetime value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if tokenDigits != 4 && tokenDigits != 6 && tokenDigits != 8 {
+			resp["message"] = "Profile API found non-compliant token digits value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+
+		respData := make(map[string]interface{})
+		appToken := identity.MfaToken{
+			ID:         util.GetRandomString(40),
+			CreatedAt:  time.Now().UTC(),
+			Parameters: make(map[string]string),
+			Flags:      make(map[string]bool),
+			Comment:    "TBD",
+			Type:       "totp",
+			Secret:     tokenSecret,
+			Algorithm:  "sha1",
+			Period:     tokenLifetime,
+			Digits:     tokenDigits,
+		}
+		if err := appToken.ValidateCodeWithTime(tokenPasscode, time.Now().Add(-time.Second*time.Duration(appToken.Period)).UTC()); err != nil {
+			respData["success"] = false
+		} else {
+			respData["success"] = true
+		}
+		resp["entry"] = respData
+		return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
+	case "add_user_app_multi_factor_verifier":
+		var tokenTitle, tokenDescription, tokenSecret string
+		var tokenLifetime, tokenDigits int
+		var tokenLabels []string = []string{}
+		var tokenTags []tagging.Tag = []tagging.Tag{}
+
+		// Extract data.
+		if v, exists := bodyData["period"]; exists {
+			switch exp := v.(type) {
+			case float64:
+				tokenLifetime = int(exp)
+			case int:
+				tokenLifetime = exp
+			case int64:
+				tokenLifetime = int(exp)
+			case json.Number:
+				i, _ := exp.Int64()
+				tokenLifetime = int(i)
+			}
+		} else {
+			resp["message"] = "Profile API did not find period in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if v, exists := bodyData["digits"]; exists {
+			switch exp := v.(type) {
+			case float64:
+				tokenDigits = int(exp)
+			case int:
+				tokenDigits = exp
+			case int64:
+				tokenDigits = int(exp)
+			case json.Number:
+				i, _ := exp.Int64()
+				tokenDigits = int(i)
+			}
+		} else {
+			resp["message"] = "Profile API did not find digits in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if v, exists := bodyData["title"]; exists {
+			tokenTitle = v.(string)
+		} else {
+			resp["message"] = "Profile API did not find title in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if v, exists := bodyData["description"]; exists {
+			tokenDescription = v.(string)
+		} else {
+			resp["message"] = "Profile API did not find description in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if v, exists := bodyData["secret"]; exists {
+			tokenSecret = v.(string)
+		} else {
+			resp["message"] = "Profile API did not find secret in the request payload"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+
+		// Validate data.
+		if !tokenIssuerRegexPattern.MatchString(tokenTitle) {
+			resp["message"] = "Profile API found non-compliant token title value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if !tokenDescriptionRegexPattern.MatchString(tokenDescription) && (tokenDescription != "") {
+			resp["message"] = "Profile API found non-compliant token description value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if !tokenSecretRegexPattern.MatchString(tokenSecret) {
+			resp["message"] = "Profile API found non-compliant token secret value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if tokenLifetime != 15 && tokenLifetime != 30 && tokenLifetime != 60 && tokenLifetime != 90 {
+			resp["message"] = "Profile API found non-compliant token lifetime value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		if tokenDigits != 4 && tokenDigits != 6 && tokenDigits != 8 {
+			resp["message"] = "Profile API found non-compliant token digits value"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+
+		rr.MfaToken.SkipVerification = true
+		rr.MfaToken.Comment = tokenTitle
+		rr.MfaToken.Description = tokenDescription
+		rr.MfaToken.Secret = tokenSecret
+		rr.MfaToken.Type = "totp"
+		rr.MfaToken.Period = tokenLifetime
+		rr.MfaToken.Digits = tokenDigits
+		rr.MfaToken.Labels = tokenLabels
+		rr.MfaToken.Tags = tokenTags
+
+		if err = backend.Request(operator.AddMfaToken, rr); err != nil {
+			resp["message"] = "Profile API failed to add token identity store"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+
+		resp["entry"] = "Created"
+		return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 	}
+
+	// Default response
+	resp["message"] = fmt.Sprintf("unsupported %s request kind with profile API", reqKind)
+	return handleAPIProfileResponse(w, rr, http.StatusNotImplemented, resp)
 }

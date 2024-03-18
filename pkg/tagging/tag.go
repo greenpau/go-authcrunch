@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package identity
+package tagging
 
 // Tag represents key-value tag.
 type Tag struct {
