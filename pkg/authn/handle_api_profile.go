@@ -113,6 +113,8 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	case "fetch_user_gpg_keys":
 	case "fetch_user_gpg_key":
 	case "delete_user_gpg_key":
+	case "test_user_gpg_key":
+	case "add_user_gpg_key":
 	default:
 		resp["message"] = "Profile API received unsupported request type"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
@@ -194,6 +196,10 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return p.FetchUserGPGKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "delete_user_gpg_key":
 		return p.DeleteUserGPGKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "test_user_gpg_key":
+		return p.TestUserGPGKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "add_user_gpg_key":
+		return p.AddUserGPGKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	}
 
 	// Default response

@@ -246,10 +246,17 @@ func (p *PublicKey) parsePublicKeyPGP() error {
 		break
 	}
 	comment = fmt.Sprintf("%s, algo %s, created %s", user, algo, pk.CreationTime.UTC())
-	if p.Comment != "" {
-		p.Comment = fmt.Sprintf("%s (%s)", p.Comment, comment)
-	} else {
+
+	if p.Comment == "" {
 		p.Comment = comment
+	}
+
+	if p.Description == "" && p.Comment != comment {
+		p.Description = comment
+	}
+
+	if !strings.Contains(p.Description, comment) && !strings.Contains(p.Comment, comment) {
+		p.Description = p.Description + " " + comment
 	}
 	return nil
 }
