@@ -42,7 +42,13 @@ func (p *Portal) FetchUserSSHKeys(
 		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
 	}
 	bundle := rr.Response.Payload.(*identity.PublicKeyBundle)
-	resp["entries"] = bundle.Get()
+	sshKeys := bundle.Get()
+	for _, sshKey := range sshKeys {
+		sshKey.Payload = ""
+		sshKey.OpenSSH = ""
+	}
+	resp["entries"] = sshKeys
+
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }
 

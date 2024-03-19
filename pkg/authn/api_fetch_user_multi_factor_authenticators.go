@@ -42,7 +42,12 @@ func (p *Portal) FetchUserMultiFactorVerifiers(
 		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
 	}
 	bundle := rr.Response.Payload.(*identity.MfaTokenBundle)
-	resp["entries"] = bundle.Get()
+
+	tokens := bundle.Get()
+	for _, token := range tokens {
+		token.Secret = ""
+	}
+	resp["entries"] = tokens
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }
 

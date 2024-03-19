@@ -42,7 +42,13 @@ func (p *Portal) FetchUserAPIKeys(
 		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
 	}
 	bundle := rr.Response.Payload.(*identity.APIKeyBundle)
-	resp["entries"] = bundle.Get()
+
+	apiKeys := bundle.Get()
+	for _, apiKey := range apiKeys {
+		apiKey.Payload = ""
+		apiKey.Prefix = ""
+	}
+	resp["entries"] = apiKeys
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }
 

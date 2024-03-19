@@ -385,7 +385,7 @@ func (user *User) AddPublicKey(r *requests.Request) error {
 		if k.Type != key.Type {
 			continue
 		}
-		if k.Fingerprint != key.Fingerprint {
+		if (k.Fingerprint != key.Fingerprint) && (k.FingerprintMD5 != key.FingerprintMD5) {
 			continue
 		}
 		return errors.ErrAddPublicKey.WithArgs(r.Key.Usage, "already exists")
