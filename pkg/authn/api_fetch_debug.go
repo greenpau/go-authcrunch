@@ -18,14 +18,13 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
-// DeleteUserMultiFactorVerifier deletes app multi factor authenticator from user identity.
-func (p *Portal) DeleteUserMultiFactorVerifier(
+// FetchDebug fetches debug information.
+func (p *Portal) FetchDebug(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -33,21 +32,17 @@ func (p *Portal) DeleteUserMultiFactorVerifier(
 	parsedUser *user.User,
 	resp map[string]interface{},
 	usr *user.User,
-	backend ids.IdentityStore,
-	bodyData map[string]interface{}) error {
+	backend ids.IdentityStore) error {
 
-	if v, exists := bodyData["id"]; exists {
-		rr.MfaToken.ID = v.(string)
-	} else {
-		resp["message"] = "Profile API did not find id in the request payload"
-		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+	entry := make(map[string]interface{})
+	database := map[string]interface{}{
+		"name":   "localdb",
+		"host":   "localhost",
+		"port":   5432,
+		"engine": "postgresql",
 	}
-
-	if err := backend.Request(operator.DeleteMfaToken, rr); err != nil {
-		resp["message"] = "Profile API failed to delete user multi factor authenticator"
-		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
-	}
-
-	resp["entry"] = rr.MfaToken.ID
+	entry["version"] = "1.0.0"
+	entry["database"] = database
+	resp["entry"] = entry
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }

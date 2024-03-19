@@ -543,6 +543,30 @@ func (db *Database) GetPublicKeys(r *requests.Request) error {
 	return nil
 }
 
+// GetPublicKey returns a public key associated with a user.
+func (db *Database) GetPublicKey(r *requests.Request) error {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+	user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
+	if err != nil {
+		return errors.ErrGetPublicKey.WithArgs(r.Key.Usage, err)
+	}
+	for _, k := range user.PublicKeys {
+		if k.Usage != r.Key.Usage {
+			continue
+		}
+		if k.Disabled {
+			continue
+		}
+		if k.ID != r.Key.ID {
+			continue
+		}
+		r.Response.Payload = k
+		return nil
+	}
+	return errors.ErrGetPublicKey.WithArgs(r.Key.Usage, "not found")
+}
+
 // DeletePublicKey deletes a public key associated with a user by key id.
 func (db *Database) DeletePublicKey(r *requests.Request) error {
 	db.mu.Lock()
@@ -637,6 +661,30 @@ func (db *Database) GetAPIKeys(r *requests.Request) error {
 	}
 	r.Response.Payload = bundle
 	return nil
+}
+
+// GetAPIKey returns an API key associated with a user.
+func (db *Database) GetAPIKey(r *requests.Request) error {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+	user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
+	if err != nil {
+		return errors.ErrGetAPIKey.WithArgs(r.Key.Usage, err)
+	}
+	for _, k := range user.APIKeys {
+		if k.Usage != r.Key.Usage {
+			continue
+		}
+		if k.Disabled {
+			continue
+		}
+		if k.ID != r.Key.ID {
+			continue
+		}
+		r.Response.Payload = k
+		return nil
+	}
+	return errors.ErrGetAPIKey.WithArgs(r.Key.Usage, "not found")
 }
 
 // ChangeUserPassword change user password.

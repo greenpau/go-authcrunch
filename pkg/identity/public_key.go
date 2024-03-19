@@ -22,14 +22,16 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/util"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/tagging"
+	"github.com/greenpau/go-authcrunch/pkg/util"
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/ssh"
 )
 
 var supportedPublicKeyTypes = map[string]bool{
@@ -48,17 +50,20 @@ type PublicKey struct {
 	ID    string `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
 	Usage string `json:"usage,omitempty" xml:"usage,omitempty" yaml:"usage,omitempty"`
 	// Type is any of the following: dsa, rsa, ecdsa, ed25519
-	Type           string    `json:"type,omitempty" xml:"type,omitempty" yaml:"type,omitempty"`
-	Fingerprint    string    `json:"fingerprint,omitempty" xml:"fingerprint,omitempty" yaml:"fingerprint,omitempty"`
-	FingerprintMD5 string    `json:"fingerprint_md5,omitempty" xml:"fingerprint_md5,omitempty" yaml:"fingerprint_md5,omitempty"`
-	Comment        string    `json:"comment,omitempty" xml:"comment,omitempty" yaml:"comment,omitempty"`
-	Payload        string    `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
-	OpenSSH        string    `json:"openssh,omitempty" xml:"openssh,omitempty" yaml:"openssh,omitempty"`
-	Expired        bool      `json:"expired,omitempty" xml:"expired,omitempty" yaml:"expired,omitempty"`
-	ExpiredAt      time.Time `json:"expired_at,omitempty" xml:"expired_at,omitempty" yaml:"expired_at,omitempty"`
-	CreatedAt      time.Time `json:"created_at,omitempty" xml:"created_at,omitempty" yaml:"created_at,omitempty"`
-	Disabled       bool      `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
-	DisabledAt     time.Time `json:"disabled_at,omitempty" xml:"disabled_at,omitempty" yaml:"disabled_at,omitempty"`
+	Type           string        `json:"type,omitempty" xml:"type,omitempty" yaml:"type,omitempty"`
+	Fingerprint    string        `json:"fingerprint,omitempty" xml:"fingerprint,omitempty" yaml:"fingerprint,omitempty"`
+	FingerprintMD5 string        `json:"fingerprint_md5,omitempty" xml:"fingerprint_md5,omitempty" yaml:"fingerprint_md5,omitempty"`
+	Comment        string        `json:"comment,omitempty" xml:"comment,omitempty" yaml:"comment,omitempty"`
+	Description    string        `json:"description,omitempty" xml:"description,omitempty" yaml:"description,omitempty"`
+	Payload        string        `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
+	OpenSSH        string        `json:"openssh,omitempty" xml:"openssh,omitempty" yaml:"openssh,omitempty"`
+	Expired        bool          `json:"expired,omitempty" xml:"expired,omitempty" yaml:"expired,omitempty"`
+	ExpiredAt      time.Time     `json:"expired_at,omitempty" xml:"expired_at,omitempty" yaml:"expired_at,omitempty"`
+	CreatedAt      time.Time     `json:"created_at,omitempty" xml:"created_at,omitempty" yaml:"created_at,omitempty"`
+	Disabled       bool          `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
+	DisabledAt     time.Time     `json:"disabled_at,omitempty" xml:"disabled_at,omitempty" yaml:"disabled_at,omitempty"`
+	Tags           []tagging.Tag `json:"tags,omitempty" xml:"tags,omitempty" yaml:"tags,omitempty"`
+	Labels         []string      `json:"labels,omitempty" xml:"labels,omitempty" yaml:"labels,omitempty"`
 }
 
 // NewPublicKeyBundle returns an instance of PublicKeyBundle.
@@ -87,11 +92,14 @@ func (b *PublicKeyBundle) Size() int {
 // NewPublicKey returns an instance of PublicKey.
 func NewPublicKey(r *requests.Request) (*PublicKey, error) {
 	p := &PublicKey{
-		Comment:   r.Key.Comment,
-		ID:        util.GetRandomString(40),
-		Payload:   r.Key.Payload,
-		Usage:     r.Key.Usage,
-		CreatedAt: time.Now().UTC(),
+		Comment:     r.Key.Comment,
+		ID:          util.GetRandomString(40),
+		Payload:     r.Key.Payload,
+		Usage:       r.Key.Usage,
+		CreatedAt:   time.Now().UTC(),
+		Description: r.Key.Description,
+		Tags:        r.Key.Tags,
+		Labels:      r.Key.Labels,
 	}
 	if err := p.parse(); err != nil {
 		return nil, err

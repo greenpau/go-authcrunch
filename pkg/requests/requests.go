@@ -99,12 +99,15 @@ type User struct {
 
 // Key holds crypto key attributes.
 type Key struct {
-	ID       string `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
-	Prefix   string `json:"prefix,omitempty" xml:"prefix,omitempty" yaml:"prefix,omitempty"`
-	Comment  string `json:"comment,omitempty" xml:"comment,omitempty" yaml:"comment,omitempty"`
-	Usage    string `json:"usage,omitempty" xml:"usage,omitempty" yaml:"usage,omitempty"`
-	Payload  string `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
-	Disabled bool   `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
+	ID          string        `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
+	Prefix      string        `json:"prefix,omitempty" xml:"prefix,omitempty" yaml:"prefix,omitempty"`
+	Comment     string        `json:"comment,omitempty" xml:"comment,omitempty" yaml:"comment,omitempty"`
+	Usage       string        `json:"usage,omitempty" xml:"usage,omitempty" yaml:"usage,omitempty"`
+	Payload     string        `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
+	Disabled    bool          `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
+	Description string        `json:"description,omitempty" xml:"description,omitempty" yaml:"description,omitempty"`
+	Tags        []tagging.Tag `json:"tags,omitempty" xml:"tags,omitempty" yaml:"tags,omitempty"`
+	Labels      []string      `json:"labels,omitempty" xml:"labels,omitempty" yaml:"labels,omitempty"`
 }
 
 // MfaToken holds MFA token attributes.

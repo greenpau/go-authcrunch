@@ -19,35 +19,13 @@ import (
 	"net/http"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
-	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
-// FetchUserMultiFactorVerifiers fetches app multi factor authenticators from user identity.
-func (p *Portal) FetchUserMultiFactorVerifiers(
-	ctx context.Context,
-	w http.ResponseWriter,
-	r *http.Request,
-	rr *requests.Request,
-	parsedUser *user.User,
-	resp map[string]interface{},
-	usr *user.User,
-	backend ids.IdentityStore) error {
-
-	// List MFA Tokens.
-	if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
-		resp["message"] = "Profile API failed to get user multi factor authenticators"
-		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
-	}
-	bundle := rr.Response.Payload.(*identity.MfaTokenBundle)
-	resp["entries"] = bundle.Get()
-	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
-}
-
-// FetchUserMultiFactorVerifier fetches app multi factor authenticator from user identity.
-func (p *Portal) FetchUserMultiFactorVerifier(
+// DeleteUserGPGKey deletes GPG key from user identity.
+func (p *Portal) DeleteUserGPGKey(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -58,19 +36,19 @@ func (p *Portal) FetchUserMultiFactorVerifier(
 	backend ids.IdentityStore,
 	bodyData map[string]interface{}) error {
 
+	rr.Key.Usage = "gpg"
 	if v, exists := bodyData["id"]; exists {
-		rr.MfaToken.ID = v.(string)
+		rr.Key.ID = v.(string)
 	} else {
 		resp["message"] = "Profile API did not find id in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 
-	// Get MFA Token
-	if err := backend.Request(operator.GetMfaToken, rr); err != nil {
-		resp["message"] = "Profile API failed to get user multi factor authenticator"
+	if err := backend.Request(operator.DeletePublicKey, rr); err != nil {
+		resp["message"] = "Profile API failed to delete user GPG key"
 		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
 	}
-	token := rr.Response.Payload.(*identity.MfaToken)
-	resp["entry"] = token
+
+	resp["entry"] = rr.Key.ID
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }

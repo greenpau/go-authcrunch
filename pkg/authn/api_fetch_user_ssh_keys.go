@@ -25,8 +25,8 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
-// FetchUserMultiFactorVerifiers fetches app multi factor authenticators from user identity.
-func (p *Portal) FetchUserMultiFactorVerifiers(
+// FetchUserSSHKeys fetches SSH keys from user identity.
+func (p *Portal) FetchUserSSHKeys(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -36,18 +36,18 @@ func (p *Portal) FetchUserMultiFactorVerifiers(
 	usr *user.User,
 	backend ids.IdentityStore) error {
 
-	// List MFA Tokens.
-	if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
-		resp["message"] = "Profile API failed to get user multi factor authenticators"
+	rr.Key.Usage = "ssh"
+	if err := backend.Request(operator.GetPublicKeys, rr); err != nil {
+		resp["message"] = "Profile API failed to get SSH keys"
 		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
 	}
-	bundle := rr.Response.Payload.(*identity.MfaTokenBundle)
+	bundle := rr.Response.Payload.(*identity.PublicKeyBundle)
 	resp["entries"] = bundle.Get()
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }
 
-// FetchUserMultiFactorVerifier fetches app multi factor authenticator from user identity.
-func (p *Portal) FetchUserMultiFactorVerifier(
+// FetchUserSSHKey fetches SSH key from user identity.
+func (p *Portal) FetchUserSSHKey(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -58,19 +58,19 @@ func (p *Portal) FetchUserMultiFactorVerifier(
 	backend ids.IdentityStore,
 	bodyData map[string]interface{}) error {
 
+	rr.Key.Usage = "ssh"
 	if v, exists := bodyData["id"]; exists {
-		rr.MfaToken.ID = v.(string)
+		rr.Key.ID = v.(string)
 	} else {
 		resp["message"] = "Profile API did not find id in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 
-	// Get MFA Token
-	if err := backend.Request(operator.GetMfaToken, rr); err != nil {
-		resp["message"] = "Profile API failed to get user multi factor authenticator"
+	if err := backend.Request(operator.GetPublicKey, rr); err != nil {
+		resp["message"] = "Profile API failed to get SSH key"
 		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
 	}
-	token := rr.Response.Payload.(*identity.MfaToken)
+	token := rr.Response.Payload.(*identity.PublicKey)
 	resp["entry"] = token
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }

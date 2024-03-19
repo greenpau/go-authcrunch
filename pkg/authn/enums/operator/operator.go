@@ -30,8 +30,12 @@ const (
 	ChangePassword
 	// GetPublicKeys operator signals the retrieval of public keys.
 	GetPublicKeys
+	// GetPublicKey operator signals the retrieval of a single public key.
+	GetPublicKey
 	// GetAPIKeys operator signals the retrieval of API keys.
 	GetAPIKeys
+	// GetAPIKey operator signals the retrieval of a single API key.
+	GetAPIKey
 	// AddKeySSH operator signals the addition of an SSH public key.
 	AddKeySSH
 	// AddKeyGPG operator signals the addition of an GPG public key.
@@ -77,6 +81,8 @@ func (e Type) String() string {
 		return "ChangePassword"
 	case GetPublicKeys:
 		return "GetPublicKeys"
+	case GetPublicKey:
+		return "GetPublicKey"
 	case AddKeySSH:
 		return "AddKeySSH"
 	case AddKeyGPG:
@@ -101,6 +107,8 @@ func (e Type) String() string {
 		return "DeleteUser"
 	case GetAPIKeys:
 		return "GetAPIKeys"
+	case GetAPIKey:
+		return "GetAPIKey"
 	case AddAPIKey:
 		return "AddAPIKey"
 	case DeleteAPIKey:

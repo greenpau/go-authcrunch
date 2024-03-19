@@ -94,6 +94,7 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	}
 
 	switch reqKind {
+	case "fetch_debug":
 	case "fetch_user_dashboard_data":
 	case "delete_user_multi_factor_authenticator":
 	case "fetch_user_multi_factor_authenticators":
@@ -101,6 +102,15 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	case "fetch_user_app_multi_factor_authenticator_code":
 	case "test_user_app_multi_factor_authenticator":
 	case "add_user_app_multi_factor_authenticator":
+	case "fetch_user_api_keys":
+	case "fetch_user_api_key":
+	case "delete_user_api_key":
+	case "fetch_user_ssh_keys":
+	case "fetch_user_ssh_key":
+	case "delete_user_ssh_key":
+	case "fetch_user_gpg_keys":
+	case "fetch_user_gpg_key":
+	case "delete_user_gpg_key":
 	default:
 		resp["message"] = "Profile API recieved unsupported request type"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
@@ -144,6 +154,8 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	rr.User.Email = usr.Claims.Email
 
 	switch reqKind {
+	case "fetch_debug":
+		return p.FetchDebug(ctx, w, r, rr, parsedUser, resp, usr, backend)
 	case "fetch_user_dashboard_data":
 		return p.FetchUserDashboardData(ctx, w, r, rr, parsedUser, resp, usr, backend)
 	case "fetch_user_multi_factor_authenticators":
@@ -158,6 +170,24 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return p.TestUserAppMultiFactorVerifier(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "add_user_app_multi_factor_authenticator":
 		return p.AddUserAppMultiFactorVerifier(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "fetch_user_api_keys":
+		return p.FetchUserAPIKeys(ctx, w, r, rr, parsedUser, resp, usr, backend)
+	case "fetch_user_api_key":
+		return p.FetchUserAPIKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "delete_user_api_key":
+		return p.DeleteUserAPIKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "fetch_user_ssh_keys":
+		return p.FetchUserSSHKeys(ctx, w, r, rr, parsedUser, resp, usr, backend)
+	case "fetch_user_ssh_key":
+		return p.FetchUserSSHKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "delete_user_ssh_key":
+		return p.DeleteUserSSHKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "fetch_user_gpg_keys":
+		return p.FetchUserGPGKeys(ctx, w, r, rr, parsedUser, resp, usr, backend)
+	case "fetch_user_gpg_key":
+		return p.FetchUserGPGKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "delete_user_gpg_key":
+		return p.DeleteUserGPGKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	}
 
 	// Default response

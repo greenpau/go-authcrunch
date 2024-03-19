@@ -33,10 +33,12 @@ const (
 	ErrAddPublicKey    StandardError = "failed adding %s public key: %v"
 	ErrDeletePublicKey StandardError = "failed deleting %q key: %v"
 	ErrGetPublicKeys   StandardError = "failed getting %q keys: %v"
+	ErrGetPublicKey    StandardError = "failed getting %q key: %v"
 
 	ErrAddAPIKey    StandardError = "failed adding %s key: %v"
 	ErrDeleteAPIKey StandardError = "failed deleting %q key: %v"
 	ErrGetAPIKeys   StandardError = "failed getting %q keys: %v"
+	ErrGetAPIKey    StandardError = "failed getting %q key: %v"
 
 	ErrChangeUserPassword   StandardError = "failed change user password: %v"
 	ErrUpdateUserPassword   StandardError = "failed updating user password: %v"
