@@ -131,7 +131,6 @@ func (sa *Authenticator) Configure(fp string, users []*User) error {
 		sa.logger.Info("created default admin user for the database",
 			zap.String("username", req.User.Username),
 			zap.String("email", req.User.Email),
-			zap.String("secret", req.User.Password),
 			zap.Any("roles", req.User.Roles),
 		)
 	}
