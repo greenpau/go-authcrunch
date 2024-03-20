@@ -115,6 +115,7 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	case "delete_user_gpg_key":
 	case "test_user_gpg_key":
 	case "add_user_gpg_key":
+	case "fetch_user_u2f_reg_params":
 	default:
 		resp["message"] = "Profile API received unsupported request type"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
@@ -174,6 +175,8 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return p.TestUserAppMultiFactorVerifier(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "add_user_app_multi_factor_authenticator":
 		return p.AddUserAppMultiFactorVerifier(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "fetch_user_u2f_reg_params":
+		return p.FetchUserUniSecFactorRegParams(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "fetch_user_api_keys":
 		return p.FetchUserAPIKeys(ctx, w, r, rr, parsedUser, resp, usr, backend)
 	case "fetch_user_api_key":
