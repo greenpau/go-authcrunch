@@ -15,12 +15,13 @@
 package local
 
 import (
+	"os"
+	"sync"
+
 	"github.com/google/uuid"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
-	"os"
-	"sync"
 )
 
 // Authenticator represents database connector.
@@ -130,7 +131,6 @@ func (sa *Authenticator) Configure(fp string, users []*User) error {
 		sa.logger.Info("created default admin user for the database",
 			zap.String("username", req.User.Username),
 			zap.String("email", req.User.Email),
-			zap.String("secret", req.User.Password),
 			zap.Any("roles", req.User.Roles),
 		)
 	}
@@ -201,6 +201,13 @@ func (sa *Authenticator) GetPublicKeys(r *requests.Request) error {
 	return sa.db.GetPublicKeys(r)
 }
 
+// GetPublicKey returns a public keys associated with a user.
+func (sa *Authenticator) GetPublicKey(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.GetPublicKey(r)
+}
+
 // AddAPIKey adds API key for a user.
 func (sa *Authenticator) AddAPIKey(r *requests.Request) error {
 	sa.mux.Lock()
@@ -222,6 +229,13 @@ func (sa *Authenticator) GetAPIKeys(r *requests.Request) error {
 	return sa.db.GetAPIKeys(r)
 }
 
+// GetAPIKey returns API key associated with a user.
+func (sa *Authenticator) GetAPIKey(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.GetAPIKey(r)
+}
+
 // AddMfaToken adds MFA token to a user.
 func (sa *Authenticator) AddMfaToken(r *requests.Request) error {
 	sa.mux.Lock()
@@ -241,6 +255,13 @@ func (sa *Authenticator) GetMfaTokens(r *requests.Request) error {
 	sa.mux.Lock()
 	defer sa.mux.Unlock()
 	return sa.db.GetMfaTokens(r)
+}
+
+// GetMfaToken returns a single MFA token associated with a user.
+func (sa *Authenticator) GetMfaToken(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.GetMfaToken(r)
 }
 
 // IdentifyUser returns user challenges.

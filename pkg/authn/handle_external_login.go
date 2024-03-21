@@ -16,11 +16,12 @@ package authn
 
 import (
 	"context"
+	"net/http"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
-	"net/http"
-	"strings"
 )
 
 func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, authMethod string) error {
@@ -105,7 +106,7 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 	return nil
 }
 
-func (p *Portal) handleJavascriptCallbackIntercept(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (p *Portal) handleJavascriptCallbackIntercept(_ context.Context, w http.ResponseWriter, _ *http.Request) error {
 	p.disableClientCache(w)
 	w.WriteHeader(200)
 

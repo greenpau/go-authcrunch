@@ -18,13 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
-	"net/http"
-	"strings"
 )
 
 func (p *Portal) handleHTTPSSHKeysSettings(
@@ -35,9 +36,16 @@ func (p *Portal) handleHTTPSSHKeysSettings(
 	var status bool
 	entrypoint := "sshkeys"
 	data["view"] = entrypoint
-	endpoint, err := getEndpoint(r.URL.Path, "/"+entrypoint)
+	var endpoint string
+	var err error
+	endpoint, err = getEndpoint(r.URL.Path, "/"+entrypoint)
 	if err != nil {
-		return err
+		if v, exists := data["endpoint"]; exists {
+			endpoint = v.(string)
+			delete(data, "endpoint")
+		} else {
+			return err
+		}
 	}
 	switch {
 	case strings.HasPrefix(endpoint, "/add") && r.Method == "POST":

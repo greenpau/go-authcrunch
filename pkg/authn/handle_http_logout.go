@@ -16,6 +16,7 @@ package authn
 
 import (
 	"context"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
@@ -50,6 +51,27 @@ func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r 
 		)
 		if strings.Contains(parsedUser.Claims.Issuer, "/oauth2/") {
 			return p.handleHTTPRedirect(ctx, w, r, rr, extractRealmLogout(parsedUser.Claims.Issuer, "oauth2"))
+		}
+		// The user is authenticated. Find whether there is redirect_uri present in Query.
+		if redirects.HasRedirectURI(r.URL) && (len(p.config.TrustedLogoutRedirectURIConfigs) > 0) {
+			p.logger.Debug(
+				"user logout with redirect",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.Any("user", parsedUser.Claims),
+			)
+			redirectURI := redirects.GetRedirectURI(r.URL)
+			if redirectURI != nil {
+				if redirects.Match(redirectURI, p.config.TrustedLogoutRedirectURIConfigs) {
+					p.logger.Debug(
+						"found trusted logout redirect uri",
+						zap.String("session_id", rr.Upstream.SessionID),
+						zap.String("request_id", rr.ID),
+						zap.String("redirect_uri", redirects.GetRawRedirectURI(r.URL)),
+					)
+					return p.handleHTTPRedirectExternal(ctx, w, r, rr, redirects.GetRawRedirectURI(r.URL))
+				}
+			}
 		}
 	} else {
 		p.logger.Debug(

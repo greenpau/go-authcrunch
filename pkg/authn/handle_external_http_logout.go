@@ -16,7 +16,9 @@ package authn
 
 import (
 	"context"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"go.uber.org/zap"
 	"net/http"
 	"path"
 	"strings"
@@ -43,6 +45,27 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 	logoutEnabled := false
 	if v, exists := cfg["logout_enabled"]; exists {
 		logoutEnabled = v.(bool)
+	}
+
+	// The user is authenticated. Find whether there is redirect_uri present in Query.
+	if redirects.HasRedirectURI(r.URL) && (len(p.config.TrustedLogoutRedirectURIConfigs) > 0) {
+		p.logger.Debug(
+			"external user logout with redirect",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+		)
+		redirectURI := redirects.GetRedirectURI(r.URL)
+		if redirectURI != nil {
+			if redirects.Match(redirectURI, p.config.TrustedLogoutRedirectURIConfigs) {
+				p.logger.Debug(
+					"found trusted logout redirect uri",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("redirect_uri", redirects.GetRawRedirectURI(r.URL)),
+				)
+				return p.handleHTTPRedirectExternal(ctx, w, r, rr, redirects.GetRawRedirectURI(r.URL))
+			}
+		}
 	}
 
 	if !logoutEnabled {

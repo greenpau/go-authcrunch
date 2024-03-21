@@ -100,6 +100,7 @@ type config struct {
 	values        []string
 	regexEnabled  bool
 	alwaysTrue    bool
+	matchAny      bool
 	exprDataType  dataType
 	inputDataType dataType
 	conditionType string
@@ -543,6 +544,16 @@ func (c *ruleListStrCondSuffixNegativeMatchListStrInput) match(ctx context.Conte
 }
 
 func (c *ruleListStrCondRegexNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	if c.config.matchAny {
+		for _, exp := range c.exprs {
+			for _, v := range values.([]string) {
+				if !exp.MatchString(v) {
+					return true
+				}
+			}
+		}
+		return false
+	}
 	for _, exp := range c.exprs {
 		for _, v := range values.([]string) {
 			if exp.MatchString(v) {
@@ -590,6 +601,14 @@ func (c *ruleStrCondSuffixNegativeMatchListStrInput) match(ctx context.Context, 
 }
 
 func (c *ruleStrCondRegexNegativeMatchListStrInput) match(ctx context.Context, values interface{}) bool {
+	if c.config.matchAny {
+		for _, v := range values.([]string) {
+			if !c.expr.MatchString(v) {
+				return true
+			}
+		}
+		return false
+	}
 	for _, v := range values.([]string) {
 		if c.expr.MatchString(v) {
 			return false
@@ -635,6 +654,14 @@ func (c *ruleListStrCondSuffixNegativeMatchStrInput) match(ctx context.Context, 
 }
 
 func (c *ruleListStrCondRegexNegativeMatchStrInput) match(ctx context.Context, v interface{}) bool {
+	if c.config.matchAny {
+		for _, exp := range c.exprs {
+			if !exp.MatchString(v.(string)) {
+				return true
+			}
+		}
+		return false
+	}
 	for _, exp := range c.exprs {
 		if exp.MatchString(v.(string)) {
 			return false
@@ -1019,7 +1046,7 @@ func (c *ruleStrCondRegexMatchStrInput) getConfig(ctx context.Context) *config {
 }
 
 func init() {
-	matchWithStrategyRgx = regexp.MustCompile(`^\s*((?P<negative_match>no)\s)?((?P<match_strategy>exact|partial|prefix|suffix|regex)\s)?match`)
+	matchWithStrategyRgx = regexp.MustCompile(`^\s*((?P<negative_match>no)\s)?((?P<match_strategy>exact|partial|prefix|suffix|regex)\s)?match\s*((?P<match_any>any)\s)?`)
 	matchFieldRgx = regexp.MustCompile(`^\s*field\s+(?P<field_name>\S+)\s+(?P<field_exists>exists|not\s+exists)\s*$`)
 }
 
@@ -1035,6 +1062,7 @@ func (cfg *config) AsMap() map[string]interface{} {
 	m["expr_data_type"] = getDataTypeName(cfg.exprDataType)
 	m["input_data_type"] = getDataTypeName(cfg.inputDataType)
 	m["condition_type"] = cfg.conditionType
+	m["match_any"] = cfg.matchAny
 	return m
 }
 
@@ -1062,12 +1090,15 @@ func extractFieldNameValues(arr []string) (string, []string) {
 	var k string
 	var v []string
 	var matchFound, fieldFound bool
-	for _, a := range arr {
+	for i, a := range arr {
 		if a == "match" {
 			matchFound = true
 			continue
 		}
 		if !matchFound {
+			continue
+		}
+		if a == "any" && arr[i-1] == "match" {
 			continue
 		}
 		if !fieldFound {
@@ -1127,6 +1158,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 	var negativeMatch bool
 	var fieldName string
 	var values []string
+	var matchAny bool
 
 	line := strings.Join(tokens, " ")
 
@@ -1167,6 +1199,10 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 					if matched[i] == "no" {
 						negativeMatch = true
 					}
+				case "match_any":
+					if matched[i] == "any" {
+						matchAny = true
+					}
 				}
 			}
 		}
@@ -1206,6 +1242,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  inputDataType,
 				inputDataType: condDataType,
 				conditionType: `ruleCondFieldFound`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1226,6 +1263,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  inputDataType,
 				inputDataType: condDataType,
 				conditionType: `ruleCondFieldNotFound`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1246,6 +1284,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  inputDataType,
 				inputDataType: condDataType,
 				conditionType: `ruleAnyCondAlwaysMatchAnyInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1266,6 +1305,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondExactNegativeMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1291,6 +1331,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondPartialNegativeMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1316,6 +1357,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondPrefixNegativeMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1341,6 +1383,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondSuffixNegativeMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1366,6 +1409,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondRegexNegativeMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1393,6 +1437,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondExactNegativeMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1415,6 +1460,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondPartialNegativeMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1437,6 +1483,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondPrefixNegativeMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1459,6 +1506,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondSuffixNegativeMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1481,6 +1529,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondRegexNegativeMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1505,6 +1554,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondExactNegativeMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1530,6 +1580,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondPartialNegativeMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1555,6 +1606,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondPrefixNegativeMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1580,6 +1632,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondSuffixNegativeMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1605,6 +1658,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondRegexNegativeMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1632,6 +1686,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondExactNegativeMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1654,6 +1709,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondPartialNegativeMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1676,6 +1732,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondPrefixNegativeMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1698,6 +1755,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondSuffixNegativeMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1720,6 +1778,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondRegexNegativeMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1744,6 +1803,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondExactMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1769,6 +1829,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondPartialMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1794,6 +1855,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondPrefixMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1819,6 +1881,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondSuffixMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1844,6 +1907,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondRegexMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1871,6 +1935,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondExactMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1893,6 +1958,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondPartialMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1915,6 +1981,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondPrefixMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1937,6 +2004,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondSuffixMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1959,6 +2027,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondRegexMatchListStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -1983,6 +2052,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondExactMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -2008,6 +2078,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondPartialMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -2033,6 +2104,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondPrefixMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -2058,6 +2130,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondSuffixMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -2083,6 +2156,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleListStrCondRegexMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -2110,6 +2184,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondExactMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -2132,6 +2207,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondPartialMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -2154,6 +2230,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondPrefixMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -2176,6 +2253,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondSuffixMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,
@@ -2198,6 +2276,7 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 				exprDataType:  condDataType,
 				inputDataType: inputDataType,
 				conditionType: `ruleStrCondRegexMatchStrInput`,
+				matchAny:      matchAny,
 			},
 			field: &field{
 				name:   fieldName,

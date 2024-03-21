@@ -17,12 +17,13 @@ package authn
 import (
 	"context"
 	"encoding/json"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
-	"go.uber.org/zap"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
+	"go.uber.org/zap"
 )
 
 // AccessDeniedResponse is the access denied response.
@@ -40,7 +41,7 @@ func newAccessDeniedResponse(msg string) *AccessDeniedResponse {
 	}
 }
 
-func (p *Portal) handleJSONErrorWithLog(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, code int, msg string) error {
+func (p *Portal) handleJSONErrorWithLog(ctx context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request, code int, msg string) error {
 	p.logger.Warn(
 		"Access denied",
 		zap.String("session_id", rr.Upstream.SessionID),
@@ -58,7 +59,7 @@ func (p *Portal) handleJSONErrorWithLog(ctx context.Context, w http.ResponseWrit
 	return p.handleJSONError(ctx, w, code, "Access denied")
 }
 
-func (p *Portal) handleJSONError(ctx context.Context, w http.ResponseWriter, code int, msg string) error {
+func (p *Portal) handleJSONError(_ context.Context, w http.ResponseWriter, code int, msg string) error {
 	resp := newAccessDeniedResponse(msg)
 	respBytes, _ := json.Marshal(resp)
 	w.WriteHeader(code)

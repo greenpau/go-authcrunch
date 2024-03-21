@@ -22,13 +22,14 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"os"
+	"strings"
+	"testing"
+
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"golang.org/x/crypto/ssh"
-	"os"
-	"strings"
-	"testing"
 )
 
 func readPEMFile(fp string) string {
@@ -50,31 +51,34 @@ func readPEMFile(fp string) string {
 }
 
 func getPublicKey(t *testing.T, pk *rsa.PrivateKey, keyType string) string {
-	// Derive Public Key
-	pubKeyBytes, err := x509.MarshalPKIXPublicKey(pk.Public())
-	if err != nil {
-		t.Fatalf("failed creating rsa public key: %v", err)
-	}
-
-	// Create PEM encoded string
-	pubKeyEncoded := pem.EncodeToMemory(
-		&pem.Block{
-			Type:  "RSA PUBLIC KEY",
-			Bytes: pubKeyBytes,
-		},
-	)
-
-	// Create OpenSSH formatted string
-	pubKeyOpenSSH, err := ssh.NewPublicKey(pk.Public())
-	if err != nil {
-		t.Fatalf("failed creating openssh key: %v", err)
-	}
-	authorizedKeyBytes := ssh.MarshalAuthorizedKey(pubKeyOpenSSH)
 	switch keyType {
 	case "openssh":
+		// Create OpenSSH formatted string
+		pubKeyOpenSSH, err := ssh.NewPublicKey(pk.Public())
+		if err != nil {
+			t.Fatalf("failed creating openssh key: %v", err)
+		}
+		authorizedKeyBytes := ssh.MarshalAuthorizedKey(pubKeyOpenSSH)
 		return string(authorizedKeyBytes)
+	case "rsa":
+		switch pubKey := pk.Public().(type) {
+		case *rsa.PublicKey:
+			pubKeyBytes := x509.MarshalPKCS1PublicKey(pubKey)
+			// Create PEM encoded string
+			pubKeyEncoded := pem.EncodeToMemory(
+				&pem.Block{
+					Type:  "RSA PUBLIC KEY",
+					Bytes: pubKeyBytes,
+				},
+			)
+			return string(pubKeyEncoded)
+		default:
+			t.Fatalf("unsupported key type: %s", keyType)
+		}
+	default:
+		t.Fatalf("unsupported key type: %s", keyType)
 	}
-	return string(pubKeyEncoded)
+	return ""
 }
 
 func TestNewPublicKey(t *testing.T) {
@@ -222,11 +226,11 @@ func TestNewPublicKey(t *testing.T) {
 			} else {
 				msgs = append(msgs, fmt.Sprintf("payload:\n%s", string(tc.req.Key.Payload)))
 			}
-			// t.Logf("public key:\n%s", tc.req.Key.Payload)
 
 			if tc.req.Key.Payload == "rsa" || tc.req.Key.Payload == "openssh" {
 				tc.req.Key.Payload = getPublicKey(t, pk, tc.req.Key.Payload)
 			}
+			// t.Logf("public key:\n%s", tc.req.Key.Payload)
 
 			key, err := NewPublicKey(tc.req)
 			if tests.EvalErrWithLog(t, err, "new public key", tc.shouldErr, tc.err, msgs) {

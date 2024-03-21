@@ -8,11 +8,11 @@ ifdef TEST
 	TEST:="-run ${TEST}"
 endif
 
-all: envvar build
+all: info build
 	@echo "$@: complete"
 
-.PHONY: envvar
-envvar:
+.PHONY: info
+info:
 	@echo "Version: $(APP_VERSION), Branch: $(GIT_BRANCH), Revision: $(GIT_COMMIT)"
 	@echo "Build on $(BUILD_DATE) by $(BUILD_USER)"
 
@@ -47,7 +47,7 @@ gtest:
 	@echo "$@: complete"
 
 .PHONY: test
-test: templates envvar covdir linter gtest coverage
+test: templates info covdir linter gtest coverage
 	@echo "$@: complete"
 
 .PHONY: ctest
@@ -101,10 +101,11 @@ clean:
 .PHONY: qtest
 qtest: covdir
 	@echo "Perform quick tests ..."
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/tagging/...
 	@#time richgo test -v -coverprofile=.coverage/coverage.out internal/tag/*.go
 	@#time richgo test -v -coverprofile=.coverage/coverage.out internal/testutils/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/util/data/...
-	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/util/...
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/util/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewConfig ./*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewServer ./*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/registry/...
@@ -125,6 +126,8 @@ qtest: covdir
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestGetMetadata ./pkg/sso/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestValidateJwksKey ./pkg/authn/backends/oauth2/jwks*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestTransformData ./pkg/authn/transformer/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/transformer/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/redirects/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/icons/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/idp/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/idp/saml/*.go
@@ -149,10 +152,11 @@ qtest: covdir
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authproxy/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/identity/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/backends/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run NewAPIKey ./pkg/identity/...
-	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
+	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run NewPublicKey ./pkg/identity/...
+	@#
+	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html;
 	@#go tool cover -func=.coverage/coverage.out | grep -v "100.0"
-	@go tool cover -func=.coverage/coverage.out
+	@#go tool cover -func=.coverage/coverage.out;
 	@echo "$@: complete"
 
 .PHONY: dep

@@ -16,9 +16,10 @@ package authn
 
 import (
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"net/http"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 func validateAPIKeyInputForm(r *http.Request, rr *requests.Request) error {

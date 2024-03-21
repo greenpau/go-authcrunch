@@ -19,6 +19,7 @@ const (
 	ErrAddMfaToken    StandardError = "failed adding MFA token: %v"
 	ErrDeleteMfaToken StandardError = "failed deleting MFA token %q: %v"
 	ErrGetMfaTokens   StandardError = "failed getting MFA tokens: %v"
+	ErrGetMfaToken    StandardError = "failed getting MFA token: %v"
 
 	ErrDuplicateMfaTokenSecret  StandardError = "duplicate MFA token secret"
 	ErrDuplicateMfaTokenComment StandardError = "duplicate MFA token comment"

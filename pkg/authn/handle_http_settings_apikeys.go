@@ -17,26 +17,34 @@ package authn
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
-	"net/http"
-	"strings"
 )
 
 func (p *Portal) handleHTTPAPIKeysSettings(
 	ctx context.Context, r *http.Request, rr *requests.Request,
 	usr *user.User, store ids.IdentityStore, data map[string]interface{},
 ) error {
+	var endpoint string
+	var err error
 	var action string
 	var status bool
 	entrypoint := "apikeys"
 	data["view"] = entrypoint
-	endpoint, err := getEndpoint(r.URL.Path, "/"+entrypoint)
+	endpoint, err = getEndpoint(r.URL.Path, "/"+entrypoint)
 	if err != nil {
-		return err
+		if v, exists := data["endpoint"]; exists {
+			endpoint = v.(string)
+			delete(data, "endpoint")
+		} else {
+			return err
+		}
 	}
 	switch {
 	case strings.HasPrefix(endpoint, "/add") && r.Method == "POST":

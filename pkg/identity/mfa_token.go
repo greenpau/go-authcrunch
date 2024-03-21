@@ -36,6 +36,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/tagging"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
@@ -51,6 +52,7 @@ type MfaToken struct {
 	Type             string            `json:"type,omitempty" xml:"type,omitempty" yaml:"type,omitempty"`
 	Algorithm        string            `json:"algorithm,omitempty" xml:"algorithm,omitempty" yaml:"algorithm,omitempty"`
 	Comment          string            `json:"comment,omitempty" xml:"comment,omitempty" yaml:"comment,omitempty"`
+	Description      string            `json:"description,omitempty" xml:"description,omitempty" yaml:"description,omitempty"`
 	Secret           string            `json:"secret,omitempty" xml:"secret,omitempty" yaml:"secret,omitempty"`
 	Period           int               `json:"period,omitempty" xml:"period,omitempty" yaml:"period,omitempty"`
 	Digits           int               `json:"digits,omitempty" xml:"digits,omitempty" yaml:"digits,omitempty"`
@@ -63,8 +65,11 @@ type MfaToken struct {
 	Parameters       map[string]string `json:"parameters,omitempty" xml:"parameters,omitempty" yaml:"parameters,omitempty"`
 	Flags            map[string]bool   `json:"flags,omitempty" xml:"flags,omitempty" yaml:"flags,omitempty"`
 	SignatureCounter uint32            `json:"signature_counter,omitempty" xml:"signature_counter,omitempty" yaml:"signature_counter,omitempty"`
-	pubkeyECDSA      *ecdsa.PublicKey
-	pubkeyRSA        *rsa.PublicKey
+	Tags             []tagging.Tag     `json:"tags,omitempty" xml:"tags,omitempty" yaml:"tags,omitempty"`
+	Labels           []string          `json:"labels,omitempty" xml:"labels,omitempty" yaml:"labels,omitempty"`
+
+	pubkeyECDSA *ecdsa.PublicKey
+	pubkeyRSA   *rsa.PublicKey
 }
 
 // MfaDevice is the hardware device associated with MfaToken.
@@ -100,12 +105,15 @@ func (b *MfaTokenBundle) Size() int {
 // NewMfaToken returns an instance of MfaToken.
 func NewMfaToken(req *requests.Request) (*MfaToken, error) {
 	p := &MfaToken{
-		ID:         util.GetRandomString(40),
-		CreatedAt:  time.Now().UTC(),
-		Parameters: make(map[string]string),
-		Flags:      make(map[string]bool),
-		Comment:    req.MfaToken.Comment,
-		Type:       req.MfaToken.Type,
+		ID:          util.GetRandomString(40),
+		CreatedAt:   time.Now().UTC(),
+		Parameters:  make(map[string]string),
+		Flags:       make(map[string]bool),
+		Comment:     req.MfaToken.Comment,
+		Type:        req.MfaToken.Type,
+		Description: req.MfaToken.Description,
+		Tags:        req.MfaToken.Tags,
+		Labels:      req.MfaToken.Labels,
 	}
 
 	if req.MfaToken.Disabled {
@@ -142,8 +150,10 @@ func NewMfaToken(req *requests.Request) (*MfaToken, error) {
 			return nil, errors.ErrMfaTokenInvalidDigits.WithArgs(p.Digits)
 		}
 		// Codes
-		if err := p.ValidateCodeWithTime(req.MfaToken.Passcode, time.Now().Add(-time.Second*time.Duration(p.Period)).UTC()); err != nil {
-			return nil, err
+		if !req.MfaToken.SkipVerification {
+			if err := p.ValidateCodeWithTime(req.MfaToken.Passcode, time.Now().Add(-time.Second*time.Duration(p.Period)).UTC()); err != nil {
+				return nil, err
+			}
 		}
 	case "u2f":
 		r := &WebAuthnRegisterRequest{}

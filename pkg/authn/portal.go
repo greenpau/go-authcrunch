@@ -190,6 +190,16 @@ func (p *Portal) configure() error {
 	if err := p.configureUserTransformer(); err != nil {
 		return err
 	}
+
+	if len(p.config.TrustedLogoutRedirectURIConfigs) > 0 {
+		p.logger.Debug(
+			"Logout redirect URI configuration",
+			zap.Any("trusted_logout_redirect_uri_configs", p.config.TrustedLogoutRedirectURIConfigs),
+		)
+	} else {
+		p.logger.Debug("Logout redirect URI configuration not present")
+	}
+
 	return nil
 }
 

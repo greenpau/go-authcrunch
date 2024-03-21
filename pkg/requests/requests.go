@@ -15,8 +15,11 @@
 package requests
 
 import (
-	"go.uber.org/zap"
 	"net/http"
+
+	"github.com/greenpau/go-authcrunch/pkg/tagging"
+
+	"go.uber.org/zap"
 )
 
 // Request hold the data associated with identity database
@@ -96,25 +99,32 @@ type User struct {
 
 // Key holds crypto key attributes.
 type Key struct {
-	ID       string `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
-	Prefix   string `json:"prefix,omitempty" xml:"prefix,omitempty" yaml:"prefix,omitempty"`
-	Comment  string `json:"comment,omitempty" xml:"comment,omitempty" yaml:"comment,omitempty"`
-	Usage    string `json:"usage,omitempty" xml:"usage,omitempty" yaml:"usage,omitempty"`
-	Payload  string `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
-	Disabled bool   `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
+	ID          string        `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
+	Prefix      string        `json:"prefix,omitempty" xml:"prefix,omitempty" yaml:"prefix,omitempty"`
+	Comment     string        `json:"comment,omitempty" xml:"comment,omitempty" yaml:"comment,omitempty"`
+	Usage       string        `json:"usage,omitempty" xml:"usage,omitempty" yaml:"usage,omitempty"`
+	Payload     string        `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
+	Disabled    bool          `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
+	Description string        `json:"description,omitempty" xml:"description,omitempty" yaml:"description,omitempty"`
+	Tags        []tagging.Tag `json:"tags,omitempty" xml:"tags,omitempty" yaml:"tags,omitempty"`
+	Labels      []string      `json:"labels,omitempty" xml:"labels,omitempty" yaml:"labels,omitempty"`
 }
 
 // MfaToken holds MFA token attributes.
 type MfaToken struct {
-	ID        string `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
-	Comment   string `json:"comment,omitempty" xml:"comment,omitempty" yaml:"comment,omitempty"`
-	Type      string `json:"type,omitempty" xml:"type,omitempty" yaml:"type,omitempty"`
-	Secret    string `json:"secret,omitempty" xml:"secret,omitempty" yaml:"secret,omitempty"`
-	Algorithm string `json:"algorithm,omitempty" xml:"algorithm,omitempty" yaml:"algorithm,omitempty"`
-	Period    int    `json:"period,omitempty" xml:"period,omitempty" yaml:"period,omitempty"`
-	Digits    int    `json:"digits,omitempty" xml:"digits,omitempty" yaml:"digits,omitempty"`
-	Passcode  string `json:"passcode,omitempty" xml:"passcode,omitempty" yaml:"passcode,omitempty"`
-	Disabled  bool   `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
+	ID               string        `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
+	Comment          string        `json:"comment,omitempty" xml:"comment,omitempty" yaml:"comment,omitempty"`
+	Description      string        `json:"description,omitempty" xml:"description,omitempty" yaml:"description,omitempty"`
+	Type             string        `json:"type,omitempty" xml:"type,omitempty" yaml:"type,omitempty"`
+	Secret           string        `json:"secret,omitempty" xml:"secret,omitempty" yaml:"secret,omitempty"`
+	Algorithm        string        `json:"algorithm,omitempty" xml:"algorithm,omitempty" yaml:"algorithm,omitempty"`
+	Period           int           `json:"period,omitempty" xml:"period,omitempty" yaml:"period,omitempty"`
+	Digits           int           `json:"digits,omitempty" xml:"digits,omitempty" yaml:"digits,omitempty"`
+	Passcode         string        `json:"passcode,omitempty" xml:"passcode,omitempty" yaml:"passcode,omitempty"`
+	Disabled         bool          `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
+	SkipVerification bool          `json:"skip_verification,omitempty" xml:"skip_verification,omitempty" yaml:"skip_verification,omitempty"`
+	Tags             []tagging.Tag `json:"tags,omitempty" xml:"tags,omitempty" yaml:"tags,omitempty"`
+	Labels           []string      `json:"labels,omitempty" xml:"labels,omitempty" yaml:"labels,omitempty"`
 }
 
 // WebAuthn holds WebAuthn messages.

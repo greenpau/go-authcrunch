@@ -17,14 +17,15 @@ package authn
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"time"
+
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
-	"net/http"
-	"time"
 )
 
-func (p *Portal) handleAPIMetadata(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
+func (p *Portal) handleAPIMetadata(_ context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request, _ *user.User) error {
 	rr.Response.Code = http.StatusOK
 	resp := identity.Version()
 	resp["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)

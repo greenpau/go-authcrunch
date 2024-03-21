@@ -17,6 +17,9 @@ package tag
 import (
 	"bufio"
 	"fmt"
+	"strings"
+	"unicode"
+
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/internal/testutils"
@@ -45,14 +48,14 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/ids/local"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
+	"github.com/greenpau/go-authcrunch/pkg/tagging"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"strings"
-	"unicode"
 
 	"os"
 	"path/filepath"
@@ -870,6 +873,16 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test requests.AuthorizationToken struct",
 			entry: &requests.AuthorizationToken{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test redirects.RedirectURIMatchConfig struct",
+			entry: &redirects.RedirectURIMatchConfig{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test tagging.Tag struct",
+			entry: &tagging.Tag{},
 			opts:  &Options{},
 		},
 	}
