@@ -17,6 +17,9 @@ package authn
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
@@ -25,8 +28,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
-	"net/http"
-	"strings"
 )
 
 func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
@@ -345,6 +346,9 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				var tokenValidated bool
 				for _, token := range bundle.Get() {
 					if token.Type != "totp" {
+						continue
+					}
+					if token.Disabled {
 						continue
 					}
 					if err := token.ValidateCode(rr.MfaToken.Passcode); err != nil {

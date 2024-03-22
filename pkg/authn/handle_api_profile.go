@@ -116,6 +116,11 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	case "test_user_gpg_key":
 	case "add_user_gpg_key":
 	case "fetch_user_u2f_reg_params":
+	case "fetch_user_u2f_ver_params":
+	case "test_user_u2f_reg":
+	case "add_user_u2f_token":
+	case "fetch_user_info":
+	case "update_user_password":
 	default:
 		resp["message"] = "Profile API received unsupported request type"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
@@ -163,6 +168,10 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return p.FetchDebug(ctx, w, r, rr, parsedUser, resp, usr, backend)
 	case "fetch_user_dashboard_data":
 		return p.FetchUserDashboardData(ctx, w, r, rr, parsedUser, resp, usr, backend)
+	case "fetch_user_info":
+		return p.FetchUserInfo(ctx, w, r, rr, parsedUser, resp, usr, backend)
+	case "update_user_password":
+		return p.UpdateUserPassword(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "fetch_user_multi_factor_authenticators":
 		return p.FetchUserMultiFactorVerifiers(ctx, w, r, rr, parsedUser, resp, usr, backend)
 	case "fetch_user_multi_factor_authenticator":
@@ -177,6 +186,12 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return p.AddUserAppMultiFactorVerifier(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "fetch_user_u2f_reg_params":
 		return p.FetchUserUniSecFactorRegParams(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "fetch_user_u2f_ver_params":
+		return p.FetchUserUniSecFactorVerParams(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "test_user_u2f_reg":
+		return p.TestUserUniSecFactorReg(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "add_user_u2f_token":
+		return p.AddUserUniSecFactorToken(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "fetch_user_api_keys":
 		return p.FetchUserAPIKeys(ctx, w, r, rr, parsedUser, resp, usr, backend)
 	case "fetch_user_api_key":

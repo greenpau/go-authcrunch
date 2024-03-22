@@ -16,7 +16,9 @@ package authn
 
 import (
 	"context"
+	"encoding/base64"
 	"net/http"
+	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -37,7 +39,8 @@ func (p *Portal) FetchUserUniSecFactorRegParams(
 	bodyData map[string]interface{}) error {
 
 	params := make(map[string]interface{})
-	params["challenge"] = util.GetRandomStringFromRange(64, 92)
+	randomStr := util.GetRandomStringFromRange(64, 92)
+	params["challenge"] = strings.TrimRight(base64.StdEncoding.EncodeToString([]byte(randomStr)), "=")
 	params["rp_name"] = "AuthCrunch"
 	// params["rp_id"] = "auth.authcrunch.com"
 	params["user_id"] = usr.Claims.ID

@@ -225,10 +225,6 @@ func (p *Portal) handleHTTPMfaSettings(
 			if !validParams {
 				break
 			}
-			var tokenTransports string
-			if len(token.Parameters["u2f_transports"]) > 0 {
-				tokenTransports = fmt.Sprintf(`"%s"`, strings.Join(strings.Split(token.Parameters["u2f_transports"], ","), `","`))
-			}
 			data["webauthn_challenge"] = util.GetRandomStringFromRange(64, 92)
 			data["webauthn_rp_name"] = "AUTHP"
 			data["webauthn_timeout"] = "60000"
@@ -243,7 +239,7 @@ func (p *Portal) handleHTTPMfaSettings(
 			allowedCredential := make(map[string]interface{})
 			allowedCredential["id"] = token.Parameters["u2f_id"]
 			allowedCredential["type"] = token.Parameters["u2f_type"]
-			allowedCredential["transports"] = tokenTransports
+			allowedCredential["transports"] = token.Parameters["u2f_transports"]
 			allowedCredentials = append(allowedCredentials, allowedCredential)
 			data["webauthn_credentials"] = allowedCredentials
 			break

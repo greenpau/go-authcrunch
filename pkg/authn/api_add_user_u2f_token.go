@@ -16,7 +16,6 @@ package authn
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
@@ -26,8 +25,8 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
-// AddUserAppMultiFactorVerifier adds app multi factor authenticator to user identity.
-func (p *Portal) AddUserAppMultiFactorVerifier(
+// AddUserUniSecFactorToken adds U2F token to user identity.
+func (p *Portal) AddUserUniSecFactorToken(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -38,42 +37,21 @@ func (p *Portal) AddUserAppMultiFactorVerifier(
 	backend ids.IdentityStore,
 	bodyData map[string]interface{}) error {
 
-	var tokenTitle, tokenDescription, tokenSecret string
-	var tokenLifetime, tokenDigits int
+	var tokenTitle, tokenDescription string
 	var tokenLabels []string = []string{}
 	var tokenTags []tagging.Tag = []tagging.Tag{}
 
-	// Extract data.
-	if v, exists := bodyData["period"]; exists {
-		switch exp := v.(type) {
-		case float64:
-			tokenLifetime = int(exp)
-		case int:
-			tokenLifetime = exp
-		case int64:
-			tokenLifetime = int(exp)
-		case json.Number:
-			i, _ := exp.Int64()
-			tokenLifetime = int(i)
-		}
+	// Validate inputs.
+	if v, exists := bodyData["webauthn_register"]; exists {
+		rr.WebAuthn.Register = v.(string)
 	} else {
-		resp["message"] = "Profile API did not find period in the request payload"
+		resp["message"] = "Profile API did not find webauthn_register in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["digits"]; exists {
-		switch exp := v.(type) {
-		case float64:
-			tokenDigits = int(exp)
-		case int:
-			tokenDigits = exp
-		case int64:
-			tokenDigits = int(exp)
-		case json.Number:
-			i, _ := exp.Int64()
-			tokenDigits = int(i)
-		}
+	if v, exists := bodyData["webauthn_challenge"]; exists {
+		rr.WebAuthn.Challenge = v.(string)
 	} else {
-		resp["message"] = "Profile API did not find digits in the request payload"
+		resp["message"] = "Profile API did not find webauthn_challenge in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 	if v, exists := bodyData["title"]; exists {
@@ -88,13 +66,6 @@ func (p *Portal) AddUserAppMultiFactorVerifier(
 		resp["message"] = "Profile API did not find description in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["secret"]; exists {
-		tokenSecret = v.(string)
-	} else {
-		resp["message"] = "Profile API did not find secret in the request payload"
-		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
-	}
-
 	if extractedTokenTags, err := tagging.ExtractTags(bodyData); err == nil {
 		for _, extractedTokenTag := range extractedTokenTags {
 			tokenTags = append(tokenTags, *extractedTokenTag)
@@ -103,7 +74,6 @@ func (p *Portal) AddUserAppMultiFactorVerifier(
 		resp["message"] = "Profile API find malformed tags in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-
 	if extractedTokenLabels, err := tagging.ExtractLabels(bodyData); err == nil {
 		tokenLabels = extractedTokenLabels
 	} else {
@@ -120,31 +90,15 @@ func (p *Portal) AddUserAppMultiFactorVerifier(
 		resp["message"] = "Profile API found non-compliant token description value"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if !tokenSecretRegexPattern.MatchString(tokenSecret) {
-		resp["message"] = "Profile API found non-compliant token secret value"
-		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
-	}
-	if tokenLifetime != 15 && tokenLifetime != 30 && tokenLifetime != 60 && tokenLifetime != 90 {
-		resp["message"] = "Profile API found non-compliant token lifetime value"
-		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
-	}
-	if tokenDigits != 4 && tokenDigits != 6 && tokenDigits != 8 {
-		resp["message"] = "Profile API found non-compliant token digits value"
-		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
-	}
 
-	rr.MfaToken.Type = "totp"
-	rr.MfaToken.SkipVerification = true
+	rr.MfaToken.Type = "u2f"
 	rr.MfaToken.Comment = tokenTitle
 	rr.MfaToken.Description = tokenDescription
-	rr.MfaToken.Secret = tokenSecret
-	rr.MfaToken.Period = tokenLifetime
-	rr.MfaToken.Digits = tokenDigits
-	rr.MfaToken.Labels = tokenLabels
 	rr.MfaToken.Tags = tokenTags
+	rr.MfaToken.Labels = tokenLabels
 
 	if err := backend.Request(operator.AddMfaToken, rr); err != nil {
-		resp["message"] = "Profile API failed to add token  to identity store"
+		resp["message"] = "Profile API failed to add token to identity store"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 

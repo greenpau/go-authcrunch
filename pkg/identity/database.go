@@ -17,7 +17,6 @@ package identity
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -483,7 +482,8 @@ func (db *Database) commit() error {
 	if err != nil {
 		return errors.ErrDatabaseCommit.WithArgs(db.path, err)
 	}
-	if err := ioutil.WriteFile(db.path, []byte(data), 0600); err != nil {
+
+	if err := os.WriteFile(db.path, []byte(data), 0600); err != nil {
 		return errors.ErrDatabaseCommit.WithArgs(db.path, err)
 	}
 	return nil
@@ -535,7 +535,9 @@ func (db *Database) GetPublicKeys(r *requests.Request) error {
 			continue
 		}
 		if k.Disabled {
-			continue
+			if !r.Key.IncludeAll {
+				continue
+			}
 		}
 		bundle.Add(k)
 	}
@@ -556,7 +558,9 @@ func (db *Database) GetPublicKey(r *requests.Request) error {
 			continue
 		}
 		if k.Disabled {
-			continue
+			if !r.Key.IncludeAll {
+				continue
+			}
 		}
 		if k.ID != r.Key.ID {
 			continue
@@ -805,7 +809,9 @@ func (db *Database) GetMfaTokens(r *requests.Request) error {
 	bundle := NewMfaTokenBundle()
 	for _, token := range user.MfaTokens {
 		if token.Disabled {
-			continue
+			if !r.MfaToken.IncludeAll {
+				continue
+			}
 		}
 		bundle.Add(token)
 	}
@@ -823,7 +829,9 @@ func (db *Database) GetMfaToken(r *requests.Request) error {
 	}
 	for _, token := range user.MfaTokens {
 		if token.Disabled {
-			continue
+			if !r.MfaToken.IncludeAll {
+				continue
+			}
 		}
 		if token.ID != r.MfaToken.ID {
 			continue
