@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -57,6 +58,8 @@ var (
 		},
 	}
 )
+
+var apiKeyRegexPattern = regexp.MustCompile(`^[A-Za-z0-9]{64,72}$`)
 
 func init() {
 	app = versioned.NewPackageManager("authdb")
@@ -596,7 +599,24 @@ func (db *Database) AddAPIKey(r *requests.Request) error {
 	if err != nil {
 		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, err)
 	}
-	s := util.GetRandomString(72)
+
+	s := r.Key.Payload
+	if s == "" {
+		s = util.GetRandomString(72)
+	}
+
+	if len(s) < 64 {
+		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is too short")
+	}
+
+	if len(s) > 72 {
+		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is too long")
+	}
+
+	if !apiKeyRegexPattern.MatchString(s) {
+		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is non compliant")
+	}
+
 	failCount := 0
 	for {
 		hk, err := NewPassword(s)

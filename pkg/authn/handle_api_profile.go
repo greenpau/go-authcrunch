@@ -105,6 +105,7 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	case "fetch_user_api_keys":
 	case "fetch_user_api_key":
 	case "delete_user_api_key":
+	case "add_user_api_key":
 	case "fetch_user_ssh_keys":
 	case "fetch_user_ssh_key":
 	case "delete_user_ssh_key":
@@ -198,6 +199,8 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return p.FetchUserAPIKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "delete_user_api_key":
 		return p.DeleteUserAPIKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "add_user_api_key":
+		return p.AddUserAPIKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "fetch_user_ssh_keys":
 		return p.FetchUserSSHKeys(ctx, w, r, rr, parsedUser, resp, usr, backend)
 	case "fetch_user_ssh_key":
