@@ -102,6 +102,7 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	case "fetch_user_app_multi_factor_authenticator_code":
 	case "test_user_app_multi_factor_authenticator":
 	case "add_user_app_multi_factor_authenticator":
+	case "test_user_app_token_passcode":
 	case "fetch_user_api_keys":
 	case "fetch_user_api_key":
 	case "delete_user_api_key":
@@ -186,6 +187,8 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return p.TestUserAppMultiFactorVerifier(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "add_user_app_multi_factor_authenticator":
 		return p.AddUserAppMultiFactorVerifier(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "test_user_app_token_passcode":
+		return p.TestUserAppTokenPasscode(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "fetch_user_u2f_reg_params":
 		return p.FetchUserUniSecFactorRegParams(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "fetch_user_u2f_ver_params":
