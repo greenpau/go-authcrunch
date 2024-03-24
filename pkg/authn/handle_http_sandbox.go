@@ -114,7 +114,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 	case strings.HasPrefix(sandboxPartition, "mfa-app-barcode/"):
 		// Handle App Portal barcode.
 		sandboxPartition = strings.TrimPrefix(sandboxPartition, "mfa-app-barcode/")
-		return p.handleHTTPMfaBarcode(ctx, w, r, sandboxPartition)
+		return p.handleHTTPSandboxMfaBarcode(ctx, w, r, sandboxPartition)
 	case sandboxPartition == "terminate":
 		p.sandboxes.Delete(sandboxID)
 		return p.handleHTTPRedirectSeeOther(ctx, w, r, rr, "login")
