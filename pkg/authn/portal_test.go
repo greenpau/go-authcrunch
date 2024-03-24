@@ -147,10 +147,21 @@ func TestNewPortal(t *testing.T) {
 				  "validate_bearer_header": true
 				},
 				"access_list_configs": [
-                  {
-                    "action": "` + defaultPortalACLAction + `",
-                    "conditions": ["` + defaultPortalACLCondition + `"]
-				  }
+					{
+						"action": "allow stop",
+						"comment": "admin role name match",
+						"conditions": ["match role authp/admin"]
+					},
+					{
+						"action": "allow stop",
+						"comment": "user role name match",
+						"conditions": ["match role authp/user"]
+					},
+					{
+						"action": "allow stop",
+						"comment": "guest role name match",
+						"conditions": ["match role authp/guest"]
+					}
 				],
 				"identity_stores": ["local_backend"]
               }

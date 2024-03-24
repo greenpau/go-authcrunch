@@ -16,11 +16,13 @@ package authn
 
 import (
 	"context"
+	"net/http"
+	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/authn/enums/role"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
-	"net/http"
-	"strings"
 )
 
 func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
@@ -47,48 +49,36 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 		return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 	}
 
-	if !rr.Response.Authenticated {
-		p.logger.Debug(
-			"User is not authorized to use API",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-		)
-		return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
-	}
-
-	if !usr.HasRole("authp/admin") {
-		p.logger.Debug(
-			"API is not available because user has no admin privileges",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-		)
-		return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusForbidden, http.StatusText(http.StatusForbidden))
-	}
-
-	if p.config.API == nil || (p.config.API != nil && !p.config.API.ProfileEnabled && !p.config.API.AdminEnabled) {
-		p.logger.Debug(
-			"API is not available",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-			zap.Any("api_config", p.config.API),
-		)
-		return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
-	}
-
 	switch {
-	case p.config.API.AdminEnabled && strings.HasSuffix(r.URL.Path, "/api/metadata"):
-		return p.handleAPIMetadata(ctx, w, r, rr, usr)
-	case p.config.API.AdminEnabled && strings.Contains(r.URL.Path, "/api/orgs"):
+	case p.config.API.AdminEnabled && r.Method == "POST" && strings.Contains(r.URL.Path, "/api/manager"):
+		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
+			p.logger.Debug(
+				"User is not authorized accessing API",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.String("reason", err.Error()),
+			)
+			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
+		}
+		// case p.config.API.AdminEnabled && strings.HasSuffix(r.URL.Path, "/api/metadata"):
+		// 	return p.handleAPIMetadata(ctx, w, r, rr, usr)
+		// case p.config.API.AdminEnabled && strings.Contains(r.URL.Path, "/api/users"):
+		// 	return p.handleAPIListUsers(ctx, w, r, rr, usr)
 		return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
-	case p.config.API.AdminEnabled && strings.Contains(r.URL.Path, "/api/teams"):
-		return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
-	case p.config.API.AdminEnabled && strings.Contains(r.URL.Path, "/api/users"):
-		return p.handleAPIListUsers(ctx, w, r, rr, usr)
 	case p.config.API.ProfileEnabled && r.Method == "POST" && strings.Contains(r.URL.Path, "/api/profile"):
+		if err := p.authorizedRole(usr, []role.Kind{role.Admin, role.User}, rr.Response.Authenticated); err != nil {
+			p.logger.Debug(
+				"User is not authorized accessing API",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.String("reason", err.Error()),
+			)
+			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
+		}
 		return p.handleAPIProfile(ctx, w, r, rr, usr)
 	default:
 		p.logger.Debug(
-			"API endpoint is not supported",
+			"API endpoint is not available",
 			zap.String("session_id", rr.Upstream.SessionID),
 			zap.String("request_id", rr.ID),
 			zap.Any("api_config", p.config.API),

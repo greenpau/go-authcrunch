@@ -45,8 +45,7 @@ import (
 )
 
 const (
-	defaultPortalACLCondition = "match roles authp/admin authp/user authp/guest superuser superadmin"
-	defaultPortalACLAction    = "allow stop"
+	defaultPortalACLAction = "allow stop"
 )
 
 // Portal is an authentication portal.
@@ -225,18 +224,78 @@ func (p *Portal) configureEssentials() error {
 		return err
 	}
 	p.cookie = c
+
+	p.logger.Debug(
+		"Configuring defaul portal user roles",
+		zap.String("portal_name", p.config.Name),
+		zap.Any("portal_admin_roles", p.config.PortalAdminRoles),
+		zap.Any("portal_user_roles", p.config.PortalUserRoles),
+		zap.Any("portal_guest_roles", p.config.PortalGuestRoles),
+		zap.Any("portal_admin_role_patterns", p.config.PortalAdminRolePatterns),
+		zap.Any("portal_user_role_patterns", p.config.PortalUserRolePatterns),
+		zap.Any("portal_guest_role_patterns", p.config.PortalGuestRolePatterns),
+	)
+
 	return nil
 }
 
 func (p *Portal) configureCryptoKeyStore() error {
 	if len(p.config.AccessListConfigs) == 0 {
-		p.config.AccessListConfigs = []*acl.RuleConfiguration{
-			{
-				// Admin users can access everything.
-				Conditions: []string{defaultPortalACLCondition},
+		defaultACLConfig := []*acl.RuleConfiguration{}
+
+		// Configure ACL by role names
+		for roleName := range p.config.PortalAdminRoles {
+			aclConfig := &acl.RuleConfiguration{
+				Comment:    "admin role name match",
+				Conditions: []string{"match role " + roleName},
 				Action:     defaultPortalACLAction,
-			},
+			}
+			defaultACLConfig = append(defaultACLConfig, aclConfig)
 		}
+		for roleName := range p.config.PortalUserRoles {
+			aclConfig := &acl.RuleConfiguration{
+				Comment:    "user role name match",
+				Conditions: []string{"match role " + roleName},
+				Action:     defaultPortalACLAction,
+			}
+			defaultACLConfig = append(defaultACLConfig, aclConfig)
+		}
+		for roleName := range p.config.PortalGuestRoles {
+			aclConfig := &acl.RuleConfiguration{
+				Comment:    "guest role name match",
+				Conditions: []string{"match role " + roleName},
+				Action:     defaultPortalACLAction,
+			}
+			defaultACLConfig = append(defaultACLConfig, aclConfig)
+		}
+
+		// Configure ACL by role patterns
+		for _, roleNameRegex := range p.config.adminRolePatterns {
+			aclConfig := &acl.RuleConfiguration{
+				Comment:    "admin role name pattern match",
+				Conditions: []string{"regex match role " + roleNameRegex.String()},
+				Action:     defaultPortalACLAction,
+			}
+			defaultACLConfig = append(defaultACLConfig, aclConfig)
+		}
+		for _, roleNameRegex := range p.config.userRolePatterns {
+			aclConfig := &acl.RuleConfiguration{
+				Comment:    "user role name pattern match",
+				Conditions: []string{"regex match role " + roleNameRegex.String()},
+				Action:     defaultPortalACLAction,
+			}
+			defaultACLConfig = append(defaultACLConfig, aclConfig)
+		}
+		for _, roleNameRegex := range p.config.guestRolePatterns {
+			aclConfig := &acl.RuleConfiguration{
+				Comment:    "guest role name pattern match",
+				Conditions: []string{"regex match role " + roleNameRegex.String()},
+				Action:     defaultPortalACLAction,
+			}
+			defaultACLConfig = append(defaultACLConfig, aclConfig)
+		}
+
+		p.config.AccessListConfigs = defaultACLConfig
 	}
 
 	p.logger.Debug(

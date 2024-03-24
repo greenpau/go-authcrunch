@@ -146,12 +146,21 @@ func TestNewServer(t *testing.T) {
                 "authentication_portals": [
                   {
                     "access_list_configs": [
-                      {
-                        "action": "allow stop",
-                        "conditions": [
-                          "match roles authp/admin authp/user authp/guest superuser superadmin"
-                        ]
-                      }
+						{
+							"action": "allow stop",
+							"comment": "admin role name match",
+							"conditions": ["match role authp/admin"]
+						},
+						{
+							"action": "allow stop",
+							"comment": "user role name match",
+							"conditions": ["match role authp/user"]
+						},
+						{
+							"action": "allow stop",
+							"comment": "guest role name match",
+							"conditions": ["match role authp/guest"]
+						}
                     ],
                     "identity_stores": [
                       "localdb"
