@@ -217,6 +217,7 @@ func (p *Portal) configureEssentials() error {
 	p.logger.Debug(
 		"Configuring cookie parameters",
 		zap.String("portal_name", p.config.Name),
+		zap.Any("cookie_config", p.config.CookieConfig),
 	)
 
 	c, err := cookie.NewFactory(p.config.CookieConfig)
@@ -226,7 +227,7 @@ func (p *Portal) configureEssentials() error {
 	p.cookie = c
 
 	p.logger.Debug(
-		"Configuring defaul portal user roles",
+		"Configuring default portal user roles",
 		zap.String("portal_name", p.config.Name),
 		zap.Any("portal_admin_roles", p.config.PortalAdminRoles),
 		zap.Any("portal_user_roles", p.config.PortalUserRoles),
