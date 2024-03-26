@@ -35,6 +35,8 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 	case r.URL.Path == "/" || r.URL.Path == "/auth" || r.URL.Path == "/auth/":
 		p.injectRedirectURL(ctx, w, r, rr)
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
+	case strings.Contains(r.URL.Path, "/profile/"):
+		return p.handleHTTPApps(ctx, w, r, rr, usr, "profile")
 	case strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon"):
 		return p.handleHTTPStaticAssets(ctx, w, r, rr)
 	case strings.Contains(r.URL.Path, "/portal"):
@@ -132,26 +134,26 @@ func (p *Portal) handleHTTPError(ctx context.Context, w http.ResponseWriter, r *
 	return p.handleHTTPRenderHTML(ctx, w, code, content.Bytes())
 }
 
-func (p *Portal) handleHTTPGeneric(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, code int, msg string) error {
-	p.disableClientCache(w)
-	resp := p.ui.GetArgs()
-	resp.BaseURL(rr.Upstream.BasePath)
-	resp.PageTitle = msg
-	switch code {
-	case http.StatusServiceUnavailable:
-		resp.Data["message"] = "This service is not available to you."
-	}
+// func (p *Portal) handleHTTPGeneric(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, code int, msg string) error {
+// 	p.disableClientCache(w)
+// 	resp := p.ui.GetArgs()
+// 	resp.BaseURL(rr.Upstream.BasePath)
+// 	resp.PageTitle = msg
+// 	switch code {
+// 	case http.StatusServiceUnavailable:
+// 		resp.Data["message"] = "This service is not available to you."
+// 	}
 
-	resp.Data["authenticated"] = rr.Response.Authenticated
-	resp.Data["go_back_url"] = rr.Upstream.BasePath
-	content, err := p.ui.Render("generic", resp)
-	if err != nil {
-		return p.handleHTTPRenderError(ctx, w, r, rr, err)
-	}
-	return p.handleHTTPRenderHTML(ctx, w, code, content.Bytes())
-}
+// 	resp.Data["authenticated"] = rr.Response.Authenticated
+// 	resp.Data["go_back_url"] = rr.Upstream.BasePath
+// 	content, err := p.ui.Render("generic", resp)
+// 	if err != nil {
+// 		return p.handleHTTPRenderError(ctx, w, r, rr, err)
+// 	}
+// 	return p.handleHTTPRenderHTML(ctx, w, code, content.Bytes())
+// }
 
-func (p *Portal) handleHTTPRedirect(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, location string) error {
+func (p *Portal) handleHTTPRedirect(_ context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request, location string) error {
 	p.disableClientCache(w)
 	location = rr.Upstream.BaseURL + path.Join(rr.Upstream.BasePath, location)
 	w.Header().Set("Location", location)
@@ -166,7 +168,7 @@ func (p *Portal) handleHTTPRedirect(ctx context.Context, w http.ResponseWriter, 
 	return nil
 }
 
-func (p *Portal) handleHTTPRedirectSeeOther(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, location string) error {
+func (p *Portal) handleHTTPRedirectSeeOther(_ context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request, location string) error {
 	p.disableClientCache(w)
 	location = rr.Upstream.BaseURL + path.Join(rr.Upstream.BasePath, location)
 	w.Header().Set("Location", location)
@@ -253,7 +255,6 @@ func (p *Portal) injectSessionID(ctx context.Context, w http.ResponseWriter, r *
 	}
 	rr.Upstream.SessionID = util.GetRandomStringFromRange(36, 46)
 	w.Header().Add("Set-Cookie", p.cookie.GetSessionCookie(addrutil.GetSourceHost(r), rr.Upstream.SessionID))
-	return
 }
 
 func (p *Portal) injectRedirectURL(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) {
