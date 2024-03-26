@@ -17,6 +17,12 @@ package authn
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
@@ -25,11 +31,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
-	"net/http"
-	"net/url"
-	"path"
-	"strings"
-	"time"
 )
 
 func (p *Portal) handleHTTPLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
@@ -148,7 +149,7 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 	}
 
 	// Inject portal-specific roles.
-	injectPortalRoles(m)
+	injectPortalRoles(m, p.config)
 	usr, err := user.NewUser(m)
 	if err != nil {
 		rr.Response.Code = http.StatusBadRequest
@@ -329,7 +330,7 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 	if err := p.transformUser(ctx, rr, m); err != nil {
 		return err
 	}
-	injectPortalRoles(m)
+	injectPortalRoles(m, p.config)
 	usr, err := user.NewUser(m)
 	if err != nil {
 		rr.Response.Code = http.StatusUnauthorized
@@ -480,19 +481,19 @@ func combineGroupRoles(m map[string]interface{}) {
 	}
 }
 
-func injectPortalRoles(m map[string]interface{}) {
+func injectPortalRoles(m map[string]interface{}, cfg *PortalConfig) {
 	var roles, updatedRoles []string
 	var reservedRoleFound bool
 	roleMap := make(map[string]bool)
-	reservedRoles := map[string]bool{
-		"authp/admin": false,
-		"authp/user":  false,
-		"authp/guest": false,
-	}
+	reservedRoles := cfg.GetReservedPortalRoles()
 
 	v, exists := m["roles"]
 	if !exists {
-		m["roles"] = []string{"authp/guest"}
+		guestRoles := []string{}
+		for _, roleName := range cfg.GetGuestPortalRoles() {
+			guestRoles = append(guestRoles, roleName)
+		}
+		m["roles"] = guestRoles
 		return
 	}
 	switch val := v.(type) {
@@ -524,7 +525,7 @@ func injectPortalRoles(m map[string]interface{}) {
 		updatedRoles = append(updatedRoles, roleName)
 	}
 	if !reservedRoleFound {
-		updatedRoles = append(updatedRoles, "authp/guest")
+		updatedRoles = append(updatedRoles, defaultGuestRoleName)
 	}
 	m["roles"] = updatedRoles
 	return

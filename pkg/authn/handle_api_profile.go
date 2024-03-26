@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/authn/enums/role"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 
 	"regexp"
@@ -68,7 +69,7 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return handleAPIProfileResponse(w, rr, http.StatusUnauthorized, resp)
 	}
 
-	if permitted := usr.HasRole("authp/admin", "authp/user"); !permitted {
+	if err := p.authorizedRole(usr, []role.Kind{role.Admin, role.User}, rr.Response.Authenticated); err != nil {
 		resp["message"] = "Profile API did not find valid role for the user"
 		return handleAPIProfileResponse(w, rr, http.StatusForbidden, resp)
 	}

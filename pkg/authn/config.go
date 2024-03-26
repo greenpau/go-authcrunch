@@ -16,6 +16,7 @@ package authn
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
@@ -27,6 +28,12 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
+)
+
+const (
+	defaultGuestRoleName = "authp/guest"
+	defaultUserRoleName  = "authp/user"
+	defaultAdminRoleName = "authp/admin"
 )
 
 // PortalConfig represents Portal configuration.
@@ -75,7 +82,8 @@ type PortalConfig struct {
 	// PortalGuestRolePatterns holds the list of regular expressions for the role names without admin or user privileges in the portal.
 	PortalGuestRolePatterns []string `json:"portal_guest_role_patterns,omitempty" xml:"portal_guest_role_patterns,omitempty" yaml:"portal_guest_role_patterns,omitempty"`
 	guestRolePatterns       []*regexp.Regexp
-
+	reservedPortalRoles     map[string]interface{}
+	guestPortalRoles        []string
 	// API holds the configuration for API endpoints.
 	API *APIConfig `json:"api,omitempty" xml:"api,omitempty" yaml:"api,omitempty"`
 
@@ -134,27 +142,51 @@ func (cfg *PortalConfig) parseRawCryptoConfigs() error {
 	return nil
 }
 
+// GetReservedPortalRoles returns the names of reserved portal roles.
+func (cfg *PortalConfig) GetReservedPortalRoles() map[string]interface{} {
+	if cfg.reservedPortalRoles == nil {
+		cfg.parsePortalRoles()
+	}
+	return cfg.reservedPortalRoles
+}
+
+// GetGuestPortalRoles returns the names of guest portal roles.
+func (cfg *PortalConfig) GetGuestPortalRoles() []string {
+	return cfg.guestPortalRoles
+}
+
 // parsePortalRoles validates the configuration of portal roles.
 func (cfg *PortalConfig) parsePortalRoles() error {
+	if cfg.reservedPortalRoles == nil {
+		cfg.reservedPortalRoles = make(map[string]interface{})
+	}
+
 	if cfg.PortalAdminRoles == nil {
 		cfg.PortalAdminRoles = make(map[string]interface{})
 	}
 	if len(cfg.PortalAdminRoles) < 1 {
-		cfg.PortalAdminRoles["authp/admin"] = true
+		cfg.PortalAdminRoles[defaultAdminRoleName] = true
+		cfg.reservedPortalRoles[defaultAdminRoleName] = true
 	}
 
 	if cfg.PortalUserRoles == nil {
 		cfg.PortalUserRoles = make(map[string]interface{})
 	}
 	if len(cfg.PortalUserRoles) < 1 {
-		cfg.PortalUserRoles["authp/user"] = true
+		cfg.PortalUserRoles[defaultUserRoleName] = true
+		cfg.reservedPortalRoles[defaultUserRoleName] = true
 	}
 
 	if cfg.PortalGuestRoles == nil {
 		cfg.PortalGuestRoles = make(map[string]interface{})
+		cfg.reservedPortalRoles[defaultGuestRoleName] = true
 	}
 	if len(cfg.PortalGuestRoles) < 1 {
-		cfg.PortalGuestRoles["authp/guest"] = true
+		cfg.PortalGuestRoles[defaultGuestRoleName] = true
+	}
+
+	if slices.Contains(cfg.guestPortalRoles, defaultGuestRoleName) {
+		cfg.guestPortalRoles = append(cfg.guestPortalRoles, defaultGuestRoleName)
 	}
 
 	for _, ptrn := range cfg.PortalAdminRolePatterns {
