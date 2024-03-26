@@ -25,17 +25,22 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
+	"go.uber.org/zap"
 )
 
 func (p *Portal) handleHTTPApps(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User, appName string) error {
 	p.disableClientCache(w)
 	p.injectRedirectURL(ctx, w, r, rr)
-	if usr == nil {
+	if usr == nil && !strings.HasSuffix(r.URL.Path, appName+"/manifest.json") {
+		p.logger.Debug("app asset download is unauthorized", zap.String("app_name", appName), zap.String("app_file_url_path", r.URL.Path))
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
 	}
 
 	if err := p.authorizedRole(usr, []role.Kind{role.Admin, role.User}, rr.Response.Authenticated); err != nil {
-		return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
+		if !strings.HasSuffix(r.URL.Path, appName+"/manifest.json") {
+			p.logger.Debug("app asset download is forbidden", zap.String("app_name", appName), zap.String("app_file_url_path", r.URL.Path))
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
+		}
 	}
 
 	var assetPath string
@@ -46,6 +51,7 @@ func (p *Portal) handleHTTPApps(ctx context.Context, w http.ResponseWriter, r *h
 			assetPath = appName + "/" + assetPath
 		}
 	default:
+		p.logger.Debug("asset download for unsupported app", zap.String("app_name", appName), zap.String("app_file_url_path", r.URL.Path))
 		return p.handleHTTPRenderError(ctx, w, r, rr, fmt.Errorf("file not found"))
 	}
 
@@ -55,9 +61,11 @@ func (p *Portal) handleHTTPApps(ctx context.Context, w http.ResponseWriter, r *h
 		if strings.HasSuffix(assetPath, "/") || strings.Count(assetPath, "/") >= 3 || strings.HasSuffix(assetPath, "/new") {
 			asset, err = ui.AppAssets.GetAsset(appName + "/")
 			if err != nil {
+				p.logger.Debug("app asset download not found", zap.String("app_name", appName), zap.String("app_file_url_path", r.URL.Path), zap.String("asset_path", assetPath))
 				return p.handleHTTPError(ctx, w, r, rr, http.StatusNotFound)
 			}
 		} else {
+			p.logger.Debug("app asset download not found", zap.String("app_name", appName), zap.String("app_file_url_path", r.URL.Path), zap.String("asset_path", assetPath))
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusNotFound)
 		}
 	}

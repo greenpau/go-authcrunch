@@ -306,7 +306,7 @@ func (p *Portal) authorizeRequest(ctx context.Context, w http.ResponseWriter, r 
 	return usr, nil
 }
 
-func extractBaseURLPath(ctx context.Context, r *http.Request, rr *requests.Request, s string) {
+func extractBaseURLPath(_ context.Context, r *http.Request, rr *requests.Request, s string) {
 	baseURL, basePath := util.GetBaseURL(r, s)
 	rr.Upstream.BaseURL = baseURL
 	if basePath == "/" {
@@ -328,12 +328,12 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 	case r.URL.Path == "/auth":
 		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
 		rr.Upstream.BasePath = "/auth/"
+	case strings.Contains(r.URL.Path, "/profile/"):
+		extractBaseURLPath(ctx, r, rr, "/profile")
 	case strings.HasSuffix(r.URL.Path, "/portal"):
 		extractBaseURLPath(ctx, r, rr, "/portal")
 	case strings.Contains(r.URL.Path, "/sandbox/"):
 		extractBaseURLPath(ctx, r, rr, "/sandbox/")
-	case strings.Contains(r.URL.Path, "/settings"):
-		extractBaseURLPath(ctx, r, rr, "/settings")
 	case strings.HasSuffix(r.URL.Path, "/recover"), strings.HasSuffix(r.URL.Path, "/forgot"):
 		extractBaseURLPath(ctx, r, rr, "/recover,/forgot")
 	case strings.HasSuffix(r.URL.Path, "/register"):
