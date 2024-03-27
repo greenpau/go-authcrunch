@@ -112,6 +112,10 @@ func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
 
 // Validate validates Config.
 func (cfg *Config) Validate() error {
+	if cfg == nil {
+		return fmt.Errorf("config is nil")
+	}
+
 	if len(cfg.AuthenticationPortals) < 1 && len(cfg.AuthorizationPolicies) < 1 {
 		return fmt.Errorf("no portals and gatekeepers found")
 	}
