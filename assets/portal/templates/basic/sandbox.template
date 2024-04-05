@@ -83,7 +83,7 @@
                     </svg>
                   </div>
                   <input id="secret" name="secret" type="password" class="app-inp-txt"
-                         autocorrect="off" autocapitalize="off" spellcheck="false" autofocus required />
+                         autocorrect="off" autocapitalize="off" autocomplete="current-password" spellcheck="false" autofocus required />
                 </div>
               </div>
 
@@ -142,7 +142,7 @@
                 <div class="app-inp-box">
                   <input id="email" name="email" type="text"
                          class="app-inp-txt"
-                         autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
+                         autocorrect="off" autocapitalize="off" autocomplete="email" spellcheck="false" autocomplete="off"
                          required />
                 </div>
               </div>
