@@ -48,11 +48,13 @@ func (e *EmailProvider) Send(req *EmailProviderSendInput) error {
 	}
 	defer c.Close()
 
-	if found, _ := c.Extension("STARTTLS"); found {
-		if err := c.StartTLS(nil); err != nil {
-			return err
+	/*
+		if found, _ := c.Extension("STARTTLS"); found {
+			if err := c.StartTLS(nil); err != nil {
+				return err
+			}
 		}
-	}
+	*/
 
 	if !e.Passwordless && req.Credentials != nil {
 		if found, _ := c.Extension("AUTH"); !found {
