@@ -61,7 +61,7 @@ func (k *JwksKey) Validate() error {
 	switch k.KeyType {
 	case "RSA":
 		switch k.Algorithm {
-		case "RS256", "RS384", "RS512", "":
+		case "RS256", "RS384", "RS512", "RSA-OAEP-256", "":
 		default:
 			return errors.ErrJwksKeyAlgoUnsupported.WithArgs(k.Algorithm, k.KeyID)
 		}
