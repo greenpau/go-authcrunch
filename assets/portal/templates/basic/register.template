@@ -79,7 +79,7 @@
                       class="app-gen-inp-txt validate"
                       pattern="{{ .Data.password_validate_pattern }}"
                       title="{{ .Data.password_validate_title }}"
-                      autocorrect="off" autocapitalize="off" autocomplete="current-password" spellcheck="false"
+                      autocorrect="off" autocapitalize="off" autocomplete="new-password" spellcheck="false"
                       required
                     />
                   </div>
@@ -99,7 +99,7 @@
                   <div class="mt-1">
                     <input type="text" name="first_name" id="first_name"
                       class="app-gen-inp-txt"
-                      autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false"
+                      autocorrect="off" autocapitalize="off" autocomplete="given-name" spellcheck="false"
                     />
                   </div>
                 </div>
@@ -108,7 +108,7 @@
                   <div class="mt-1">
                     <input type="text" name="last_name" id="last_name"
                       class="app-gen-inp-txt"
-                      autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false"
+                      autocorrect="off" autocapitalize="off" autocomplete="family-name" spellcheck="false"
                     />
                   </div>
                 </div>
