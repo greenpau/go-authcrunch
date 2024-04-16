@@ -19,6 +19,7 @@ import (
 	jwtlib "github.com/golang-jwt/jwt/v4"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"go.uber.org/zap"
 	"strings"
 )
 
@@ -96,8 +97,14 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 			return nil, errors.ErrIdentityProviderOAuthEmailNotFound.WithArgs(b.config.IdentityTokenName)
 		}
 	}
-
 	m := make(map[string]interface{})
+	for k, v := range claims {
+		if _, exists := b.userInfoFields[k]; exists {
+			b.logger.Debug("Add user info field.", zap.String(k, fmt.Sprintf("%v", v)))
+			m[k] = v
+		}
+	}
+
 	for _, k := range tokenFields {
 		if _, exists := claims[k]; !exists {
 			continue
