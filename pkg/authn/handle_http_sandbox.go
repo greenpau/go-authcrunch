@@ -379,7 +379,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				}
 				m["view"] = "error"
 				checkpoint.FailedAttempts++
-				return m, fmt.Errorf(strings.Join(tokenErrors, "\n"))
+				return m, fmt.Errorf("%s", strings.Join(tokenErrors, "\n"))
 			case uniConfigured && (action == "mfa-u2f-auth" || action == ""):
 				m["title"] = "Hardware Token"
 				m["view"] = "mfa_u2f_auth"

@@ -16,12 +16,13 @@ package acl
 
 import (
 	"context"
-	"github.com/greenpau/go-authcrunch/internal/tests"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 )
 
 func TestNewAclRule(t *testing.T) {
@@ -12830,7 +12831,7 @@ func TestEvalAclRule(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Logf(tc.name)
+			t.Logf("%s", tc.name)
 			var rule aclRule
 			ctx := context.Background()
 			logger := logutil.NewLogger()
