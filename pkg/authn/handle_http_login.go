@@ -493,6 +493,9 @@ func injectPortalRoles(m map[string]interface{}, cfg *PortalConfig) {
 		for _, roleName := range cfg.GetGuestPortalRoles() {
 			guestRoles = append(guestRoles, roleName)
 		}
+		if len(guestRoles) < 1 {
+			guestRoles = append(guestRoles, defaultGuestRoleName)
+		}
 		m["roles"] = guestRoles
 		return
 	}
@@ -524,11 +527,10 @@ func injectPortalRoles(m map[string]interface{}, cfg *PortalConfig) {
 		roleMap[roleName] = true
 		updatedRoles = append(updatedRoles, roleName)
 	}
-	if !reservedRoleFound {
+	if !reservedRoleFound && len(roles) < 1 {
 		updatedRoles = append(updatedRoles, defaultGuestRoleName)
 	}
 	m["roles"] = updatedRoles
-	return
 }
 
 func (p *Portal) transformUser(ctx context.Context, rr *requests.Request, m map[string]interface{}) error {
