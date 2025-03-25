@@ -112,6 +112,7 @@ type Database struct {
 	refID           map[string]*User
 	refAPIKey       map[string]*User
 	path            string
+	inMemory        bool
 }
 
 // NewDatabase return an instance of Database.
@@ -127,14 +128,17 @@ func NewDatabase(fp string) (*Database, error) {
 		refID:           make(map[string]*User),
 		refEmailAddress: make(map[string]*User),
 		refAPIKey:       make(map[string]*User),
+		inMemory:        fp == ":memory:",
 	}
 	fileInfo, err := os.Stat(fp)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return nil, errors.ErrNewDatabase.WithArgs(fp, err)
-		}
-		if err := os.MkdirAll(filepath.Dir(fp), 0700); err != nil {
-			return nil, errors.ErrNewDatabase.WithArgs(fp, err)
+		if !db.inMemory {
+			if !os.IsNotExist(err) {
+				return nil, errors.ErrNewDatabase.WithArgs(fp, err)
+			}
+			if err := os.MkdirAll(filepath.Dir(fp), 0700); err != nil {
+				return nil, errors.ErrNewDatabase.WithArgs(fp, err)
+			}
 		}
 		db.Version = app.Version
 		db.enforceDefaultPolicy()
@@ -481,11 +485,13 @@ func (db *Database) Copy(fp string) error {
 func (db *Database) commit() error {
 	db.Revision++
 	db.LastModified = time.Now().UTC()
+	if db.inMemory {
+		return nil
+	}
 	data, err := json.MarshalIndent(db, "", "  ")
 	if err != nil {
 		return errors.ErrDatabaseCommit.WithArgs(db.path, err)
 	}
-
 	if err := os.WriteFile(db.path, []byte(data), 0600); err != nil {
 		return errors.ErrDatabaseCommit.WithArgs(db.path, err)
 	}
