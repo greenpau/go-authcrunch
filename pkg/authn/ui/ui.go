@@ -22,6 +22,7 @@ import (
 	"path"
 	"strings"
 	"text/template"
+	"net/url"
 )
 
 // Themes stores UI themes.
@@ -276,9 +277,20 @@ func (f *Factory) DeleteTemplates() {
 	return
 }
 
+func customPathJoin(args ...string) string {
+	// Example of additional logic: cleaning each path part before joining
+	encodedArgs := make([]string, len(args))
+	for i, arg := range args {
+		encodedArgs[i] = url.QueryEscape(arg)
+	}
+	// Join the cleaned path elements
+	joinedPath := path.Join(encodedArgs...)
+	return joinedPath
+}
+
 func loadTemplateFromString(s, p string) (*template.Template, error) {
 	funcMap := template.FuncMap{
-		"pathjoin": path.Join,
+		"pathjoin": customPathJoin,
 		"brsplitline": func(s string) string {
 			var output []rune
 			var count = 0
