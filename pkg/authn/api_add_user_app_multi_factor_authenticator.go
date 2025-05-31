@@ -133,18 +133,18 @@ func (p *Portal) AddUserAppMultiFactorVerifier(
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 
+	rr.MfaToken.Type = "totp"
 	rr.MfaToken.SkipVerification = true
 	rr.MfaToken.Comment = tokenTitle
 	rr.MfaToken.Description = tokenDescription
 	rr.MfaToken.Secret = tokenSecret
-	rr.MfaToken.Type = "totp"
 	rr.MfaToken.Period = tokenLifetime
 	rr.MfaToken.Digits = tokenDigits
 	rr.MfaToken.Labels = tokenLabels
 	rr.MfaToken.Tags = tokenTags
 
 	if err := backend.Request(operator.AddMfaToken, rr); err != nil {
-		resp["message"] = "Profile API failed to add token identity store"
+		resp["message"] = "Profile API failed to add token  to identity store"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 

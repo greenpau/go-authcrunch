@@ -16,14 +16,15 @@ package identity
 
 import (
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"github.com/greenpau/go-authcrunch/internal/tests"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"path"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 var (
@@ -114,6 +115,24 @@ func TestNewDatabase(t *testing.T) {
 			backup: filepath.Join(tmpDir, "user_db_backup.json"),
 			want: map[string]interface{}{
 				"path":       filepath.Join(tmpDir, "user_db.json"),
+				"user_count": 0,
+			},
+		},
+		{
+			name: "test create new in-memory database",
+			path: ":memory:",
+			req: &requests.Request{
+				User: requests.User{
+					Username: "jsmith",
+					Password: passwd,
+					Email:    "jsmith@gmail.com",
+					FullName: "Smith, John",
+					Roles:    []string{"viewer", "editor", "admin"},
+				},
+			},
+			backup: filepath.Join(tmpDir, "user_db_backup.json"),
+			want: map[string]interface{}{
+				"path":       ":memory:",
 				"user_count": 0,
 			},
 		},

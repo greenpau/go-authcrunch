@@ -20,10 +20,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
-// StaticAssets is an instance of StaticAssetLibrary.
+// StaticAssets is an instance of StaticAssetLibrary containing plain HTML.
 var StaticAssets *StaticAssetLibrary
+
+// AppAssets is an instance of StaticAssetLibrary containing React Apps.
+var AppAssets *StaticAssetLibrary
 
 // StaticAsset is a single static web asset.
 type StaticAsset struct {
@@ -47,6 +51,74 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	AppAssets, err = NewAppAssetLibrary()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func getContentType(filePath string) (string, error) {
+	ext := filepath.Ext(filePath)
+	switch ext {
+	case ".html":
+		return "text/html", nil
+	case ".ttf":
+		return "font/ttf", nil
+	case ".woff":
+		return "font/woff", nil
+	case ".woff2":
+		return "font/woff2", nil
+	case ".ico":
+		return "image/vnd.microsoft.icon", nil
+	case ".js":
+		return "application/javascript", nil
+	case ".css":
+		return "text/css", nil
+	case ".eot":
+		return "application/vnd.ms-fontobject", nil
+	case ".svg":
+		return "image/svg+xml", nil
+	case ".jpg", ".jpeg":
+		return "image/jpeg", nil
+	case ".png":
+		return "image/png", nil
+	case ".gif":
+		return "image/gif", nil
+	case ".json":
+		return "application/json", nil
+	case ".txt":
+		return "text/plain", nil
+	case ".xml":
+		return "application/xml", nil
+	default:
+		return "", fmt.Errorf("extension %q is not supported", ext)
+	}
+}
+
+// NewAppAssetLibrary returns an instance of StaticAssetLibrary.
+func NewAppAssetLibrary() (*StaticAssetLibrary, error) {
+	sal := &StaticAssetLibrary{}
+	sal.items = make(map[string]*StaticAsset)
+	for path, embedPath := range embedPages {
+		b, err := embedFileSystem.ReadFile(embedPath)
+		if err != nil {
+			return nil, fmt.Errorf("app asset %s reading error: %s", embedPath, err)
+		}
+		ct, err := getContentType(embedPath)
+		if err != nil {
+			return nil, fmt.Errorf("app asset %s getting content type: %s", embedPath, err)
+		}
+		item := &StaticAsset{
+			Path:        path,
+			ContentType: ct,
+			Content:     string(b),
+		}
+		h := sha1.New()
+		io.WriteString(h, item.Content)
+		item.Checksum = base64.URLEncoding.EncodeToString(h.Sum(nil))
+		sal.items[path] = item
+	}
+	return sal, nil
 }
 
 // NewStaticAssetLibrary returns an instance of StaticAssetLibrary.

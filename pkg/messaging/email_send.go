@@ -16,13 +16,14 @@ package messaging
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/util"
-	"strings"
-	"time"
 )
 
 // EmailProviderSendInput is input for EmailProvider.Send function.
@@ -48,11 +49,13 @@ func (e *EmailProvider) Send(req *EmailProviderSendInput) error {
 	}
 	defer c.Close()
 
-	if found, _ := c.Extension("STARTTLS"); found {
-		if err := c.StartTLS(nil); err != nil {
-			return err
+	/*
+		if found, _ := c.Extension("STARTTLS"); found {
+			if err := c.StartTLS(nil); err != nil {
+				return err
+			}
 		}
-	}
+	*/
 
 	if !e.Passwordless && req.Credentials != nil {
 		if found, _ := c.Extension("AUTH"); !found {
@@ -104,7 +107,7 @@ func (e *EmailProvider) Send(req *EmailProviderSendInput) error {
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(wc, msg)
+	_, err = fmt.Fprintf(wc, "%s", msg)
 	if err != nil {
 		return err
 	}

@@ -26,7 +26,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// FetchUserDashboardData fetches user identity information.
+// FetchUserDashboardData fetches user dashboard information.
 func (p *Portal) FetchUserDashboardData(
 	ctx context.Context,
 	w http.ResponseWriter,
@@ -58,6 +58,7 @@ func (p *Portal) FetchUserDashboardData(
 
 	// API Keys
 	rr.Key.Usage = "api"
+	rr.Key.IncludeAll = true
 	err = backend.Request(operator.GetAPIKeys, rr)
 	if err != nil {
 		resp["message"] = "failed to extract user api keys"
@@ -75,6 +76,7 @@ func (p *Portal) FetchUserDashboardData(
 
 	// SSH Keys
 	rr.Key.Usage = "ssh"
+	rr.Key.IncludeAll = true
 	err = backend.Request(operator.GetPublicKeys, rr)
 	if err != nil {
 		resp["message"] = "failed to extract user ssh keys"
@@ -92,6 +94,7 @@ func (p *Portal) FetchUserDashboardData(
 
 	// GPG Keys
 	rr.Key.Usage = "gpg"
+	rr.Key.IncludeAll = true
 	err = backend.Request(operator.GetPublicKeys, rr)
 	if err != nil {
 		resp["message"] = "failed to extract user gpg keys"
@@ -108,6 +111,7 @@ func (p *Portal) FetchUserDashboardData(
 	assetCount["gpg_key"] = len(gpgKeys)
 
 	// MFA and 2FA
+	rr.MfaToken.IncludeAll = true
 	if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
 		resp["message"] = "failed to extract user MFA/2FA"
 		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)

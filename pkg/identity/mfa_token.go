@@ -425,7 +425,7 @@ func (p *MfaToken) WebAuthnRequest(payload string) (*WebAuthnAuthenticateRequest
 	}
 
 	// Verify that the value of C.crossOrigin is false.
-	if r.ClientData.CrossOrigin == true {
+	if r.ClientData.CrossOrigin {
 		return r, errors.ErrWebAuthnRequest.WithArgs("client data cross origin true is not supported")
 	}
 
@@ -438,7 +438,7 @@ func (p *MfaToken) WebAuthnRequest(payload string) (*WebAuthnAuthenticateRequest
 	}
 
 	// Verify that the User Present bit of the flags in authData is set.
-	if r.AuthData.Flags["UP"] != true {
+	if !r.AuthData.Flags["UP"] {
 		return r, errors.ErrWebAuthnRequest.WithArgs("authData User Present bit is not set")
 	}
 

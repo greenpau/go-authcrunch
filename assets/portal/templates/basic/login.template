@@ -40,7 +40,7 @@
                     <label for="username" class="block text-center pb-2 text-lg font-sans font-medium text-primary-700">Please provide username or email address</label>
                     <div class="app-inp-box">
                       <div class="app-inp-prf-img"><i class="las la-user"></i></div>
-                      <input class="app-inp-txt" id="username" name="username" type="text" autocorrect="off" autocapitalize="off" spellcheck="false" autofocus required />
+                      <input class="app-inp-txt" id="username" name="username" type="text" autocorrect="off" autocapitalize="off" autocomplete="username" spellcheck="false" autofocus required />
                     </div>
                   </div>
 

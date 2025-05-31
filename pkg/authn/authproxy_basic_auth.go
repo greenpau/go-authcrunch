@@ -17,14 +17,15 @@ package authn
 import (
 	"context"
 	"encoding/base64"
+	"strings"
+	"time"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"go.uber.org/zap"
-	"strings"
-	"time"
 )
 
 // BasicAuth performs API key authentication.
@@ -148,7 +149,7 @@ func (p *Portal) BasicAuth(r *authproxy.Request) error {
 	}
 
 	// Inject portal specific roles
-	injectPortalRoles(m)
+	injectPortalRoles(m, p.config)
 
 	// Create a new user and sign the token.
 	usr, err := user.NewUser(m)

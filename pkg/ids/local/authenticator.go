@@ -24,6 +24,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	defaultAdminRoleName = "authp/admin"
+)
+
 // Authenticator represents database connector.
 type Authenticator struct {
 	db     *identity.Database
@@ -109,7 +113,7 @@ func (sa *Authenticator) Configure(fp string, users []*User) error {
 				Username: os.Getenv("AUTHP_ADMIN_USER"),
 				Password: os.Getenv("AUTHP_ADMIN_SECRET"),
 				Email:    os.Getenv("AUTHP_ADMIN_EMAIL"),
-				Roles:    []string{"authp/admin"},
+				Roles:    []string{defaultAdminRoleName},
 			},
 		}
 

@@ -15,11 +15,13 @@
 package identity
 
 import (
+	"time"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/tagging"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	"golang.org/x/crypto/bcrypt"
-	"time"
 )
 
 // APIKeyBundle is a collection of API keys.
@@ -30,16 +32,19 @@ type APIKeyBundle struct {
 
 // APIKey is an API key.
 type APIKey struct {
-	ID         string    `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
-	Prefix     string    `json:"prefix,omitempty" xml:"prefix,omitempty" yaml:"prefix,omitempty"`
-	Usage      string    `json:"usage,omitempty" xml:"usage,omitempty" yaml:"usage,omitempty"`
-	Comment    string    `json:"comment,omitempty" xml:"comment,omitempty" yaml:"comment,omitempty"`
-	Payload    string    `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
-	Expired    bool      `json:"expired,omitempty" xml:"expired,omitempty" yaml:"expired,omitempty"`
-	ExpiredAt  time.Time `json:"expired_at,omitempty" xml:"expired_at,omitempty" yaml:"expired_at,omitempty"`
-	CreatedAt  time.Time `json:"created_at,omitempty" xml:"created_at,omitempty" yaml:"created_at,omitempty"`
-	Disabled   bool      `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
-	DisabledAt time.Time `json:"disabled_at,omitempty" xml:"disabled_at,omitempty" yaml:"disabled_at,omitempty"`
+	ID          string        `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
+	Prefix      string        `json:"prefix,omitempty" xml:"prefix,omitempty" yaml:"prefix,omitempty"`
+	Usage       string        `json:"usage,omitempty" xml:"usage,omitempty" yaml:"usage,omitempty"`
+	Comment     string        `json:"comment,omitempty" xml:"comment,omitempty" yaml:"comment,omitempty"`
+	Payload     string        `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
+	Expired     bool          `json:"expired,omitempty" xml:"expired,omitempty" yaml:"expired,omitempty"`
+	ExpiredAt   time.Time     `json:"expired_at,omitempty" xml:"expired_at,omitempty" yaml:"expired_at,omitempty"`
+	CreatedAt   time.Time     `json:"created_at,omitempty" xml:"created_at,omitempty" yaml:"created_at,omitempty"`
+	Disabled    bool          `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
+	DisabledAt  time.Time     `json:"disabled_at,omitempty" xml:"disabled_at,omitempty" yaml:"disabled_at,omitempty"`
+	Description string        `json:"description,omitempty" xml:"description,omitempty" yaml:"description,omitempty"`
+	Tags        []tagging.Tag `json:"tags,omitempty" xml:"tags,omitempty" yaml:"tags,omitempty"`
+	Labels      []string      `json:"labels,omitempty" xml:"labels,omitempty" yaml:"labels,omitempty"`
 }
 
 // NewAPIKeyBundle returns an instance of APIKeyBundle.
@@ -80,12 +85,15 @@ func NewAPIKey(r *requests.Request) (*APIKey, error) {
 		return nil, errors.ErrAPIKeyCommentEmpty
 	}
 	p := &APIKey{
-		Comment:   r.Key.Comment,
-		ID:        util.GetRandomString(40),
-		Prefix:    r.Key.Prefix,
-		Payload:   r.Key.Payload,
-		Usage:     r.Key.Usage,
-		CreatedAt: time.Now().UTC(),
+		Comment:     r.Key.Comment,
+		ID:          util.GetRandomString(40),
+		Prefix:      r.Key.Prefix,
+		Payload:     r.Key.Payload,
+		Usage:       r.Key.Usage,
+		CreatedAt:   time.Now().UTC(),
+		Description: r.Key.Description,
+		Tags:        r.Key.Tags,
+		Labels:      r.Key.Labels,
 	}
 	if r.Key.Disabled {
 		p.Disabled = true

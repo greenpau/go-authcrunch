@@ -106,6 +106,7 @@ type Key struct {
 	Payload     string        `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
 	Disabled    bool          `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
 	Description string        `json:"description,omitempty" xml:"description,omitempty" yaml:"description,omitempty"`
+	IncludeAll  bool          `json:"include_all,omitempty" xml:"include_all,omitempty" yaml:"include_all,omitempty"`
 	Tags        []tagging.Tag `json:"tags,omitempty" xml:"tags,omitempty" yaml:"tags,omitempty"`
 	Labels      []string      `json:"labels,omitempty" xml:"labels,omitempty" yaml:"labels,omitempty"`
 }
@@ -123,6 +124,7 @@ type MfaToken struct {
 	Passcode         string        `json:"passcode,omitempty" xml:"passcode,omitempty" yaml:"passcode,omitempty"`
 	Disabled         bool          `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
 	SkipVerification bool          `json:"skip_verification,omitempty" xml:"skip_verification,omitempty" yaml:"skip_verification,omitempty"`
+	IncludeAll       bool          `json:"include_all,omitempty" xml:"include_all,omitempty" yaml:"include_all,omitempty"`
 	Tags             []tagging.Tag `json:"tags,omitempty" xml:"tags,omitempty" yaml:"tags,omitempty"`
 	Labels           []string      `json:"labels,omitempty" xml:"labels,omitempty" yaml:"labels,omitempty"`
 }

@@ -17,11 +17,13 @@ package user
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
+	"time"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	datautil "github.com/greenpau/go-authcrunch/pkg/util/data"
-	"strings"
-	"time"
 )
 
 /*
@@ -290,6 +292,16 @@ func (u *User) SetRolesClaim(roles []string) {
 func (u *User) HasRole(roles ...string) bool {
 	for _, role := range roles {
 		if _, exists := u.rkv[role]; exists {
+			return true
+		}
+	}
+	return false
+}
+
+// HasRolePattern checks whether a user has a role matching the provided pattern.
+func (u *User) HasRolePattern(ptrn *regexp.Regexp) bool {
+	for roleName := range u.rkv {
+		if ptrn.MatchString(roleName) {
 			return true
 		}
 	}

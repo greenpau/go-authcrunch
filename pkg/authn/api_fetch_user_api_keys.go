@@ -44,10 +44,10 @@ func (p *Portal) FetchUserAPIKeys(
 	bundle := rr.Response.Payload.(*identity.APIKeyBundle)
 
 	apiKeys := bundle.Get()
-	for _, apiKey := range apiKeys {
-		apiKey.Payload = ""
-		apiKey.Prefix = ""
-	}
+	// for _, apiKey := range apiKeys {
+	// 	apiKey.Payload = ""
+	// 	apiKey.Prefix = ""
+	// }
 	resp["entries"] = apiKeys
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }

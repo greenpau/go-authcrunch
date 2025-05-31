@@ -43,10 +43,10 @@ func (p *Portal) FetchUserSSHKeys(
 	}
 	bundle := rr.Response.Payload.(*identity.PublicKeyBundle)
 	sshKeys := bundle.Get()
-	for _, sshKey := range sshKeys {
-		sshKey.Payload = ""
-		sshKey.OpenSSH = ""
-	}
+	// for _, sshKey := range sshKeys {
+	// 	sshKey.Payload = ""
+	// 	sshKey.OpenSSH = ""
+	// }
 	resp["entries"] = sshKeys
 
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)

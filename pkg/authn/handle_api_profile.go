@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/authn/enums/role"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 
 	"regexp"
@@ -68,7 +69,7 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return handleAPIProfileResponse(w, rr, http.StatusUnauthorized, resp)
 	}
 
-	if permitted := usr.HasRole("authp/admin", "authp/user"); !permitted {
+	if err := p.authorizedRole(usr, []role.Kind{role.Admin, role.User}, rr.Response.Authenticated); err != nil {
 		resp["message"] = "Profile API did not find valid role for the user"
 		return handleAPIProfileResponse(w, rr, http.StatusForbidden, resp)
 	}
@@ -102,9 +103,13 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	case "fetch_user_app_multi_factor_authenticator_code":
 	case "test_user_app_multi_factor_authenticator":
 	case "add_user_app_multi_factor_authenticator":
+	case "test_user_webauthn_token":
+	case "test_user_app_token_passcode":
 	case "fetch_user_api_keys":
 	case "fetch_user_api_key":
 	case "delete_user_api_key":
+	case "add_user_api_key":
+	case "test_user_api_key":
 	case "fetch_user_ssh_keys":
 	case "fetch_user_ssh_key":
 	case "delete_user_ssh_key":
@@ -116,6 +121,11 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	case "test_user_gpg_key":
 	case "add_user_gpg_key":
 	case "fetch_user_u2f_reg_params":
+	case "fetch_user_u2f_ver_params":
+	case "test_user_u2f_reg":
+	case "add_user_u2f_token":
+	case "fetch_user_info":
+	case "update_user_password":
 	default:
 		resp["message"] = "Profile API received unsupported request type"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
@@ -163,6 +173,10 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return p.FetchDebug(ctx, w, r, rr, parsedUser, resp, usr, backend)
 	case "fetch_user_dashboard_data":
 		return p.FetchUserDashboardData(ctx, w, r, rr, parsedUser, resp, usr, backend)
+	case "fetch_user_info":
+		return p.FetchUserInfo(ctx, w, r, rr, parsedUser, resp, usr, backend)
+	case "update_user_password":
+		return p.UpdateUserPassword(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "fetch_user_multi_factor_authenticators":
 		return p.FetchUserMultiFactorVerifiers(ctx, w, r, rr, parsedUser, resp, usr, backend)
 	case "fetch_user_multi_factor_authenticator":
@@ -175,14 +189,28 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return p.TestUserAppMultiFactorVerifier(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "add_user_app_multi_factor_authenticator":
 		return p.AddUserAppMultiFactorVerifier(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "test_user_webauthn_token":
+		return p.TestUserWebAuthnToken(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "test_user_app_token_passcode":
+		return p.TestUserAppTokenPasscode(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "fetch_user_u2f_reg_params":
 		return p.FetchUserUniSecFactorRegParams(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "fetch_user_u2f_ver_params":
+		return p.FetchUserUniSecFactorVerParams(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "test_user_u2f_reg":
+		return p.TestUserUniSecFactorReg(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "add_user_u2f_token":
+		return p.AddUserUniSecFactorToken(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "fetch_user_api_keys":
 		return p.FetchUserAPIKeys(ctx, w, r, rr, parsedUser, resp, usr, backend)
 	case "fetch_user_api_key":
 		return p.FetchUserAPIKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "delete_user_api_key":
 		return p.DeleteUserAPIKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "add_user_api_key":
+		return p.AddUserAPIKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "test_user_api_key":
+		return p.TestUserAPIKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "fetch_user_ssh_keys":
 		return p.FetchUserSSHKeys(ctx, w, r, rr, parsedUser, resp, usr, backend)
 	case "fetch_user_ssh_key":

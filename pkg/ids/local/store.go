@@ -122,7 +122,6 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 	case operator.DeletePublicKey:
 		return b.authenticator.DeletePublicKey(r)
 	case operator.AddMfaToken:
-		// b.logger.Debug("detected supported identity store operation", zap.Any("op", op), zap.Any("params", r))
 		return b.authenticator.AddMfaToken(r)
 	case operator.DeleteMfaToken:
 		return b.authenticator.DeleteMfaToken(r)
@@ -132,8 +131,12 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 		return b.authenticator.DeleteAPIKey(r)
 	case operator.GetPublicKeys:
 		return b.authenticator.GetPublicKeys(r)
+	case operator.GetPublicKey:
+		return b.authenticator.GetPublicKey(r)
 	case operator.GetAPIKeys:
 		return b.authenticator.GetAPIKeys(r)
+	case operator.GetAPIKey:
+		return b.authenticator.GetAPIKey(r)
 	case operator.GetMfaTokens:
 		return b.authenticator.GetMfaTokens(r)
 	case operator.GetMfaToken:

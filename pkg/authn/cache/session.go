@@ -50,11 +50,12 @@ type SessionCache struct {
 
 // NewSessionCache returns SessionCache instance.
 func NewSessionCache() *SessionCache {
-	return &SessionCache{
+	c := &SessionCache{
 		cleanupInternal: defaultSessionCleanupInternal,
 		Entries:         make(map[string]*SessionCacheEntry),
 		exit:            make(chan bool),
 	}
+	return c
 }
 
 // SetCleanupInterval sets cache management interval.
@@ -104,7 +105,6 @@ func manageSessionCache(c *SessionCache) {
 		}
 		c.mu.Unlock()
 	}
-	return
 }
 
 // Run starts management of SessionCache instance.
@@ -166,7 +166,12 @@ func (c *SessionCache) Get(sessionID string) (*user.User, error) {
 	defer c.mu.RUnlock()
 	if entry, exists := c.Entries[sessionID]; exists {
 		if err := entry.Valid(); err != nil {
+			delete(c.Entries, sessionID)
 			return nil, fmt.Errorf("cached session id error: %s", err)
+		}
+		if entry.user == nil {
+			delete(c.Entries, sessionID)
+			return nil, fmt.Errorf("cached session id %s has nil user", sessionID)
 		}
 		return entry.user, nil
 	}

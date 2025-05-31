@@ -16,10 +16,11 @@ package tag
 
 import (
 	"fmt"
-	"github.com/iancoleman/strcase"
 	"reflect"
 	"strings"
 	"unicode"
+
+	"github.com/iancoleman/strcase"
 )
 
 // Options stores compliance check options.
@@ -45,7 +46,7 @@ func GetTagCompliance(resource interface{}, opts *Options) ([]string, error) {
 
 	rr := reflect.TypeOf(resource).Elem()
 	//resourceType := fmt.Sprintf("%s", rr.Name())
-	rk := fmt.Sprintf("%s", rr.Kind())
+	rk := rr.Kind().String()
 
 	if rk != "struct" {
 		return nil, fmt.Errorf("resource kind %q is unsupported", rk)

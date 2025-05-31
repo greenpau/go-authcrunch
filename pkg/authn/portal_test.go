@@ -15,6 +15,8 @@
 package authn
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/internal/testutils"
@@ -27,7 +29,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
-	"testing"
 )
 
 func TestNewPortal(t *testing.T) {
@@ -133,14 +134,34 @@ func TestNewPortal(t *testing.T) {
 				"ui": {
 				  "theme": "basic"
 				},
+				"portal_admin_roles": {
+					"authp/admin": true
+				},
+				"portal_user_roles": {
+					"authp/user": true
+				},
+				"portal_guest_roles": {
+					"authp/guest": true
+				},
 				"token_validator_options": {
 				  "validate_bearer_header": true
 				},
 				"access_list_configs": [
-                  {
-                    "action": "` + defaultPortalACLAction + `",
-                    "conditions": ["` + defaultPortalACLCondition + `"]
-				  }
+					{
+						"action": "allow stop",
+						"comment": "admin role name match",
+						"conditions": ["match role authp/admin"]
+					},
+					{
+						"action": "allow stop",
+						"comment": "user role name match",
+						"conditions": ["match role authp/user"]
+					},
+					{
+						"action": "allow stop",
+						"comment": "guest role name match",
+						"conditions": ["match role authp/guest"]
+					}
 				],
 				"identity_stores": ["local_backend"]
               }

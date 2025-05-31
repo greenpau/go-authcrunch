@@ -16,21 +16,25 @@ package authcrunch
 
 import (
 	"fmt"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+
 	// "github.com/greenpau/go-authcrunch/pkg/authn/registration"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
+
 	// "github.com/greenpau/go-authcrunch/pkg/errors"
+	"testing"
+
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
-	"testing"
 )
 
 func TestNewServer(t *testing.T) {
@@ -142,17 +146,35 @@ func TestNewServer(t *testing.T) {
                 "authentication_portals": [
                   {
                     "access_list_configs": [
-                      {
-                        "action": "allow stop",
-                        "conditions": [
-                          "match roles authp/admin authp/user authp/guest superuser superadmin"
-                        ]
-                      }
+						{
+							"action": "allow stop",
+							"comment": "admin role name match",
+							"conditions": ["match role authp/admin"]
+						},
+						{
+							"action": "allow stop",
+							"comment": "user role name match",
+							"conditions": ["match role authp/user"]
+						},
+						{
+							"action": "allow stop",
+							"comment": "guest role name match",
+							"conditions": ["match role authp/guest"]
+						}
                     ],
                     "identity_stores": [
                       "localdb"
                     ],
                     "name": "myportal",
+					"portal_admin_roles": {
+						"authp/admin": true
+					},
+					"portal_user_roles": {
+						"authp/user": true
+					},
+					"portal_guest_roles": {
+						"authp/guest": true
+					},
                     "token_validator_options": {
                       "validate_bearer_header": true
                     },

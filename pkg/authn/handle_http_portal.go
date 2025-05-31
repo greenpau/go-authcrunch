@@ -16,13 +16,36 @@ package authn
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
-	"net/http"
-	"net/url"
 )
+
+func getEndpoint(p, s string) (string, error) {
+	i := strings.Index(p, s)
+	if i < 0 {
+		return s, fmt.Errorf("%s is not in %s", p, s)
+	}
+	return strings.TrimPrefix(p[i:], s), nil
+}
+
+func getEndpointKeyID(p, s string) (string, error) {
+	sp, err := getEndpoint(p, s)
+	if err != nil {
+		return "", err
+	}
+	arr := strings.Split(sp, "/")
+	if len(arr) != 1 {
+		return "", fmt.Errorf("invalid key id")
+	}
+	return arr[0], nil
+}
 
 func (p *Portal) handleHTTPPortal(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, parsedUser *user.User) error {
 	p.disableClientCache(w)

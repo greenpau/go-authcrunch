@@ -1003,7 +1003,7 @@ func TestStructTagCompliance(t *testing.T) {
 			}
 		}
 		if len(msgs) > 0 {
-			t.Logf("Add the following tests:\n" + strings.Join(msgs, "\n"))
+			t.Logf("%s", "Add the following tests:\n"+strings.Join(msgs, "\n"))
 			t.Fatal("Fix above structs")
 		}
 	}

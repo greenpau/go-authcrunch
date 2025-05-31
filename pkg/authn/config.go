@@ -15,6 +15,8 @@
 package authn
 
 import (
+	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
@@ -26,6 +28,12 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
+)
+
+const (
+	defaultGuestRoleName = "authp/guest"
+	defaultUserRoleName  = "authp/user"
+	defaultAdminRoleName = "authp/admin"
 )
 
 // PortalConfig represents Portal configuration.
@@ -58,6 +66,24 @@ type PortalConfig struct {
 	// TrustedLogoutRedirectURIConfigs holds the configuration of trusted logout redirect URIs.
 	TrustedLogoutRedirectURIConfigs []*redirects.RedirectURIMatchConfig `json:"trusted_logout_redirect_uri_configs,omitempty" xml:"trusted_logout_redirect_uri_configs,omitempty" yaml:"trusted_logout_redirect_uri_configs,omitempty"`
 
+	// PortalAdminRoles holds the list of role names granted to do administrative tasks in the portal.
+	PortalAdminRoles map[string]interface{} `json:"portal_admin_roles,omitempty" xml:"portal_admin_roles,omitempty" yaml:"portal_admin_roles,omitempty"`
+	// PortalUserRoles holds the list of role names granted to do perform profile tasks in the portal.
+	PortalUserRoles map[string]interface{} `json:"portal_user_roles,omitempty" xml:"portal_user_roles,omitempty" yaml:"portal_user_roles,omitempty"`
+	// PortalGuestRoles holds the list of role names without admin or user privileges in the portal.
+	PortalGuestRoles map[string]interface{} `json:"portal_guest_roles,omitempty" xml:"portal_guest_roles,omitempty" yaml:"portal_guest_roles,omitempty"`
+
+	// PortalAdminRolePatterns holds the list of regular expressions for the role names granted to do administrative tasks in the portal.
+	PortalAdminRolePatterns []string `json:"portal_admin_role_patterns,omitempty" xml:"portal_admin_role_patterns,omitempty" yaml:"portal_admin_role_patterns,omitempty"`
+	adminRolePatterns       []*regexp.Regexp
+	// PortalUserRolePatterns holds the list of regular expressions for the role names granted to do perform profile tasks in the portal.
+	PortalUserRolePatterns []string `json:"portal_user_role_patterns,omitempty" xml:"portal_user_role_patterns,omitempty" yaml:"portal_user_role_patterns,omitempty"`
+	userRolePatterns       []*regexp.Regexp
+	// PortalGuestRolePatterns holds the list of regular expressions for the role names without admin or user privileges in the portal.
+	PortalGuestRolePatterns []string `json:"portal_guest_role_patterns,omitempty" xml:"portal_guest_role_patterns,omitempty" yaml:"portal_guest_role_patterns,omitempty"`
+	guestRolePatterns       []*regexp.Regexp
+	reservedPortalRoles     map[string]interface{}
+	guestPortalRoles        []string
 	// API holds the configuration for API endpoints.
 	API *APIConfig `json:"api,omitempty" xml:"api,omitempty" yaml:"api,omitempty"`
 
@@ -116,6 +142,89 @@ func (cfg *PortalConfig) parseRawCryptoConfigs() error {
 	return nil
 }
 
+// GetReservedPortalRoles returns the names of reserved portal roles.
+func (cfg *PortalConfig) GetReservedPortalRoles() map[string]interface{} {
+	if cfg.reservedPortalRoles == nil {
+		cfg.parsePortalRoles()
+	}
+	return cfg.reservedPortalRoles
+}
+
+// GetGuestPortalRoles returns the names of guest portal roles.
+func (cfg *PortalConfig) GetGuestPortalRoles() []string {
+	return cfg.guestPortalRoles
+}
+
+// parsePortalRoles validates the configuration of portal roles.
+func (cfg *PortalConfig) parsePortalRoles() error {
+	if cfg.reservedPortalRoles == nil {
+		cfg.reservedPortalRoles = make(map[string]interface{})
+	}
+
+	if cfg.PortalAdminRoles == nil {
+		cfg.PortalAdminRoles = make(map[string]interface{})
+	}
+	if len(cfg.PortalAdminRoles) < 1 {
+		cfg.PortalAdminRoles[defaultAdminRoleName] = true
+		cfg.reservedPortalRoles[defaultAdminRoleName] = true
+	}
+
+	if cfg.PortalUserRoles == nil {
+		cfg.PortalUserRoles = make(map[string]interface{})
+	}
+	if len(cfg.PortalUserRoles) < 1 {
+		cfg.PortalUserRoles[defaultUserRoleName] = true
+		cfg.reservedPortalRoles[defaultUserRoleName] = true
+	}
+
+	if cfg.PortalGuestRoles == nil {
+		cfg.PortalGuestRoles = make(map[string]interface{})
+		cfg.reservedPortalRoles[defaultGuestRoleName] = true
+	}
+	if len(cfg.PortalGuestRoles) < 1 {
+		cfg.PortalGuestRoles[defaultGuestRoleName] = true
+	}
+
+	if slices.Contains(cfg.guestPortalRoles, defaultGuestRoleName) {
+		cfg.guestPortalRoles = append(cfg.guestPortalRoles, defaultGuestRoleName)
+	}
+
+	for _, ptrn := range cfg.PortalAdminRolePatterns {
+		if ptrn == "" {
+			return errors.ErrInvalidConfiguration.WithArgs("portal", "admin role pattern is empty")
+		}
+		r, err := regexp.Compile(ptrn)
+		if err != nil {
+			return errors.ErrInvalidConfiguration.WithArgs("portal admin role pattern", err)
+		}
+		cfg.adminRolePatterns = append(cfg.adminRolePatterns, r)
+	}
+
+	for _, ptrn := range cfg.PortalUserRolePatterns {
+		if ptrn == "" {
+			return errors.ErrInvalidConfiguration.WithArgs("portal", "user role pattern is empty")
+		}
+		r, err := regexp.Compile(ptrn)
+		if err != nil {
+			return errors.ErrInvalidConfiguration.WithArgs("portal user role pattern", err)
+		}
+		cfg.userRolePatterns = append(cfg.userRolePatterns, r)
+	}
+
+	for _, ptrn := range cfg.PortalGuestRolePatterns {
+		if ptrn == "" {
+			return errors.ErrInvalidConfiguration.WithArgs("portal", "guest role pattern is empty")
+		}
+		r, err := regexp.Compile(ptrn)
+		if err != nil {
+			return errors.ErrInvalidConfiguration.WithArgs("portal guest role pattern", err)
+		}
+		cfg.guestRolePatterns = append(cfg.guestRolePatterns, r)
+	}
+
+	return nil
+}
+
 // Validate validates PortalConfig.
 func (cfg *PortalConfig) Validate() error {
 	if cfg.validated {
@@ -128,6 +237,10 @@ func (cfg *PortalConfig) Validate() error {
 	// if len(cfg.IdentityStores) == 0 && len(cfg.IdentityProviders) == 0 {
 	//	  return errors.ErrPortalConfigBackendsNotFound
 	// }
+
+	if err := cfg.parsePortalRoles(); err != nil {
+		return err
+	}
 
 	if err := cfg.parseRawCryptoConfigs(); err != nil {
 		return err
