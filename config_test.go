@@ -299,6 +299,41 @@ func TestNewConfig(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "test valid config whan multiple portals have same realm from different identity stores",
+			identityStores: []*ids.IdentityStoreConfig{
+				{
+					Name: "localdb1",
+					Kind: "local",
+					Params: map[string]interface{}{
+						"realm": "local",
+						"path":  filepath.Join(path.Dir(dbPath), "user_db1.json"),
+					},
+				},
+				{
+					Name: "localdb2",
+					Kind: "local",
+					Params: map[string]interface{}{
+						"realm": "local",
+						"path":  filepath.Join(path.Dir(dbPath), "user_db2.json"),
+					},
+				},
+			},
+			portals: []*authn.PortalConfig{
+				{
+					Name: "myportal1",
+					IdentityStores: []string{
+						"localdb1",
+					},
+				},
+				{
+					Name: "myportal2",
+					IdentityStores: []string{
+						"localdb2",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testcases {
@@ -360,4 +395,10 @@ func TestNewConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateNilConfig(t *testing.T) {
+	var cfg *Config
+	err := cfg.Validate()
+	tests.EvalErrWithLog(t, err, "Validate", true, fmt.Errorf("config is nil"), nil)
 }
