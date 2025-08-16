@@ -23,6 +23,8 @@
 #
 #- name: John Smith
 #  email: foo@bar.com
+- name: Gerard Salvatella
+  email: github@wish.yt
 - name: Lennart Schoch
   email: lennartschoch@protonmail.com
 - name: Antonio Cunha
