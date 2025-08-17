@@ -155,6 +155,10 @@ func (b *IdentityProvider) Configure() error {
 		entityID, _ := url.Parse(b.config.EntityID)
 		sp.MetadataURL = *entityID
 
+		if b.config.EntityID != "" {
+			sp.EntityID = b.config.EntityID
+		}
+
 		if b.idpMetadataURL != nil {
 			sp.MetadataURL = *b.idpMetadataURL
 		}
