@@ -202,7 +202,11 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	r.Response.Code = http.StatusFound
 	state := uuid.New().String()
 	nonce := util.GetRandomString(32)
-	params := url.Values{}
+	authorizationURL, err := url.Parse(b.authorizationURL)
+	if err != nil {
+		return errors.ErrIdentityProviderConfig.WithArgs("could not parse authorization url")
+	}
+	params := authorizationURL.Query()
 	// CSRF Protection
 	params.Set("state", state)
 	if !b.disableNonce {
@@ -232,7 +236,8 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 
 	params.Set("client_id", b.config.ClientID)
 
-	r.Response.RedirectURL = b.authorizationURL + "?" + params.Encode()
+	authorizationURL.RawQuery = params.Encode()
+	r.Response.RedirectURL = authorizationURL.String()
 
 	b.state.add(state, nonce)
 	b.logger.Debug(
