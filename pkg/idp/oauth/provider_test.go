@@ -19,14 +19,15 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/internal/tests"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
-	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
+	"go.uber.org/zap"
 )
 
 func TestNewIdentityProvider(t *testing.T) {
@@ -175,6 +176,86 @@ func TestNewIdentityProvider(t *testing.T) {
 						"class_name":       string("lab la-codepen la-2x"),
 						"color":            string("white"),
 						"text_color":       string("#37474f"),
+					},
+				},
+			},
+		},
+		{
+			name: "discord provider",
+			config: &Config{
+				Name:         "discord",
+				Realm:        "discord",
+				Driver:       "discord",
+				ClientID:     "foo",
+				ClientSecret: "bar",
+			},
+			logger: logutil.NewLogger(),
+			want: map[string]interface{}{
+				"kind":  "oauth",
+				"name":  "discord",
+				"realm": "discord",
+				"config": map[string]interface{}{
+					"name":                  "discord",
+					"realm":                 "discord",
+					"driver":                "discord",
+					"client_id":             "foo",
+					"client_secret":         "bar",
+					"server_name":           "discord.com",
+					"identity_token_name":   "id_token", // maybe change this to access_token
+					"scopes":                []any{"identify"},
+					"base_auth_url":         "https://discord.com/oauth2",
+					"response_type":         []any{"code"},
+					"required_token_fields": []any{"access_token"},
+					"authorization_url":     "https://discord.com/oauth2/authorize",
+					"token_url":             "https://discord.com/api/oauth2/token",
+					"login_icon": map[string]any{
+						"class_name":       "lab la-discord la-2x",
+						"color":            "white",
+						"text":             "Discord",
+						"background_color": "#5865f2",
+						"text_color":       "#37474f",
+					},
+				},
+			},
+		},
+		{
+			name: "discord provider with overridden urls",
+			config: &Config{
+				Name:         "discord",
+				Realm:        "discord",
+				Driver:       "discord",
+				ClientID:     "foo",
+				ClientSecret: "bar",
+
+				BaseAuthURL:      "https://discordapp.com/other",
+				AuthorizationURL: "https://discordapp.com/other/authorize?prompt=none",
+				TokenURL:         "https://discordapp.com/other/oauth2/token",
+			},
+			logger: logutil.NewLogger(),
+			want: map[string]interface{}{
+				"kind":  "oauth",
+				"name":  "discord",
+				"realm": "discord",
+				"config": map[string]interface{}{
+					"name":                  "discord",
+					"realm":                 "discord",
+					"driver":                "discord",
+					"client_id":             "foo",
+					"client_secret":         "bar",
+					"server_name":           "discordapp.com",
+					"identity_token_name":   "id_token", // maybe change this to access_token
+					"scopes":                []any{"identify"},
+					"base_auth_url":         "https://discordapp.com/other",
+					"response_type":         []any{"code"},
+					"required_token_fields": []any{"access_token"},
+					"authorization_url":     "https://discordapp.com/other/authorize?prompt=none",
+					"token_url":             "https://discordapp.com/other/oauth2/token",
+					"login_icon": map[string]any{
+						"class_name":       "lab la-discord la-2x",
+						"color":            "white",
+						"text":             "Discord",
+						"background_color": "#5865f2",
+						"text_color":       "#37474f",
 					},
 				},
 			},

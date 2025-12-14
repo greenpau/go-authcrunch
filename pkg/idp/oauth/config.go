@@ -16,11 +16,12 @@ package oauth
 
 import (
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
 const defaultIdentityTokenCookieName string = "AUTHP_ID_TOKEN"
@@ -248,9 +249,15 @@ func (cfg *Config) Validate() error {
 		cfg.AuthorizationURL = fmt.Sprintf("%s/apps/oauth2/authorize", cfg.BaseAuthURL)
 		cfg.TokenURL = fmt.Sprintf("%s/apps/oauth2/api/v1/token", cfg.BaseAuthURL)
 	case "discord":
-		cfg.BaseAuthURL = "https://discord.com/oauth2"
-		cfg.AuthorizationURL = "https://discord.com/oauth2/authorize"
-		cfg.TokenURL = "https://discord.com/api/oauth2/token"
+		if cfg.BaseAuthURL == "" {
+			cfg.BaseAuthURL = "https://discord.com/oauth2"
+		}
+		if cfg.AuthorizationURL == "" {
+			cfg.AuthorizationURL = "https://discord.com/oauth2/authorize"
+		}
+		if cfg.TokenURL == "" {
+			cfg.TokenURL = "https://discord.com/api/oauth2/token"
+		}
 		cfg.RequiredTokenFields = []string{"access_token"}
 	case "linkedin":
 		if cfg.BaseAuthURL == "" {
