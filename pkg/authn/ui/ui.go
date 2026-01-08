@@ -17,11 +17,12 @@ package ui
 import (
 	"bytes"
 	"fmt"
-	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"io/ioutil"
 	"path"
 	"strings"
 	"text/template"
+
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 // Themes stores UI themes.
@@ -188,7 +189,7 @@ func (f *Factory) GetArgs() *Args {
 
 // BaseURL sets base URL for the authentication portal.
 func (args *Args) BaseURL(s string) {
-	if !strings.HasPrefix(args.LogoURL, "http") {
+	if !strings.HasPrefix(args.LogoURL, "http") && !strings.HasPrefix(args.LogoURL, "data:") {
 		args.LogoURL = path.Join(s, args.LogoURL)
 	}
 	args.ActionEndpoint = s
@@ -281,7 +282,7 @@ func loadTemplateFromString(s, p string) (*template.Template, error) {
 		"pathjoin": path.Join,
 		"brsplitline": func(s string) string {
 			var output []rune
-			var count = 0
+			count := 0
 			for _, c := range s {
 				count++
 				if count > 25 {
