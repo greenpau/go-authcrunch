@@ -170,6 +170,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 				zap.String("request_id", r.ID),
 				zap.Any("claims", m),
 			)
+			b.state.del(reqParamsState)
 			return nil
 		case idTokenExists && accessTokenExists:
 			accessToken := map[string]interface{}{
