@@ -92,11 +92,11 @@ func manageStateManager(sm *stateManager) {
 		for state, ts := range sm.states {
 			deleteState := false
 			if _, exists := sm.status[state]; !exists {
-				if ts.Sub(now).Minutes() > 5 {
+				if now.Sub(ts).Minutes() > 5 {
 					deleteState = true
 				}
 			} else {
-				if ts.Sub(now).Hours() > 12 {
+				if now.Sub(ts).Hours() > 12 {
 					deleteState = true
 				}
 			}
