@@ -81,7 +81,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		return fmt.Errorf("unsupported ACS URL %s", acsURL)
 	}
 
-	samlAssertions, err := sp.ParseXMLResponse(samlResponseBytes, []string{""}, *r.Upstream.Request.URL)
+	samlAssertions, err := sp.ParseXMLResponse(samlResponseBytes, []string{""}, sp.AcsURL)
 	if err != nil {
 		return fmt.Errorf("failed to ParseXMLResponse: %s", err)
 	}
