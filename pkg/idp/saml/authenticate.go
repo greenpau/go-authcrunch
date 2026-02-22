@@ -17,10 +17,11 @@ package saml
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 
 	"go.uber.org/zap"
 )
@@ -80,7 +81,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		return fmt.Errorf("unsupported ACS URL %s", acsURL)
 	}
 
-	samlAssertions, err := sp.ParseXMLResponse(samlResponseBytes, []string{""})
+	samlAssertions, err := sp.ParseXMLResponse(samlResponseBytes, []string{""}, *r.Upstream.Request.URL)
 	if err != nil {
 		return fmt.Errorf("failed to ParseXMLResponse: %s", err)
 	}

@@ -73,7 +73,7 @@ func TestNewPassword(t *testing.T) {
 			input:     "foobar",
 			password:  "foobar",
 			shouldErr: true,
-			err:       errors.ErrPasswordGenerate.WithArgs("crypto/bcrypt: cost 10000 is outside allowed range (4,31)"),
+			err:       errors.ErrPasswordGenerate.WithArgs("crypto/bcrypt: cost 10000 is outside allowed inclusive range 4..31"),
 		},
 		{
 			name:      "test password with empty hash algorithm",
