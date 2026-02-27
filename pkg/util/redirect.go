@@ -25,10 +25,10 @@ func GetBaseURL(r *http.Request, s string) (string, string) {
 	for _, p := range strings.Split(s, ",") {
 		i := strings.Index(r.URL.Path, p)
 		if i >= 0 {
-			return GetCurrentBaseURL(r), r.URL.Path[:i]
+			return GetCurrentBaseURL(r), sanitizeURLPath(r.URL.Path[:i])
 		}
 	}
-	return GetCurrentBaseURL(r), r.URL.Path
+	return GetCurrentBaseURL(r), sanitizeURLPath(r.URL.Path)
 }
 
 // GetRelativeURL returns relative path to current URL.
@@ -37,12 +37,25 @@ func GetRelativeURL(r *http.Request, orig, repl string) string {
 	if i < 0 {
 		return GetCurrentBaseURL(r) + repl
 	}
-	return GetCurrentBaseURL(r) + r.URL.Path[:i] + repl
+	return GetCurrentBaseURL(r) + sanitizeURLPath(r.URL.Path[:i]) + repl
 }
 
-// GetCurrentURL returns current URL.
+// sanitizeURLPath re-encodes each segment of a URL path so that characters
+// unsafe in an HTML context (e.g. <, >, ", ') are percent-encoded while
+// preserving forward slashes. Input is expected to be r.URL.Path, which
+// net/http already decodes from the raw request, so no double-encoding
+// occurs in practice.
+func sanitizeURLPath(s string) string {
+	parts := strings.Split(s, "/")
+	for i, part := range parts {
+		parts[i] = urlpkg.PathEscape(part)
+	}
+	return strings.Join(parts, "/")
+}
+
+// GetCurrentURL returns current URL with the path sanitized.
 func GetCurrentURL(r *http.Request) string {
-	return GetCurrentBaseURL(r) + r.URL.Path
+	return GetCurrentBaseURL(r) + sanitizeURLPath(r.URL.Path)
 }
 
 // GetIssuerURL returns issuer URL.
