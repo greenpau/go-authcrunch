@@ -119,10 +119,13 @@ func (p *Portal) handleHTTPError(ctx context.Context, w http.ResponseWriter, r *
 	resp.Data["authenticated"] = rr.Response.Authenticated
 
 	if rr.Response.RedirectURL != "" {
+		// RedirectURL is sourced from a server-set cookie, not raw user input.
 		resp.Data["go_back_url"] = rr.Response.RedirectURL
 	} else {
-		if r.Referer() != "" {
-			resp.Data["go_back_url"] = util.SanitizeURL(r.Referer())
+		ref := r.Referer()
+		parsed, err := url.Parse(ref)
+		if ref != "" && err == nil && (parsed.Scheme == "http" || parsed.Scheme == "https") {
+			resp.Data["go_back_url"] = util.SanitizeURL(ref)
 		} else {
 			resp.Data["go_back_url"] = "/"
 		}

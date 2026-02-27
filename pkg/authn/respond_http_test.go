@@ -114,3 +114,99 @@ func TestRefererSanitization(t *testing.T) {
 		tests.EvalObjectsWithLog(t, "sanitized url", true, strings.Contains(rb, "https://www.google.com/search?hl=en%26q=testing%27%22()%26%%3Cacx%3E%3CScRiPt %3Ealert(9854)%3C/ScRiPt%3E"), []string{})
 	})
 }
+
+func TestRefererSchemeValidation(t *testing.T) {
+	buildPortal := func() *Portal {
+		f, _ := cookie.NewFactory(nil)
+		uiFactory := ui.NewFactory()
+		p := &Portal{
+			config: &PortalConfig{
+				Name: "somePortal",
+				UI: &ui.Parameters{
+					Theme: "",
+				},
+			},
+			logger: zap.L(),
+			cookie: f,
+			ui:     uiFactory,
+		}
+		_ = p.configureUserInterface()
+		return p
+	}
+
+	var testcases = []struct {
+		name    string
+		referer string
+		want    string
+	}{
+		{
+			name:    "rejects javascript protocol in Referer",
+			referer: "javascript:alert(document.domain)",
+			want:    "/",
+		},
+		{
+			name:    "rejects uppercase JAVASCRIPT protocol in Referer",
+			referer: "JAVASCRIPT:alert(document.domain)",
+			want:    "/",
+		},
+		{
+			name:    "rejects data protocol in Referer",
+			referer: "data:text/html,<script>alert(1)</script>",
+			want:    "/",
+		},
+		{
+			name:    "rejects javascript protocol disguised with path",
+			referer: "javascript:alert(1)//https://example.com",
+			want:    "/",
+		},
+		{
+			name:    "allows valid https Referer",
+			referer: "https://example.com/page",
+			want:    "https://example.com/page",
+		},
+		{
+			name:    "allows valid http Referer",
+			referer: "http://example.com/page",
+			want:    "http://example.com/page",
+		},
+		{
+			name:    "rejects vbscript protocol in Referer",
+			referer: "vbscript:MsgBox",
+			want:    "/",
+		},
+		{
+			name:    "rejects file protocol in Referer",
+			referer: "file:///etc/passwd",
+			want:    "/",
+		},
+		{
+			name:    "falls back to / on malformed URL",
+			referer: "://no-scheme",
+			want:    "/",
+		},
+		{
+			name:    "falls back to / when Referer is empty",
+			referer: "",
+			want:    "/",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := buildPortal()
+			reqURL := url.URL{Scheme: "https", Host: "foo.bar", Path: "/myPage"}
+			r := http.Request{URL: &reqURL, Method: "GET"}
+			r.Header = make(http.Header)
+			if tc.referer != "" {
+				r.Header.Set("Referer", tc.referer)
+			}
+			request := requests.NewRequest()
+			rw := buildCustomResponseWriter()
+
+			_ = p.handleHTTPError(context.Background(), rw, &r, request, 404)
+			rb := string(rw.body)
+
+			tests.EvalObjectsWithLog(t, "go_back_url", true, strings.Contains(rb, tc.want), []string{})
+		})
+	}
+}
