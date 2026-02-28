@@ -1,0 +1,42 @@
+.mfa-app-auth-form{
+  text-align: center;
+}
+
+.mfa-app-auth-ctrl{
+  margin-bottom: 2em;
+}
+
+.mfa-app-auth-passcode {
+  all: inherit;
+  border-style: none !important;
+  font-size: 2.5em !important;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-align: center;
+}
+
+/* Remove bottom border from input on focus */
+input.mfa-app-auth-passcode:focus {
+  border-bottom: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.mfa-app-auth-btn {
+  text-align: center;
+  margin-bottom: 0.5em;
+}
+
+/* Add left margin to the buttons, except the first one */
+.mfa-app-auth-btn button:not(:first-child) {
+  margin-left: 0.5em;
+}
+
+.mfa-auth-help-text p {
+  font-weight: 300;
+}
+
+.mfa-auth-help-menu p {
+  font-weight: 500;
+}

@@ -1,0 +1,237 @@
+/*
+ * Authentication Portal Stylesheets
+ * Author: Paul Greenberg github.com/greenpau
+ */
+
+/*
+ * Login Page
+ */
+
+input {
+  font-family: 'Roboto', sans-serif;
+}
+
+.app-card {
+     margin-top: 2em;
+}
+
+.app-card-container {
+     background-color: white;
+     box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+     transition: 0.3s;
+     margin-top: 2em;
+     padding-top: 1em !important;
+     padding-left: 2em !important;
+     padding-right: 2em !important;
+}
+
+.app-header {
+     font-family: 'Roboto', sans-serif;
+     padding-top: 0.5em !important;
+     //color: #EE6E73;
+     font-size: 1.25rem;
+}
+
+.app-header h4 {
+     margin: 1rem 0 0.1rem 0;
+}
+
+.app-form, .app-control {
+     font-family: 'Roboto', sans-serif;
+     font-size: 1.25rem;
+}
+
+.app-link a:link, .app-link a:visited, .app-link a:active, .app-link a:hover {
+     font-size: 1rem;
+     text-transform: none !important;
+     display: block;
+}
+
+.app-input-row {
+     line-height: 2px !important;
+     font-family: 'Roboto', sans-serif;
+     font-size: 1rem;
+     margin-bottom: 1px;
+}
+
+p.app-input-text {
+     //color: #52504f;
+     font-weight: 500;
+}
+
+.app-input-field {
+     margin-bottom: 0px;
+     margin-top: 0.25rem;
+}
+
+p.app-text {
+     font-family: 'Roboto', sans-serif;
+     //color: #52504f;
+     padding-top: 1em !important;
+     font-weight: 500;
+}
+
+span.app-error-text {
+     font-family: 'Roboto', sans-serif;
+}
+
+.app-btn {
+     display: inline-flex;
+     margin-bottom: 0.25em;
+}
+
+.app-btn-icon {
+     font-size: 2em !important;
+     margin-right: 0.1em !important;
+}
+
+span.app-btn-text {
+     font-family: 'Roboto', sans-serif;
+     padding-left: 0.2rem;
+     font-weight: 500;
+}
+
+.toast-error {
+     // restyle post 
+}
+
+.helper-btn {
+     margin-bottom: 0.15em;
+}
+
+/*
+ * Portal Page
+ */
+
+.navbtn {
+  font-family: 'Roboto', sans-serif;
+}
+.navbtn-last {
+  margin-right: 0px !important;
+}
+
+.navbtn {
+  font-family: 'Roboto', sans-serif;
+}
+.navbtn-last {
+  margin-right: 0px !important;
+}
+
+/*
+ * Whoami Page
+ */
+
+.hljs {
+  font-size: 1rem;
+}
+
+/*
+ * Settings Page
+ */
+
+.app-container {
+  background-color: white;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+  transition: 0.3s;
+  margin-top: 2em;
+}
+
+.app-content {
+  padding-left: 1.5em !important;
+  padding-right: 1.5em !important;
+}
+.app-content h1 {
+  font-size: 2rem;
+  //color: #52504f;
+  margin-top: 0.2em !important;
+  margin-bottom: 0.2em !important;
+}
+.app-content p {
+  //color: #52504f;
+}
+
+.nav-wrapper img {
+  height: 100%;
+  object-fit: contain;
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+}
+
+.brand-logo {
+  padding-left: 1rem !important;
+  font-size: 1.5em !important;
+}
+
+.app-navbar-btn-icon {
+  margin-top: -0.75rem !important;
+}
+
+.shell-textarea-wrapper {
+  width: 100%
+}
+
+.shell-textarea {
+  height: 10em;
+}
+
+/*
+ * Misc
+ */
+
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active {
+     -webkit-box-shadow: 0 0 0 30px white inset !important;
+}
+
+.app-input-field > i {
+  position: absolute;
+  padding-top: 0.45em;
+  padding-left: 0.3em;
+  font-size: 1.75em;
+  z-index: 100;
+}
+
+input#username {
+  all: inherit;
+  // border: 0.1em solid #93ccfa;
+  border: 0.1em solid #f2f2f2;
+  border-radius: 0.1em;
+  line-height: 2em !important;
+  font-size: 1.25em !important;
+  font-weight: 400;
+  color: #3b3b3b !important;
+  padding-left: 2em;
+  padding-right: 0.5em;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+input#username:focus {
+  border: 0.1em solid #62b5f8;
+}
+
+select#realm {
+  padding-left: 2em;
+  border: 0.1em solid #f2f2f2;
+  border-radius: 0.1em;
+  line-height: 2em !important;
+  font-size: 1.25em !important;
+  font-weight: 400;
+  color: #3b3b3b !important;
+  padding-left: 2em;
+  padding-right: 0.5em;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+select#realm:focus {
+  border: 0.1em solid #62b5f8;
+}
+
+.app-input-row {
+  padding: 0.25em 1em 0.25em 1em;
+}
+
+.app-input-field {
+  width: 100%;
+}
