@@ -221,7 +221,6 @@ func (args *Args) AddFrontendLinks(arr []string) {
 				}
 			case "disabled":
 				disabledLink = true
-				break
 			}
 			argp++
 		}
@@ -274,7 +273,6 @@ func (f *Factory) AddTemplate(s, tp string) error {
 // DeleteTemplates removes all templates from Factory.
 func (f *Factory) DeleteTemplates() {
 	f.Templates = make(map[string]*Template)
-	return
 }
 
 func loadTemplateFromString(s, p string) (*template.Template, error) {

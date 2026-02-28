@@ -16,18 +16,27 @@ package ui
 
 import (
 	"crypto/sha1"
+	"embed"
 	"encoding/base64"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 )
 
-// StaticAssets is an instance of StaticAssetLibrary containing plain HTML.
-var StaticAssets *StaticAssetLibrary
+var (
+	//go:embed core
+	coreFileSystem embed.FS
 
-// AppAssets is an instance of StaticAssetLibrary containing React Apps.
-var AppAssets *StaticAssetLibrary
+	// StaticAssets is an instance of StaticAssetLibrary containing plain HTML.
+	StaticAssets *StaticAssetLibrary
+
+	// AppAssets is an instance of StaticAssetLibrary containing React Apps.
+	AppAssets *StaticAssetLibrary
+)
 
 // StaticAsset is a single static web asset.
 type StaticAsset struct {
@@ -69,7 +78,7 @@ func getContentType(filePath string) (string, error) {
 	case ".woff2":
 		return "font/woff2", nil
 	case ".ico":
-		return "image/vnd.microsoft.icon", nil
+		return "image/x-icon", nil
 	case ".js":
 		return "application/javascript", nil
 	case ".css":
@@ -121,16 +130,58 @@ func NewAppAssetLibrary() (*StaticAssetLibrary, error) {
 	return sal, nil
 }
 
+// EnumerateEmbedFs returns a slice of all file paths within the embedded filesystem.
+func EnumerateEmbedFs(embedFs embed.FS) ([]string, error) {
+	var filePaths []string
+
+	// "." is the root of the embedded filesystem
+	err := fs.WalkDir(embedFs, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			filePaths = append(filePaths, path)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return filePaths, nil
+}
+
 // NewStaticAssetLibrary returns an instance of StaticAssetLibrary.
 func NewStaticAssetLibrary() (*StaticAssetLibrary, error) {
 	sal := &StaticAssetLibrary{}
 	sal.items = make(map[string]*StaticAsset)
-	for path, item := range defaultStaticAssets {
-		s, err := base64.StdEncoding.DecodeString(item.EncodedContent)
+
+	filePaths, err := EnumerateEmbedFs(coreFileSystem)
+	if err != nil {
+		return nil, fmt.Errorf("failed to enumerate core file system: %s", err)
+	}
+	for _, filePath := range filePaths {
+		b, err := coreFileSystem.ReadFile(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("static asset %s decoding error: %s", path, err)
+			return nil, fmt.Errorf("core asset %s reading error: %s", filePath, err)
 		}
-		item.Content = string(s)
+		ct, err := getContentType(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("core asset %s getting content type: %s", filePath, err)
+		}
+		path := filePath
+		oldPrefix := "core/"
+		newPrefix := "assets/"
+		if strings.HasPrefix(path, oldPrefix) {
+			path = newPrefix + strings.TrimPrefix(path, oldPrefix)
+		}
+
+		item := &StaticAsset{
+			Path:        path,
+			FsPath:      filePath,
+			ContentType: ct,
+			Content:     string(b),
+		}
 		h := sha1.New()
 		io.WriteString(h, item.Content)
 		item.Checksum = base64.URLEncoding.EncodeToString(h.Sum(nil))
@@ -168,4 +219,19 @@ func (sal *StaticAssetLibrary) AddAsset(path, contentType, fsPath string) error 
 	item.Checksum = base64.URLEncoding.EncodeToString(h.Sum(nil))
 	sal.items[path] = item
 	return nil
+}
+
+// GetAssetCount returns the total number of static assets in the library.
+func (sal *StaticAssetLibrary) GetAssetCount() int {
+	return len(sal.items)
+}
+
+// GetAssetPaths returns a slice of all asset paths, sorted alphanumerically.
+func (sal *StaticAssetLibrary) GetAssetPaths() []string {
+	paths := make([]string, 0, len(sal.items))
+	for path := range sal.items {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	return paths
 }

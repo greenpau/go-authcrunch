@@ -67,7 +67,7 @@ func TestNewFactory(t *testing.T) {
 	loginOptions["realms"] = loginRealms
 	loginOptions["default_realm"] = "local"
 	loginOptions["authenticators"] = []map[string]interface{}{
-		map[string]interface{}{
+		{
 			"background_color":          "#324960",
 			"class_name":                "las la-key la-2x",
 			"color":                     "white",
