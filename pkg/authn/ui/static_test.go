@@ -31,13 +31,13 @@ func TestNewStaticAssetLibrary(t *testing.T) {
 		t.Fatal("Expected StaticAssetLibrary instance, got nil")
 	}
 
-	want_count := 87
-	got_count := sal.GetAssetCount()
-	if got_count != want_count {
-		t.Errorf("Expected asset count %d, got %d", want_count, got_count)
+	wantCount := 87
+	gotCount := sal.GetAssetCount()
+	if gotCount != wantCount {
+		t.Errorf("Expected asset count %d, got %d", wantCount, gotCount)
 	}
 
-	want_paths := []string{
+	wantPaths := []string{
 		"assets/cbor/cbor.js",
 		"assets/css/apps_mobile_access.css",
 		"assets/css/apps_sso.css",
@@ -127,43 +127,43 @@ func TestNewStaticAssetLibrary(t *testing.T) {
 		"assets/materialize-css/js/materialize.min.js",
 	}
 
-	got_paths := sal.GetAssetPaths()
+	gotPaths := sal.GetAssetPaths()
 
-	if !reflect.DeepEqual(got_paths, want_paths) {
+	if !reflect.DeepEqual(gotPaths, wantPaths) {
 		t.Error("GetAssetPaths() mismatch detected:")
 
 		// Create sets for comparison
 		gotMap := make(map[string]bool)
-		for _, p := range got_paths {
+		for _, p := range gotPaths {
 			gotMap[p] = true
 		}
 
 		wantMap := make(map[string]bool)
-		for _, p := range want_paths {
+		for _, p := range wantPaths {
 			wantMap[p] = true
 		}
 
 		// Find missing (in want, but not in got)
-		for _, p := range want_paths {
+		for _, p := range wantPaths {
 			if !gotMap[p] {
 				t.Errorf("  [-] expected file not found: %s", p)
 			}
 		}
 
 		// Find extras (in got, but not in want)
-		for _, p := range got_paths {
+		for _, p := range gotPaths {
 			if !wantMap[p] {
 				t.Errorf("  [+] found unexpected file:   %s", p)
 			}
 		}
 
 		// Also check if order is the only problem
-		if len(got_paths) == len(want_paths) {
+		if len(gotPaths) == len(wantPaths) {
 			t.Log("Note: Slice lengths match; check for alphanumeric sorting errors.")
 		}
 	}
 
-	want_content_types := map[string]string{
+	wantContentTypes := map[string]string{
 		"assets/cbor/cbor.js":                                             "application/javascript",
 		"assets/css/apps_mobile_access.css":                               "text/css",
 		"assets/css/apps_sso.css":                                         "text/css",
@@ -253,28 +253,28 @@ func TestNewStaticAssetLibrary(t *testing.T) {
 		"assets/materialize-css/js/materialize.min.js":                    "application/javascript",
 	}
 
-	got_content_types := make(map[string]string)
-	for _, path := range got_paths {
+	gotContentTypes := make(map[string]string)
+	for _, path := range gotPaths {
 		asset, err := sal.GetAsset(path)
 		if err != nil {
 			t.Fatalf("failed to extract asset %s, got error: %v", path, err)
 		}
-		got_content_types[path] = asset.ContentType
+		gotContentTypes[path] = asset.ContentType
 	}
 
-	if !reflect.DeepEqual(got_content_types, want_content_types) {
+	if !reflect.DeepEqual(gotContentTypes, wantContentTypes) {
 		t.Error("Content type mismatch detected:")
 
-		for path, wantType := range want_content_types {
-			if gotType, exists := got_content_types[path]; !exists {
+		for path, wantType := range wantContentTypes {
+			if gotType, exists := gotContentTypes[path]; !exists {
 				t.Errorf("  [-] Expected path missing from the library: %s", path)
 			} else if gotType != wantType {
 				t.Errorf("  [M] Mismatched type for %s:\n      want: %s\n      got:  %s", path, wantType, gotType)
 			}
 		}
 
-		for path := range got_content_types {
-			if _, exists := want_content_types[path]; !exists {
+		for path := range gotContentTypes {
+			if _, exists := wantContentTypes[path]; !exists {
 				t.Errorf("  [+] Found unexpected path: %s", path)
 			}
 		}

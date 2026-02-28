@@ -70,18 +70,13 @@ coverage:
 	@go tool cover -func=.coverage/coverage.out | grep -v "100.0"
 	@echo "$@: complete"
 
-.PHONY: ui-templates
-ui-templates:
-	@./assets/scripts/generate_ui.sh
-	@echo "$@: complete"
-
 .PHONY: email-templates
 email-templates:
 	@./assets/scripts/generate_email_templates.sh
 	@echo "$@: complete"
 
 .PHONY: templates
-templates: ui-templates email-templates license
+templates: email-templates license
 	@echo "$@: complete"
 
 .PHONY: docs
@@ -135,7 +130,7 @@ qtest: covdir
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewJwksKeyFromRSAPublicKeyPEM ./pkg/idp/oauth/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewIdentityProviderConfig ./pkg/idp/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/ui/...
-	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewStaticAssetLibrary ./pkg/authn/ui/...
+	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewPageTemplatesLibrary ./pkg/authn/ui/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/local/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/ldap/*.go

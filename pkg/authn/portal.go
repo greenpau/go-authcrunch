@@ -564,13 +564,16 @@ func (p *Portal) configureUserInterface() error {
 		if err != nil {
 			return errors.ErrCustomHTMLHeaderNotReadable.WithArgs(p.config.UI.CustomHTMLHeaderPath, p.config.Name, err)
 		}
-		for k, v := range ui.PageTemplates {
-			headIndex := strings.Index(v, "<meta name=\"description\"")
+		for _, k := range ui.PageTemplates.GetAssetPaths() {
+			asset, err := ui.PageTemplates.GetAsset(k)
+			if err != nil {
+				return errors.ErrCustomHTMLHeaderNotReadable.WithArgs(p.config.UI.CustomHTMLHeaderPath, p.config.Name, err)
+			}
+			headIndex := strings.Index(asset.Content, "<meta name=\"description\"")
 			if headIndex < 1 {
 				continue
 			}
-			v = v[:headIndex] + string(b) + v[headIndex:]
-			ui.PageTemplates[k] = v
+			asset.Content = asset.Content[:headIndex] + string(b) + asset.Content[headIndex:]
 		}
 	}
 
@@ -621,7 +624,7 @@ func (p *Portal) configureUserInterface() error {
 	}
 
 	// User Interface Templates
-	for k := range ui.PageTemplates {
+	for _, k := range ui.PageTemplates.GetAssetPaths() {
 		tmplNameParts := strings.SplitN(k, "/", 2)
 		tmplTheme := tmplNameParts[0]
 		tmplName := tmplNameParts[1]

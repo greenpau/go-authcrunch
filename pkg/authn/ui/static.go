@@ -69,6 +69,8 @@ func init() {
 func getContentType(filePath string) (string, error) {
 	ext := filepath.Ext(filePath)
 	switch ext {
+	case ".template":
+		return "text/plain", nil
 	case ".html":
 		return "text/html", nil
 	case ".ttf":
@@ -234,4 +236,15 @@ func (sal *StaticAssetLibrary) GetAssetPaths() []string {
 	}
 	sort.Strings(paths)
 	return paths
+}
+
+// HasAsset checks if an asset exists in the library by its path.
+func (sal *StaticAssetLibrary) HasAsset(path string) bool {
+	// If the map is nil, we safely return false
+	if sal.items == nil {
+		return false
+	}
+
+	_, exists := sal.items[path]
+	return exists
 }

@@ -123,10 +123,14 @@ func NewTemplate(s, tp string) (*Template, error) {
 	}
 
 	if tp == "inline" {
-		if _, exists := PageTemplates[s]; !exists {
+		if !PageTemplates.HasAsset(s) {
 			return nil, fmt.Errorf("built-in template does not exists: %s", s)
 		}
-		templateBody = PageTemplates[s]
+		pageTemplate, err := PageTemplates.GetAsset(s)
+		if err != nil {
+			return nil, err
+		}
+		templateBody = pageTemplate.Content
 	} else {
 		if strings.HasPrefix(tp, "http://") || strings.HasPrefix(tp, "https://") {
 			return nil, fmt.Errorf("the loading of template from remote URL is not supported yet")
@@ -233,7 +237,7 @@ func (args *Args) AddFrontendLinks(arr []string) {
 
 // AddBuiltinTemplates adds all built-in template to Factory
 func (f *Factory) AddBuiltinTemplates() error {
-	for name := range PageTemplates {
+	for _, name := range PageTemplates.GetAssetPaths() {
 		if err := f.AddBuiltinTemplate(name); err != nil {
 			return fmt.Errorf("Failed to load built-in template %s: %s", name, err)
 		}
@@ -246,7 +250,7 @@ func (f *Factory) AddBuiltinTemplate(name string) error {
 	if _, exists := f.Templates[name]; exists {
 		return fmt.Errorf("template %s already defined", name)
 	}
-	if _, exists := PageTemplates[name]; !exists {
+	if !PageTemplates.HasAsset(name) {
 		return fmt.Errorf("built-in template %s does not exists", name)
 	}
 	tmpl, err := NewTemplate(name, "inline")

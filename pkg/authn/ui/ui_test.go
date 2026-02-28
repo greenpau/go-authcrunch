@@ -48,7 +48,7 @@ func TestNewFactory(t *testing.T) {
 	}
 
 	t.Log("Adding a template from file system")
-	if err := f.AddTemplate("login", "../../../assets/portal/templates/basic/login.template"); err != nil {
+	if err := f.AddTemplate("login", "../../../pkg/authn/ui/page_templates/basic/login.template"); err != nil {
 		t.Fatalf("Expected success, but got error: %s, %v", err, f.Templates)
 	}
 
