@@ -16,12 +16,13 @@ package registry
 
 import (
 	"bytes"
-	"github.com/greenpau/go-authcrunch/pkg/credentials"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"mime/quotedprintable"
 	"strings"
 	"text/template"
+
+	"github.com/greenpau/go-authcrunch/pkg/credentials"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/messaging"
 )
 
 // Notify serves notifications.
@@ -94,7 +95,11 @@ func (r *LocaUserRegistry) Notify(data map[string]string) error {
 		return errors.ErrNotifyRequestMessagingNil.WithArgs(r.config.EmailProvider)
 	}
 
-	tmplSubj, tmplSubjErr := template.New("email_subj").Parse(messaging.EmailTemplateSubject[lang+"/"+tmplName])
+	tmplSubjAsset, err := messaging.EmailTemplates.GetAsset(lang + "/" + tmplName + "_subject")
+	if err != nil {
+		return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, err)
+	}
+	tmplSubj, tmplSubjErr := template.New("email_subj").Parse(tmplSubjAsset.Content)
 	if tmplSubjErr != nil {
 		return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, tmplSubjErr)
 	}
@@ -103,7 +108,11 @@ func (r *LocaUserRegistry) Notify(data map[string]string) error {
 		return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, err)
 	}
 
-	tmplBody, tmplBodyErr := template.New("email_body").Parse(messaging.EmailTemplateBody[lang+"/"+tmplName])
+	tmplBodyAsset, err := messaging.EmailTemplates.GetAsset(lang + "/" + tmplName + "_body")
+	if err != nil {
+		return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, err)
+	}
+	tmplBody, tmplBodyErr := template.New("email_body").Parse(tmplBodyAsset.Content)
 	if tmplBodyErr != nil {
 		return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, tmplBodyErr)
 	}
@@ -113,7 +122,7 @@ func (r *LocaUserRegistry) Notify(data map[string]string) error {
 	}
 
 	var qpEmailBody string
-	qpEmailBody, err := quotedPrintableBody(emailBody.String())
+	qpEmailBody, err = quotedPrintableBody(emailBody.String())
 	if err != nil {
 		return errors.ErrNotifyRequestEmail.WithArgs(r.config.EmailProvider, err)
 	}

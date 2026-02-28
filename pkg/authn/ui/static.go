@@ -153,10 +153,16 @@ func EnumerateEmbedFs(embedFs embed.FS) ([]string, error) {
 	return filePaths, nil
 }
 
-// NewStaticAssetLibrary returns an instance of StaticAssetLibrary.
-func NewStaticAssetLibrary() (*StaticAssetLibrary, error) {
+// CreateStaticAssetLibrary returns an instance of StaticAssetLibrary.
+func CreateStaticAssetLibrary() *StaticAssetLibrary {
 	sal := &StaticAssetLibrary{}
 	sal.items = make(map[string]*StaticAsset)
+	return sal
+}
+
+// NewStaticAssetLibrary returns an instance of StaticAssetLibrary.
+func NewStaticAssetLibrary() (*StaticAssetLibrary, error) {
+	sal := CreateStaticAssetLibrary()
 
 	filePaths, err := EnumerateEmbedFs(coreFileSystem)
 	if err != nil {
@@ -247,4 +253,12 @@ func (sal *StaticAssetLibrary) HasAsset(path string) bool {
 
 	_, exists := sal.items[path]
 	return exists
+}
+
+// UpdateAsset adds or updates an asset in the library.
+func (sal *StaticAssetLibrary) UpdateAsset(path string, item *StaticAsset) {
+	if sal.items == nil {
+		sal.items = make(map[string]*StaticAsset)
+	}
+	sal.items[path] = item
 }

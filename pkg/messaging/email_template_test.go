@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ui
+package messaging
 
 import (
 	"reflect"
 	"testing"
 )
 
-func TestNewPageTemplatesLibrary(t *testing.T) {
-	t.Log("Creating Page Templates Library factory")
+func TestNewEmailTemplatesLibrary(t *testing.T) {
+	t.Log("Creating Email Messaging Templates Library factory")
 
-	sal, err := NewPageTemplatesLibrary()
+	sal, err := NewEmailTemplatesLibrary()
 	if err != nil {
 		t.Fatalf("Expected success, but got error: %v", err)
 	}
@@ -31,22 +31,19 @@ func TestNewPageTemplatesLibrary(t *testing.T) {
 		t.Fatal("Expected StaticAssetLibrary instance, got nil")
 	}
 
-	wantCount := 9
+	wantCount := 6
 	gotCount := sal.GetAssetCount()
 	if gotCount != wantCount {
 		t.Errorf("Expected asset count %d, got %d", wantCount, gotCount)
 	}
 
 	wantPaths := []string{
-		"basic/apps_mobile_access",
-		"basic/apps_sso",
-		"basic/generic",
-		"basic/login",
-		"basic/portal",
-		"basic/register",
-		"basic/sandbox",
-		"basic/settings",
-		"basic/whoami",
+		"en/registration_confirmation_body",
+		"en/registration_confirmation_subject",
+		"en/registration_ready_body",
+		"en/registration_ready_subject",
+		"en/registration_verdict_body",
+		"en/registration_verdict_subject",
 	}
 
 	gotPaths := sal.GetAssetPaths()
@@ -85,5 +82,5 @@ func TestNewPageTemplatesLibrary(t *testing.T) {
 		}
 	}
 
-	t.Log("Static Asset Library initialized successfully")
+	t.Log("Email Messaging Templates Library initialized successfully")
 }
