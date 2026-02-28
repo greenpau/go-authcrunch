@@ -1477,10 +1477,10 @@ var PageTemplates = map[string]string{
     </script>
     {{ end }}
     {{ if .Message }}
+    <div id="toast-msg" style="display:none"><span class="app-error-text">{{ .Message }}</span><button class="btn-flat toast-action" onclick="M.Toast.dismissAll();">Close</button></div>
     <script>
-    var toastHTML = '<span class="app-error-text">{{ .Message }}</span><button class="btn-flat toast-action" onclick="M.Toast.dismissAll();">Close</button>';
     toastElement = M.toast({
-      html: toastHTML,
+      html: document.getElementById('toast-msg').innerHTML,
       classes: 'toast-error'
     });
     const appContainer = document.querySelector('.app-container')
@@ -1490,15 +1490,7 @@ var PageTemplates = map[string]string{
     {{ if eq .Data.view "mfa-add-u2f" }}
     <script>
 function u2f_token_register(formID, btnID) {
-  const params = {
-    challenge: "{{ .Data.webauthn_challenge }}",
-    rp_name: "{{ .Data.webauthn_rp_name }}",
-    user_id: "{{ .Data.webauthn_user_id }}",
-    user_name: "{{ .Data.webauthn_user_email }}",
-    user_display_name: "{{ .Data.webauthn_user_display_name }}",
-    user_verification: "{{ .Data.webauthn_user_verification }}",
-    attestation: "{{ .Data.webauthn_attestation }}",
-  };
+  const params = {{ .Data.webauthn_params }};
   register_u2f_token(formID, btnID, params);
 }
     </script>
@@ -1507,28 +1499,7 @@ function u2f_token_register(formID, btnID) {
     {{ if eq .Data.view "mfa-test-u2f" }}
     <script>
 function u2f_token_authenticate(formID, btnID) {
-  const params = {
-    challenge: "{{ .Data.webauthn_challenge }}",
-    timeout: {{ .Data.webauthn_timeout }},
-    rp_name: "{{ .Data.webauthn_rp_name }}",
-    user_verification: "{{ .Data.webauthn_user_verification }}",
-    {{ if .Data.webauthn_credentials }}
-    allowed_credentials: [
-    {{ range .Data.webauthn_credentials }}
-      {
-        id: "{{ .id }}",
-        type: "{{ .type }}",
-        transports: [{{ .transports }}],
-      },
-    {{ end }}
-    ],
-    {{ else }}
-    allowed_credentials: [],
-    {{ end }}
-    ext_uvm: {{ .Data.webauthn_ext_uvm }},
-    ext_loc: {{ .Data.webauthn_ext_loc }},
-    ext_tx_auth_simple: "{{ .Data.webauthn_tx_auth_simple }}",
-  };
+  const params = {{ .Data.webauthn_params }};
   authenticate_u2f_token(formID, btnID, params);
 }
     </script>
@@ -2091,15 +2062,7 @@ function u2f_token_authenticate(formID, btnID) {
     {{ if eq .Data.view "mfa_u2f_register" }}
     <script>
     function u2f_token_register(formID, btnID) {
-      const params = {
-        challenge: "{{ .Data.webauthn_challenge }}",
-        rp_name: "{{ .Data.webauthn_rp_name }}",
-        user_id: "{{ .Data.webauthn_user_id }}",
-        user_name: "{{ .Data.webauthn_user_email }}",
-        user_display_name: "{{ .Data.webauthn_user_display_name }}",
-        user_verification: "{{ .Data.webauthn_user_verification }}",
-        attestation: "{{ .Data.webauthn_attestation }}",
-      };
+      const params = {{ .Data.webauthn_params }};
       register_u2f_token(formID, btnID, params);
     }
     </script>
@@ -2107,28 +2070,7 @@ function u2f_token_authenticate(formID, btnID) {
     {{ if eq .Data.view "mfa_u2f_auth" }}
     <script>
     function u2f_token_authenticate(formID) {
-      const params = {
-        challenge: "{{ .Data.webauthn_challenge }}",
-        timeout: {{ .Data.webauthn_timeout }},
-        rp_name: "{{ .Data.webauthn_rp_name }}",
-        user_verification: "{{ .Data.webauthn_user_verification }}",
-        {{- if .Data.webauthn_credentials }}
-        allowed_credentials: [
-        {{- range .Data.webauthn_credentials }}
-          {
-            id: "{{ .id }}",
-            type: "{{ .type }}",
-            transports: [{{ range .transports }}"{{ . }}",{{ end }}],
-          },
-        {{- end }}
-        ],
-        {{ else }}
-        allowed_credentials: [],
-        {{end -}}
-        ext_uvm: {{ .Data.webauthn_ext_uvm }},
-        ext_loc: {{ .Data.webauthn_ext_loc }},
-        ext_tx_auth_simple: "{{ .Data.webauthn_tx_auth_simple }}",
-      };
+      const params = {{ .Data.webauthn_params }};
       authenticate_u2f_token(formID, params);
     }
 
@@ -2136,10 +2078,10 @@ function u2f_token_authenticate(formID, btnID) {
     </script>
     {{ end }}
     {{ if .Message }}
+    <div id="toast-msg" style="display:none"><span>{{ .Message }}</span><button class="btn-flat toast-action" onclick="M.Toast.dismissAll();">Close</button></div>
     <script>
-    var toastHTML = '<span>{{ .Message }}</span><button class="btn-flat toast-action" onclick="M.Toast.dismissAll();">Close</button>';
     toastElement = M.toast({
-      html: toastHTML,
+      html: document.getElementById('toast-msg').innerHTML,
       classes: 'toast-error'
     });
     const appContainer = document.querySelector('.app-card-container')

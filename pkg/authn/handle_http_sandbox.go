@@ -16,7 +16,9 @@ package authn
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strings"
 
@@ -420,14 +422,24 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					creds = append(creds, cred)
 				}
 				usr.Authenticator.TempChallenge = util.GetRandomString(64)
+				authParams := map[string]interface{}{
+					"challenge":           usr.Authenticator.TempChallenge,
+					"timeout":             60000,
+					"rp_name":             "AUTHP",
+					"user_verification":   "discouraged",
+					"ext_uvm":             false,
+					"ext_loc":             false,
+					"ext_tx_auth_simple":  "Could you please verify yourself?",
+					"allowed_credentials": creds,
+				}
+				jsonBytes, err := json.Marshal(authParams)
+				if err != nil {
+					m["view"] = "error"
+					return m, fmt.Errorf("Failed to serialize webauthn params: %v", err)
+				}
+				m["webauthn_params"] = template.JS(jsonBytes)
+				// Set separately for the hidden form field that POSTs back to the server.
 				m["webauthn_challenge"] = usr.Authenticator.TempChallenge
-				m["webauthn_rp_name"] = "AUTHP"
-				m["webauthn_timeout"] = "60000"
-				m["webauthn_user_verification"] = "discouraged"
-				m["webauthn_ext_uvm"] = "false"
-				m["webauthn_ext_loc"] = "false"
-				m["webauthn_tx_auth_simple"] = "Could you please verify yourself?"
-				m["webauthn_credentials"] = creds
 			case !appConfigured && (action == "mfa-app-register"):
 				m["title"] = "Authenticator App Registration"
 				m["view"] = "mfa_app_register"
@@ -493,17 +505,27 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				}
 				// Display U2F registration.
 				usr.Authenticator.TempChallenge = util.GetRandomStringFromRange(64, 92)
-				m["webauthn_challenge"] = usr.Authenticator.TempChallenge
-				m["webauthn_rp_name"] = "AUTHP"
-				m["webauthn_user_id"] = usr.Claims.ID
-				m["webauthn_user_email"] = usr.Claims.Email
-				m["webauthn_user_verification"] = "discouraged"
-				m["webauthn_attestation"] = "direct"
-				if usr.Claims.Name == "" {
-					m["webauthn_user_display_name"] = usr.Claims.Subject
-				} else {
-					m["webauthn_user_display_name"] = usr.Claims.Name
+				displayName := usr.Claims.Name
+				if displayName == "" {
+					displayName = usr.Claims.Subject
 				}
+				registerParams := map[string]interface{}{
+					"challenge":         usr.Authenticator.TempChallenge,
+					"rp_name":           "AUTHP",
+					"user_id":           usr.Claims.ID,
+					"user_name":         usr.Claims.Email,
+					"user_display_name": displayName,
+					"user_verification": "discouraged",
+					"attestation":       "direct",
+				}
+				jsonBytes, err := json.Marshal(registerParams)
+				if err != nil {
+					m["view"] = "error"
+					return m, fmt.Errorf("Failed to serialize webauthn params: %v", err)
+				}
+				m["webauthn_params"] = template.JS(jsonBytes)
+				// Set separately for the hidden form field that POSTs back to the server.
+				m["webauthn_challenge"] = usr.Authenticator.TempChallenge
 			default:
 				checkpoint.FailedAttempts++
 				m["title"] = "Bad Request"

@@ -16,6 +16,8 @@ package ui
 
 import (
 	"bytes"
+	"encoding/json"
+	"html/template"
 	"strings"
 	"testing"
 )
@@ -103,6 +105,92 @@ func TestNewFactory(t *testing.T) {
 		t.Fatalf("Expected templates to match, but got mismatch: %d (basic/login) vs. %d (login)", t1.Len(), t2.Len())
 	}
 
+}
+
+func TestHTMLTemplateEscaping(t *testing.T) {
+	t.Log("Testing html/template escaping behavior")
+
+	webauthnArgs := &Args{Data: map[string]interface{}{}}
+	webauthnJSON, _ := json.Marshal(map[string]interface{}{
+		"challenge": "abc123",
+		"timeout":   60000,
+		"ext_uvm":   false,
+	})
+	webauthnArgs.Data["webauthn_params"] = template.JS(webauthnJSON)
+
+	testcases := []struct {
+		name     string
+		template string
+		args     *Args
+		contains []string
+		excludes []string
+	}{
+		{
+			name:     "message with special chars is HTML-escaped in toast div",
+			template: `{{ if .Message }}<div id="toast-msg" style="display:none"><span>{{ .Message }}</span></div>{{ end }}`,
+			args:     &Args{Message: `<script>alert("xss")</script>`},
+			contains: []string{`&lt;script&gt;alert(&#34;xss&#34;)&lt;/script&gt;`},
+			excludes: []string{`<script>alert`},
+		},
+		{
+			name:     "webauthn params rendered as raw JS from template.JS",
+			template: `<script>const p = {{ .Data.webauthn_params }};</script>`,
+			args:     webauthnArgs,
+			contains: []string{`"challenge":"abc123"`, `"timeout":60000`, `"ext_uvm":false`},
+		},
+		{
+			name:     "brsplitline produces unescaped br tags",
+			template: `<div>{{ "abcdefghijklmnopqrstuvwxyz1234567890" | brsplitline }}</div>`,
+			args:     &Args{},
+			contains: []string{`<br>`},
+			excludes: []string{`&lt;br&gt;`},
+		},
+		{
+			name:     "webauthn params with script tag in value are neutralized by json.Marshal",
+			template: `<script>const p = {{ .Data.webauthn_params }};</script>`,
+			args: func() *Args {
+				a := &Args{Data: map[string]interface{}{}}
+				b, _ := json.Marshal(map[string]interface{}{
+					"challenge": `</script><script>alert("xss")</script>`,
+				})
+				a.Data["webauthn_params"] = template.JS(b)
+				return a
+			}(),
+			contains: []string{`\u003c/script\u003e`},
+			excludes: []string{`</script><script>alert`},
+		},
+		{
+			name:     "pathjoin in script src is not broken",
+			template: `<script src="{{ pathjoin .ActionEndpoint "/assets/js/app.js" }}"></script>`,
+			args:     &Args{ActionEndpoint: "/auth"},
+			contains: []string{`src="/auth/assets/js/app.js"`},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Logf("Parsing template: %s", tc.name)
+			tmpl, err := loadTemplateFromString("test", tc.template)
+			if err != nil {
+				t.Fatalf("Expected success, but got error: %v", err)
+			}
+			var buf bytes.Buffer
+			if err := tmpl.Execute(&buf, tc.args); err != nil {
+				t.Fatalf("Expected success, but got error: %v", err)
+			}
+			output := buf.String()
+			for _, s := range tc.contains {
+				if !strings.Contains(output, s) {
+					t.Errorf("Expected output to contain %q, got: %s", s, output)
+				}
+			}
+			for _, s := range tc.excludes {
+				if strings.Contains(output, s) {
+					t.Errorf("Expected output NOT to contain %q, got: %s", s, output)
+				}
+			}
+		})
+	}
 }
 
 func TestAddBuiltinTemplates(t *testing.T) {
