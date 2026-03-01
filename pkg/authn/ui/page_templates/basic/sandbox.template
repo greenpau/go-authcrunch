@@ -377,8 +377,7 @@
 
                 <input id="email" name="email" type="hidden" value="{{ .Data.mfa_email }}" />
                 <input id="type" name="type" type="hidden" value="{{ .Data.mfa_type }}" />
-                <input id="barcode_uri" name "barcode_uri" type="hidden" value="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-barcode" }}" />
-
+                <input id="barcode_uri" name="barcode_uri" type="hidden" value="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-barcode" }}" />
                 <div class="py-4">
                   <label for="passcode" class="app-inp-lbl">Passcode</label>
                   <div class="app-inp-box">
