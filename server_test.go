@@ -179,6 +179,7 @@ func TestNewServer(t *testing.T) {
                       "validate_bearer_header": true
                     },
                     "ui": {
+					  "language": "en",
                       "theme": "basic"
                     }
                   }

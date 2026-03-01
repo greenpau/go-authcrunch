@@ -1,0 +1,250 @@
+[
+    {
+        "id": "thank_you",
+        "description": "A standard expression of gratitude.",
+        "other": {
+            "en": "Thank you!",
+            "de": "Vielen Dank!",
+            "fr": "Merci !",
+            "ja": "ありがとうございます！",
+            "zh": "谢谢！",
+            "he": "תודה רבה!",
+            "ar": "شكراً لك!",
+            "ru": "Спасибо!"
+        }
+    },
+    {
+        "id": "sign_in",
+        "description": "Label for the button or link that allows a user to log into their account.",
+        "other": {
+            "en": "Sign In",
+            "de": "Anmelden",
+            "fr": "Se connecter",
+            "ja": "サインイン",
+            "zh": "登录",
+            "he": "התחבר",
+            "ar": "تسجيل الدخول",
+            "ru": "Войти"
+        }
+    },
+    {
+        "id": "provide_username_or_email",
+        "description": "Instructional text for a login or recovery field.",
+        "other": {
+            "en": "Please provide username or email address",
+            "de": "Bitte geben Sie Ihren Benutzernamen oder Ihre E-Mail-Adresse an",
+            "fr": "Veuillez fournir un nom d'utilisateur ou une adresse e-mail",
+            "ja": "ユーザー名またはメールアドレスを入力してください",
+            "zh": "请输入用户名或电子邮件地址",
+            "he": "נא להזין שם משתמש או כתובת אימייל",
+            "ar": "يرجى تقديم اسم المستخدم أو عنوان البريد الإلكتروني",
+            "ru": "Пожалуйста, введите имя пользователя или адрес электронной почты"
+        }
+    },
+    {
+        "id": "back_action",
+        "description": "Label for a button or link to return to the previous screen or step.",
+        "other": {
+            "en": "Back",
+            "de": "Zurück",
+            "fr": "Retour",
+            "ja": "戻る",
+            "zh": "返回",
+            "he": "חזור",
+            "ar": "رجوع",
+            "ru": "Назад"
+        }
+    },
+    {
+        "id": "proceed_action",
+        "description": "Label for a button to continue to the next step.",
+        "other": {
+            "en": "Proceed",
+            "de": "Weiter",
+            "fr": "Continuer",
+            "ja": "続行",
+            "zh": "继续",
+            "he": "המשך",
+            "ar": "متابعة",
+            "ru": "Продолжить"
+        }
+    },
+    {
+        "id": "register_action",
+        "description": "Label for the button or link to create a new account.",
+        "other": {
+            "en": "Register",
+            "de": "Registrieren",
+            "fr": "S'inscrire",
+            "ja": "登録",
+            "zh": "注册",
+            "he": "הרשמה",
+            "ar": "تسجيل",
+            "ru": "Регистрация"
+        }
+    },
+    {
+        "id": "sign_out",
+        "description": "Label for the button or link that ends the current user session.",
+        "other": {
+            "en": "Sign Out",
+            "de": "Abmelden",
+            "fr": "Se déconnecter",
+            "ja": "サインアウト",
+            "zh": "登出",
+            "he": "התנתק",
+            "ar": "تسجيل الخروج",
+            "ru": "Выйти"
+        }
+    },
+    {
+        "id": "found_external_urls",
+        "description": "Reports the number of external URLs discovered during a scan.",
+        "one": {
+            "en": "Found single external URL {{.external_url}}.",
+            "de": "Einzelne externe URL gefunden: {{.external_url}}.",
+            "fr": "Une seule URL externe trouvée : {{.external_url}}.",
+            "ja": "1つの外部URLが見つかりました: {{.external_url}}",
+            "zh": "找到一个外部链接：{{.external_url}}",
+            "he": "נמצאה כתובת חיצונית אחת: {{.external_url}}",
+            "ar": "تم العثور على رابط خارجي واحد: {{.external_url}}",
+            "ru": "Найден один внешний URL: {{.external_url}}"
+        },
+        "other": {
+            "en": "Found {{.external_url_count}} external URLs.",
+            "de": "{{.external_url_count}} externe URLs gefunden.",
+            "fr": "{{.external_url_count}} URL externes trouvées.",
+            "ja": "{{.external_url_count}}個の外部URLが見つかりました。",
+            "zh": "找到 {{.external_url_count}} 个外部链接。",
+            "he": "נמצאו {{.external_url_count}} כתובות חיצוניות.",
+            "ar": "تم العثور على {{.external_url_count}} روابط خارجية.",
+            "ru": "Найдено внешних URL: {{.external_url_count}}."
+        }
+    },
+    {
+        "id": "registration_welcome",
+        "description": "Welcome message displayed to a user immediately after successful registration.",
+        "other": {
+            "en": "Thank you for registering and we hope you enjoy the experience!",
+            "de": "Vielen Dank für Ihre Registrierung! Wir hoffen, dass Ihnen die Erfahrung gefällt.",
+            "fr": "Merci de vous être inscrit et nous espérons que vous apprécierez l'expérience !",
+            "ja": "ご登録ありがとうございます。ぜひこの体験をお楽しみください！",
+            "zh": "感谢您的注册，希望您能享受这次体验！",
+            "he": "תודה שנרשמת, אנו מקווים שתהנה מהחוויה!",
+            "ar": "شكراً لتسجيلك، ونتمنى لك تجربة ممتعة!",
+            "ru": "Спасибо за регистрацию! Надеемся, вам понравится наш сервис."
+        }
+    },
+    {
+        "id": "things_to_keep_in_mind",
+        "description": "An introductory phrase used before listing important tips or rules.",
+        "other": {
+            "en": "Here are a few things to keep in mind:",
+            "de": "Hier sind ein paar Dinge, die Sie beachten sollten:",
+            "fr": "Voici quelques points à garder à l'esprit :",
+            "ja": "留意事項は以下の通りです:",
+            "zh": "以下是几点注意事项：",
+            "he": "הנה כמה דברים שכדאי לזכור:",
+            "ar": "إليك بعض الأمور التي يجب مراعاتها:",
+            "ru": "Вот несколько моментов, которые следует учитывать:"
+        }
+    },
+    {
+        "id": "confirmation_email_arrival",
+        "description": "Notice informing the user when to expect their confirmation email.",
+        "other": {
+            "en": "You should receive your confirmation email within the next {{.minutes}} minutes.",
+            "de": "Sie sollten Ihre Bestätigungs-E-Mail innerhalb der nächsten {{.minutes}} Minuten erhalten.",
+            "fr": "Vous devriez recevoir votre e-mail de confirmation dans les {{.minutes}} prochaines minutes.",
+            "ja": "確認メールは通常{{.minutes}}分以内に届きます。",
+            "zh": "您应该在接下来的 {{.minutes}} 分钟内收到确认电子邮件。",
+            "he": "אתה אמור לקבל את אימייל האישור תוך {{.minutes}} הדקות הקרובות.",
+            "ar": "من المفترض أن تصلك رسالة التأكيد خلال الـ {{.minutes}} دقيقة القادمة.",
+            "ru": "Вы должны получить подтверждение по электронной почте в течение следующих {{.minutes}} минут."
+        }
+    },
+    {
+        "id": "email_support_resend",
+        "description": "Call to action for the user to contact support if the email is missing.",
+        "other": {
+            "en": "If you still don't see it, please email support so we can resend it to you.",
+            "de": "Falls Sie sie immer noch nicht sehen, senden Sie bitte eine E-Mail an den Support, damit wir sie Ihnen erneut zusenden können.",
+            "fr": "Si vous ne le voyez toujours pas, veuillez envoyer un e-mail à l'assistance afin que nous puissions vous le renvoyer.",
+            "ja": "届かない場合は、再送いたしますのでサポートまでメールでご連絡ください。",
+            "zh": "如果您仍然没有看到邮件，请发邮件给技术支持，以便我们为您重新发送。",
+            "he": "אם אתה עדיין לא רואה אותו, אנא שלח אימייל לתמיכה כדי שנוכל לשלוח אותו שוב.",
+            "ar": "إذا لم تجد الرسالة بعد، يرجى مراسلة الدعم الفني لإعادة إرسالها.",
+            "ru": "Если вы всё еще не видите письмо, напишите в службу поддержки, чтобы мы могли отправить его повторно."
+        }
+    },
+    {
+        "id": "registration_confirmed",
+        "description": "Message shown to the user after they click the verification link in their email.",
+        "other": {
+            "en": "Thank you for confirming your registration and validating your email address!",
+            "de": "Vielen Dank für die Bestätigung Ihrer Registrierung und die Validierung Ihrer E-Mail-Adresse!",
+            "fr": "Merci d'avoir confirmé votre inscription et validé votre adresse e-mail !",
+            "ja": "会員登録の確認とメールアドレスの認証が完了しました。ありがとうございます！",
+            "zh": "感谢您确认注册并验证您的电子邮件地址！",
+            "he": "תודה שאישרת את ההרשמה ואימתת את כתובת האימייל שלך!",
+            "ar": "شكراً لتأكيد تسجيلك وتفعيل بريدك الإلكتروني!",
+            "ru": "Благодарим за подтверждение регистрации и верификацию адреса электронной почты!"
+        }
+    },
+    {
+        "id": "admin_approval_notice",
+        "description": "Information regarding the manual approval process by an administrator after registration.",
+        "other": {
+            "en": "At this point, once an administrator approves or disapproves your registration, you will get an email about that decision. If approved, you will be able to login with your credentials right away.",
+            "de": "Sobald ein Administrator Ihre Registrierung genehmigt oder ablehnt, erhalten Sie eine E-Mail über diese Entscheidung. Im Falle einer Genehmigung können Sie sich sofort mit Ihren Zugangsdaten anmelden.",
+            "fr": "À ce stade, une fois qu'un administrateur aura approuvé ou refusé votre inscription, vous recevrez un e-mail concernant cette décision. En cas d'approbation, vous pourrez vous connecter immédiatement avec vos identifiants.",
+            "ja": "管理者による登録の承認または不承認が完了次第、その結果をメールでお知らせいたします。承認された場合は、すぐにお手持ちの認証情報でログインできるようになります。",
+            "zh": "此时，一旦管理员批准或拒绝您的注册，您将收到一封有关该决定的电子邮件。如果获得批准，您将可以立即使用您的凭据登录。",
+            "he": "בשלב זה, ברגע שמנהל יאשר או ידחה את הרשמתך, תקבל אימייל על ההחלטה. אם תאושר, תוכל להתחבר עם פרטי הגישה שלך מיד.",
+            "ar": "في هذه المرحلة، بمجرد موافقة المسؤول أو رفضه لتسجيلك، ستتلقى بريداً إلكترونياً بهذا القرار. في حال الموافقة، ستتمكن من تسجيل الدخول ببياناتك على الفور.",
+            "ru": "На данном этапе, как только администратор одобрит или отклонит вашу регистрацию, вы получите электронное письмо с этим решением. В случае одобрения вы сможете сразу же войти в систему, используя свои учетные данные."
+        }
+    },
+    {
+        "id": "clear_action",
+        "description": "Label for a button or action that clears input fields or filters.",
+        "other": {
+            "en": "Clear",
+            "de": "Leeren",
+            "fr": "Effacer",
+            "ja": "クリア",
+            "zh": "清除",
+            "he": "נקה",
+            "ar": "مسح",
+            "ru": "Очистить"
+        }
+    },
+    {
+        "id": "submit_action",
+        "description": "Label for a button that submits form data or confirms an action.",
+        "other": {
+            "en": "Submit",
+            "de": "Absenden",
+            "fr": "Envoyer",
+            "ja": "送信",
+            "zh": "提交",
+            "he": "שלח",
+            "ar": "إرسال",
+            "ru": "Отправить"
+        }
+    },
+    {
+        "id": "dismiss_action",
+        "description": "Label for an action that closes a notification, alert, or popup.",
+        "other": {
+            "en": "Dismiss",
+            "de": "Schließen",
+            "fr": "Ignorer",
+            "ja": "閉じる",
+            "zh": "忽略",
+            "he": "התעלם",
+            "ar": "تجاهل",
+            "ru": "Закрыть"
+        }
+    }
+]

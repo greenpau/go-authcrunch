@@ -37,7 +37,7 @@
               <div>
                 <form class="space-y-6" action="{{ pathjoin .ActionEndpoint "/login" }}" method="POST">
                   <div>
-                    <label for="username" class="block text-center pb-2 text-lg font-sans font-medium text-primary-700">Please provide username or email address</label>
+                    <label for="username" class="block text-center pb-2 text-lg font-sans font-medium text-primary-700">{{ .Data.i18n_provide_username_or_email }}</label>
                     <div class="app-inp-box">
                       <div class="app-inp-prf-img"><i class="las la-user"></i></div>
                       <input class="app-inp-txt" id="username" name="username" type="text" autocorrect="off" autocapitalize="off" autocomplete="username" spellcheck="false" autofocus required />
@@ -70,14 +70,14 @@
                       <div class="flex-none">
                         <button type="button" onclick="hideLoginForm();return false;" class="app-btn-sec">
                           <div><i class="las la-caret-left"></i></div>
-                          <div class="pl-1 pr-2"><span>Back</span></div>
+                          <div class="pl-1 pr-2"><span>{{ .Data.i18n_back_action }}</span></div>
                         </button>
                       </div>
                     {{ end }}
                     <div class="grow">
                       <button type="submit" class="app-btn-pri">
                         <div><i class="las la-check-circle"></i></div>
-                        <div class="pl-2"><span>Proceed</span></div>
+                        <div class="pl-2"><span>{{ .Data.i18n_proceed_action }}</span></div>
                       </button>
                     </div>
                   </div>
@@ -88,7 +88,7 @@
                 <div id="user_register_link" {{ if eq .Data.login_options.hide_register_link "yes" }}class="hidden"{{ end -}}>
                   <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/register" .Data.login_options.default_realm }}">
                     <i class="las la-book"></i>
-                    <span class="text-lg">Register</span>
+                    <span class="text-lg">{{ .Data.i18n_register_action }}</span>
                   </a>
                 </div>
 

@@ -53,6 +53,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
 	"github.com/greenpau/go-authcrunch/pkg/tagging"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
@@ -883,6 +884,11 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test tagging.Tag struct",
 			entry: &tagging.Tag{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test translate.MessageData struct",
+			entry: &translate.MessageData{},
 			opts:  &Options{},
 		},
 	}

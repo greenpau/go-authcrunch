@@ -17,11 +17,12 @@ package ui
 import (
 	"bytes"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"path"
 	"strings"
-	"html/template"
 
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
@@ -51,9 +52,10 @@ type Factory struct {
 	Realms []UserRealm `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
 	// The pass to authentication endpoint. This is where
 	// user credentials will be passed to via POST.
-	ActionEndpoint string `json:"-"`
-	CustomCSSPath  string `json:"custom_css_path,omitempty" xml:"custom_css_path,omitempty" yaml:"custom_css_path,omitempty"`
-	CustomJsPath   string `json:"custom_js_path,omitempty" xml:"custom_js_path,omitempty" yaml:"custom_js_path,omitempty"`
+	ActionEndpoint string           `json:"-"`
+	CustomCSSPath  string           `json:"custom_css_path,omitempty" xml:"custom_css_path,omitempty" yaml:"custom_css_path,omitempty"`
+	CustomJsPath   string           `json:"custom_js_path,omitempty" xml:"custom_js_path,omitempty" yaml:"custom_js_path,omitempty"`
+	Language       translate.LangID `json:"language,omitempty" xml:"language,omitempty" yaml:"language,omitempty"`
 }
 
 // Template represents a user interface instance, e.g. a single

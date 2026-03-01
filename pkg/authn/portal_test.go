@@ -132,6 +132,7 @@ func TestNewPortal(t *testing.T) {
               "config": {
 			    "name": "myportal",
 				"ui": {
+				  "language": "en",
 				  "theme": "basic"
 				},
 				"portal_admin_roles": {

@@ -27,6 +27,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
@@ -49,12 +50,17 @@ func (p *Portal) handleHTTPLoginScreen(ctx context.Context, w http.ResponseWrite
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
 	if p.config.UI.Title == "" {
-		resp.PageTitle = "Sign In"
+		resp.PageTitle = translate.Translate("sign_in", p.ui.Language, nil)
 	} else {
 		resp.PageTitle = p.config.UI.Title
 	}
 	resp.Data["authenticated"] = rr.Response.Authenticated
 	resp.Data["login_options"] = p.loginOptions
+
+	resp.Data["i18n_provide_username_or_email"] = translate.Translate("provide_username_or_email", p.ui.Language, nil)
+	resp.Data["i18n_back_action"] = translate.Translate("back_action", p.ui.Language, nil)
+	resp.Data["i18n_proceed_action"] = translate.Translate("proceed_action", p.ui.Language, nil)
+	resp.Data["i18n_register_action"] = translate.Translate("register_action", p.ui.Language, nil)
 
 	content, err := p.ui.Render("login", resp)
 	if err != nil {

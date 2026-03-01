@@ -33,6 +33,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 
 	"fmt"
@@ -623,6 +624,16 @@ func (p *Portal) configureUserInterface() error {
 		return errors.ErrUserInterfaceThemeNotFound.WithArgs(p.config.Name, p.config.UI.Theme)
 	}
 
+	if p.config.UI.Language == "" {
+		p.config.UI.Language = "en"
+	}
+
+	if !translate.IsSupportedLanguage(p.config.UI.Language) {
+		return errors.ErrUserInterfaceLanguageNotFound.WithArgs(p.config.Name, p.config.UI.Language)
+	}
+
+	p.ui.Language = translate.NormalizeLanguage(p.config.UI.Language)
+
 	// User Interface Templates
 	for _, k := range ui.PageTemplates.GetAssetPaths() {
 		tmplNameParts := strings.SplitN(k, "/", 2)
@@ -669,6 +680,7 @@ func (p *Portal) configureUserInterface() error {
 		zap.Any("private_links", p.ui.PrivateLinks),
 		zap.Any("realms", p.ui.Realms),
 		zap.String("theme", p.config.UI.Theme),
+		zap.String("language", translate.GetLanguageCode(p.ui.Language)),
 	)
 
 	return nil
