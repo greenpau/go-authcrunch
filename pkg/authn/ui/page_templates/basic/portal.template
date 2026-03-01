@@ -32,7 +32,7 @@
             </div>
           </div>
           <div>
-            <p class="app-inp-lbl">Access the following services.</p>
+            <p class="app-inp-lbl">{{ .Data.i18n_access_services_instruction }}</p>
           </div>
           <div class="mt-3 grid">
             {{ range .PrivateLinks }}
@@ -49,7 +49,7 @@
               <a href="{{ pathjoin .ActionEndpoint "/logout" }}">
                 <div class="app-portal-btn-box">
                   <div class="app-portal-btn-img"><i class="las la-sign-out-alt"></i></div>
-                  <div class="app-portal-btn-txt"><span>Sign Out</span></div>
+                  <div class="app-portal-btn-txt"><span>{{ .Data.i18n_sign_out }}</span></div>
                 </div>
               </a>
             </div>

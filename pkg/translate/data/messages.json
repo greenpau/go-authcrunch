@@ -196,6 +196,34 @@
         }
     },
     {
+        "id": "access_services_instruction",
+        "description": "Introductory text before a list of available applications or services.",
+        "other": {
+            "en": "Access the following services.",
+            "de": "Greifen Sie auf die folgenden Dienste zu.",
+            "fr": "Accédez aux services suivants.",
+            "ja": "以下のサービスにアクセスしてください。",
+            "zh": "访问以下服务。",
+            "he": "גש לשירותים הבאים.",
+            "ar": "الوصول إلى الخدمات التالية.",
+            "ru": "Воспользуйтесь следующими услугами."
+        }
+    },
+    {
+        "id": "applications_label",
+        "description": "Plural noun for a list of software applications or tools within the portal.",
+        "other": {
+            "en": "Applications",
+            "de": "Anwendungen",
+            "fr": "Applications",
+            "ja": "アプリケーション",
+            "zh": "应用程序",
+            "he": "אפליקציות",
+            "ar": "التطبيقات",
+            "ru": "Приложения"
+        }
+    },
+    {
         "id": "forgot_username_question",
         "description": "Question link on the login page for users who cannot remember their username.",
         "other": {

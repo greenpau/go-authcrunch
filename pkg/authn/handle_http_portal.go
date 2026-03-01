@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
@@ -86,11 +87,13 @@ func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWrit
 	}
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
-	resp.PageTitle = "Applications"
+	resp.PageTitle = translate.Translate("applications_label", p.ui.Language, nil)
 	if len(usr.FrontendLinks) > 0 {
 		// Add additional frontend links.
 		resp.AddFrontendLinks(usr.FrontendLinks)
 	}
+	resp.Data["i18n_access_services_instruction"] = translate.Translate("access_services_instruction", p.ui.Language, nil)
+	resp.Data["i18n_sign_out"] = translate.Translate("sign_out", p.ui.Language, nil)
 	content, err := p.ui.Render("portal", resp)
 	if err != nil {
 		return p.handleHTTPRenderError(ctx, w, r, rr, err)
