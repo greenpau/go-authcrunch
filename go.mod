@@ -12,11 +12,13 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/greenpau/versioned v1.0.30
 	github.com/iancoleman/strcase v0.3.0
+	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/urfave/cli/v2 v2.27.7
 	go.uber.org/zap v1.27.1
 	golang.org/x/crypto v0.48.0
 	golang.org/x/net v0.50.0
+	golang.org/x/text v0.34.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -27,12 +29,10 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/mattermost/xml-roundtrip-validator v0.1.0 // indirect
-	github.com/nicksnyder/go-i18n/v2 v2.6.1 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/russellhaering/goxmldsig v1.5.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
 )
