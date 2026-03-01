@@ -196,6 +196,48 @@
         }
     },
     {
+        "id": "aws_sso_label",
+        "description": "Brand name for Amazon Web Services Single Sign-On service. Usually remains in English.",
+        "other": {
+            "en": "AWS SSO",
+            "de": "AWS SSO",
+            "fr": "AWS SSO",
+            "ja": "AWS SSO",
+            "zh": "AWS SSO",
+            "he": "AWS SSO",
+            "ar": "AWS SSO",
+            "ru": "AWS SSO"
+        }
+    },
+    {
+        "id": "account_id_label",
+        "description": "Label for a unique account identifier, often a number or alphanumeric string.",
+        "other": {
+            "en": "Account ID",
+            "de": "Konto-ID",
+            "fr": "ID de compte",
+            "ja": "アカウントID",
+            "zh": "账户 ID",
+            "he": "מזהה חשבון",
+            "ar": "معرف الحساب",
+            "ru": "ID аккаунта"
+        }
+    },
+    {
+        "id": "aws_role_assumption_instruction",
+        "description": "Instruction for users to select and assume an IAM role within an AWS account list.",
+        "other": {
+            "en": "Assume any of the following roles on the associated AWS accounts by clicking the name of the role.",
+            "de": "Übernehmen Sie eine der folgenden Rollen in den zugehörigen AWS-Konten, indem Sie auf den Namen der Rolle klicken.",
+            "fr": "Assumez l'un des rôles suivants sur les comptes AWS associés en cliquant sur le nom du rôle.",
+            "ja": "ロール名をクリックして、関連するAWSアカウントの以下のいずれかのロールを引き受けてください。",
+            "zh": "通过点击角色名称，在关联的 AWS 账户中承担以下任一角色。",
+            "he": "קבל על עצמך את אחד מהתפקידים הבאים בחשבונות ה-AWS המשויכים על ידי לחיצה על שם התפקיד.",
+            "ar": "قم بتولي أي من الأدوار التالية في حسابات AWS المرتبطة عن طريق النقر فوق اسم الدور.",
+            "ru": "Примите любую из следующих ролей в связанных аккаунтах AWS, нажав на название роли."
+        }
+    },
+    {
         "id": "contact_support_action",
         "description": "Label for a button or link that allows the user to contact the support team.",
         "other": {
@@ -305,6 +347,34 @@
             "he": "התנתק",
             "ar": "تسجيل الخروج",
             "ru": "Выйти"
+        }
+    },
+    {
+        "id": "role_name_label",
+        "description": "Label for the identifier of an IAM role or a user role within a list.",
+        "other": {
+            "en": "Role Name",
+            "de": "Rollenname",
+            "fr": "Nom du rôle",
+            "ja": "ロール名",
+            "zh": "角色名称",
+            "he": "שם תפקיד",
+            "ar": "اسم الدور",
+            "ru": "Название роли"
+        }
+    },
+    {
+        "id": "no_aws_roles_assigned_message",
+        "description": "Information message displayed when a user's identity is authenticated but lacks any assigned AWS IAM roles.",
+        "other": {
+            "en": "Your user identity has no roles associated with AWS accounts.",
+            "de": "Ihrer Benutzeridentität sind keine Rollen mit AWS-Konten zugewiesen.",
+            "fr": "Votre identité d'utilisateur n'a aucun rôle associé à des comptes AWS.",
+            "ja": "ユーザー識別情報に関連付けられたAWSアカウントのロールがありません。",
+            "zh": "您的用户身份没有关联 AWS 账户的角色。",
+            "he": "לזהות המשתמש שלך אין תפקידים המשויכים לחשבונות AWS.",
+            "ar": "هوية المستخدم الخاصة بك ليس لها أدوار مرتبطة بحسابات AWS.",
+            "ru": "Ваша учетная запись не имеет ролей, связанных с аккаунтами AWS."
         }
     },
     {

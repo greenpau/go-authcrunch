@@ -22,6 +22,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"go.uber.org/zap"
 )
@@ -166,10 +167,16 @@ func (p *Portal) handleHTTPAppsSingleSignOnMenu(ctx context.Context, w http.Resp
 	provider sso.SingleSignOnProvider, roles []*assumeRoleEntry, usr *user.User) error {
 
 	resp := p.ui.GetArgs()
-	resp.PageTitle = "AWS SSO"
+	resp.PageTitle = translate.Translate("aws_sso_label", p.ui.Language, nil)
 	resp.BaseURL(rr.Upstream.BasePath)
 	resp.Data["role_count"] = len(roles)
 	resp.Data["roles"] = roles
+	resp.Data["i18n_account_id_label"] = translate.Translate("account_id_label", p.ui.Language, nil)
+	resp.Data["i18n_aws_role_assumption_instruction"] = translate.Translate("aws_role_assumption_instruction", p.ui.Language, nil)
+	resp.Data["i18n_portal_label"] = translate.Translate("portal_label", p.ui.Language, nil)
+	resp.Data["i18n_role_name_label"] = translate.Translate("role_name_label", p.ui.Language, nil)
+	resp.Data["i18n_no_aws_roles_assigned_message"] = translate.Translate("no_aws_roles_assigned_message", p.ui.Language, nil)
+	resp.Data["i18n_sign_out"] = translate.Translate("sign_out", p.ui.Language, nil)
 
 	content, err := p.ui.Render("apps_sso", resp)
 	if err != nil {

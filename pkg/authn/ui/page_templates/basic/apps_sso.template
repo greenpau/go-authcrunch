@@ -34,7 +34,7 @@
 
           {{ if gt .Data.role_count 0 }}
             <div class="pb-4 pt-4">
-              <p class="app-inp-lbl">Assume any of the following roles on the associated AWS accounts by clicking the name of the role.</p>
+              <p class="app-inp-lbl">{{ .Data.i18n_aws_role_assumption_instruction }}</p>
             </div>
 
             <div class="flex flex-col">
@@ -43,8 +43,8 @@
                   <table class="min-w-full divide-y divide-gray-300">
                     <thead>
                       <tr>
-                        <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary-700 sm:pl-6 md:pl-0">Role Name</th>
-                        <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-primary-700">Account ID</th>
+                        <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary-700 sm:pl-6 md:pl-0">{{ .Data.i18n_role_name_label }}</th>
+                        <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-primary-700">{{ .Data.i18n_account_id_label }}</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -63,7 +63,7 @@
             </div>
           {{ else }}
             <div class="pb-4 pt-4">
-              <p class="app-inp-lbl">Your user identity has no roles associated with AWS accounts.</p>
+              <p class="app-inp-lbl">{{ .Data.i18n_no_aws_roles_assigned_message }}</p>
             </div>
           {{ end }}
 
@@ -72,13 +72,13 @@
             <div id="forgot_username_link">
               <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/portal" }}">
                 <i class="las la-layer-group"></i>
-                <span class="text-lg">Portal</span>
+                <span class="text-lg">{{ .Data.i18n_portal_label }}</span>
               </a>
             </div>
             <div id="contact_support_link">
               <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/logout" }}">
                 <i class="las la-times-circle"></i>
-                <span class="text-lg">Sign Out</span>
+                <span class="text-lg">{{ .Data.i18n_sign_out }}</span>
               </a>
             </div>
           </div>
