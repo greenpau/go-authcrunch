@@ -20,7 +20,7 @@ import (
 	"io/ioutil"
 	"path"
 	"strings"
-	"text/template"
+	"html/template"
 
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
@@ -282,18 +282,19 @@ func (f *Factory) DeleteTemplates() {
 func loadTemplateFromString(s, p string) (*template.Template, error) {
 	funcMap := template.FuncMap{
 		"pathjoin": path.Join,
-		"brsplitline": func(s string) string {
+		"brsplitline": func(s string) template.HTML {
+			escaped := template.HTMLEscapeString(s)
 			var output []rune
 			count := 0
-			for _, c := range s {
+			for _, c := range escaped {
 				count++
 				if count > 25 {
 					count = 0
-					output = append(output, []rune{'<', 'b', 'r', '>'}...)
+					output = append(output, '<', 'b', 'r', '>')
 				}
 				output = append(output, c)
 			}
-			return string(output)
+			return template.HTML(output)
 		},
 	}
 	t := template.New(s).Funcs(funcMap)

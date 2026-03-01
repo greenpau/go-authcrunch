@@ -111,7 +111,7 @@ func TestRefererSanitization(t *testing.T) {
 		_ = p.handleHTTPError(context.Background(), rw, &r, request, 404)
 		rb := string(rw.body)
 
-		tests.EvalObjectsWithLog(t, "sanitized url", true, strings.Contains(rb, "https://www.google.com/search?hl=en%26q=testing%27%22()%26%%3Cacx%3E%3CScRiPt %3Ealert(9854)%3C/ScRiPt%3E"), []string{})
+		tests.EvalObjectsWithLog(t, "sanitized url", true, strings.Contains(rb, "https://www.google.com/search?hl=en%26q=testing%27%22%28%29%26%25%3Cacx%3E%3CScRiPt%20%3Ealert%289854%29%3C/ScRiPt%3E"), []string{})
 	})
 }
 
