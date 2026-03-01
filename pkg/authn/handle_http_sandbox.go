@@ -24,6 +24,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
@@ -200,7 +201,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 	m := make(map[string]interface{})
 	backend := p.getIdentityStoreByRealm(usr.Authenticator.Realm)
 	if backend == nil {
-		m["title"] = "Internal Server Error"
+		m["title"] = translate.Translate("internal_server_error_message", p.ui.Language, nil)
 		m["view"] = "terminate"
 		return m, fmt.Errorf("Authentication realm not found")
 	}

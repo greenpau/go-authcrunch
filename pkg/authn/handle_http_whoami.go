@@ -17,10 +17,12 @@ package authn
 import (
 	"context"
 	"encoding/json"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/user"
 	"net/http"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
+	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
 func (p *Portal) handleHTTPWhoami(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
@@ -33,7 +35,7 @@ func (p *Portal) handleHTTPWhoami(ctx context.Context, w http.ResponseWriter, r 
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 	}
 	resp := p.ui.GetArgs()
-	resp.PageTitle = "User Identity"
+	resp.PageTitle = translate.Translate("user_identity_heading", p.ui.Language, nil)
 	resp.BaseURL(rr.Upstream.BasePath)
 	tokenMap := make(map[string]interface{})
 	for k, v := range usr.AsMap() {
@@ -54,6 +56,8 @@ func (p *Portal) handleHTTPWhoami(ctx context.Context, w http.ResponseWriter, r 
 		return p.handleHTTPRenderError(ctx, w, r, rr, err)
 	}
 	resp.Data["token"] = string(prettyTokenMap)
+	resp.Data["i18n_portal_label"] = translate.Translate("portal_label", p.ui.Language, nil)
+	resp.Data["i18n_sign_out"] = translate.Translate("sign_out", p.ui.Language, nil)
 
 	content, err := p.ui.Render("whoami", resp)
 	if err != nil {

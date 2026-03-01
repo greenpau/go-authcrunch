@@ -61,6 +61,8 @@ func (p *Portal) handleHTTPLoginScreen(ctx context.Context, w http.ResponseWrite
 	resp.Data["i18n_back_action"] = translate.Translate("back_action", p.ui.Language, nil)
 	resp.Data["i18n_proceed_action"] = translate.Translate("proceed_action", p.ui.Language, nil)
 	resp.Data["i18n_register_action"] = translate.Translate("register_action", p.ui.Language, nil)
+	resp.Data["i18n_forgot_username_question"] = translate.Translate("forgot_username_question", p.ui.Language, nil)
+	resp.Data["i18n_contact_support_action"] = translate.Translate("contact_support_action", p.ui.Language, nil)
 
 	content, err := p.ui.Render("login", resp)
 	if err != nil {
@@ -446,7 +448,6 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	}
 	w.Header().Set("Location", redirectLocation)
 	rr.Response.Code = http.StatusSeeOther
-	return
 }
 
 func combineGroupRoles(m map[string]interface{}) {

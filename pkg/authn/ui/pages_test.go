@@ -15,7 +15,11 @@
 package ui
 
 import (
+	"fmt"
 	"reflect"
+	"regexp"
+	"sort"
+	"strings"
 	"testing"
 )
 
@@ -31,7 +35,7 @@ func TestNewPageTemplatesLibrary(t *testing.T) {
 		t.Fatal("Expected StaticAssetLibrary instance, got nil")
 	}
 
-	wantCount := 9
+	wantCount := 8
 	gotCount := sal.GetAssetCount()
 	if gotCount != wantCount {
 		t.Errorf("Expected asset count %d, got %d", wantCount, gotCount)
@@ -45,7 +49,6 @@ func TestNewPageTemplatesLibrary(t *testing.T) {
 		"basic/portal",
 		"basic/register",
 		"basic/sandbox",
-		"basic/settings",
 		"basic/whoami",
 	}
 
@@ -86,4 +89,52 @@ func TestNewPageTemplatesLibrary(t *testing.T) {
 	}
 
 	t.Log("Static Asset Library initialized successfully")
+}
+
+func TestExtractTemplatePhrases(t *testing.T) {
+	sal, err := NewPageTemplatesLibrary()
+	if err != nil {
+		t.Fatalf("Expected success, but got error: %v", err)
+	}
+
+	tagRegex := regexp.MustCompile(`>([^<{}\n\t][^<{}]+[^<{}\n\t])<`)
+	attrRegex := regexp.MustCompile(`\b(alt|title|label|placeholder)="([^"{}]*)"`)
+
+	for _, assetPath := range sal.GetAssetPaths() {
+		asset, err := sal.GetAsset(assetPath)
+		if err != nil {
+			t.Fatalf("Expected success with %s, but got error: %v", assetPath, err)
+		}
+
+		phrases := make(map[string]bool)
+
+		tagMatches := tagRegex.FindAllStringSubmatch(asset.Content, -1)
+		for _, m := range tagMatches {
+			phrase := strings.TrimSpace(m[1])
+			if len(phrase) > 1 {
+				phrases[phrase] = true
+			}
+		}
+
+		attrMatches := attrRegex.FindAllStringSubmatch(asset.Content, -1)
+		for _, m := range attrMatches {
+			phrase := strings.TrimSpace(m[2])
+			if len(phrase) > 1 {
+				phrases[phrase] = true
+			}
+		}
+
+		var result []string
+		for p := range phrases {
+			result = append(result, p)
+		}
+		sort.Strings(result)
+
+		if len(result) > 0 {
+			t.Logf("Found translatable phrases in: %s", asset.FsPath)
+			for _, p := range result {
+				fmt.Println(p)
+			}
+		}
+	}
 }

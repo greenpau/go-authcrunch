@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
@@ -107,16 +108,18 @@ func (p *Portal) handleHTTPError(ctx context.Context, w http.ResponseWriter, r *
 
 	switch code {
 	case http.StatusForbidden:
-		resp.PageTitle = "Access Denied"
-		resp.Data["message"] = "Please contact support if you believe this is an error."
+		resp.PageTitle = translate.Translate("access_denied_message", p.ui.Language, nil)
+		resp.Data["message"] = translate.Translate("contact_support_instruction", p.ui.Language, nil)
 	case http.StatusNotFound:
-		resp.PageTitle = "Page Not Found"
-		resp.Data["message"] = "The page you are looking for could not be found."
+		resp.PageTitle = translate.Translate("page_not_found_message", p.ui.Language, nil)
+		resp.Data["message"] = translate.Translate("page_not_found_detail", p.ui.Language, nil)
 	default:
 		resp.PageTitle = http.StatusText(code)
 	}
 
 	resp.Data["authenticated"] = rr.Response.Authenticated
+
+	resp.Data["i18n_go_back_action"] = translate.Translate("go_back_action", p.ui.Language, nil)
 
 	if rr.Response.RedirectURL != "" {
 		// RedirectURL is sourced from a server-set cookie, not raw user input.
@@ -136,25 +139,6 @@ func (p *Portal) handleHTTPError(ctx context.Context, w http.ResponseWriter, r *
 	}
 	return p.handleHTTPRenderHTML(ctx, w, code, content.Bytes())
 }
-
-// func (p *Portal) handleHTTPGeneric(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, code int, msg string) error {
-// 	p.disableClientCache(w)
-// 	resp := p.ui.GetArgs()
-// 	resp.BaseURL(rr.Upstream.BasePath)
-// 	resp.PageTitle = msg
-// 	switch code {
-// 	case http.StatusServiceUnavailable:
-// 		resp.Data["message"] = "This service is not available to you."
-// 	}
-
-// 	resp.Data["authenticated"] = rr.Response.Authenticated
-// 	resp.Data["go_back_url"] = rr.Upstream.BasePath
-// 	content, err := p.ui.Render("generic", resp)
-// 	if err != nil {
-// 		return p.handleHTTPRenderError(ctx, w, r, rr, err)
-// 	}
-// 	return p.handleHTTPRenderHTML(ctx, w, code, content.Bytes())
-// }
 
 func (p *Portal) handleHTTPRedirect(_ context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request, location string) error {
 	p.disableClientCache(w)
@@ -220,9 +204,10 @@ func (p *Portal) handleHTTPRenderError(ctx context.Context, w http.ResponseWrite
 
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
-	resp.PageTitle = http.StatusText(http.StatusInternalServerError)
+	resp.PageTitle = translate.Translate("internal_server_error_message", p.ui.Language, nil)
 	resp.Data["go_back_url"] = "/"
-	resp.Data["message"] = "Unexpected server error occurred. If persists, please contact support."
+	resp.Data["message"] = translate.Translate("unexpected_error_contact_support", p.ui.Language, nil)
+	resp.Data["i18n_go_back_action"] = translate.Translate("go_back_action", p.ui.Language, nil)
 
 	content, err := p.ui.Render("generic", resp)
 	if err != nil {
@@ -234,14 +219,14 @@ func (p *Portal) handleHTTPRenderError(ctx context.Context, w http.ResponseWrite
 	return p.handleHTTPRenderHTML(ctx, w, http.StatusInternalServerError, content.Bytes())
 }
 
-func (p *Portal) handleHTTPRenderHTML(ctx context.Context, w http.ResponseWriter, code int, body []byte) error {
+func (p *Portal) handleHTTPRenderHTML(_ context.Context, w http.ResponseWriter, code int, body []byte) error {
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(code)
 	w.Write(body)
 	return nil
 }
 
-func (p *Portal) handleHTTPRenderPlainText(ctx context.Context, w http.ResponseWriter, code int) error {
+func (p *Portal) handleHTTPRenderPlainText(_ context.Context, w http.ResponseWriter, code int) error {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(code)
 	w.Write([]byte(http.StatusText(code)))

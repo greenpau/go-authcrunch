@@ -84,6 +84,160 @@
         }
     },
     {
+        "id": "go_back_action",
+        "description": "Label for a button or link to return to the previous page or step.",
+        "other": {
+            "en": "Go back",
+            "de": "Gehen Sie zurück",
+            "fr": "Retourner",
+            "ja": "戻る",
+            "zh": "返回",
+            "he": "חזור אחורה",
+            "ar": "العودة للخلف",
+            "ru": "Вернуться назад"
+        }
+    },
+    {
+        "id": "access_denied_message",
+        "description": "Error message shown when a user lacks the necessary permissions to view a page or perform an action.",
+        "other": {
+            "en": "Access Denied",
+            "de": "Zugriff verweigert",
+            "fr": "Accès refusé",
+            "ja": "アクセス拒否",
+            "zh": "访问被拒绝",
+            "he": "הגישה נדחתה",
+            "ar": "تم رفض الوصول",
+            "ru": "Доступ запрещен"
+        }
+    },
+    {
+        "id": "page_not_found_message",
+        "description": "Standard 404 error message when a requested URL does not exist.",
+        "other": {
+            "en": "Page Not Found",
+            "de": "Seite nicht gefunden",
+            "fr": "Page non trouvée",
+            "ja": "ページが見つかりません",
+            "zh": "页面未找到",
+            "he": "הדף לא נמצא",
+            "ar": "الصفحة غير موجودة",
+            "ru": "Страница не найдена"
+        }
+    },
+    {
+        "id": "contact_support_instruction",
+        "description": "Instruction for the user to reach out to the help desk or support team if they encounter an error.",
+        "other": {
+            "en": "Please contact support if you believe this is an error.",
+            "de": "Bitte kontaktieren Sie den Support, wenn Sie glauben, dass dies ein Fehler ist.",
+            "fr": "Veuillez contacter le support si vous pensez qu'il s'agit d'une erreur.",
+            "ja": "これがエラーであると思われる場合は、サポートにお問い合わせください。",
+            "zh": "如果您认为这是一个错误，请联系支持人员。",
+            "he": "אנא צרו קשר עם התמיכה אם אתם מאמינים שמדובר בשגיאה.",
+            "ar": "يرجى الاتصال بالدعم إذا كنت تعتقد أن هذا خطأ.",
+            "ru": "Пожалуйста, свяжитесь с техподдержкой, если вы считаете, что это ошибка."
+        }
+    },
+    {
+        "id": "page_not_found_detail",
+        "description": "Descriptive text for a 404 error page explaining that the requested resource is missing.",
+        "other": {
+            "en": "The page you are looking for could not be found.",
+            "de": "Die von Ihnen gesuchte Seite konnte nicht gefunden werden.",
+            "fr": "La page que vous recherchez est introuvable.",
+            "ja": "お探しのページは見つかりませんでした。",
+            "zh": "您查找的页面无法找到。",
+            "he": "הדף שחיפשת לא נמצא.",
+            "ar": "تعذر العثور على الصفحة التي تبحث عنها.",
+            "ru": "Страница, которую вы ищете, не найдена."
+        }
+    },
+    {
+        "id": "internal_server_error_message",
+        "description": "Standard 500 error message indicating a general server-side failure.",
+        "other": {
+            "en": "Internal Server Error",
+            "de": "Interner Serverfehler",
+            "fr": "Erreur interne du serveur",
+            "ja": "内部サーバーエラー",
+            "zh": "内部服务器错误",
+            "he": "שגיאת שרת פנימית",
+            "ar": "خطأ داخلي في الخادم",
+            "ru": "Внутренняя ошибка сервера"
+        }
+    },
+    {
+        "id": "unexpected_error_contact_support",
+        "description": "A combined error message for 500-level errors suggesting a retry and support contact.",
+        "other": {
+            "en": "Unexpected server error occurred. If persists, please contact support.",
+            "de": "Ein unerwarteter Serverfehler ist aufgetreten. Falls das Problem weiterhin besteht, wenden Sie sich bitte an den Support.",
+            "fr": "Une erreur serveur inattendue s'est produite. Si elle persiste, veuillez contacter le support.",
+            "ja": "予期しないサーバーエラーが発生しました。問題が解決しない場合は、サポートにお問い合わせください。",
+            "zh": "发生意外的服务器错误。如果问题仍然存在，请联系支持人员。",
+            "he": "אירעה שגיאת שרת בלתי צפויה. אם הבעיה נמשכת, אנא צרו קשר עם התמיכה.",
+            "ar": "حدث خطأ غير متوقع في الخادم. إذا استمرت المشكلة، يرجى الاتصال بالدعم.",
+            "ru": "Произошла непредвиденная ошибка сервера. Если проблема сохранится, пожалуйста, свяжитесь с техподдержкой."
+        }
+    },
+    {
+        "id": "contact_support_action",
+        "description": "Label for a button or link that allows the user to contact the support team.",
+        "other": {
+            "en": "Contact Support",
+            "de": "Support kontaktieren",
+            "fr": "Contacter le support",
+            "ja": "サポートに連絡",
+            "zh": "联系支持",
+            "he": "צור קשר עם התמיכה",
+            "ar": "اتصل بالدعم",
+            "ru": "Связаться с техподдержкой"
+        }
+    },
+    {
+        "id": "forgot_username_question",
+        "description": "Question link on the login page for users who cannot remember their username.",
+        "other": {
+            "en": "Forgot Username?",
+            "de": "Benutzername vergessen?",
+            "fr": "Nom d'utilisateur oublié ?",
+            "ja": "ユーザー名を忘れましたか？",
+            "zh": "忘记用户名？",
+            "he": "שכחת שם משתמש?",
+            "ar": "هل نسيت اسم المستخدم؟",
+            "ru": "Забыли имя пользователя?"
+        }
+    },
+    {
+        "id": "user_identity_heading",
+        "description": "Heading for the section containing user profile information or identity details.",
+        "other": {
+            "en": "User Identity",
+            "de": "Benutzeridentität",
+            "fr": "Identité de l'utilisateur",
+            "ja": "ユーザー識別情報",
+            "zh": "用户身份",
+            "he": "זהות משתמש",
+            "ar": "هوية المستخدم",
+            "ru": "Идентификация пользователя"
+        }
+    },
+    {
+        "id": "portal_label",
+        "description": "General name for the application gateway or dashboard interface.",
+        "other": {
+            "en": "Portal",
+            "de": "Portal",
+            "fr": "Portail",
+            "ja": "ポータル",
+            "zh": "门户",
+            "he": "פורטל",
+            "ar": "البوابة",
+            "ru": "Портал"
+        }
+    },
+    {
         "id": "sign_out",
         "description": "Label for the button or link that ends the current user session.",
         "other": {

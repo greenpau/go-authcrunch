@@ -95,14 +95,14 @@
                 <div id="forgot_username_link" {{ if eq .Data.login_options.hide_forgot_username_link "yes" }}class="hidden"{{ end -}}>
                   <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/forgot" .Data.login_options.default_realm }}">
                     <i class="las la-unlock"></i>
-                    <span class="text-lg">Forgot Username?</span>
+                    <span class="text-lg">{{ .Data.i18n_forgot_username_question }}</span>
                   </a>
                 </div>
 
                 <div id="contact_support_link" {{ if eq .Data.login_options.hide_contact_support_link "yes" }}class="hidden"{{ end -}}>
                   <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/help" .Data.login_options.default_realm }}">
                     <i class="las la-info-circle"></i>
-                    <span class="text-lg">Contact Support</span>
+                    <span class="text-lg">{{ .Data.i18n_contact_support_action }}</span>
                   </a>
                 </div>
               </div>

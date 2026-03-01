@@ -34,7 +34,7 @@
                   </div>
                   {{ if .Data.go_back_url }}
                     <div class="app-gen-btn-box">
-                      <a href="{{ .Data.go_back_url }}" class="app-gen-btn-txt"> Go back </a>
+                      <a href="{{ .Data.go_back_url }}" class="app-gen-btn-txt"> {{ .Data.i18n_go_back_action }} </a>
                     </div>
                   {{ end }}
                 </div>
