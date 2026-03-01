@@ -16,10 +16,12 @@ package authn
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"go.uber.org/zap"
-	"net/http"
 )
 
 func (p *Portal) handleHTTPAppsMobileAccess(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, parsedUser *user.User) error {
@@ -50,9 +52,11 @@ func (p *Portal) handleHTTPAppsMobileAccess(ctx context.Context, w http.Response
 	}
 
 	resp := p.ui.GetArgs()
-	resp.PageTitle = "Mobile Access"
+	resp.PageTitle = translate.Translate("mobile_access_label", p.ui.Language, nil)
 	resp.BaseURL(rr.Upstream.BasePath)
-
+	resp.Data["i18n_qr_passwordless_login_instruction"] = translate.Translate("qr_passwordless_login_instruction", p.ui.Language, nil)
+	resp.Data["i18n_portal_label"] = translate.Translate("portal_label", p.ui.Language, nil)
+	resp.Data["i18n_sign_out"] = translate.Translate("sign_out", p.ui.Language, nil)
 	content, err := p.ui.Render("apps_mobile_access", resp)
 	if err != nil {
 		return p.handleHTTPRenderError(ctx, w, r, rr, err)

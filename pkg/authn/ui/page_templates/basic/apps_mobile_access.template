@@ -32,20 +32,20 @@
             </div>
           </div>
           <div>
-            <p class="app-inp-lbl">Scan the below QR code and follow the link to perform one-time passwordless login.</p>
+            <p class="app-inp-lbl">{{ .Data.i18n_qr_passwordless_login_instruction }}</p>
           </div>
 
           <div class="flex flex-wrap pt-6 justify-center gap-4">
             <div id="forgot_username_link">
               <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/portal" }}">
                 <i class="las la-layer-group"></i>
-                <span class="text-lg">Portal</span>
+                <span class="text-lg">{{ .Data.i18n_portal_label }}</span>
               </a>
             </div>
             <div id="contact_support_link">
               <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/logout" }}">
                 <i class="las la-times-circle"></i>
-                <span class="text-lg">Sign Out</span>
+                <span class="text-lg">{{ .Data.i18n_sign_out }}</span>
               </a>
             </div>
           </div>
