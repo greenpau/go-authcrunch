@@ -15,6 +15,7 @@
 package translate
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -129,5 +130,34 @@ func TestTranslate(t *testing.T) {
 				t.Fatalf("unexpected result (-got +want):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestMessageIDsForDuplicates(t *testing.T) {
+	data, err := staticFiles.ReadFile("data/messages.json")
+	if err != nil {
+		t.Fatalf("failed to read data/messages.json from embed: %v", err)
+	}
+
+	type messageEntry struct {
+		ID string `json:"id"`
+	}
+
+	var messages []messageEntry
+	if err := json.Unmarshal(data, &messages); err != nil {
+		t.Fatalf("failed to unmarshal data/messages.json: %v", err)
+	}
+
+	seen := make(map[string]int)
+	for i, msg := range messages {
+		if msg.ID == "" {
+			t.Errorf("entry at index %d has an empty ID", i)
+			continue
+		}
+
+		if count, exists := seen[msg.ID]; exists {
+			t.Errorf("duplicate message ID found: %q (appears at index %d and %d)", msg.ID, count, i)
+		}
+		seen[msg.ID] = i
 	}
 }
