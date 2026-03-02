@@ -16,38 +16,43 @@ package file
 
 import (
 	"bufio"
-	"bytes"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-// ReadCertFile reads certificate files.
+// ReadCertFile reads certificate files and returns the base64 content between tags.
 func ReadCertFile(filePath string) (string, error) {
-	var buffer bytes.Buffer
-	var RecordingEnabled bool
-	fileHandle, err := os.Open(filePath)
+	fp, err := expandHomePath(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	fileHandle, err := os.Open(fp)
 	if err != nil {
 		return "", err
 	}
 	defer fileHandle.Close()
 
+	var sb strings.Builder
+	var recordingEnabled bool
 	scanner := bufio.NewScanner(fileHandle)
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "-----") {
 			if strings.Contains(line, "BEGIN CERTIFICATE") {
-				RecordingEnabled = true
+				recordingEnabled = true
 				continue
 			}
 			if strings.Contains(line, "END CERTIFICATE") {
 				break
 			}
 		}
-		if RecordingEnabled {
-			buffer.WriteString(strings.TrimSpace(line))
+		if recordingEnabled {
+			sb.WriteString(strings.TrimSpace(line))
 		}
 	}
 
@@ -55,59 +60,69 @@ func ReadCertFile(filePath string) (string, error) {
 		return "", err
 	}
 
-	return buffer.String(), nil
+	return sb.String(), nil
 }
 
-// ReadFile reads a file.
+// ReadFile reads a file and returns its content as a single stripped string.
 func ReadFile(filePath string) (string, error) {
-	var buffer bytes.Buffer
-	fileHandle, err := os.Open(filePath)
+	fp, err := expandHomePath(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	fileHandle, err := os.Open(fp)
 	if err != nil {
 		return "", err
 	}
 	defer fileHandle.Close()
 
+	var sb strings.Builder
 	scanner := bufio.NewScanner(fileHandle)
 	for scanner.Scan() {
-		line := scanner.Text()
-		buffer.WriteString(strings.TrimSpace(line))
+		sb.WriteString(strings.TrimSpace(scanner.Text()))
 	}
 
 	if err := scanner.Err(); err != nil {
 		return "", err
 	}
 
-	return buffer.String(), nil
+	return sb.String(), nil
 }
 
+// expandHomePath handles tilde expansion safely.
 func expandHomePath(fp string) (string, error) {
 	if fp == "" {
-		return fp, fmt.Errorf("cannot expand an empty string")
+		return "", errors.New("cannot expand an empty path")
 	}
+
+	// Only expand if it starts with ~
 	if fp[0] != '~' {
 		return fp, nil
 	}
+
+	// Ensure it's either just "~" or starts with "~/" or "~\"
+	if len(fp) > 1 && fp[1] != os.PathSeparator && fp[1] != '/' {
+		return fp, nil
+	}
+
 	hd, err := os.UserHomeDir()
 	if err != nil {
-		return fp, err
+		return fp, fmt.Errorf("failed to get home directory: %w", err)
 	}
-	fp = filepath.Join(hd, fp[1:])
-	return fp, nil
+
+	return filepath.Join(hd, fp[1:]), nil
 }
 
-// ReadFileBytes expands home directory and reads a file.
+// ReadFileBytes expands home directory and reads a file into a byte slice.
 func ReadFileBytes(fp string) ([]byte, error) {
-	if fp == "" {
-		return nil, fmt.Errorf("cannot expand an empty string")
-	}
-	fp, err := expandHomePath(fp)
+	expanded, err := expandHomePath(fp)
 	if err != nil {
 		return nil, err
 	}
-	return ioutil.ReadFile(fp)
+	return os.ReadFile(expanded)
 }
 
-// ExpandPath expands file system path.
+// ExpandPath expands file system path or returns the original if expansion fails.
 func ExpandPath(s string) string {
 	p, err := expandHomePath(s)
 	if err != nil {
