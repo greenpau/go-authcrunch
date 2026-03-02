@@ -14,6 +14,20 @@
         }
     },
     {
+        "id": "registration_label",
+        "description": "Noun for the registration process or the registration page title.",
+        "other": {
+            "en": "Registration",
+            "de": "Registrierung",
+            "fr": "Inscription",
+            "ja": "登録",
+            "zh": "注册",
+            "he": "הרשמה",
+            "ar": "التسجيل",
+            "ru": "Регистрация"
+        }
+    },
+    {
         "id": "sign_in",
         "description": "Label for the button or link that allows a user to log into their account.",
         "other": {
@@ -444,6 +458,160 @@
         }
     },
     {
+        "id": "email_label",
+        "description": "Short label for an email address input field or column header.",
+        "other": {
+            "en": "Email",
+            "de": "E-Mail",
+            "fr": "E-mail",
+            "ja": "メールアドレス",
+            "zh": "电子邮件",
+            "he": "אימייל",
+            "ar": "البريد الإلكتروني",
+            "ru": "Эл. почта"
+        }
+    },
+    {
+        "id": "first_name_label",
+        "description": "Label for the first name input field in a user profile or registration form.",
+        "other": {
+            "en": "First name",
+            "de": "Vorname",
+            "fr": "Prénom",
+            "ja": "名",
+            "zh": "名字",
+            "he": "שם פרטי",
+            "ar": "الاسم الأول",
+            "ru": "Имя"
+        }
+    },
+    {
+        "id": "last_name_label",
+        "description": "Label for the last name (surname/family name) input field in a user profile or registration form.",
+        "other": {
+            "en": "Last name",
+            "de": "Nachname",
+            "fr": "Nom",
+            "ja": "姓",
+            "zh": "姓氏",
+            "he": "שם משפחה",
+            "ar": "اسم العائلة",
+            "ru": "Фамилия"
+        }
+    },
+    {
+        "id": "passcode_label",
+        "description": "Label for a numeric or short alphanumeric security code, often for MFA or verification.",
+        "other": {
+            "en": "Passcode",
+            "de": "Sicherheitscode",
+            "fr": "Code d'accès",
+            "ja": "パスコード",
+            "zh": "验证码",
+            "he": "קוד גישה",
+            "ar": "رمز المرור",
+            "ru": "Код доступа"
+        }
+    },
+    {
+        "id": "password_label",
+        "description": "Standard label for the password input field in login or registration forms.",
+        "other": {
+            "en": "Password",
+            "de": "Passwort",
+            "fr": "Mot de passe",
+            "ja": "パスワード",
+            "zh": "密码",
+            "he": "סיסמה",
+            "ar": "كلمة المرור",
+            "ru": "Пароль"
+        }
+    },
+    {
+        "id": "privacy_policy_label",
+        "description": "Link or heading for the legal document outlining data handling practices.",
+        "other": {
+            "en": "Privacy Policy",
+            "de": "Datenschutzerklärung",
+            "fr": "Politique de confidentialité",
+            "ja": "プライバシーポリシー",
+            "zh": "隐私政策",
+            "he": "מדיניות פרטיות",
+            "ar": "سياسة الخصوصية",
+            "ru": "Политика конфиденциальности"
+        }
+    },
+    {
+        "id": "registration_code_label",
+        "description": "Label for the specific alphanumeric code required to complete a registration process.",
+        "other": {
+            "en": "Registration Code",
+            "de": "Registrierungscode",
+            "fr": "Code d'inscription",
+            "ja": "登録コード",
+            "zh": "注册码",
+            "he": "קוד הרשמה",
+            "ar": "رمز التسجيل",
+            "ru": "Код регистрации"
+        }
+    },
+    {
+        "id": "terms_and_conditions_label",
+        "description": "Label for the legal agreement between the service provider and the user.",
+        "other": {
+            "en": "Terms and Conditions",
+            "de": "Allgemeine Geschäftsbedingungen",
+            "fr": "Conditions générales",
+            "ja": "利用規約",
+            "zh": "条款和条件",
+            "he": "תנאי שימוש",
+            "ar": "الشروط والأحكام",
+            "ru": "Условия и положения"
+        }
+    },
+    {
+        "id": "registration_code_length_hint",
+        "description": "Validation message or hint informing the user of the required character count for a registration code.",
+        "other": {
+            "en": "The registration code should be 6-8 characters long.",
+            "de": "Der Registrierungscode sollte 6-8 Zeichen lang sein.",
+            "fr": "Le code d'inscription doit comporter entre 6 et 8 caractères.",
+            "ja": "登録コードは6〜8文字である必要があります。",
+            "zh": "注册码应为 6-8 个字符。",
+            "he": "קוד ההרשמה צריך להיות באורך של 6 עד 8 תווים.",
+            "ar": "يجب أن يتكون رمز التسجيل من 6 إلى 8 أحرف.",
+            "ru": "Код регистрации должен содержать от 6 до 8 символов."
+        }
+    },
+    {
+        "id": "username_label",
+        "description": "Standard label for the username input field used for identification or login.",
+        "other": {
+            "en": "Username",
+            "de": "Benutzername",
+            "fr": "Nom d'utilisateur",
+            "ja": "ユーザー名",
+            "zh": "用户名",
+            "he": "שם משתמש",
+            "ar": "اسم المستخدم",
+            "ru": "Имя пользователя"
+        }
+    },
+    {
+        "id": "general_error_unexpected",
+        "description": "A polite, generic error message used when a system action fails for an unknown reason.",
+        "other": {
+            "en": "Unfortunately, things did not go as expected.",
+            "de": "Leider ist etwas schiefgelaufen.",
+            "fr": "Malheureusement, les choses ne se sont pas passées comme prévu.",
+            "ja": "申し訳ありませんが、予期しないエラーが発生しました。",
+            "zh": "很遗憾，操作未按预期进行。",
+            "he": "לצערו, דברים לא קרו כמצופה.",
+            "ar": "للأسف، لم تسر الأمور كما היה متوقعاً.",
+            "ru": "К сожалению, что-то пошло не так."
+        }
+    },
+    {
         "id": "email_support_resend",
         "description": "Call to action for the user to contact support if the email is missing.",
         "other": {
@@ -455,6 +623,34 @@
             "he": "אם אתה עדיין לא רואה אותו, אנא שלח אימייל לתמיכה כדי שנוכל לשלוח אותו שוב.",
             "ar": "إذا لم تجد الرسالة بعد، يرجى مراسلة الدعم الفني لإعادة إرسالها.",
             "ru": "Если вы всё еще не видите письмо, напишите в службу поддержки, чтобы мы могли отправить его повторно."
+        }
+    },
+    {
+        "id": "agreement_lead_in",
+        "description": "Introductory phrase for a legal consent checkbox, usually followed by links to Terms or Privacy policies.",
+        "other": {
+            "en": "By selecting this, you agree to the",
+            "de": "Mit der Auswahl erklären Sie sich einverstanden mit den",
+            "fr": "En cochant cette case, vous acceptez les",
+            "ja": "これを選択することで、ユーザーは以下に同意したものとみなされます：",
+            "zh": "勾选此项即表示您同意",
+            "he": "בבחירה באפשרות זו, הנך מסכים ל-",
+            "ar": "من خلال تحديد هذا، فإنك توافق على",
+            "ru": "Выбирая этот пункт, вы соглашаетесь с"
+        }
+    },
+    {
+        "id": "conjunction_and",
+        "description": "The lowercase conjunction 'and' used to join two items or links in a sentence.",
+        "other": {
+            "en": "and",
+            "de": "und",
+            "fr": "et",
+            "ja": "および",
+            "zh": "和",
+            "he": "ו-",
+            "ar": "و",
+            "ru": "и"
         }
     },
     {
@@ -511,6 +707,48 @@
             "he": "שלח",
             "ar": "إرسال",
             "ru": "Отправить"
+        }
+    },
+    {
+        "id": "email_validation_success_message",
+        "description": "Success message displayed after a user successfully clicks a verification link in their email.",
+        "other": {
+            "en": "Thank you for confirming your registration and validating your email address!",
+            "de": "Vielen Dank für die Bestätigung Ihrer Registrierung und die Validierung Ihrer E-Mail-Adresse!",
+            "fr": "Merci d'avoir confirmé votre inscription et validé votre adresse e-mail !",
+            "ja": "登録の確認とメールアドレスの認証が完了しました。ありがとうございます！",
+            "zh": "感谢您确认注册并验证您的电子邮件地址！",
+            "he": "תודה שאישרת את ההרשמה ואימתת את כתובת האימייל שלך!",
+            "ar": "شكرًا لك على تأكيد تسجيلك والتحقق من عنوان بريدك الإلكتروني!",
+            "ru": "Благодарим за подтверждение регистрации и верификацию вашего адреса электронной почты!"
+        }
+    },
+    {
+        "id": "home_label",
+        "description": "Standard navigation label for the main landing page or dashboard.",
+        "other": {
+            "en": "Home",
+            "de": "Startseite",
+            "fr": "Accueil",
+            "ja": "ホーム",
+            "zh": "首页",
+            "he": "דף הבית",
+            "ar": "الصفحة الرئيسية",
+            "ru": "Главная"
+        }
+    },
+    {
+        "id": "registration_pending_explanation",
+        "description": "Information provided to a user after submitting their registration, explaining the administrative review process.",
+        "other": {
+            "en": "At this point, once an administrator approves or disapproves your registration, you will get an email about that decision. If approved, you will be able to login with your credentials right away.",
+            "de": "Sobald ein Administrator Ihre Registrierung genehmigt oder ablehnt, erhalten Sie eine E-Mail über diese Entscheidung. Im Falle einer Genehmigung können Sie sich sofort mit Ihren Zugangsdaten anmelden.",
+            "fr": "À ce stade, une fois qu'un administrateur aura approuvé ou refusé votre inscription, vous recevrez un e-mail concernant cette décision. En cas d'approbation, vous pourrez vous connecter immédiatement avec vos identifiants.",
+            "ja": "現時点では、管理者が登録を承認または否認した後、その決定に関するメールが送信されます。承認された場合は、すぐに資格情報を使用してログインできるようになります。",
+            "zh": "此时，一旦管理员批准或拒绝您的注册，您将收到一封关于该决定的电子邮件。如果获得批准，您将可以立即使用您的凭据登录。",
+            "he": "בשלב זה, ברגע שמנהל מערכת יאשר או ידחה את הרשמתך, תקבל אימייל לגבי ההחלטה. אם ההרשמה תאושר, תוכל להתחבר עם פרטי הגישה שלך באופן מיידי.",
+            "ar": "في هذه المرحلة، بمجرد موافقة المسؤول על تسجيلك أو رفضه، ستتلقى بريدًا إلكترونيًا بشأن هذا القرار. في حالة الموافقة، ستتمكن من تسجيل الدخول باستخدام بيانات الاعتماد الخاصة بك على الفور.",
+            "ru": "На данном этапе, как только администратор одобрит или отклонит вашу регистрацию, вы получите электронное письмо с этим решением. В случае одобрения вы сможете сразу же войти в систему, используя свои учетные данные."
         }
     },
     {

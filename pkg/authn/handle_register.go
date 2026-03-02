@@ -23,6 +23,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/validators"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
@@ -105,16 +106,49 @@ func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http
 			resp.Message = reg.message
 		}
 	case "registered":
-		resp.PageTitle = "Thank you!"
+		resp.PageTitle = translate.Translate("thank_you", p.ui.Language, nil)
 	case "ackfail":
-		resp.PageTitle = "Registration"
+		resp.PageTitle = translate.Translate("registration_label", p.ui.Language, nil)
 		resp.Data["message"] = reg.message
 	case "ack":
-		resp.PageTitle = "Registration"
+		resp.PageTitle = translate.Translate("registration_label", p.ui.Language, nil)
 		resp.Data["registration_id"] = reg.registrationID
 	case "acked":
-		resp.PageTitle = "Registration"
+		resp.PageTitle = translate.Translate("registration_label", p.ui.Language, nil)
 	}
+
+	resp.Data["i18n_email_validation_success_message"] = translate.Translate("email_validation_success_message", p.ui.Language, nil)
+	resp.Data["i18n_registration_pending_explanation"] = translate.Translate("registration_pending_explanation", p.ui.Language, nil)
+	resp.Data["i18n_home_label"] = translate.Translate("home_label", p.ui.Language, nil)
+	resp.Data["i18n_clear_action"] = translate.Translate("clear_action", p.ui.Language, nil)
+	resp.Data["i18n_dismiss_action"] = translate.Translate("dismiss_action", p.ui.Language, nil)
+	resp.Data["i18n_submit_action"] = translate.Translate("submit_action", p.ui.Language, nil)
+
+	resp.Data["i18n_registration_welcome"] = translate.Translate("registration_welcome", p.ui.Language, nil)
+	resp.Data["i18n_things_to_keep_in_mind"] = translate.Translate("things_to_keep_in_mind", p.ui.Language, nil)
+	resp.Data["i18n_confirmation_email_arrival"] = translate.Translate(
+		"confirmation_email_arrival",
+		p.ui.Language,
+		map[string]interface{}{
+			"minutes": 15,
+		},
+	)
+	resp.Data["i18n_email_support_resend"] = translate.Translate("email_support_resend", p.ui.Language, nil)
+
+	resp.Data["i18n_email_label"] = translate.Translate("email_label", p.ui.Language, nil)
+	resp.Data["i18n_first_name_label"] = translate.Translate("first_name_label", p.ui.Language, nil)
+	resp.Data["i18n_last_name_label"] = translate.Translate("last_name_label", p.ui.Language, nil)
+	resp.Data["i18n_passcode_label"] = translate.Translate("passcode_label", p.ui.Language, nil)
+	resp.Data["i18n_password_label"] = translate.Translate("password_label", p.ui.Language, nil)
+	resp.Data["i18n_privacy_policy_label"] = translate.Translate("privacy_policy_label", p.ui.Language, nil)
+	resp.Data["i18n_registration_code_label"] = translate.Translate("registration_code_label", p.ui.Language, nil)
+	resp.Data["i18n_terms_and_conditions_label"] = translate.Translate("terms_and_conditions_label", p.ui.Language, nil)
+	resp.Data["i18n_registration_code_length_hint"] = translate.Translate("registration_code_length_hint", p.ui.Language, nil)
+	resp.Data["i18n_username_label"] = translate.Translate("username_label", p.ui.Language, nil)
+	resp.Data["i18n_general_error_unexpected"] = translate.Translate("general_error_unexpected", p.ui.Language, nil)
+
+	resp.Data["i18n_agreement_lead_in"] = translate.Translate("agreement_lead_in", p.ui.Language, nil)
+	resp.Data["i18n_conjunction_and"] = translate.Translate("conjunction_and", p.ui.Language, nil)
 
 	content, err := p.ui.Render("register", resp)
 	if err != nil {
