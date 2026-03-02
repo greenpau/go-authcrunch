@@ -570,6 +570,76 @@
         }
     },
     {
+        "id": "mfa_requirement_notice",
+        "description": "Security notice informing the user that they must complete a multi-factor authentication step to proceed.",
+        "other": {
+            "en": "Your session requires multi-factor authentication.",
+            "de": "Ihre Sitzung erfordert eine Multi-Faktor-Authentifizierung.",
+            "fr": "Votre session nécessite une authentification multi-facteurs.",
+            "ja": "セッションには多要素認証が必要です。",
+            "zh": "您的会话需要多重身份验证。",
+            "he": "ההתחברות שלך דורשת אימות דו-שלבי.",
+            "ar": "تتطلب جلستك مصادقة متعددة العوامل.",
+            "ru": "Для вашего сеанса требуется многофакторная аутентификация."
+        }
+    },
+    {
+        "id": "mfa_not_configured_error",
+        "description": "Error message shown when a user is required to use MFA but hasn't set up any methods (like an authenticator app or SMS) yet.",
+        "other": {
+            "en": "However, you do not have a second factor authentication method configured.",
+            "de": "Sie haben jedoch keine Methode für die Zwei-Faktor-Authentifizierung konfiguriert.",
+            "fr": "Cependant, vous n'avez pas configuré de méthode d'authentification à deux facteurs.",
+            "ja": "ただし、2要素認証の設定が完了していません。",
+            "zh": "但是，您尚未配置第二重身份验证方法。",
+            "he": "עם זאת, לא הגדרת אמצעי אימות דו-שלבי.",
+            "ar": "ومع ذلك، ليس لديك طريقة مصادقة ثنائية مكونة.",
+            "ru": "Однако у вас не настроен метод двухфакторной аутентификации."
+        }
+    },
+    {
+        "id": "mfa_setup_instruction",
+        "description": "Instructional text guiding the user to select an MFA method (like SMS, App, or Email) to begin the setup process.",
+        "other": {
+            "en": "Please click the authentication methods below to proceed with the configuration.",
+            "de": "Bitte klicken Sie unten auf die Authentifizierungsmethoden, um mit der Konfiguration fortzufahren.",
+            "fr": "Veuillez cliquer sur les méthodes d'authentification ci-dessous pour procéder à la configuration.",
+            "ja": "設定を進めるには、以下の認証方法をクリックしてください。",
+            "zh": "请点击下方的身份验证方法以继续配置。",
+            "he": "אנא לחץ על שיטות האימות להלן כדי להמשיך בהגדרה.",
+            "ar": "يرجى النقر فوق طرق المصادقة أدناه للمتابعة في التكوين.",
+            "ru": "Пожалуйста, выберите метод аутентификации ниже, чтобы продолжить настройку."
+        }
+    },
+    {
+        "id": "mfa_challenge_instruction",
+        "description": "Instruction for a user who already has MFA set up, asking them to choose which method to use for the current login challenge.",
+        "other": {
+            "en": "Please click the appropriate second factor authentication method to proceed further.",
+            "de": "Bitte klicken Sie auf die entsprechende Zwei-Faktor-Authentifizierungsmethode, um fortzufahren.",
+            "fr": "Veuillez cliquer sur la méthode d'authentification à deux facteurs appropriée pour continuer.",
+            "ja": "続行するには、適切な2要素認証方法を選択してください。",
+            "zh": "请点击相应的第二重身份验证方法以继续。",
+            "he": "אנא לחץ על שיטת האימות הדו-שלבי המתאימה כדי להמשיך.",
+            "ar": "يرجى النقر فوق طريقة المصادقة الثنائية المناسبة للمتابعة.",
+            "ru": "Пожалуйста, выберите подходящий метод двухфакторной аутентификации, чтобы продолжить."
+        }
+    },
+    {
+        "id": "user_authorization_label",
+        "description": "Heading or label referring to the process of verifying user permissions and access levels.",
+        "other": {
+            "en": "User Authorization",
+            "de": "Benutzerautorisierung",
+            "fr": "Autorisation de l'utilisateur",
+            "ja": "ユーザー認可",
+            "zh": "用户授权",
+            "he": "הרשאת משתמש",
+            "ar": "تصريح المستخدم",
+            "ru": "Авторизация пользователя"
+        }
+    },
+    {
         "id": "registration_code_length_hint",
         "description": "Validation message or hint informing the user of the required character count for a registration code.",
         "other": {

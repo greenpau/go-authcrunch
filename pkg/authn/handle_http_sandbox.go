@@ -179,7 +179,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 
 	// Handle the processing of user views, e.g. app or U2F tokens, etc.
 	resp := p.ui.GetArgs()
-	resp.PageTitle = "User Authorization"
+	resp.PageTitle = translate.Translate("user_authorization_label", p.ui.Language, nil)
 	if _, exists := data["title"]; exists {
 		resp.PageTitle = data["title"].(string)
 	}
@@ -188,6 +188,11 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 	for k, v := range data {
 		resp.Data[k] = v
 	}
+
+	resp.Data["i18n_mfa_requirement_notice"] = translate.Translate("mfa_requirement_notice", p.ui.Language, nil)
+	resp.Data["i18n_mfa_not_configured_error"] = translate.Translate("mfa_not_configured_error", p.ui.Language, nil)
+	resp.Data["i18n_mfa_setup_instruction"] = translate.Translate("mfa_setup_instruction", p.ui.Language, nil)
+	resp.Data["i18n_mfa_challenge_instruction"] = translate.Translate("mfa_challenge_instruction", p.ui.Language, nil)
 
 	content, err := p.ui.Render("sandbox", resp)
 	if err != nil {

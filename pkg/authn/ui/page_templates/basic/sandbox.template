@@ -37,12 +37,12 @@
 
           {{ if or (eq .Data.view "mfa_mixed_auth") (eq .Data.view "mfa_mixed_register") }}
           <div class="app-txt-section">
-            <p>Your session requires multi-factor authentication.</p>
+            <p>{{ .Data.i18n_mfa_requirement_notice }}</p>
             {{ if eq .Data.view "mfa_mixed_register" }}
-            <p>However, you do not have second factor authentication method configured.</p>
-            <p>Please click the authentication methods below to proceed with the configuration.</p>
+            <p>{{ .Data.i18n_mfa_not_configured_error }}</p>
+            <p>{{ .Data.i18n_mfa_setup_instruction }}</p>
             {{ else }}
-            <p>Please click the appropriate second factor authentication method to proceed further.</p>
+            <p>{{ .Data.i18n_mfa_challenge_instruction }}</p>
             {{ end }}
           </div>
           <ul role="list" class="divide-y divide-primary-200">
