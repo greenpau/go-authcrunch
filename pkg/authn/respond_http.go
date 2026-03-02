@@ -21,6 +21,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -245,16 +246,54 @@ func (p *Portal) injectSessionID(ctx context.Context, w http.ResponseWriter, r *
 	w.Header().Add("Set-Cookie", p.cookie.GetSessionCookie(addrutil.GetSourceHost(r), rr.Upstream.SessionID))
 }
 
-func (p *Portal) injectRedirectURL(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) {
+func (p *Portal) injectRedirectURL(_ context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) {
 	if r.Method == "GET" {
 		q := r.URL.Query()
 		if redirectURL, exists := q["redirect_url"]; exists {
+			if len(p.config.TrustedLoginRedirectURIConfigs) < 1 {
+				p.logger.Debug(
+					"trust login redirect uri is not configured, but detected redirect_url attempt",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+				)
+				return
+			}
+
+			if len(redirectURL) != 1 {
+				p.logger.Debug(
+					"unexpected redirect_url format",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+				)
+				return
+			}
+
+			loginRedirectURL, err := url.Parse(redirectURL[0])
+			if err != nil {
+				p.logger.Debug(
+					"failed to parse provided redirect_url",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+				)
+				return
+			}
+
+			if !redirects.Match(loginRedirectURL, p.config.TrustedLoginRedirectURIConfigs) {
+				p.logger.Debug(
+					"provided redirect_url is not trusted",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+				)
+				return
+			}
+
 			c := p.cookie.GetCookie(addrutil.GetSourceHost(r), p.cookie.Referer, util.StripQueryParam(redirectURL[0], "login_hint"))
 			p.logger.Debug(
 				"redirect recorded",
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
 				zap.String("redirect_url", c),
+				zap.Any("redirect_url_any", redirectURL),
 			)
 			w.Header().Add("Set-Cookie", c)
 			rr.Response.RedirectURL = c

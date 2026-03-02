@@ -16,15 +16,17 @@ package authn
 
 import (
 	"context"
-	"github.com/greenpau/go-authcrunch/internal/tests"
-	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
-	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"go.uber.org/zap"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"go.uber.org/zap"
 )
 
 type customResponseWriter struct {
@@ -61,11 +63,17 @@ func TestInjectRedirectURL(t *testing.T) {
 			Path:     "/myPage",
 			RawQuery: "redirect_url=https%3A%2F%2Ffoo.bar%2Fredir%3Flogin_hint%3Dmy%40email.com",
 		}
+		loginRedirConfig, err := redirects.NewRedirectURIMatchConfig("exact", "foo.bar", "exact", "/redir")
+		if err != nil {
+			t.Fatalf("failed to build login redirect config: %v", err)
+		}
+
 		r := http.Request{URL: &reqURL, Method: "GET"}
 		f, _ := cookie.NewFactory(nil)
 		p := Portal{
 			config: &PortalConfig{
-				Name: "somePortal",
+				Name:                           "somePortal",
+				TrustedLoginRedirectURIConfigs: []*redirects.RedirectURIMatchConfig{loginRedirConfig},
 			},
 			logger: zap.L(),
 			cookie: f,

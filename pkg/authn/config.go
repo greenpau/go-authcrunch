@@ -63,9 +63,10 @@ type PortalConfig struct {
 	CryptoKeyStoreConfig map[string]interface{} `json:"crypto_key_store_config,omitempty" xml:"crypto_key_store_config,omitempty" yaml:"crypto_key_store_config,omitempty"`
 	// TokenGrantorOptions holds the configuration for the tokens issues by Authenticator.
 	TokenGrantorOptions *options.TokenGrantorOptions `json:"token_grantor_options,omitempty" xml:"token_grantor_options,omitempty" yaml:"token_grantor_options,omitempty"`
+	// TrustedLoginRedirectURIConfigs holds the configuration of trusted login redirect URIs.
+	TrustedLoginRedirectURIConfigs []*redirects.RedirectURIMatchConfig `json:"trusted_login_redirect_uri_configs,omitempty" xml:"trusted_login_redirect_uri_configs,omitempty" yaml:"trusted_login_redirect_uri_configs,omitempty"`
 	// TrustedLogoutRedirectURIConfigs holds the configuration of trusted logout redirect URIs.
 	TrustedLogoutRedirectURIConfigs []*redirects.RedirectURIMatchConfig `json:"trusted_logout_redirect_uri_configs,omitempty" xml:"trusted_logout_redirect_uri_configs,omitempty" yaml:"trusted_logout_redirect_uri_configs,omitempty"`
-
 	// PortalAdminRoles holds the list of role names granted to do administrative tasks in the portal.
 	PortalAdminRoles map[string]interface{} `json:"portal_admin_roles,omitempty" xml:"portal_admin_roles,omitempty" yaml:"portal_admin_roles,omitempty"`
 	// PortalUserRoles holds the list of role names granted to do perform profile tasks in the portal.
@@ -247,6 +248,12 @@ func (cfg *PortalConfig) Validate() error {
 	}
 
 	for _, redirURIConfig := range cfg.TrustedLogoutRedirectURIConfigs {
+		if err := redirURIConfig.Validate(); err != nil {
+			return err
+		}
+	}
+
+	for _, redirURIConfig := range cfg.TrustedLoginRedirectURIConfigs {
 		if err := redirURIConfig.Validate(); err != nil {
 			return err
 		}

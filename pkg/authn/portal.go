@@ -200,6 +200,15 @@ func (p *Portal) configure() error {
 		p.logger.Debug("Logout redirect URI configuration not present")
 	}
 
+	if len(p.config.TrustedLoginRedirectURIConfigs) > 0 {
+		p.logger.Debug(
+			"Login redirect URI configuration",
+			zap.Any("trusted_login_redirect_uri_configs", p.config.TrustedLoginRedirectURIConfigs),
+		)
+	} else {
+		p.logger.Debug("Login redirect URI configuration not present")
+	}
+
 	return nil
 }
 
