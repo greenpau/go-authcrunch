@@ -29,6 +29,11 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// GithubEmailURLStr is the GitHub API endpoint for user emails
+	GithubEmailURLStr = "https://api.github.com/user/emails"
+)
+
 type discordMember struct {
 	Roles []string `json:"roles"`
 }
@@ -272,6 +277,14 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 			metadata["id"] = v
 		}
 		m["metadata"] = metadata
+
+		if err := b.fetchGithubEmail(data, m, GithubEmailURLStr, tokenString); err != nil {
+			b.logger.Error(
+				"Failed extracting user email",
+				zap.String("identity_provider_name", b.config.Name),
+				zap.Error(err),
+			)
+		}
 
 		if orgURL, exists := data["organizations_url"]; exists && len(b.userOrgFilters) > 0 {
 			params := map[string]interface{}{
