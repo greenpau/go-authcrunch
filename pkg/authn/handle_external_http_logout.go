@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
 	"net/http"
 	"path"
@@ -40,6 +41,13 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 	if providerIdentityTokenCookieName != "" {
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(providerIdentityTokenCookieName))
 	}
+
+	h := addrutil.GetSourceHost(r)
+	for tokenName := range p.validator.GetAuthCookies() {
+		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, tokenName))
+	}
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.Referer))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SessionID))
 
 	cfg := provider.GetConfig()
 	logoutEnabled := false
