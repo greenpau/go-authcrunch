@@ -16,6 +16,7 @@ package authz
 
 import (
 	"context"
+
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
@@ -23,9 +24,10 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 
+	"strings"
+
 	"github.com/google/uuid"
 	"go.uber.org/zap"
-	"strings"
 )
 
 // Gatekeeper is an auth.
@@ -63,6 +65,11 @@ func NewGatekeeper(cfg *PolicyConfig, logger *zap.Logger) (*Gatekeeper, error) {
 		return nil, err
 	}
 	return p, nil
+}
+
+// GetLogger returns logger associated with the gatekeeper.
+func (g *Gatekeeper) GetLogger() *zap.Logger {
+	return g.logger
 }
 
 func (g *Gatekeeper) configure() error {

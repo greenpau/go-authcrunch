@@ -16,6 +16,10 @@ package authz
 
 import (
 	"context"
+	"net/http"
+	"net/url"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
 	"github.com/greenpau/go-authcrunch/pkg/authz/handlers"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -25,9 +29,6 @@ import (
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"github.com/greenpau/go-authcrunch/pkg/util/validate"
 	"go.uber.org/zap"
-	"net/http"
-	"net/url"
-	"strings"
 )
 
 var (
@@ -140,7 +141,6 @@ func (g *Gatekeeper) expireAuthCookies(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Add("Set-Cookie", cookie.Name+"=delete; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT")
 	}
-	return
 }
 
 // handleAuthorizeWithAuthFailed handles failed authorization requests based on

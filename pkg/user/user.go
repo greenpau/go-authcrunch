@@ -200,7 +200,6 @@ func (u *User) GetData() map[string]interface{} {
 // SetRequestHeaders sets request headers associated with the user.
 func (u *User) SetRequestHeaders(m map[string]string) {
 	u.requestHeaders = m
-	return
 }
 
 // GetRequestHeaders returns request headers associated with the user.
@@ -211,7 +210,6 @@ func (u *User) GetRequestHeaders() map[string]string {
 // SetRequestIdentity sets request identity associated with the user.
 func (u *User) SetRequestIdentity(m map[string]interface{}) {
 	u.requestIdentity = m
-	return
 }
 
 // GetRequestIdentity returns request identity associated with the user.
@@ -251,6 +249,12 @@ func (u *User) BuildRequestIdentity(s string) map[string]interface{} {
 	}
 	if u.Claims.Email != "" {
 		m["email"] = u.Claims.Email
+	}
+	if u.Claims.Origin != "" {
+		m["origin"] = u.Claims.Origin
+	}
+	if u.Claims.Issuer != "" {
+		m["issuer"] = u.Claims.Issuer
 	}
 
 	u.SetRequestIdentity(m)

@@ -16,11 +16,12 @@ package validator
 
 import (
 	"context"
+	"net/http"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
-	"net/http"
-	"strings"
 )
 
 const (
@@ -72,7 +73,7 @@ func (v *TokenValidator) clearAuthCookies() {
 
 // parseQueryParams authorizes HTTP requests based on the presence and the
 // content of the tokens in HTTP query parameters.
-func (v *TokenValidator) parseQueryParams(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) {
+func (v *TokenValidator) parseQueryParams(_ context.Context, r *http.Request, ar *requests.AuthorizationRequest) {
 	values := r.URL.Query()
 	if len(values) == 0 {
 		return
@@ -87,12 +88,11 @@ func (v *TokenValidator) parseQueryParams(ctx context.Context, r *http.Request, 
 			return
 		}
 	}
-	return
 }
 
 // AuthorizeAuthorizationHeader authorizes HTTP requests based on the presence and the
 // content of the tokens in HTTP Authorization header.
-func (v *TokenValidator) parseAuthHeader(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) {
+func (v *TokenValidator) parseAuthHeader(_ context.Context, r *http.Request, ar *requests.AuthorizationRequest) {
 	hdr := r.Header.Get("Authorization")
 	if hdr == "" {
 		return
@@ -125,7 +125,6 @@ func (v *TokenValidator) parseAuthHeader(ctx context.Context, r *http.Request, a
 			return
 		}
 	}
-	return
 }
 
 // AuthorizeCookies authorizes HTTP requests based on the presence and the
@@ -145,7 +144,6 @@ func (v *TokenValidator) parseCookies(ctx context.Context, r *http.Request, ar *
 		ar.Token.Source = tokenSourceCookie
 		return
 	}
-	return
 }
 
 // Authorize authorizes HTTP requests based on the presence and the content of
