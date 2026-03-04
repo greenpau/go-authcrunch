@@ -17,7 +17,7 @@ package identity
 // Version returns the version information.
 func Version() map[string]interface{} {
 	m := make(map[string]interface{})
-	m["name"] = "authp"
+	m["name"] = app.Name
 	m["version"] = app.Version
 	if app.Git.Branch != "" {
 		m["branch"] = app.Git.Branch

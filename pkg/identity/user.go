@@ -15,6 +15,7 @@
 package identity
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -586,4 +587,13 @@ func (user *User) HasAdminRights() bool {
 		}
 	}
 	return false
+}
+
+// AsMap converts the UserMetadata struct into a map of interface values,
+// using the JSON tag names as the map keys.
+func (m *UserMetadata) AsMap() map[string]any {
+	resp := make(map[string]any)
+	data, _ := json.Marshal(m)
+	json.Unmarshal(data, &resp)
+	return resp
 }

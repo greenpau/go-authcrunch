@@ -67,7 +67,7 @@ func init() {
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
 	app.SetVersion(appVersion, "1.1.12")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.1.11-7-gc8a4c4a")
+	app.SetGitCommit(gitCommit, "v1.1.12-1-g9996bf4")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
@@ -106,6 +106,7 @@ type Database struct {
 	Policy          Policy    `json:"policy,omitempty" xml:"policy,omitempty" yaml:"policy,omitempty"`
 	Revision        uint64    `json:"revision,omitempty" xml:"revision,omitempty" yaml:"revision,omitempty"`
 	LastModified    time.Time `json:"last_modified,omitempty" xml:"last_modified,omitempty" yaml:"last_modified,omitempty"`
+	LoadedAt        time.Time `json:"loaded_at,omitempty" xml:"loaded_at,omitempty" yaml:"loaded_at,omitempty"`
 	Users           []*User   `json:"users,omitempty" xml:"users,omitempty" yaml:"users,omitempty"`
 	refEmailAddress map[string]*User
 	refUsername     map[string]*User
@@ -199,6 +200,7 @@ func NewDatabase(fp string) (*Database, error) {
 			db.refAPIKey[apiKey.Prefix] = user
 		}
 	}
+	db.LoadedAt = time.Now().UTC()
 	return db, nil
 }
 
@@ -329,6 +331,30 @@ func (db *Database) GetUsers(r *requests.Request) error {
 	}
 	r.Response.Payload = bundle
 	return nil
+}
+
+// ListUsers return a list of user identities.
+func (db *Database) ListUsers() []map[string]any {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+	users := []map[string]any{}
+	for _, user := range db.Users {
+		data := user.GetMetadata()
+		if data == nil {
+			continue
+		}
+		dataMap := data.AsMap()
+		if dataMap == nil {
+			continue
+		}
+		roles := []string{}
+		for _, role := range user.Roles {
+			roles = append(roles, role.String())
+		}
+		dataMap["roles"] = roles
+		users = append(users, dataMap)
+	}
+	return users
 }
 
 // GetUser return an instance of User.
@@ -982,4 +1008,23 @@ func (db *Database) UserExists(username, emailAddress string) (bool, error) {
 		return false, fmt.Errorf("username and email address belong to two different users")
 	}
 	return true, nil
+}
+
+// GetMetadata returns Database metadata.
+func (db *Database) GetMetadata() map[string]any {
+	return map[string]any{
+		"version":       db.Version,
+		"policy":        db.Policy,
+		"revision":      db.Revision,
+		"last_modified": db.LastModified,
+		"loaded_at":     db.LoadedAt,
+		"user_count":    len(db.Users),
+		"path":          db.path,
+		"in_memory":     db.inMemory,
+	}
+}
+
+// Reload reloads Database instance.
+func (db *Database) Reload() error {
+	return nil
 }

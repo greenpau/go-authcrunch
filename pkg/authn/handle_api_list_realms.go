@@ -17,9 +17,8 @@ package authn
 import (
 	"context"
 	"encoding/json"
-
-	// "github.com/greenpau/go-authcrunch/pkg/identity"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -27,69 +26,55 @@ import (
 	"go.uber.org/zap"
 )
 
-type listUsersRequest struct {
+type realmQuery struct {
 	Query string `json:"query"`
+}
+
+type realmEntry struct {
 	Realm string `json:"realm"`
+	Kind  string `json:"kind"`
+	Name  string `json:"name"`
 }
 
-type listUsersResponse struct {
-	Count     int              `json:"count"`
-	Users     []map[string]any `json:"users"`
-	Timestamp string           `json:"timestamp"`
-}
-
-func (p *Portal) handleAPIListUsers(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, _ *user.User) error {
-	req := &listUsersRequest{}
+func (p *Portal) handleAPIListRealms(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, _ *user.User) error {
+	reqQuery := &realmQuery{}
 	if r.Body != nil {
 		defer r.Body.Close()
-		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		if err := json.NewDecoder(r.Body).Decode(reqQuery); err != nil {
 			p.logger.Error(
 				"failed to decode request",
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
-				zap.String("api_endpoint", "server/users"),
+				zap.String("api_endpoint", "server/realms"),
 				zap.String("error", err.Error()),
 			)
 			return p.handleJSONError(ctx, w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 		}
 	}
 
-	if req.Realm == "" {
-		p.logger.Warn(
-			"malformed request",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-			zap.String("api_endpoint", "server/users"),
-			zap.String("error", "missing realm"),
-		)
-		return p.handleJSONError(ctx, w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
-	}
+	resp := make(map[string]any)
+	resp["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)
 
-	users := []map[string]any{}
+	realms := []realmEntry{}
 	for _, ids := range p.identityStores {
-		if ids.GetRealm() != req.Realm {
+		if reqQuery.Query == "all" {
+			realms = append(realms, realmEntry{
+				Realm: ids.GetRealm(),
+				Name:  ids.GetName(),
+				Kind:  ids.GetKind(),
+			})
 			continue
 		}
-		var err error
-		users, err = ids.GetUsersMetadata(req.Query)
-		if err != nil {
-			p.logger.Warn(
-				"failed to fetch users metadata",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.String("api_endpoint", "server/users"),
-				zap.Error(err),
-			)
-			return p.handleJSONError(ctx, w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+		if strings.Contains(ids.GetRealm(), reqQuery.Query) {
+			realms = append(realms, realmEntry{
+				Realm: ids.GetRealm(),
+				Name:  ids.GetName(),
+				Kind:  ids.GetKind(),
+			})
 		}
-		break
 	}
-
-	resp := listUsersResponse{
-		Count:     len(users),
-		Users:     users,
-		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
-	}
+	resp["realms"] = realms
+	resp["count"] = len(realms)
 
 	respBytes, err := json.Marshal(resp)
 	if err != nil {
@@ -97,7 +82,7 @@ func (p *Portal) handleAPIListUsers(ctx context.Context, w http.ResponseWriter, 
 			"failed to encode response",
 			zap.String("session_id", rr.Upstream.SessionID),
 			zap.String("request_id", rr.ID),
-			zap.String("api_endpoint", "server/users"),
+			zap.String("api_endpoint", "server/realms"),
 			zap.String("error", err.Error()),
 		)
 		return p.handleJSONError(ctx, w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))

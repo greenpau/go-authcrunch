@@ -16,9 +16,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/urfave/cli/v2"
 	"log"
 	"os"
+
+	"github.com/urfave/cli/v2"
 
 	"github.com/greenpau/versioned"
 )
@@ -39,7 +40,7 @@ func init() {
 	app.Documentation = "https://github.com/greenpau/go-authcrunch/"
 	app.SetVersion(appVersion, "1.1.12")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.1.11-7-gc8a4c4a")
+	app.SetGitCommit(gitCommit, "v1.1.12-1-g9996bf4")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 
@@ -100,6 +101,30 @@ func init() {
 			Name:        "list",
 			Usage:       "list database objects",
 			Subcommands: listSubcmd,
+		},
+		{
+			Name:   "info",
+			Usage:  "get database information",
+			Action: fetchInfo,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     "realm",
+					Usage:    "The realm to get info for",
+					Required: true,
+				},
+			},
+		},
+		{
+			Name:   "reload",
+			Usage:  "reload database",
+			Action: reload,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     "realm",
+					Usage:    "The realm to reload",
+					Required: true,
+				},
+			},
 		},
 	}
 }

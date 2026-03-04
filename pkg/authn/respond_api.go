@@ -50,21 +50,66 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	switch {
-	case p.config.API.AdminEnabled && r.Method == "POST" && strings.Contains(r.URL.Path, "/api/manager"):
+	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/realms"):
 		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
 			p.logger.Debug(
 				"User is not authorized accessing API",
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
+				zap.String("api_endpoint", "server/realms"),
 				zap.String("reason", err.Error()),
 			)
 			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
 		}
-		// case p.config.API.AdminEnabled && strings.HasSuffix(r.URL.Path, "/api/metadata"):
-		// 	return p.handleAPIMetadata(ctx, w, r, rr, usr)
-		// case p.config.API.AdminEnabled && strings.Contains(r.URL.Path, "/api/users"):
-		// 	return p.handleAPIListUsers(ctx, w, r, rr, usr)
-		return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
+		return p.handleAPIListRealms(ctx, w, r, rr, usr)
+	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/users"):
+		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
+			p.logger.Debug(
+				"User is not authorized accessing API",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.String("api_endpoint", "server/users"),
+				zap.String("reason", err.Error()),
+			)
+			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
+		}
+		return p.handleAPIListUsers(ctx, w, r, rr, usr)
+	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/info"):
+		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
+			p.logger.Debug(
+				"User is not authorized accessing API",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.String("api_endpoint", "server/info"),
+				zap.String("reason", err.Error()),
+			)
+			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
+		}
+		return p.handleAPIRealmInfo(ctx, w, r, rr, usr)
+	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/reload"):
+		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
+			p.logger.Debug(
+				"User is not authorized accessing API",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.String("api_endpoint", "server/reload"),
+				zap.String("reason", err.Error()),
+			)
+			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
+		}
+		return p.handleAPIReloadRealm(ctx, w, r, rr, usr)
+	case p.config.API.AdminEnabled && r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/api/server/metadata"):
+		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
+			p.logger.Debug(
+				"User is not authorized accessing API",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.String("api_endpoint", "server/metadata"),
+				zap.String("reason", err.Error()),
+			)
+			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
+		}
+		return p.handleAPIMetadata(ctx, w, r, rr, usr)
 	case p.config.API.ProfileEnabled && r.Method == "POST" && strings.Contains(r.URL.Path, "/api/profile"):
 		if err := p.authorizedRole(usr, []role.Kind{role.Admin, role.User}, rr.Response.Authenticated); err != nil {
 			p.logger.Debug(

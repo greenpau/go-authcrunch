@@ -141,6 +141,18 @@ func (sa *Authenticator) Configure(fp string, users []*User) error {
 	return nil
 }
 
+// Reload reloads the database.
+func (sa *Authenticator) Reload() error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	db, err := identity.NewDatabase(sa.path)
+	if err != nil {
+		return err
+	}
+	sa.db = db
+	return nil
+}
+
 // AuthenticateUser checks the database for the presence of a username/email
 // and password and returns user claims.
 func (sa *Authenticator) AuthenticateUser(r *requests.Request) error {
@@ -161,6 +173,13 @@ func (sa *Authenticator) GetUsers(r *requests.Request) error {
 	sa.mux.Lock()
 	defer sa.mux.Unlock()
 	return sa.db.GetUsers(r)
+}
+
+// ListUsers retrieves users from database.
+func (sa *Authenticator) ListUsers() []map[string]any {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.ListUsers()
 }
 
 // GetUser retrieves a specific user from database.
@@ -280,4 +299,11 @@ func (sa *Authenticator) LookupAPIKey(r *requests.Request) error {
 	sa.mux.Lock()
 	defer sa.mux.Unlock()
 	return sa.db.LookupAPIKey(r)
+}
+
+// GetMetadata returns metadata associated with the Authenticator database.
+func (sa *Authenticator) GetMetadata() map[string]any {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.GetMetadata()
 }

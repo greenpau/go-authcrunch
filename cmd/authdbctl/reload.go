@@ -15,6 +15,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -23,22 +25,34 @@ import (
 	"go.uber.org/zap"
 )
 
-func metadata(c *cli.Context) error {
+func reload(c *cli.Context) error {
 	wr := new(wrapper)
 	if err := wr.configure(c); err != nil {
 		return err
 	}
+	endpointURL := wr.config.BaseURL + "/api/server/reload"
+	wr.logger.Debug("reloading database", zap.String("endpoint_url", endpointURL), zap.String("realm", c.String("realm")))
 
-	endpointURL := wr.config.BaseURL + "/api/server/metadata"
-	wr.logger.Debug("fetching metadata", zap.String("endpoint_url", endpointURL))
+	var reqData = []byte(`{
+		"realm": "` + c.String("realm") + `"
+	}`)
 
-	req, _ := http.NewRequest(http.MethodGet, endpointURL, nil)
+	req, _ := http.NewRequest(http.MethodPost, endpointURL, bytes.NewBuffer(reqData))
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Set("Authorization", "access_token="+wr.config.token)
-	respBody, _, err := wr.browser.Do(req)
+	respBody, resp, err := wr.browser.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed connecting to fetch metadata: %v", err)
+		return fmt.Errorf("failed reloading database: %v", err)
 	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed reloading database, server responsed with %d", resp.StatusCode)
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal([]byte(respBody), &data); err != nil {
+		return fmt.Errorf("failed to parse JSON response: %v", err)
+	}
+
 	fmt.Fprintf(os.Stdout, "%s\n", respBody)
 	return nil
 }

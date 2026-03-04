@@ -27,19 +27,13 @@ import (
 	"go.uber.org/zap"
 )
 
-type listUsersRequest struct {
+type realmInfoRequest struct {
 	Query string `json:"query"`
 	Realm string `json:"realm"`
 }
 
-type listUsersResponse struct {
-	Count     int              `json:"count"`
-	Users     []map[string]any `json:"users"`
-	Timestamp string           `json:"timestamp"`
-}
-
-func (p *Portal) handleAPIListUsers(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, _ *user.User) error {
-	req := &listUsersRequest{}
+func (p *Portal) handleAPIRealmInfo(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, _ *user.User) error {
+	req := &realmInfoRequest{}
 	if r.Body != nil {
 		defer r.Body.Close()
 		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
@@ -47,7 +41,7 @@ func (p *Portal) handleAPIListUsers(ctx context.Context, w http.ResponseWriter, 
 				"failed to decode request",
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
-				zap.String("api_endpoint", "server/users"),
+				zap.String("api_endpoint", "server/info"),
 				zap.String("error", err.Error()),
 			)
 			return p.handleJSONError(ctx, w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
@@ -59,25 +53,25 @@ func (p *Portal) handleAPIListUsers(ctx context.Context, w http.ResponseWriter, 
 			"malformed request",
 			zap.String("session_id", rr.Upstream.SessionID),
 			zap.String("request_id", rr.ID),
-			zap.String("api_endpoint", "server/users"),
+			zap.String("api_endpoint", "server/info"),
 			zap.String("error", "missing realm"),
 		)
 		return p.handleJSONError(ctx, w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 	}
 
-	users := []map[string]any{}
+	metadata := map[string]any{}
 	for _, ids := range p.identityStores {
 		if ids.GetRealm() != req.Realm {
 			continue
 		}
 		var err error
-		users, err = ids.GetUsersMetadata(req.Query)
+		metadata, err = ids.GetMetadata(req.Query)
 		if err != nil {
 			p.logger.Warn(
-				"failed to fetch users metadata",
+				"failed to fetch database metadata",
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
-				zap.String("api_endpoint", "server/users"),
+				zap.String("api_endpoint", "server/info"),
 				zap.Error(err),
 			)
 			return p.handleJSONError(ctx, w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -85,19 +79,15 @@ func (p *Portal) handleAPIListUsers(ctx context.Context, w http.ResponseWriter, 
 		break
 	}
 
-	resp := listUsersResponse{
-		Count:     len(users),
-		Users:     users,
-		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
-	}
+	metadata["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)
 
-	respBytes, err := json.Marshal(resp)
+	respBytes, err := json.Marshal(metadata)
 	if err != nil {
 		p.logger.Error(
 			"failed to encode response",
 			zap.String("session_id", rr.Upstream.SessionID),
 			zap.String("request_id", rr.ID),
-			zap.String("api_endpoint", "server/users"),
+			zap.String("api_endpoint", "server/info"),
 			zap.String("error", err.Error()),
 		)
 		return p.handleJSONError(ctx, w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))

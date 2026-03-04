@@ -16,8 +16,7 @@ Please browse to [docs.authcrunch.com](https://docs.authcrunch.com/).
 
 ## Issues
 
-* Caddy-specific: [Open](https://github.com/greenpau/caddy-security/issues/new/choose)
-* Other Go-frameworks: [Open](https://github.com/greenpau/go-authcrunch/issues/new/choose)
+Please open issues in [caddy-security](https://github.com/greenpau/caddy-security/issues/new/choose).
 
 ## Plugins
 

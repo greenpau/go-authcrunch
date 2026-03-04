@@ -16,6 +16,7 @@ package local
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
@@ -224,4 +225,34 @@ func (b *IdentityStore) GetLoginIcon() *icons.LoginIcon {
 	b.config.LoginIcon.SupportLink = b.config.SupportLink
 	b.config.LoginIcon.SupportEmail = b.config.SupportEmail
 	return b.config.LoginIcon
+}
+
+// Reload reloads IdentityStore.
+func (b *IdentityStore) Reload() error {
+	if b.authenticator == nil {
+		return fmt.Errorf("authenticator is nil")
+	}
+	return b.authenticator.Reload()
+}
+
+// GetUsersMetadata returns list of users in IdentityStore.
+func (b *IdentityStore) GetUsersMetadata(_ string) ([]map[string]any, error) {
+	if b.authenticator == nil {
+		return nil, fmt.Errorf("authenticator is nil")
+	}
+	entries := b.authenticator.ListUsers()
+	if entries == nil {
+		return nil, fmt.Errorf("failed to ListUsers")
+	}
+	return entries, nil
+}
+
+// GetMetadata returns metadata for the IdentityStore.
+func (b *IdentityStore) GetMetadata(_ string) (map[string]any, error) {
+	if b.authenticator == nil {
+		return nil, fmt.Errorf("authenticator is nil")
+	}
+
+	metadata := b.authenticator.GetMetadata()
+	return metadata, nil
 }

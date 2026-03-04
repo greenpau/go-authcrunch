@@ -16,14 +16,16 @@ package ldap
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/url"
+	"regexp"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
-	"net/url"
-	"regexp"
-	"strings"
 )
 
 const (
@@ -281,4 +283,19 @@ func (cfg *Config) Validate() error {
 // GetLoginIcon returns the instance of the icon associated with the provider.
 func (b *IdentityStore) GetLoginIcon() *icons.LoginIcon {
 	return b.config.LoginIcon
+}
+
+// Reload reloads IdentityStore.
+func (b *IdentityStore) Reload() error {
+	return fmt.Errorf("not implemented")
+}
+
+// GetUsersMetadata returns list of users in IdentityStore.
+func (b *IdentityStore) GetUsersMetadata(_ string) ([]map[string]any, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+// GetMetadata returns metadata for the IdentityStore.
+func (b *IdentityStore) GetMetadata(_ string) (map[string]any, error) {
+	return nil, fmt.Errorf("not implemented")
 }

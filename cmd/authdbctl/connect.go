@@ -16,13 +16,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/urfave/cli/v2"
-	"go.uber.org/zap"
-	"golang.org/x/net/html"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/urfave/cli/v2"
+	"go.uber.org/zap"
+	"golang.org/x/net/html"
 )
 
 func connect(c *cli.Context) error {
@@ -61,7 +62,7 @@ func connect(c *cli.Context) error {
 		redirectURL := resp.Header.Get("Location")
 
 		if redirectURL != "" {
-			wr.logger.Debug("request redirected", zap.String("redirect_url", redirectURL))
+			wr.logger.Debug("request redirected", zap.String("redirect_url", redirectURL), zap.String("base_url", wr.config.BaseURL+"/"))
 			req, _ := http.NewRequest(http.MethodGet, redirectURL, nil)
 			respBody, resp, err = wr.browser.Do(req)
 			for _, cookie := range resp.Cookies() {

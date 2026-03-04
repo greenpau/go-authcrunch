@@ -33,6 +33,9 @@ type IdentityStore interface {
 	GetKind() string
 	GetConfig() map[string]interface{}
 	Configure() error
+	GetUsersMetadata(string) ([]map[string]any, error)
+	GetMetadata(string) (map[string]any, error)
+	Reload() error
 	Configured() bool
 	Request(operator.Type, *requests.Request) error
 	GetLoginIcon() *icons.LoginIcon
