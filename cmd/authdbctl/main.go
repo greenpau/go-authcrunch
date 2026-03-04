@@ -126,6 +126,41 @@ func init() {
 				},
 			},
 		},
+		{
+			Name:  "generate",
+			Usage: "generate objects",
+			Subcommands: []*cli.Command{
+				{
+					Name:  "password",
+					Usage: "password management",
+					Subcommands: []*cli.Command{
+						{
+							Name:   "hash",
+							Usage:  "generate password hash",
+							Action: generatePasswordHash,
+							Flags: []cli.Flag{
+								&cli.StringFlag{
+									Name:     "password",
+									Usage:    "The password to hash (insecure, use prompt instead)",
+									Required: false,
+								},
+								&cli.IntFlag{
+									Name:        "cost",
+									Usage:       "The hashing cost factor",
+									Value:       10,
+									DefaultText: "10",
+								},
+								&cli.StringFlag{
+									Name:     "db-path",
+									Usage:    "Sets `PATH` to the database file",
+									Required: false,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

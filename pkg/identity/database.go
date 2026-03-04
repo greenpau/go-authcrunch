@@ -67,7 +67,7 @@ func init() {
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
 	app.SetVersion(appVersion, "1.1.13")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.1.12-4-gf3ccd29")
+	app.SetGitCommit(gitCommit, "v1.1.13-1-ge478e6e")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
@@ -232,7 +232,8 @@ func (db *Database) enforceDefaultPolicy() bool {
 	return false
 }
 
-func (db *Database) checkPolicyCompliance(username, password string) error {
+// CheckPolicyCompliance performs policy compliance for username and password.
+func (db *Database) CheckPolicyCompliance(username, password string) error {
 	if err := db.checkUserPolicyCompliance(username); err != nil {
 		return err
 	}
@@ -266,7 +267,7 @@ func (db *Database) AddUser(r *requests.Request) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	if err := db.checkPolicyCompliance(r.User.Username, r.User.Password); err != nil {
+	if err := db.CheckPolicyCompliance(r.User.Username, r.User.Password); err != nil {
 		return errors.ErrAddUser.WithArgs(r.User.Username, err)
 	}
 

@@ -11,6 +11,7 @@
   * [List Realm Users](#list-realm-users)
   * [Reload Database](#reload-database)
   * [Database Info](#database-info)
+  * [Generating Hashed Password](#generating-hashed-password)
   * [Adding New Users](#adding-new-users)
 * [Backlog](#backlog)
 
@@ -291,6 +292,37 @@ Expected response follows:
   "user_count": 3,
   "version": "1.1.12"
 }
+```
+
+### Generating Hashed Password
+
+The following command generates hashed password. The tool prompt the user for the password.
+
+```bash
+authdbctl generate password hash
+```
+
+The output follows. Entered `12345678` when prompted "Enter Password".
+
+```text
+$ authdbctl generate password hash
+Enter Password: 
+Database: :memory:
+Cost: 10
+Status: Generating hash for password 12...78 (length 8)
+password "bcrypt:10:$2a$10$K9KksvjRCdjT1sYbecGCCu.Y33xpii94itQPgGVS6vShuEUB0On1q"
+```
+
+You can provide path to existing database file. This way the tool will check password compliance policies.
+
+```bash
+authdbctl generate password hash --db-path assets/conf/local/users.json
+```
+
+You can also provide custom cost.
+
+```bash
+authdbctl generate password hash --cost 10 --password SomeFunkyPassword
 ```
 
 ### Adding New Users
