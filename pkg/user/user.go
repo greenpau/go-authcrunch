@@ -257,6 +257,16 @@ func (u *User) BuildRequestIdentity(s string) map[string]interface{} {
 		m["issuer"] = u.Claims.Issuer
 	}
 
+	if u.Claims.custom != nil {
+		if rawUserInfo, ok := u.Claims.custom["userinfo"]; ok {
+			if userInfo, ok := rawUserInfo.(map[string]interface{}); ok {
+				if username, ok := userInfo["preferred_username"].(string); ok {
+					m["userinfo|preferred_username"] = username
+				}
+			}
+		}
+	}
+
 	u.SetRequestIdentity(m)
 	return m
 }
