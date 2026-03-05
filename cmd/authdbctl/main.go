@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 
@@ -34,6 +35,17 @@ var (
 	sh         *cli.App
 )
 
+// getConfigPath returns a cross-platform path for config files.
+// It uses ~/.config/authdbctl/... on Unix and %USERPROFILE%\.config\authdbctl\... on Windows.
+func getConfigPath(fileName string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		// Fallback to relative path if home dir cannot be determined
+		return filepath.Join(".config", "authdbctl", fileName)
+	}
+	return filepath.Join(home, ".config", "authdbctl", fileName)
+}
+
 func init() {
 	app = versioned.NewPackageManager("authdbctl")
 	app.Description = "AuthDB management client"
@@ -48,6 +60,9 @@ func init() {
 		fmt.Fprintf(os.Stdout, "%s\n", app.Banner())
 	}
 
+	defaultConfigPath := getConfigPath("config.yaml")
+	defaultTokenPath := getConfigPath("token.jwt")
+
 	sh = cli.NewApp()
 	sh.Name = app.Name
 	sh.Version = app.Version
@@ -59,15 +74,15 @@ func init() {
 		Name:        "config",
 		Aliases:     []string{"c"},
 		Usage:       "Sets `PATH` to configuration file",
-		Value:       `~/.config/authdbctl/config.yaml`,
-		DefaultText: `~/.config/authdbctl/config.yaml`,
+		Value:       defaultConfigPath,
+		DefaultText: defaultConfigPath,
 		EnvVars:     []string{"AUTHDBCTL_CONFIG_PATH"},
 	})
 	sh.Flags = append(sh.Flags, &cli.StringFlag{
 		Name:        "token-path",
 		Usage:       "Sets `PATH` to token file",
-		Value:       `~/.config/authdbctl/token.jwt`,
-		DefaultText: `~/.config/authdbctl/token.jwt`,
+		Value:       defaultTokenPath,
+		DefaultText: defaultTokenPath,
 		EnvVars:     []string{"AUTHDBCTL_TOKEN_PATH"},
 	})
 	sh.Flags = append(sh.Flags, &cli.StringFlag{
