@@ -265,6 +265,11 @@ func (u *User) BuildRequestIdentity(s string) map[string]interface{} {
 				}
 			}
 		}
+		if rawRealm, ok := u.Claims.custom["realm"]; ok {
+			if realm, ok := rawRealm.(string); ok {
+				m["realm"] = realm
+			}
+		}
 	}
 
 	u.SetRequestIdentity(m)
