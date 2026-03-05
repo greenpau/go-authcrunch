@@ -19,6 +19,8 @@ import (
 	"net"
 	"sort"
 	"strings"
+
+	"golang.org/x/net/publicsuffix"
 )
 
 // Config represents a common set of configuration settings
@@ -262,6 +264,13 @@ func (f *Factory) evalHost(h string) *DomainConfig {
 	} else {
 		i = strings.IndexByte(h, '.')
 		c.Domain = string(h[i+1:])
+	}
+
+	// Validate extracted domain is not a public suffix.
+	// Browsers reject cookies set to PSL entries (co.uk, fly.dev, etc.).
+	// If invalid, omit domain attribute so the browser defaults to exact FQDN.
+	if _, err := publicsuffix.EffectiveTLDPlusOne(c.Domain); err != nil {
+		c.Domain = ""
 	}
 
 	if f.config.StripDomainEnabled {
