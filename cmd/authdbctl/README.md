@@ -85,7 +85,7 @@ The expected output follows:
 
 ## Configuration Files
 
-The `authdbctl`'s configuration file is `~/.config/authdbctl/config.json`.
+The `authdbctl`'s configuration file is `~/.config/authdbctl/config.yaml`.
 
 The configuration file contains the following:
 
