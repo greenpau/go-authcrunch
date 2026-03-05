@@ -222,6 +222,84 @@ func TestFactory(t *testing.T) {
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
 		},
+		{
+			name: "psl co.uk subdomain without domain config",
+			host: "bar.co.uk",
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "psl co.uk direct without domain config",
+			host: "co.uk",
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "psl fly.dev subdomain without domain config",
+			host: "app.fly.dev",
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "psl github.io subdomain without domain config",
+			host: "myapp.github.io",
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "psl herokuapp.com subdomain without domain config",
+			host: "myapp.herokuapp.com",
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "psl deep subdomain without domain config",
+			host: "auth.app.fly.dev",
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Domain=app.fly.dev; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Domain=app.fly.dev; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Domain=app.fly.dev; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=app.fly.dev; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "psl co.uk with explicit domain config",
+			host: "bar.co.uk",
+			config: &Config{
+				Domains: map[string]*DomainConfig{
+					"bar.co.uk": &DomainConfig{
+						Seq:    0,
+						Domain: "bar.co.uk",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Domain=bar.co.uk; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Domain=bar.co.uk; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Domain=bar.co.uk; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=bar.co.uk; Path=/; Secure; HttpOnly;",
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
