@@ -32,6 +32,7 @@ type Config struct {
 	Insecure           bool                     `json:"insecure,omitempty" xml:"insecure,omitempty" yaml:"insecure,omitempty"`
 	SameSite           string                   `json:"same_site,omitempty" xml:"same_site,omitempty" yaml:"same_site,omitempty"`
 	StripDomainEnabled bool                     `json:"strip_domain_enabled,omitempty" xml:"strip_domain_enabled,omitempty" yaml:"strip_domain_enabled,omitempty"`
+	GuessDomainEnabled bool                     `json:"guess_domain_enabled,omitempty" xml:"guess_domain_enabled,omitempty" yaml:"guess_domain_enabled,omitempty"`
 }
 
 // DomainConfig represents a common set of configuration settings
@@ -247,7 +248,7 @@ func (f *Factory) evalHost(h string) *DomainConfig {
 			if h == k {
 				return f.config.Domains[k]
 			}
-			if strings.Contains(h, k) {
+			if strings.HasSuffix(h, "."+k) {
 				candidate = f.config.Domains[k]
 			}
 		}
@@ -259,18 +260,20 @@ func (f *Factory) evalHost(h string) *DomainConfig {
 
 	c := &DomainConfig{}
 
-	if strings.Count(h, ".") == 1 {
-		c.Domain = string(h)
-	} else {
-		i = strings.IndexByte(h, '.')
-		c.Domain = string(h[i+1:])
-	}
+	if f.config.GuessDomainEnabled {
+		if strings.Count(h, ".") == 1 {
+			c.Domain = string(h)
+		} else {
+			i = strings.IndexByte(h, '.')
+			c.Domain = string(h[i+1:])
+		}
 
-	// Validate extracted domain is not a public suffix.
-	// Browsers reject cookies set to PSL entries (co.uk, fly.dev, etc.).
-	// If invalid, omit domain attribute so the browser defaults to exact FQDN.
-	if _, err := publicsuffix.EffectiveTLDPlusOne(c.Domain); err != nil {
-		c.Domain = ""
+		// Validate extracted domain is not a public suffix.
+		// Browsers reject cookies set to PSL entries (co.uk, fly.dev, etc.).
+		// If invalid, omit domain attribute so the browser defaults to exact FQDN.
+		if _, err := publicsuffix.EffectiveTLDPlusOne(c.Domain); err != nil {
+			c.Domain = ""
+		}
 	}
 
 	if f.config.StripDomainEnabled {
