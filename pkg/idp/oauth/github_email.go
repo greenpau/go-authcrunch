@@ -31,6 +31,12 @@ const (
 	EmailVerifiedClaimKey = "email_verified"
 )
 
+type ghResponse struct {
+	DocumentationURL string `json:"documentation_url"`
+	Message          string `json:"message"`
+	Status           string `json:"status"`
+}
+
 // ghEmailEntry represents the structure returned by the GitHub user emails API.
 type ghEmailEntry struct {
 	Email      string `json:"email"`
@@ -49,15 +55,17 @@ func (b *IdentityProvider) fetchGithubEmail(data map[string]interface{}, metadat
 	}
 
 	if v, exists := data[EmailClaimKey]; exists {
-		email, ok := v.(string)
-		if !ok {
-			return errors.New("found email claim but it is not a string")
+		if v != nil {
+			email, ok := v.(string)
+			if !ok {
+				return errors.New("found email claim but it is not a string")
+			}
+			if email == "" {
+				return errors.New("found email claim but it is emtpy")
+			}
+			metadata[EmailClaimKey] = email
+			return nil
 		}
-		if email == "" {
-			return errors.New("found email claim but it is emtpy")
-		}
-		metadata[EmailClaimKey] = email
-		return nil
 	}
 
 	var req *http.Request
@@ -71,8 +79,9 @@ func (b *IdentityProvider) fetchGithubEmail(data map[string]interface{}, metadat
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Add("Authorization", "token "+tokenString)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Add("Authorization", "Bearer "+tokenString)
+	req.Header.Add("X-GitHub-Api-Version", "2022-11-28")
 
 	resp, err := cli.Do(req)
 	if err != nil {
@@ -85,6 +94,11 @@ func (b *IdentityProvider) fetchGithubEmail(data map[string]interface{}, metadat
 	}
 
 	b.logger.Debug("User data received", zap.String("url", endpointURL), zap.Any("body", respBody))
+
+	var rawErrResp ghResponse
+	if err := json.Unmarshal(respBody, &rawErrResp); err == nil {
+		return fmt.Errorf("%s: %s", rawErrResp.Message, rawErrResp.Status)
+	}
 
 	var emails []ghEmailEntry
 	if err := json.Unmarshal(respBody, &emails); err != nil {
