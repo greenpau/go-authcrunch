@@ -22,14 +22,62 @@ import (
 	"strings"
 )
 
-var (
-	tokenFields = []string{
-		"sub", "name", "email", "iat", "exp", "jti",
-		"iss", "groups", "picture",
-		"roles", "role", "groups", "group",
-		"given_name", "family_name",
+type TokenField struct {
+	Name string   // key used in resulting claim map
+	Path []string // path inside the JWT claims, supporting nested paths
+}
+
+var tokenFields = []TokenField{
+	{Name: "sub",     Path: []string{"sub"}},
+	{Name: "name",    Path: []string{"name"}},
+	{Name: "email",   Path: []string{"email"}},
+	{Name: "iat",     Path: []string{"iat"}},
+	{Name: "exp",     Path: []string{"exp"}},
+	{Name: "jti",     Path: []string{"jti"}},
+	{Name: "iss",     Path: []string{"iss"}},
+	{Name: "groups",  Path: []string{"groups"}},
+	{Name: "picture", Path: []string{"picture"}},
+
+	// Multiple potential paths we need to look for roles in the JWT claims access token
+	{Name: "roles", Path: []string{"roles"}},
+	{Name: "roles", Path: []string{"realm_access", "roles"}}, // Keycloak
+	{Name: "roles", Path: []string{"app_metadata", "authorization", "roles"}},
+
+	{Name: "given_name",  Path: []string{"given_name"}},
+	{Name: "family_name", Path: []string{"family_name"}},
+}
+
+
+func getNestedClaim(data map[string]interface{}, path []string) (interface{}, bool) {
+	var current interface{} = data
+
+	for _, p := range path {
+		m, ok := current.(map[string]interface{})
+		if !ok {
+			return nil, false
+		}
+
+		current, ok = m[p]
+		if !ok {
+			return nil, false
+		}
 	}
-)
+
+	return current, true
+}
+
+
+func mergeClaims(a interface{}, b interface{}) interface{} {
+	aSlice, aOk := a.([]interface{})
+	bSlice, bOk := b.([]interface{})
+
+	if aOk && bOk {
+		return append(aSlice, bSlice...)
+	}
+
+	return b
+}
+
 
 func (b *IdentityProvider) validateAccessToken(state string, data map[string]interface{}) (map[string]interface{}, error) {
 	var tokenString string
@@ -98,11 +146,18 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 	}
 
 	m := make(map[string]interface{})
-	for _, k := range tokenFields {
-		if _, exists := claims[k]; !exists {
+
+	for _, field := range tokenFields {
+		value, ok := getNestedClaim(claims, field.Path)
+		if !ok {
 			continue
 		}
-		m[k] = claims[k]
+
+		if existing, exists := m[field.Name]; exists {
+			m[field.Name] = mergeClaims(existing, value)
+		} else {
+			m[field.Name] = value
+		}
 	}
 
 	if _, exists := m["name"]; !exists {
