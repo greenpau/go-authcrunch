@@ -79,10 +79,10 @@ func TestFactory(t *testing.T) {
 			name: "contoso.com cookie without domain config",
 			host: "contoso.com",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
-				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
-				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
 		},
 		{
@@ -171,10 +171,10 @@ func TestFactory(t *testing.T) {
 				SameSite: "strict",
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
-				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
-				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+				"grant":          "access_token=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
 		},
 		{
@@ -276,10 +276,10 @@ func TestFactory(t *testing.T) {
 			name: "psl deep subdomain without domain config",
 			host: "auth.app.fly.dev",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=app.fly.dev; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=app.fly.dev; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
-				"session_delete": "AUTHP_SESSION_ID=delete; Domain=app.fly.dev; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
-				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=app.fly.dev; Path=/; Secure; HttpOnly;",
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
 		},
 		{
@@ -298,6 +298,111 @@ func TestFactory(t *testing.T) {
 				"delete":         "access_token=delete; Domain=bar.co.uk; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Domain=bar.co.uk; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=bar.co.uk; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "default host-only cookie without domain config",
+			host: "auth.contoso.com",
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "default host-only with port without domain config",
+			host: "auth.contoso.com:8443",
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "default host-only two-level subdomain without domain config",
+			host: "bar.foo.contoso.com",
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "guess domain enabled restores parent domain guessing",
+			host: "auth.contoso.com",
+			config: &Config{
+				GuessDomainEnabled: true,
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "guess domain with psl deep subdomain",
+			host: "auth.app.fly.dev",
+			config: &Config{
+				GuessDomainEnabled: true,
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Domain=app.fly.dev; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Domain=app.fly.dev; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Domain=app.fly.dev; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=app.fly.dev; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "guess domain with psl entry omits domain",
+			host: "app.fly.dev",
+			config: &Config{
+				GuessDomainEnabled: true,
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "domain config substring mismatch",
+			host: "evil-example.com",
+			config: &Config{
+				Domains: map[string]*DomainConfig{
+					"example.com": &DomainConfig{
+						Seq:    0,
+						Domain: "example.com",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "domain config suffix match with dot boundary",
+			host: "auth.example.com",
+			config: &Config{
+				Domains: map[string]*DomainConfig{
+					"example.com": &DomainConfig{
+						Seq:    0,
+						Domain: "example.com",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"grant":          "access_token=foobar; Domain=example.com; Path=/; Secure; HttpOnly;",
+				"delete":         "access_token=delete; Domain=example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Domain=example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=example.com; Path=/; Secure; HttpOnly;",
 			},
 		},
 	}
