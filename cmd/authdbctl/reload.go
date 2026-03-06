@@ -15,7 +15,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -37,15 +36,9 @@ func reload(c *cli.Context) error {
 		"realm": "` + c.String("realm") + `"
 	}`)
 
-	req, _ := http.NewRequest(http.MethodPost, endpointURL, bytes.NewBuffer(reqData))
-	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	req.Header.Set("Authorization", "access_token="+wr.config.token)
-	respBody, resp, err := wr.browser.Do(req)
+	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, reqData)
 	if err != nil {
-		return fmt.Errorf("failed reloading database: %v", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed reloading database, server responsed with %d", resp.StatusCode)
+		return fmt.Errorf("failed fetching database info: %w", err)
 	}
 
 	var data map[string]any

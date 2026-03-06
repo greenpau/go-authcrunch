@@ -19,6 +19,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/urfave/cli/v2"
 
@@ -95,6 +96,25 @@ func init() {
 	sh.Flags = append(sh.Flags, &cli.BoolFlag{
 		Name:  "debug",
 		Usage: "Enabled debug logging",
+	})
+	sh.Flags = append(sh.Flags, &cli.IntFlag{
+		Name:    "retries",
+		Aliases: []string{"r"},
+		Usage:   "Maximum number of retry attempts for network calls",
+		Value:   3, // Default value
+		EnvVars: []string{"AUTHDBCTL_MAX_RETRIES"},
+	})
+	sh.Flags = append(sh.Flags, &cli.StringFlag{
+		Name:    "access-token-name",
+		Usage:   "Sets the `NAME` of the access token key in the Authorization header",
+		Value:   "access_token",
+		EnvVars: []string{"AUTHDBCTL_TOKEN_NAME"},
+	})
+	sh.Flags = append(sh.Flags, &cli.DurationFlag{
+		Name:    "retry-interval",
+		Usage:   "Interval between retries (e.g., 500ms, 1s, 5s)",
+		Value:   250 * time.Millisecond,
+		EnvVars: []string{"AUTHDBCTL_RETRY_INTERVAL"},
 	})
 	sh.Commands = []*cli.Command{
 		{

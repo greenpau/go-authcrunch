@@ -32,13 +32,11 @@ func metadata(c *cli.Context) error {
 	endpointURL := wr.config.BaseURL + "/api/server/metadata"
 	wr.logger.Debug("fetching metadata", zap.String("endpoint_url", endpointURL))
 
-	req, _ := http.NewRequest(http.MethodGet, endpointURL, nil)
-	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	req.Header.Set("Authorization", "access_token="+wr.config.token)
-	respBody, _, err := wr.browser.Do(req)
+	respBody, err := wr.doRequestWithRetry(c, http.MethodGet, endpointURL, nil)
 	if err != nil {
-		return fmt.Errorf("failed connecting to fetch metadata: %v", err)
+		return fmt.Errorf("failed fetching database info: %w", err)
 	}
+
 	fmt.Fprintf(os.Stdout, "%s\n", respBody)
 	return nil
 }

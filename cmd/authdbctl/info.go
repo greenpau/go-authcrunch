@@ -15,7 +15,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -34,19 +33,13 @@ func fetchInfo(c *cli.Context) error {
 	wr.logger.Debug("fetching database info", zap.String("endpoint_url", endpointURL), zap.String("realm", c.String("realm")))
 
 	var reqData = []byte(`{
-		"realm": "` + c.String("realm") + `",
-		"query": "all"
-	}`)
+        "realm": "` + c.String("realm") + `",
+        "query": "all"
+    }`)
 
-	req, _ := http.NewRequest(http.MethodPost, endpointURL, bytes.NewBuffer(reqData))
-	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	req.Header.Set("Authorization", "access_token="+wr.config.token)
-	respBody, resp, err := wr.browser.Do(req)
+	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, reqData)
 	if err != nil {
-		return fmt.Errorf("failed fetching database info: %v", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed fetching database info, server responsed with %d", resp.StatusCode)
+		return fmt.Errorf("failed fetching database %q realm info: %w", c.String("realm"), err)
 	}
 
 	var data map[string]any

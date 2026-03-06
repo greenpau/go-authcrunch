@@ -67,7 +67,7 @@ func init() {
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
 	app.SetVersion(appVersion, "1.1.18")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.1.17-2-gc1ef3ac")
+	app.SetGitCommit(gitCommit, "v1.1.18-3-g2971bfb")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }

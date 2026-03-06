@@ -15,7 +15,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -50,15 +49,10 @@ func listRealms(c *cli.Context) error {
 	var reqData = []byte(`{
 		"query": "all"
 	}`)
-	req, _ := http.NewRequest(http.MethodPost, endpointURL, bytes.NewBuffer(reqData))
-	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	req.Header.Set("Authorization", "access_token="+wr.config.token)
-	respBody, resp, err := wr.browser.Do(req)
+
+	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, reqData)
 	if err != nil {
-		return fmt.Errorf("failed listing realms: %v", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed listing realms, server responsed with %d", resp.StatusCode)
+		return fmt.Errorf("failed fetching database info: %w", err)
 	}
 
 	var data listRealmsResponse
