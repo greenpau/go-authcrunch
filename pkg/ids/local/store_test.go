@@ -105,7 +105,6 @@ func TestNewIdentityStore(t *testing.T) {
 					"DeleteAPIKey":    true,
 					"DeleteMfaToken":  true,
 					"DeletePublicKey": true,
-					"DeleteUser":      true,
 					"GetAPIKeys":      false,
 					"GetMfaTokens":    false,
 					"GetMfaToken":     true,
@@ -114,6 +113,7 @@ func TestNewIdentityStore(t *testing.T) {
 					"GetUsers":        false,
 					"IdentifyUser":    false,
 					"LookupAPIKey":    true,
+					"DeleteUser":      false,
 				},
 			},
 		},
@@ -190,7 +190,6 @@ func TestNewIdentityStore(t *testing.T) {
 					operator.AddUser,
 					operator.GetUser,
 					operator.GetUsers,
-					operator.DeleteUser,
 					operator.IdentifyUser,
 					operator.AddAPIKey,
 					operator.DeleteAPIKey,
@@ -201,6 +200,8 @@ func TestNewIdentityStore(t *testing.T) {
 				if tc.publicKeysEnabled {
 					ops = append(ops, operator.GetPublicKeys)
 				}
+
+				ops = append(ops, operator.DeleteUser)
 
 				for _, op := range ops {
 					req := &requests.Request{
@@ -215,10 +216,16 @@ func TestNewIdentityStore(t *testing.T) {
 						}
 					}
 
-					if err := st.Request(op, req); err != nil {
+					err := st.Request(op, req)
+					if err != nil {
 						results[op.String()] = true
 					} else {
 						results[op.String()] = false
+					}
+
+					wantOps := tc.want["ops"].(map[string]bool)
+					if wantOps[op.String()] != results[op.String()] {
+						msgs = append(msgs, fmt.Sprintf("op: %s, want: %v, got: %v, error: %v", op.String(), wantOps[op.String()], results[op.String()], err))
 					}
 				}
 
@@ -253,12 +260,12 @@ func TestConfigureIdentityStore(t *testing.T) {
 		{
 			name: "test two configs having same realm and same path",
 			configs: []*Config{
-				&Config{
+				{
 					Name:  "local_store",
 					Realm: "local",
 					Path:  dbPath,
 				},
-				&Config{
+				{
 					Name:  "local_store",
 					Realm: "local",
 					Path:  dbPath,
@@ -284,7 +291,7 @@ func TestConfigureIdentityStore(t *testing.T) {
 		{
 			name: "test unsupported file path",
 			configs: []*Config{
-				&Config{
+				{
 					Name:  "local_store",
 					Realm: "local",
 					Path:  "/dev/null",

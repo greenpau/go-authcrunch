@@ -15,6 +15,7 @@
 package local
 
 import (
+	"fmt"
 	"os"
 	"sync"
 
@@ -165,7 +166,34 @@ func (sa *Authenticator) AuthenticateUser(r *requests.Request) error {
 func (sa *Authenticator) AddUser(r *requests.Request) error {
 	sa.mux.Lock()
 	defer sa.mux.Unlock()
+	if r.User.Password == "" {
+		r.User.Password = sa.db.GeneratePassword()
+	}
 	return sa.db.AddUser(r)
+}
+
+// OverwriteUserRoles overwrites user roles in IdentityStore.
+func (sa *Authenticator) OverwriteUserRoles(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.OverwriteUserRoles(r)
+}
+
+// AddUserRoles adds user roles to IdentityStore.
+func (sa *Authenticator) AddUserRoles(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.AddUserRoles(r)
+}
+
+// ResetUserPassword resets user password in database.
+func (sa *Authenticator) ResetUserPassword(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	if r.User.Password == "" {
+		r.User.Password = sa.db.GeneratePassword()
+	}
+	return sa.db.ResetUserPassword(r)
 }
 
 // GetUsers retrieves users from database.
@@ -182,6 +210,27 @@ func (sa *Authenticator) ListUsers() []map[string]any {
 	return sa.db.ListUsers()
 }
 
+// FetchUserData retrieves user data from database.
+func (sa *Authenticator) FetchUserData(username string, emailAddress string) (map[string]any, error) {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	req := &requests.Request{
+		User: requests.User{
+			Username: username,
+			Email:    emailAddress,
+		},
+	}
+	if err := sa.db.GetUser(req); err != nil {
+		return nil, err
+	}
+	if req.Response.Payload != nil {
+		if u, ok := req.Response.Payload.(*identity.User); ok {
+			return u.AsMap(), nil
+		}
+	}
+	return nil, fmt.Errorf("response had no user info")
+}
+
 // GetUser retrieves a specific user from database.
 func (sa *Authenticator) GetUser(r *requests.Request) error {
 	sa.mux.Lock()
@@ -194,6 +243,20 @@ func (sa *Authenticator) DeleteUser(r *requests.Request) error {
 	sa.mux.Lock()
 	defer sa.mux.Unlock()
 	return sa.db.DeleteUser(r)
+}
+
+// DisableUser disables a specific user from database.
+func (sa *Authenticator) DisableUser(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.DisableUser(r)
+}
+
+// EnableUser enables a specific user in database.
+func (sa *Authenticator) EnableUser(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.EnableUser(r)
 }
 
 // ChangePassword changes password for a user.

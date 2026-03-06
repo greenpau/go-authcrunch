@@ -26,6 +26,13 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	listRealmsSubcmd = &cli.Command{
+		Name:   "realms",
+		Action: listRealms,
+	}
+)
+
 type realmEntry struct {
 	Realm string `json:"realm"`
 	Kind  string `json:"kind"`

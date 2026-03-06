@@ -15,8 +15,10 @@
 package identity
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -67,7 +69,7 @@ func init() {
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
 	app.SetVersion(appVersion, "1.1.18")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.1.18-3-g2971bfb")
+	app.SetGitCommit(gitCommit, "v1.1.18-4-gb78278e")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
@@ -262,6 +264,93 @@ func (db *Database) GetPath() string {
 	return db.path
 }
 
+// ResetUserPassword resets user password in database.
+func (db *Database) ResetUserPassword(r *requests.Request) error {
+	if err := db.CheckPolicyCompliance(r.User.Username, r.User.Password); err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+
+	user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
+	if err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+
+	for _, u := range db.Users {
+		if u.ID == user.ID {
+			if err := user.ResetPassword(r.User.Password, db.Policy.Password.KeepVersions); err != nil {
+				return errors.ErrUpdateUser.WithArgs(err)
+			}
+			break
+		}
+	}
+
+	if err := db.commit(); err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+	return nil
+
+}
+
+// OverwriteUserRoles overwrites user roles in Database.
+func (db *Database) OverwriteUserRoles(r *requests.Request) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
+	if err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+
+	roles := []string{}
+
+	for _, u := range db.Users {
+		if u.ID == user.ID {
+			if err := u.OverwriteRoles(r.User.Roles); err != nil {
+				return errors.ErrUpdateUser.WithArgs(err)
+			}
+			roles = u.GetRolesClaim()
+			break
+		}
+	}
+
+	if err := db.commit(); err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+
+	r.Response.Payload = roles
+	return nil
+}
+
+// AddUserRoles overwrites user roles in Database.
+func (db *Database) AddUserRoles(r *requests.Request) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
+	if err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+
+	roles := []string{}
+
+	for _, u := range db.Users {
+		if u.ID == user.ID {
+			if err := u.AddRoles(r.User.Roles); err != nil {
+				return errors.ErrUpdateUser.WithArgs(err)
+			}
+			roles = u.GetRolesClaim()
+			break
+		}
+	}
+
+	if err := db.commit(); err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+
+	r.Response.Payload = roles
+	return nil
+}
+
 // AddUser adds user identity to the database.
 func (db *Database) AddUser(r *requests.Request) error {
 	db.mu.Lock()
@@ -353,6 +442,7 @@ func (db *Database) ListUsers() []map[string]any {
 			roles = append(roles, role.String())
 		}
 		dataMap["roles"] = roles
+		dataMap["disabled"] = user.Disabled
 		users = append(users, dataMap)
 	}
 	return users
@@ -374,23 +464,118 @@ func (db *Database) GetUser(r *requests.Request) error {
 func (db *Database) DeleteUser(r *requests.Request) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	// user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
-	_, err := db.validateUserIdentity(r.User.Username, r.User.Email)
+	user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
 	if err != nil {
-		return errors.ErrDeleteUser.WithArgs(r.Query.ID, err)
+		return errors.ErrDeleteUser.WithArgs(r.User.Username, err)
 	}
-	return errors.ErrDeleteUser.WithArgs(r.Query.ID, "user delete operation is not supported")
-	// TODO: how do we delete a user ???
 
-	// if err := user.DeletePublicKey(r); err != nil {
-	//	return err
-	//}
-	/*
-		if err := db.commit(); err != nil {
-			return errors.ErrDeleteUser.WithArgs(r.Query.ID, err)
+	delete(db.refID, user.ID)
+	delete(db.refUsername, strings.ToLower(user.Username))
+	for _, email := range user.EmailAddresses {
+		delete(db.refEmailAddress, strings.ToLower(email.Address))
+	}
+	for _, apiKey := range user.APIKeys {
+		delete(db.refAPIKey, apiKey.Prefix)
+	}
+	for i, u := range db.Users {
+		if u.ID == user.ID {
+			// Remove the element by joining the parts before and after the index
+			db.Users = append(db.Users[:i], db.Users[i+1:]...)
+			break
 		}
-		return nil
-	*/
+	}
+	if err := db.commit(); err != nil {
+		return errors.ErrAddUser.WithArgs(r.User.Username, err)
+	}
+	return nil
+}
+
+// DisableUser disables a user by user id.
+func (db *Database) DisableUser(r *requests.Request) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
+	if err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+
+	delete(db.refID, user.ID)
+	delete(db.refUsername, strings.ToLower(user.Username))
+	for _, email := range user.EmailAddresses {
+		delete(db.refEmailAddress, strings.ToLower(email.Address))
+	}
+	for _, apiKey := range user.APIKeys {
+		delete(db.refAPIKey, apiKey.Prefix)
+	}
+	for _, u := range db.Users {
+		if u.ID == user.ID {
+			u.Disabled = true
+			break
+		}
+	}
+	if err := db.commit(); err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+	return nil
+}
+
+// EnableUser disables a user by user id.
+func (db *Database) EnableUser(r *requests.Request) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	var user *User
+
+	for _, u := range db.Users {
+		if u.Username != r.User.Username {
+			continue
+		}
+		matchedEmail := false
+		for _, addr := range u.EmailAddresses {
+			if addr.Address != r.User.Email {
+				continue
+			}
+			matchedEmail = true
+			break
+		}
+		if matchedEmail && u.Disabled {
+			user = u
+			break
+		}
+	}
+
+	if user == nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, "no disabled user match")
+	}
+
+	username := strings.ToLower(user.Username)
+
+	emailAddresses := []string{}
+	for _, email := range user.EmailAddresses {
+		emailAddress := strings.ToLower(email.Address)
+		emailAddresses = append(emailAddresses, emailAddress)
+	}
+
+	db.refUsername[username] = user
+	db.refID[user.ID] = user
+	for _, emailAddress := range emailAddresses {
+		db.refEmailAddress[emailAddress] = user
+	}
+	for _, apiKey := range user.APIKeys {
+		db.refAPIKey[apiKey.Prefix] = user
+	}
+
+	for _, u := range db.Users {
+		if u.ID == user.ID {
+			u.Disabled = false
+			break
+		}
+	}
+
+	if err := db.commit(); err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+	return nil
 }
 
 // AuthenticateUser adds user identity to the database.
@@ -403,6 +588,11 @@ func (db *Database) AuthenticateUser(r *requests.Request) error {
 		// Calculate password hash as the means to prevent user discovery.
 		NewPassword(r.User.Password)
 		return errors.ErrAuthFailed.WithArgs(err)
+	}
+
+	if user.Disabled {
+		r.Response.Code = 401
+		return errors.ErrAuthFailed.WithArgs("unauthorized")
 	}
 
 	switch {
@@ -758,7 +948,6 @@ func (db *Database) ChangeUserPassword(r *requests.Request) error {
 	if err := user.ChangePassword(r, db.Policy.Password.KeepVersions); err != nil {
 		return err
 	}
-	// if db.Policy.Password.KeepVersions
 	if err := db.commit(); err != nil {
 		return errors.ErrChangeUserPassword.WithArgs(err)
 	}
@@ -792,6 +981,12 @@ func (db *Database) IdentifyUser(r *requests.Request) error {
 	defer db.mu.Unlock()
 	user, err := db.getUser(r.User.Username)
 	if err != nil {
+		r.User.Username = "nobody"
+		r.User.Email = "nobody@localhost"
+		r.User.Challenges = []string{"password"}
+		return nil
+	}
+	if user.Disabled {
 		r.User.Username = "nobody"
 		r.User.Email = "nobody@localhost"
 		r.User.Challenges = []string{"password"}
@@ -1028,4 +1223,71 @@ func (db *Database) GetMetadata() map[string]any {
 // Reload reloads Database instance.
 func (db *Database) Reload() error {
 	return nil
+}
+
+// GeneratePassword generates random password based on database password policies.
+func (db *Database) GeneratePassword() string {
+	policy := db.Policy.Password
+
+	// Define character sets
+	lower := "abcdefghijklmnopqrstuvwxyz"
+	upper := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	numbers := "0123456789"
+	special := "!@#$%^&*()-_=+[]{}|;:,.<>?"
+
+	var charPool string
+	var password []byte
+
+	// Ensure at least one character from each required category is present
+	// to satisfy the policy immediately.
+	addChar := func(set string) {
+		if len(set) > 0 {
+			n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(set))))
+			password = append(password, set[n.Int64()])
+		}
+	}
+
+	// Always include lowercase by default unless you want to be ultra-strict,
+	// but we'll use the policy flags to build the pool.
+	charPool += lower
+	if policy.RequireUppercase {
+		charPool += upper
+		addChar(upper)
+	}
+	if policy.RequireNumber {
+		charPool += numbers
+		addChar(numbers)
+	}
+	if policy.RequireNonAlphaNumeric {
+		charPool += special
+		addChar(special)
+	}
+
+	// If no specific requirements, expand pool to everything for better entropy
+	if !policy.RequireUppercase && !policy.RequireNumber && !policy.RequireNonAlphaNumeric {
+		charPool += upper + numbers
+	}
+
+	// Fill the remaining length
+	length := policy.MinLength
+	if length < 8 {
+		length = 8 // Sensible default if policy is too loose
+	}
+	if length > policy.MaxLength && policy.MaxLength > 0 {
+		length = policy.MaxLength
+	}
+
+	for len(password) < length {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charPool))))
+		password = append(password, charPool[n.Int64()])
+	}
+
+	// Shuffle the slice so required characters aren't always at the start
+	for i := len(password) - 1; i > 0; i-- {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		j := n.Int64()
+		password[i], password[j] = password[j], password[i]
+	}
+
+	return string(password)
 }

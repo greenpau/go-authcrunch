@@ -171,7 +171,7 @@ func (p *Portal) handleHTTPRedirectSeeOther(_ context.Context, w http.ResponseWr
 	return nil
 }
 
-func (p *Portal) handleHTTPRedirectExternal(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, location string) error {
+func (p *Portal) handleHTTPRedirectExternal(_ context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request, location string) error {
 	w.Header().Set("Location", location)
 	p.logger.Debug(
 		"External redirect served",

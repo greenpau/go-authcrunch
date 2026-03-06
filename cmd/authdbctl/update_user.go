@@ -25,13 +25,13 @@ import (
 )
 
 var (
-	addUserSubcmd = &cli.Command{
+	updateUserSubcmd = &cli.Command{
 
 		Name: "user",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "realm",
-				Usage:    "The realm to retrieve users from",
+				Usage:    "The realm to update user in",
 				Required: true,
 			},
 			&cli.StringFlag{
@@ -40,59 +40,88 @@ var (
 				Required: true,
 			},
 			&cli.StringFlag{
-				Name:     "name",
-				Usage:    "Name",
-				Required: true,
-			},
-			&cli.StringFlag{
 				Name:     "email",
 				Usage:    "Email address",
 				Required: true,
 			},
+			&cli.BoolFlag{
+				Name:  "disable",
+				Usage: "Disable the user account",
+			},
+			&cli.BoolFlag{
+				Name:  "enable",
+				Usage: "Enable the user account",
+			},
+			&cli.BoolFlag{
+				Name:  "reset-password",
+				Usage: "Generate a new password for the user",
+			},
 			&cli.StringSliceFlag{
-				Name:     "roles",
-				Usage:    "Roles",
-				Required: true,
+				Name:  "overwrite-roles",
+				Usage: "Replace existing roles with these (comma-separated or multiple flags)",
+			},
+			&cli.StringSliceFlag{
+				Name:  "add-roles",
+				Usage: "Append these roles to the existing ones",
 			},
 		},
-		Action: addUser,
+		Action: updateUser,
 	}
 )
 
-func addUser(c *cli.Context) error {
+func updateUser(c *cli.Context) error {
 	wr := new(wrapper)
 	if err := wr.configure(c); err != nil {
 		return err
 	}
 	endpointURL := wr.config.BaseURL + "/api/server/user"
-	wr.logger.Debug("add user",
+	wr.logger.Debug("updating user",
 		zap.String("endpoint_url", endpointURL),
 		zap.String("username", c.String("username")),
-		zap.String("name", c.String("name")),
 		zap.String("email", c.String("email")),
-		zap.Strings("roles", c.StringSlice("roles")),
 		zap.String("realm", c.String("realm")),
 	)
 
 	payload := userRequest{
 		Realm:     c.String("realm"),
-		Operation: "add",
+		Operation: "update",
 		User: map[string]any{
 			"username": c.String("username"),
-			"name":     c.String("name"),
 			"email":    c.String("email"),
-			"roles":    c.StringSlice("roles"),
 		},
+	}
+
+	if c.Bool("disable") {
+		payload.Operation = "disable"
+	}
+
+	if c.Bool("enable") {
+		payload.Operation = "enable"
+	}
+
+	if c.Bool("reset-password") {
+		payload.Operation = "reset_password"
+	}
+
+	// Supports --overwrite-roles "a","b" or --overwrite-roles "a" --overwrite-roles "b"
+	if c.IsSet("overwrite-roles") {
+		payload.Operation = "overwrite_roles"
+		payload.User["roles"] = c.StringSlice("overwrite-roles")
+	}
+
+	if c.IsSet("add-roles") {
+		payload.Operation = "add_roles"
+		payload.User["roles"] = c.StringSlice("add-roles")
 	}
 
 	reqData, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal add user request: %v", err)
+		return fmt.Errorf("failed to marshal update user request: %v", err)
 	}
 
 	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, reqData)
 	if err != nil {
-		return fmt.Errorf("failed adding %q user to %q realm: %w", c.String("username"), c.String("realm"), err)
+		return fmt.Errorf("failed updating %q user to %q realm: %w", c.String("username"), c.String("realm"), err)
 	}
 
 	var data map[string]any

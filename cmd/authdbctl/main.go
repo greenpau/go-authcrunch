@@ -133,21 +133,24 @@ func init() {
 			Subcommands: addSubcmd,
 		},
 		{
+			Name:        "delete",
+			Usage:       "delete database objects",
+			Subcommands: deleteSubcmd,
+		},
+		{
+			Name:        "update",
+			Usage:       "update database objects",
+			Subcommands: updateSubcmd,
+		},
+		{
 			Name:        "list",
 			Usage:       "list database objects",
 			Subcommands: listSubcmd,
 		},
 		{
-			Name:   "info",
-			Usage:  "get database information",
-			Action: fetchInfo,
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:     "realm",
-					Usage:    "The realm to get info for",
-					Required: true,
-				},
-			},
+			Name:        "info",
+			Usage:       "get info about database objects",
+			Subcommands: infoSubcmd,
 		},
 		{
 			Name:   "reload",

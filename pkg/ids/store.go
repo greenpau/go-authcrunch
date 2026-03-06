@@ -34,7 +34,15 @@ type IdentityStore interface {
 	GetConfig() map[string]interface{}
 	Configure() error
 	GetUsersMetadata(string) ([]map[string]any, error)
+	FetchUserData(string, string) (map[string]any, error)
+	DeleteUser(string, string) error
+	DisableUser(string, string) error
+	EnableUser(string, string) error
+	ResetUserPassword(string, string) (map[string]any, error)
+	AddUser(string, string, string, []string) (map[string]any, error)
 	GetMetadata(string) (map[string]any, error)
+	OverwriteUserRoles(string, string, []string) (map[string]any, error)
+	AddUserRoles(string, string, []string) (map[string]any, error)
 	Reload() error
 	Configured() bool
 	Request(operator.Type, *requests.Request) error

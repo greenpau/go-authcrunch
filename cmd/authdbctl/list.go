@@ -19,8 +19,8 @@ import (
 )
 
 var (
-	infoSubcmd = []*cli.Command{
-		fetchRealmInfoSubcmd,
-		fetchUserInfoSubcmd,
+	listSubcmd = []*cli.Command{
+		listUsersSubcmd,
+		listRealmsSubcmd,
 	}
 )

@@ -247,6 +247,14 @@ func (b *IdentityStore) GetUsersMetadata(_ string) ([]map[string]any, error) {
 	return entries, nil
 }
 
+// FetchUserData returns user data from IdentityStore.
+func (b *IdentityStore) FetchUserData(username string, emailAddress string) (map[string]any, error) {
+	if b.authenticator == nil {
+		return nil, fmt.Errorf("authenticator is nil")
+	}
+	return b.authenticator.FetchUserData(username, emailAddress)
+}
+
 // GetMetadata returns metadata for the IdentityStore.
 func (b *IdentityStore) GetMetadata(_ string) (map[string]any, error) {
 	if b.authenticator == nil {
@@ -255,4 +263,128 @@ func (b *IdentityStore) GetMetadata(_ string) (map[string]any, error) {
 
 	metadata := b.authenticator.GetMetadata()
 	return metadata, nil
+}
+
+// DeleteUser deleted user from IdentityStore.
+func (b *IdentityStore) DeleteUser(username string, emailAddress string) error {
+	if b.authenticator == nil {
+		return fmt.Errorf("authenticator is nil")
+	}
+	req := &requests.Request{
+		User: requests.User{
+			Username: username,
+			Email:    emailAddress,
+		},
+	}
+	return b.authenticator.DeleteUser(req)
+}
+
+// DisableUser disables user in IdentityStore.
+func (b *IdentityStore) DisableUser(username string, emailAddress string) error {
+	if b.authenticator == nil {
+		return fmt.Errorf("authenticator is nil")
+	}
+	req := &requests.Request{
+		User: requests.User{
+			Username: username,
+			Email:    emailAddress,
+		},
+	}
+	return b.authenticator.DisableUser(req)
+}
+
+// EnableUser enables user in IdentityStore.
+func (b *IdentityStore) EnableUser(username string, emailAddress string) error {
+	if b.authenticator == nil {
+		return fmt.Errorf("authenticator is nil")
+	}
+	req := &requests.Request{
+		User: requests.User{
+			Username: username,
+			Email:    emailAddress,
+		},
+	}
+	return b.authenticator.EnableUser(req)
+}
+
+// ResetUserPassword resets user password in IdentityStore.
+func (b *IdentityStore) ResetUserPassword(username string, emailAddress string) (map[string]any, error) {
+	if b.authenticator == nil {
+		return nil, fmt.Errorf("authenticator is nil")
+	}
+	req := &requests.Request{
+		User: requests.User{
+			Username: username,
+			Email:    emailAddress,
+		},
+	}
+	if err := b.authenticator.ResetUserPassword(req); err != nil {
+		return nil, err
+	}
+	resp := make(map[string]any)
+	resp["password"] = req.User.Password
+	return resp, nil
+}
+
+// AddUser adds user to IdentityStore.
+func (b *IdentityStore) AddUser(username string, emailAddress string, name string, roles []string) (map[string]any, error) {
+	if b.authenticator == nil {
+		return nil, fmt.Errorf("authenticator is nil")
+	}
+	password := b.authenticator.db.GeneratePassword()
+	req := &requests.Request{
+		User: requests.User{
+			Username: username,
+			Email:    emailAddress,
+			FullName: name,
+			Roles:    roles,
+			Password: password,
+		},
+	}
+	if err := b.authenticator.AddUser(req); err != nil {
+		return nil, err
+	}
+	resp := make(map[string]any)
+	resp["password"] = password
+	return resp, nil
+}
+
+// OverwriteUserRoles overwrites user roles in IdentityStore.
+func (b *IdentityStore) OverwriteUserRoles(username string, emailAddress string, roles []string) (map[string]any, error) {
+	if b.authenticator == nil {
+		return nil, fmt.Errorf("authenticator is nil")
+	}
+	req := &requests.Request{
+		User: requests.User{
+			Username: username,
+			Email:    emailAddress,
+			Roles:    roles,
+		},
+	}
+	if err := b.authenticator.OverwriteUserRoles(req); err != nil {
+		return nil, err
+	}
+	resp := make(map[string]any)
+	resp["roles"] = req.Response.Payload
+	return resp, nil
+}
+
+// AddUserRoles adds user roles to IdentityStore.
+func (b *IdentityStore) AddUserRoles(username string, emailAddress string, roles []string) (map[string]any, error) {
+	if b.authenticator == nil {
+		return nil, fmt.Errorf("authenticator is nil")
+	}
+	req := &requests.Request{
+		User: requests.User{
+			Username: username,
+			Email:    emailAddress,
+			Roles:    roles,
+		},
+	}
+	if err := b.authenticator.AddUserRoles(req); err != nil {
+		return nil, err
+	}
+	resp := make(map[string]any)
+	resp["roles"] = req.Response.Payload
+	return resp, nil
 }

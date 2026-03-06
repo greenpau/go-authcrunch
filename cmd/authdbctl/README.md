@@ -12,7 +12,13 @@
   * [Reload Database](#reload-database)
   * [Database Info](#database-info)
   * [Generating Hashed Password](#generating-hashed-password)
+  * [User Info](#user-info)
   * [Adding New Users](#adding-new-users)
+  * [Deleting Users](#deleting-users)
+  * [Managing Users](#managing-users)
+    * [Disable User](#disable-user)
+    * [Password Reset](#password-reset)
+    * [Update Roles](#update-roles)
 * [Backlog](#backlog)
 
 <!-- end-markdown-toc -->
@@ -256,8 +262,8 @@ Additionally, you will see the following log. Here, I broke `users.json` by malf
 The following commands reads local database info on the server:
 
 ```bash
-authdbctl info --realm local
-authdbctl --debug info --realm local
+authdbctl info realm --realm local
+authdbctl --debug info realm --realm local
 ```
 
 Expected response follows:
@@ -325,30 +331,203 @@ You can also provide custom cost.
 authdbctl generate password hash --cost 10 --password SomeFunkyPassword
 ```
 
-### Adding New Users
+### User Info
 
-The following commands adds a user to local database on the server:
-
-```bash
-bin/authdbctl --debug add user --username jsmith --name "John Smith" --roles "authp/user" --email jsmith@localhost.localdomain --realm local
-```
-
-To pass multiple roles use the following pattern:
+The following commands reads user info from local database on the server:
 
 ```bash
-bin/authdbctl ... --roles "authp/user","dash" ... --realm local
-```
-
-If you want to provide password, then do it like this:
-
-```bash
-bin/authdbctl --debug add user --username jsmith --name "John Smith" --roles "authp/user" --email jsmith@localhost.localdomain --realm local < "My@Password123"
+authdbctl info user --username jsmith --email jsmith@localhost.localdomain --realm local
+authdbctl --debug info user --username jsmith --email jsmith@localhost.localdomain --realm local
 ```
 
 Expected response follows:
 
 ```json
-TBD
+{
+  "created": "2026-02-28T16:20:05.188852Z",
+  "email_address": {
+    "address": "jsmith@localhost.localdomain",
+    "domain": "localhost.localdomain"
+  },
+  "email_addresses": [
+    {
+      "address": "jsmith@localhost.localdomain",
+      "domain": "localhost.localdomain"
+    }
+  ],
+  "id": "40244493-f15b-4c59-8baa-1cdeb54e9cf0",
+  "last_modified": "2026-02-28T16:20:05.248115Z",
+  "name": {
+    "first": "John",
+    "last": "Smith"
+  },
+  "names": [
+    {
+      "first": "John",
+      "last": "Smith"
+    }
+  ],
+  "passwords": [
+    {
+      "algorithm": "bcrypt",
+      "cost": 10,
+      "created_at": "2026-02-28T16:20:05.188852Z",
+      "disabled_at": "0001-01-01T00:00:00Z",
+      "expired_at": "0001-01-01T00:00:00Z",
+      "hash": "$2a$10$AVaIYtQ.18aWFtW2I3bug./ievuxXJU1zsVqga4VxqeXxWgD39gBe",
+      "purpose": "generic"
+    }
+  ],
+  "roles": [
+    {
+      "name": "user",
+      "organization": "authp"
+    },
+    {
+      "name": "dash"
+    }
+  ],
+  "username": "jsmith"
+}
+```
+
+### Adding New Users
+
+> NOTE: You cannot provide password during the creation of new users.
+
+The following command adds a user to local database on the server:
+
+```bash
+authdbctl --debug add user --username jsmith --name "John Smith" --roles "authp/user" --email jsmith@localhost.localdomain --realm local
+```
+
+To pass multiple roles use the following pattern:
+
+```bash
+authdbctl ... --roles "authp/user","dash" ... --realm local
+```
+
+If it fails, you will the following message:
+
+```text
+2026/03/06 09:21:04 failed adding "jsmith" user to "local" realm: server responded with 400 after 3 attempts
+```
+
+A successfuly response will contain database-generated password:
+
+```json
+{"password":"CzRhT3Pg","status":"success","timestamp":"2026-03-06T17:21:02.435454Z"}
+```
+
+### Deleting Users
+
+You must provide both username and email to delete a user.
+
+The following command deletes a user from local database on the server:
+
+```bash
+authdbctl --debug delete user --username jsmith --email jsmith@localhost.localdomain --realm local
+```
+
+If it fails, you will the following message:
+
+```text
+{"error":"failed deleting user \"jsmith\": user not found","status":"failure","timestamp":"2026-03-06T16:18:14.481666Z"}
+```
+
+Successful response follows:
+
+```json
+{"status":"success","timestamp":"2026-03-06T16:57:24.029785Z"}
+```
+
+### Managing Users
+
+#### Disable User
+
+The following command disables a user in local database on the server. The user will not be able to login.
+
+```bash
+authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --disable
+```
+
+If it fails, you will the following message:
+
+```text
+{"error":"failed updating user \"foo\": user not found","status":"failure","timestamp":"2026-03-06T18:33:51.541007Z"}
+```
+
+Successful response follows:
+
+```json
+{"status":"success","timestamp":"2026-03-06T18:10:15.379784Z"}
+```
+
+The user is now disabled:
+
+```text
+$ authdbctl --format table list users --realm local
+┌──────────┬─────────────┬────────────────────────────────┬────────────────────────┬──────────┐
+│ USERNAME │    NAME     │             EMAIL              │         ROLES          │ DISABLED │
+├──────────┼─────────────┼────────────────────────────────┼────────────────────────┼──────────┤
+│ webadmin │ Webmaster   │ webadmin@localhost.localdomain │ authp/admin;authp/user │ false    │
+│ mstone   │ Stone, Mia  │ mstone@localhost.localdomain   │ authp/user;dash        │ false    │
+│ jsmith   │ Smith, John │ jsmith@localhost.localdomain   │ authp/user             │ true     │
+└──────────┴─────────────┴────────────────────────────────┴────────────────────────┴──────────┘
+```
+
+
+The following command re-enabled a user in local database on the server.
+
+```bash
+authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --enable
+```
+
+
+#### Password Reset
+
+The following command resets a user's password in local database on the server.
+
+```bash
+authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --reset-password
+```
+
+If it fails, you will the following message:
+
+```text
+{"error":"failed updating user \"jsmith\": user not found","status":"failure","timestamp":"2026-03-06T19:04:41.138024Z"}
+```
+
+A successfuly response will contain database-regenerated password:
+
+```json
+{"password":"htJ9v0nw","status":"success","timestamp":"2026-03-06T19:04:56.450332Z"}
+```
+
+#### Update Roles
+
+The following command updates user's roles in local database on the server.
+
+```bash
+authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --overwrite-roles "authp/user","dash","foo"
+```
+
+If it fails, you will the following message:
+
+```text
+2026/03/06 14:05:45 failed updating "jsmith" user to "local" realm: server responded with 501 after 3 attempts
+```
+
+A successfuly response follows:
+
+```json
+{"roles":["authp/user","dash","foo"],"status":"success","timestamp":"2026-03-06T19:44:25.213519Z"}
+```
+
+Alternatively, you can just add roles.
+
+```bash
+authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --add-roles "baz"
 ```
 
 ## Backlog

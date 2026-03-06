@@ -25,13 +25,14 @@ import (
 )
 
 var (
-	addUserSubcmd = &cli.Command{
-
-		Name: "user",
+	fetchUserInfoSubcmd = &cli.Command{
+		Name:   "user",
+		Usage:  "get info about user",
+		Action: fetchUserInfo,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "realm",
-				Usage:    "The realm to retrieve users from",
+				Usage:    "The realm to get info from",
 				Required: true,
 			},
 			&cli.StringFlag{
@@ -40,48 +41,34 @@ var (
 				Required: true,
 			},
 			&cli.StringFlag{
-				Name:     "name",
-				Usage:    "Name",
-				Required: true,
-			},
-			&cli.StringFlag{
 				Name:     "email",
 				Usage:    "Email address",
 				Required: true,
 			},
-			&cli.StringSliceFlag{
-				Name:     "roles",
-				Usage:    "Roles",
-				Required: true,
-			},
 		},
-		Action: addUser,
 	}
 )
 
-func addUser(c *cli.Context) error {
+func fetchUserInfo(c *cli.Context) error {
 	wr := new(wrapper)
 	if err := wr.configure(c); err != nil {
 		return err
 	}
 	endpointURL := wr.config.BaseURL + "/api/server/user"
-	wr.logger.Debug("add user",
+	wr.logger.Debug(
+		"fetching database user info",
 		zap.String("endpoint_url", endpointURL),
-		zap.String("username", c.String("username")),
-		zap.String("name", c.String("name")),
-		zap.String("email", c.String("email")),
-		zap.Strings("roles", c.StringSlice("roles")),
 		zap.String("realm", c.String("realm")),
+		zap.String("username", c.String("username")),
+		zap.String("email", c.String("email")),
 	)
 
 	payload := userRequest{
 		Realm:     c.String("realm"),
-		Operation: "add",
+		Operation: "info",
 		User: map[string]any{
 			"username": c.String("username"),
-			"name":     c.String("name"),
 			"email":    c.String("email"),
-			"roles":    c.StringSlice("roles"),
 		},
 	}
 
@@ -92,7 +79,7 @@ func addUser(c *cli.Context) error {
 
 	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, reqData)
 	if err != nil {
-		return fmt.Errorf("failed adding %q user to %q realm: %w", c.String("username"), c.String("realm"), err)
+		return fmt.Errorf("failed fetching database %q realm info: %w", c.String("realm"), err)
 	}
 
 	var data map[string]any

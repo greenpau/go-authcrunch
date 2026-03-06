@@ -49,6 +49,7 @@ const (
 	ErrPasswordPolicyCompliance StandardError = "user password policy compliance check failed: %v"
 
 	ErrAddUser    StandardError = "failed adding user %q: %v"
+	ErrUpdateUser StandardError = "failed updating user %q: %v"
 	ErrDeleteUser StandardError = "failed deleting user %q: %v"
 	ErrGetUsers   StandardError = "failed retrieving users: %v"
 	ErrGetUser    StandardError = "failed retrieving user %q: %v"

@@ -25,13 +25,13 @@ import (
 )
 
 var (
-	addUserSubcmd = &cli.Command{
+	deleteUserSubcmd = &cli.Command{
 
 		Name: "user",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "realm",
-				Usage:    "The realm to retrieve users from",
+				Usage:    "The realm to delete user from",
 				Required: true,
 			},
 			&cli.StringFlag{
@@ -40,59 +40,45 @@ var (
 				Required: true,
 			},
 			&cli.StringFlag{
-				Name:     "name",
-				Usage:    "Name",
-				Required: true,
-			},
-			&cli.StringFlag{
 				Name:     "email",
 				Usage:    "Email address",
 				Required: true,
 			},
-			&cli.StringSliceFlag{
-				Name:     "roles",
-				Usage:    "Roles",
-				Required: true,
-			},
 		},
-		Action: addUser,
+		Action: deleteUser,
 	}
 )
 
-func addUser(c *cli.Context) error {
+func deleteUser(c *cli.Context) error {
 	wr := new(wrapper)
 	if err := wr.configure(c); err != nil {
 		return err
 	}
 	endpointURL := wr.config.BaseURL + "/api/server/user"
-	wr.logger.Debug("add user",
+	wr.logger.Debug("deleting user",
 		zap.String("endpoint_url", endpointURL),
 		zap.String("username", c.String("username")),
-		zap.String("name", c.String("name")),
 		zap.String("email", c.String("email")),
-		zap.Strings("roles", c.StringSlice("roles")),
 		zap.String("realm", c.String("realm")),
 	)
 
 	payload := userRequest{
 		Realm:     c.String("realm"),
-		Operation: "add",
+		Operation: "delete",
 		User: map[string]any{
 			"username": c.String("username"),
-			"name":     c.String("name"),
 			"email":    c.String("email"),
-			"roles":    c.StringSlice("roles"),
 		},
 	}
 
 	reqData, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal add user request: %v", err)
+		return fmt.Errorf("failed to marshal delete user request: %v", err)
 	}
 
 	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, reqData)
 	if err != nil {
-		return fmt.Errorf("failed adding %q user to %q realm: %w", c.String("username"), c.String("realm"), err)
+		return fmt.Errorf("failed deleting %q user to %q realm: %w", c.String("username"), c.String("realm"), err)
 	}
 
 	var data map[string]any

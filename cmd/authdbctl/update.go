@@ -19,8 +19,7 @@ import (
 )
 
 var (
-	infoSubcmd = []*cli.Command{
-		fetchRealmInfoSubcmd,
-		fetchUserInfoSubcmd,
+	updateSubcmd = []*cli.Command{
+		updateUserSubcmd,
 	}
 )

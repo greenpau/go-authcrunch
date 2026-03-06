@@ -295,7 +295,47 @@ func (b *IdentityStore) GetUsersMetadata(_ string) ([]map[string]any, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// FetchUserData returns user data from IdentityStore.
+func (b *IdentityStore) FetchUserData(_ string, _ string) (map[string]any, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+// DeleteUser deleted user from IdentityStore.
+func (b *IdentityStore) DeleteUser(_ string, _ string) error {
+	return fmt.Errorf("not implemented")
+}
+
+// DisableUser disables user in IdentityStore.
+func (b *IdentityStore) DisableUser(_ string, _ string) error {
+	return fmt.Errorf("not implemented")
+}
+
+// EnableUser enables user in IdentityStore.
+func (b *IdentityStore) EnableUser(_ string, _ string) error {
+	return fmt.Errorf("not implemented")
+}
+
 // GetMetadata returns metadata for the IdentityStore.
 func (b *IdentityStore) GetMetadata(_ string) (map[string]any, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+// AddUser adds user to IdentityStore.
+func (b *IdentityStore) AddUser(_ string, _ string, _ string, _ []string) (map[string]any, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+// OverwriteUserRoles overwrites user roles in IdentityStore.
+func (b *IdentityStore) OverwriteUserRoles(_ string, _ string, _ []string) (map[string]any, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+// AddUserRoles adds user roles to IdentityStore.
+func (b *IdentityStore) AddUserRoles(_ string, _ string, _ []string) (map[string]any, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+// ResetUserPassword resets user password in IdentityStore.
+func (b *IdentityStore) ResetUserPassword(_ string, _ string) (map[string]any, error) {
 	return nil, fmt.Errorf("not implemented")
 }

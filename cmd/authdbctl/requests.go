@@ -19,11 +19,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
+
+type userRequest struct {
+	Realm     string         `json:"realm"`
+	Operation string         `json:"operation"`
+	User      map[string]any `json:"user"`
+}
 
 func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, body []byte) (string, error) {
 	var respBody string
@@ -58,10 +65,14 @@ func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, body [
 		)
 
 		if msg, ok := errorData["message"].(string); ok && msg == "Access denied" {
-			wr.logger.Info("access denied detected, attempting to re-authenticate", zap.Int("attempt", i))
+			wr.logger.Debug("access denied detected, attempting to re-authenticate", zap.Int("attempt", i))
 			if authErr := wr.authenticate(); authErr != nil {
 				return "", fmt.Errorf("re-authentication failed: %v", authErr)
 			}
+		}
+
+		if msg, ok := errorData["message"].(string); ok && strings.ToLower(msg) == "not implemented" {
+			return "", fmt.Errorf("operation is %s", msg)
 		}
 
 		if i == maxAttempts {

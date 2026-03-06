@@ -26,7 +26,7 @@ import (
 // UserMetadata is metadata associated with a user.
 type UserMetadata struct {
 	ID           string    `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
-	Enabled      bool      `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Disabled     bool      `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
 	Username     string    `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
 	Title        string    `json:"title,omitempty" xml:"title,omitempty" yaml:"title,omitempty"`
 	Name         string    `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
@@ -46,7 +46,7 @@ type UserMetadataBundle struct {
 // User is a user identity.
 type User struct {
 	ID             string          `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
-	Enabled        bool            `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Disabled       bool            `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
 	Human          bool            `json:"human,omitempty" xml:"human,omitempty" yaml:"human,omitempty"`
 	Username       string          `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
 	Title          string          `json:"title,omitempty" xml:"title,omitempty" yaml:"title,omitempty"`
@@ -234,6 +234,18 @@ func (user *User) HasRole(s string) bool {
 	return false
 }
 
+// OverwriteRoles adds roles to a user identity.
+func (user *User) OverwriteRoles(roles []string) error {
+	user.Roles = []*Role{}
+	for _, role := range roles {
+		if err := user.AddRole(role); err != nil {
+			return err
+		}
+	}
+	user.Revise()
+	return nil
+}
+
 // AddRoles adds roles to a user identity.
 func (user *User) AddRoles(roles []string) error {
 	for _, role := range roles {
@@ -241,6 +253,7 @@ func (user *User) AddRoles(roles []string) error {
 			return err
 		}
 	}
+	user.Revise()
 	return nil
 }
 
@@ -279,6 +292,21 @@ func (user *User) VerifyPassword(s string) error {
 		}
 	}
 	return errors.ErrUserPasswordInvalid
+}
+
+// ResetPassword resets password for the User.
+func (user *User) ResetPassword(s string, keepVersions int) error {
+	for _, p := range user.Passwords {
+		if p.Disabled || p.Expired {
+			continue
+		}
+		p.Disabled = true
+	}
+	if err := user.AddPassword(s, keepVersions); err != nil {
+		return errors.ErrChangeUserPassword.WithArgs(err)
+	}
+	user.Revise()
+	return nil
 }
 
 // VerifyWebAuthnRequest authenticated WebAuthn requests.
@@ -521,6 +549,7 @@ func (user *User) ChangePassword(r *requests.Request, keepVersions int) error {
 	if err := user.AddPassword(r.User.Password, keepVersions); err != nil {
 		return errors.ErrChangeUserPassword.WithArgs(err)
 	}
+	user.Revise()
 	return nil
 }
 
@@ -536,6 +565,7 @@ func (user *User) UpdatePassword(r *requests.Request, keepVersions int) error {
 	if err := user.AddPassword(r.User.Password, keepVersions); err != nil {
 		return errors.ErrUpdateUserPassword.WithArgs(err)
 	}
+	user.Revise()
 	return nil
 }
 
@@ -543,7 +573,7 @@ func (user *User) UpdatePassword(r *requests.Request, keepVersions int) error {
 func (user *User) GetMetadata() *UserMetadata {
 	m := &UserMetadata{
 		ID:           user.ID,
-		Enabled:      user.Enabled,
+		Disabled:     user.Disabled,
 		Username:     user.Username,
 		Title:        user.Title,
 		Created:      user.Created,
@@ -594,6 +624,15 @@ func (user *User) HasAdminRights() bool {
 func (m *UserMetadata) AsMap() map[string]any {
 	resp := make(map[string]any)
 	data, _ := json.Marshal(m)
+	json.Unmarshal(data, &resp)
+	return resp
+}
+
+// AsMap converts the User struct into a map of interface values,
+// using the JSON tag names as the map keys.
+func (user *User) AsMap() map[string]any {
+	resp := make(map[string]any)
+	data, _ := json.Marshal(user)
 	json.Unmarshal(data, &resp)
 	return resp
 }
