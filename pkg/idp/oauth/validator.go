@@ -22,29 +22,27 @@ import (
 	"strings"
 )
 
-type TokenField struct {
-	Name string   // key used in resulting claim map
-	Path []string // path inside the JWT claims, supporting nested paths
+type tokenField struct {
+	name string   // key used in resulting claim map
+	path []string // path inside the JWT claims, supporting nested paths
 }
 
-var tokenFields = []TokenField{
-	{Name: "sub",     Path: []string{"sub"}},
-	{Name: "name",    Path: []string{"name"}},
-	{Name: "email",   Path: []string{"email"}},
-	{Name: "iat",     Path: []string{"iat"}},
-	{Name: "exp",     Path: []string{"exp"}},
-	{Name: "jti",     Path: []string{"jti"}},
-	{Name: "iss",     Path: []string{"iss"}},
-	{Name: "groups",  Path: []string{"groups"}},
-	{Name: "picture", Path: []string{"picture"}},
-
-	// Multiple potential paths we need to look for roles in the JWT claims access token
-	{Name: "roles", Path: []string{"roles"}},
-	{Name: "roles", Path: []string{"realm_access", "roles"}}, // Keycloak
-	{Name: "roles", Path: []string{"app_metadata", "authorization", "roles"}},
-
-	{Name: "given_name",  Path: []string{"given_name"}},
-	{Name: "family_name", Path: []string{"family_name"}},
+var tokenFields = []tokenField{
+	{name: "sub",     path: []string{"sub"}},
+	{name: "name",    path: []string{"name"}},
+	{name: "email",   path: []string{"email"}},
+	{name: "iat",     path: []string{"iat"}},
+	{name: "exp",     path: []string{"exp"}},
+	{name: "jti",     path: []string{"jti"}},
+	{name: "iss",     path: []string{"iss"}},
+	{name: "groups",  path: []string{"groups"}},
+	{name: "picture", path: []string{"picture"}},
+	// Multiple potential paths we need to look for roles in the access token claims
+	{name: "roles", path: []string{"roles"}},
+	{name: "roles", path: []string{"realm_access", "roles"}}, // Keycloak
+	{name: "roles", path: []string{"app_metadata", "authorization", "roles"}},
+	{name: "given_name",  path: []string{"given_name"}},
+	{name: "family_name", path: []string{"family_name"}},
 }
 
 
@@ -148,15 +146,15 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 	m := make(map[string]interface{})
 
 	for _, field := range tokenFields {
-		value, ok := getNestedClaim(claims, field.Path)
+		value, ok := getNestedClaim(claims, field.path)
 		if !ok {
 			continue
 		}
 
-		if existing, exists := m[field.Name]; exists {
-			m[field.Name] = mergeClaims(existing, value)
+		if existing, exists := m[field.name]; exists {
+			m[field.name] = mergeClaims(existing, value)
 		} else {
-			m[field.Name] = value
+			m[field.name] = value
 		}
 	}
 
