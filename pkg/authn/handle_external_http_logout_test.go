@@ -16,6 +16,7 @@ package authn
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -157,48 +158,74 @@ func TestHandleHTTPExternalLogout(t *testing.T) {
 	}
 }
 
-func TestHandleHTTPExternalLogoutGoogle(t *testing.T) {
-	f, _ := cookie.NewFactory(nil)
-	v := validator.NewTokenValidator()
-	provider := &mockIdentityProvider{
-		realm:                   "google",
-		name:                    "google",
-		kind:                    "oauth",
-		driver:                  "google",
-		config:                  map[string]interface{}{"logout_enabled": true},
-		identityTokenCookieName: "google_id_token",
-		logoutURL:               "https://accounts.google.com/logout",
-	}
-	p := &Portal{
-		config: &PortalConfig{
-			Name: "testPortal",
+func TestHandleHTTPExternalLogoutProviders(t *testing.T) {
+	testcases := []struct {
+		name         string
+		realm        string
+		driver       string
+		logoutURL    string
+		wantLocation string
+	}{
+		{
+			name:         "google oauth2 logout redirect",
+			realm:        "google",
+			driver:       "google",
+			logoutURL:    "https://accounts.google.com/logout",
+			wantLocation: "https://accounts.google.com/logout",
 		},
-		logger:            zap.L(),
-		cookie:            f,
-		validator:         v,
-		identityProviders: []idp.IdentityProvider{provider},
+		{
+			name:         "generic oauth2 logout redirect",
+			realm:        "generic",
+			driver:       "generic",
+			logoutURL:    "https://example.com/oauth2/logout",
+			wantLocation: "https://example.com/oauth2/logout",
+		},
 	}
 
-	rw := buildCustomResponseWriter()
-	reqURL := &url.URL{
-		Scheme: "https",
-		Host:   "auth.example.com",
-		Path:   "/oauth2/google/logout",
-	}
-	r := &http.Request{
-		URL:    reqURL,
-		Method: "GET",
-		Host:   "auth.example.com",
-	}
-	rr := requests.NewRequest()
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			f, _ := cookie.NewFactory(nil)
+			v := validator.NewTokenValidator()
+			provider := &mockIdentityProvider{
+				realm:                   tc.realm,
+				name:                    tc.realm,
+				kind:                    "oauth",
+				driver:                  tc.driver,
+				config:                  map[string]interface{}{"logout_enabled": true},
+				identityTokenCookieName: fmt.Sprintf("%s_id_token", tc.realm),
+				logoutURL:               tc.logoutURL,
+			}
+			p := &Portal{
+				config: &PortalConfig{
+					Name: "testPortal",
+				},
+				logger:            zap.L(),
+				cookie:            f,
+				validator:         v,
+				identityProviders: []idp.IdentityProvider{provider},
+			}
 
-	err := p.handleHTTPExternalLogout(context.Background(), rw, r, rr, "oauth2")
-	tests.EvalObjectsWithLog(t, "error", nil, err, []string{})
-	tests.EvalObjectsWithLog(t, "status_code", http.StatusFound, rw.statusCode, []string{})
+			rw := buildCustomResponseWriter()
+			reqURL := &url.URL{
+				Scheme: "https",
+				Host:   "auth.example.com",
+				Path:   fmt.Sprintf("/oauth2/%s/logout", tc.realm),
+			}
+			r := &http.Request{
+				URL:    reqURL,
+				Method: "GET",
+				Host:   "auth.example.com",
+			}
+			rr := requests.NewRequest()
 
-	location := rw.Header().Get("Location")
-	wantLocation := "https://accounts.google.com/logout"
-	if !strings.Contains(location, wantLocation) {
-		t.Errorf("got location %q, want it to contain %q", location, wantLocation)
+			err := p.handleHTTPExternalLogout(context.Background(), rw, r, rr, "oauth2")
+			tests.EvalObjectsWithLog(t, "error", nil, err, []string{})
+			tests.EvalObjectsWithLog(t, "status_code", http.StatusFound, rw.statusCode, []string{})
+
+			location := rw.Header().Get("Location")
+			if !strings.Contains(location, tc.wantLocation) {
+				t.Errorf("got location %q, want it to contain %q", location, tc.wantLocation)
+			}
+		})
 	}
 }
