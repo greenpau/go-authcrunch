@@ -156,3 +156,49 @@ func TestHandleHTTPExternalLogout(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleHTTPExternalLogoutGoogle(t *testing.T) {
+	f, _ := cookie.NewFactory(nil)
+	v := validator.NewTokenValidator()
+	provider := &mockIdentityProvider{
+		realm:                   "google",
+		name:                    "google",
+		kind:                    "oauth",
+		driver:                  "google",
+		config:                  map[string]interface{}{"logout_enabled": true},
+		identityTokenCookieName: "google_id_token",
+		logoutURL:               "https://accounts.google.com/logout",
+	}
+	p := &Portal{
+		config: &PortalConfig{
+			Name: "testPortal",
+		},
+		logger:            zap.L(),
+		cookie:            f,
+		validator:         v,
+		identityProviders: []idp.IdentityProvider{provider},
+	}
+
+	rw := buildCustomResponseWriter()
+	reqURL := &url.URL{
+		Scheme: "https",
+		Host:   "auth.example.com",
+		Path:   "/oauth2/google/logout",
+	}
+	r := &http.Request{
+		URL:    reqURL,
+		Method: "GET",
+		Host:   "auth.example.com",
+	}
+	rr := requests.NewRequest()
+
+	err := p.handleHTTPExternalLogout(context.Background(), rw, r, rr, "oauth2")
+	tests.EvalObjectsWithLog(t, "error", nil, err, []string{})
+	tests.EvalObjectsWithLog(t, "status_code", http.StatusFound, rw.statusCode, []string{})
+
+	location := rw.Header().Get("Location")
+	wantLocation := "https://accounts.google.com/logout"
+	if !strings.Contains(location, wantLocation) {
+		t.Errorf("got location %q, want it to contain %q", location, wantLocation)
+	}
+}
