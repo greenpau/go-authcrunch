@@ -89,6 +89,8 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 	case "cognito":
 		// Add redirect_uri to the logout URL.
 		providerLogoutURL += "&logout_uri=" + rr.Upstream.BaseURL + path.Join(rr.Upstream.BasePath, "/logout")
+	case "google":
+		providerLogoutURL += "?continue=" + rr.Upstream.BaseURL + path.Join(rr.Upstream.BasePath, "/logout")
 	}
 
 	return p.handleHTTPRedirectExternal(ctx, w, r, rr, providerLogoutURL)

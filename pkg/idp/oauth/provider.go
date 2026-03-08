@@ -470,6 +470,8 @@ func (b *IdentityProvider) GetLogoutURL() string {
 	switch b.config.Driver {
 	case "cognito":
 		return b.logoutURL + "?client_id=" + b.config.ClientID
+	case "google":
+		return "https://accounts.google.com/logout"
 	}
 	return b.logoutURL
 }
