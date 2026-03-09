@@ -171,28 +171,42 @@ func TestHandleHTTPExternalLogoutProviders(t *testing.T) {
 			realm:        "google",
 			driver:       "google",
 			logoutURL:    "https://accounts.google.com/logout",
-			wantLocation: "https://accounts.google.com/logout?continue=",
+			wantLocation: "https://accounts.google.com/logout?continue=https%3A%2F%2Fauth.example.com%2Flogout",
 		},
 		{
 			name:         "azure oauth2 logout redirect",
 			realm:        "azure",
 			driver:       "azure",
 			logoutURL:    "https://login.microsoftonline.com/common/oauth2/v2.0/logout",
-			wantLocation: "https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=",
+			wantLocation: "https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=https%3A%2F%2Fauth.example.com%2Flogout",
 		},
 		{
 			name:         "gitlab oauth2 logout redirect",
 			realm:        "gitlab",
 			driver:       "gitlab",
 			logoutURL:    "https://gitlab.com/oauth/logout",
-			wantLocation: "https://gitlab.com/oauth/logout?post_logout_redirect_uri=",
+			wantLocation: "https://gitlab.com/oauth/logout?post_logout_redirect_uri=https%3A%2F%2Fauth.example.com%2Flogout",
+		},
+		{
+			name:         "okta oauth2 logout redirect",
+			realm:        "okta",
+			driver:       "okta",
+			logoutURL:    "https://okta.example.com/oauth2/v1/logout",
+			wantLocation: "https://okta.example.com/oauth2/v1/logout?post_logout_redirect_uri=https%3A%2F%2Fauth.example.com%2Flogout",
 		},
 		{
 			name:         "cognito oauth2 logout redirect",
 			realm:        "cognito",
 			driver:       "cognito",
 			logoutURL:    "https://auth.example.com/logout?client_id=foo",
-			wantLocation: "https://auth.example.com/logout?client_id=foo&logout_uri=",
+			wantLocation: "https://auth.example.com/logout?client_id=foo&logout_uri=https%3A%2F%2Fauth.example.com%2Flogout",
+		},
+		{
+			name:         "github oauth2 logout (no redirect param)",
+			realm:        "github",
+			driver:       "github",
+			logoutURL:    "https://github.com/logout",
+			wantLocation: "https://github.com/logout",
 		},
 		{
 			name:         "generic oauth2 logout redirect",
@@ -239,14 +253,15 @@ func TestHandleHTTPExternalLogoutProviders(t *testing.T) {
 			}
 			rr := requests.NewRequest()
 			rr.Upstream.BaseURL = "https://auth.example.com"
+			rr.Upstream.BasePath = "/"
 
 			err := p.handleHTTPExternalLogout(context.Background(), rw, r, rr, "oauth2")
 			tests.EvalObjectsWithLog(t, "error", nil, err, []string{})
 			tests.EvalObjectsWithLog(t, "status_code", http.StatusFound, rw.statusCode, []string{})
 
 			location := rw.Header().Get("Location")
-			if !strings.Contains(location, tc.wantLocation) {
-				t.Errorf("got location %q, want it to contain %q", location, tc.wantLocation)
+			if location != tc.wantLocation {
+				t.Errorf("got location %q, want %q", location, tc.wantLocation)
 			}
 		})
 	}
