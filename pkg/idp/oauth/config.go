@@ -85,6 +85,10 @@ type Config struct {
 	// If enabled, portal redirects to identity provider logout URL. This would end the session with the provider.
 	LogoutEnabled bool `json:"logout_enabled,omitempty" xml:"logout_enabled,omitempty" yaml:"logout_enabled,omitempty"`
 
+	// The URL to redirect to upon logout. If set, logout is assumed enabled and the user
+	// gets redirected to this URL regardless of any provider-specific configuration.
+	LogoutURL string `json:"logout_url,omitempty" xml:"logout_url,omitempty" yaml:"logout_url,omitempty"`
+
 	ResponseType []string `json:"response_type,omitempty" xml:"response_type,omitempty" yaml:"response_type,omitempty"`
 
 	AuthorizationURL string `json:"authorization_url,omitempty" xml:"authorization_url,omitempty" yaml:"authorization_url,omitempty"`

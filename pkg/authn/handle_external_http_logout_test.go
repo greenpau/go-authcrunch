@@ -16,6 +16,7 @@ package authn
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -153,6 +154,115 @@ func TestHandleHTTPExternalLogout(t *testing.T) {
 			tests.EvalObjectsWithLog(t, "access_token cookie deleted", true, hasAccessToken, []string{})
 			tests.EvalObjectsWithLog(t, "referer cookie deleted", true, hasReferer, []string{})
 			tests.EvalObjectsWithLog(t, "session_id cookie deleted", true, hasSessionID, []string{})
+		})
+	}
+}
+
+func TestHandleHTTPExternalLogoutProviders(t *testing.T) {
+	testcases := []struct {
+		name         string
+		realm        string
+		driver       string
+		logoutURL    string
+		wantLocation string
+	}{
+		{
+			name:         "google oauth2 logout redirect",
+			realm:        "google",
+			driver:       "google",
+			logoutURL:    "https://accounts.google.com/logout",
+			wantLocation: "https://accounts.google.com/logout?continue=https%3A%2F%2Fauth.example.com%2Flogout",
+		},
+		{
+			name:         "azure oauth2 logout redirect",
+			realm:        "azure",
+			driver:       "azure",
+			logoutURL:    "https://login.microsoftonline.com/common/oauth2/v2.0/logout",
+			wantLocation: "https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=https%3A%2F%2Fauth.example.com%2Flogout",
+		},
+		{
+			name:         "gitlab oauth2 logout redirect",
+			realm:        "gitlab",
+			driver:       "gitlab",
+			logoutURL:    "https://gitlab.com/oauth/logout",
+			wantLocation: "https://gitlab.com/oauth/logout?post_logout_redirect_uri=https%3A%2F%2Fauth.example.com%2Flogout",
+		},
+		{
+			name:         "okta oauth2 logout redirect",
+			realm:        "okta",
+			driver:       "okta",
+			logoutURL:    "https://okta.example.com/oauth2/v1/logout",
+			wantLocation: "https://okta.example.com/oauth2/v1/logout?post_logout_redirect_uri=https%3A%2F%2Fauth.example.com%2Flogout",
+		},
+		{
+			name:         "cognito oauth2 logout redirect",
+			realm:        "cognito",
+			driver:       "cognito",
+			logoutURL:    "https://auth.example.com/logout?client_id=foo",
+			wantLocation: "https://auth.example.com/logout?client_id=foo&logout_uri=https%3A%2F%2Fauth.example.com%2Flogout",
+		},
+		{
+			name:         "github oauth2 logout (no redirect param)",
+			realm:        "github",
+			driver:       "github",
+			logoutURL:    "https://github.com/logout",
+			wantLocation: "https://github.com/logout",
+		},
+		{
+			name:         "generic oauth2 logout redirect",
+			realm:        "generic",
+			driver:       "generic",
+			logoutURL:    "https://example.com/oauth2/logout",
+			wantLocation: "https://example.com/oauth2/logout",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			f, _ := cookie.NewFactory(nil)
+			v := validator.NewTokenValidator()
+			provider := &mockIdentityProvider{
+				realm:                   tc.realm,
+				name:                    tc.realm,
+				kind:                    "oauth",
+				driver:                  tc.driver,
+				config:                  map[string]interface{}{"logout_enabled": true},
+				identityTokenCookieName: fmt.Sprintf("%s_id_token", tc.realm),
+				logoutURL:               tc.logoutURL,
+			}
+			p := &Portal{
+				config: &PortalConfig{
+					Name: "testPortal",
+				},
+				logger:            zap.L(),
+				cookie:            f,
+				validator:         v,
+				identityProviders: []idp.IdentityProvider{provider},
+			}
+
+			rw := buildCustomResponseWriter()
+			reqURL := &url.URL{
+				Scheme: "https",
+				Host:   "auth.example.com",
+				Path:   fmt.Sprintf("/oauth2/%s/logout", tc.realm),
+			}
+			r := &http.Request{
+				URL:    reqURL,
+				Method: "GET",
+				Host:   "auth.example.com",
+			}
+			rr := requests.NewRequest()
+			rr.Upstream.BaseURL = "https://auth.example.com"
+			rr.Upstream.BasePath = "/"
+
+			err := p.handleHTTPExternalLogout(context.Background(), rw, r, rr, "oauth2")
+			tests.EvalObjectsWithLog(t, "error", nil, err, []string{})
+			tests.EvalObjectsWithLog(t, "status_code", http.StatusFound, rw.statusCode, []string{})
+
+			location := rw.Header().Get("Location")
+			if location != tc.wantLocation {
+				t.Errorf("got location %q, want %q", location, tc.wantLocation)
+			}
 		})
 	}
 }
