@@ -55,6 +55,11 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 	if v, exists := cfg["logout_enabled"]; exists {
 		logoutEnabled = v.(bool)
 	}
+	if v, exists := cfg["logout_url"]; exists {
+		if v.(string) != "" {
+			logoutEnabled = true
+		}
+	}
 
 	// The user is authenticated. Find whether there is redirect_uri present in Query.
 	if redirects.HasRedirectURI(r.URL) && (len(p.config.TrustedLogoutRedirectURIConfigs) > 0) {

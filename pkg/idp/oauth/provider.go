@@ -467,6 +467,9 @@ func (b *IdentityProvider) GetLoginIcon() *icons.LoginIcon {
 
 // GetLogoutURL returns the logout URL associated with the provider.
 func (b *IdentityProvider) GetLogoutURL() string {
+	if b.config.LogoutURL != "" {
+		return b.config.LogoutURL
+	}
 	switch b.config.Driver {
 	case "cognito":
 		return b.logoutURL + "?client_id=" + b.config.ClientID
