@@ -14,12 +14,20 @@
 
 package local
 
+// APIKey holds API key data.
+type APIKey struct {
+	ID        string `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
+	Payload   string `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
+	Overwrite bool   `json:"overwrite,omitempty" xml:"overwrite,omitempty" yaml:"overwrite,omitempty"`
+}
+
 // User holds the configuration for the identity store user.
 type User struct {
-	Username                 string   `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
-	EmailAddress             string   `json:"email_address,omitempty" xml:"email_address,omitempty" yaml:"email_address,omitempty"`
-	Name                     string   `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	Roles                    []string `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
-	Password                 string   `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
-	PasswordOverwriteEnabled bool     `json:"password_overwrite_enabled,omitempty" xml:"password_overwrite_enabled,omitempty" yaml:"password_overwrite_enabled,omitempty"`
+	Username                 string    `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
+	EmailAddress             string    `json:"email_address,omitempty" xml:"email_address,omitempty" yaml:"email_address,omitempty"`
+	Name                     string    `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Roles                    []string  `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
+	Password                 string    `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
+	PasswordOverwriteEnabled bool      `json:"password_overwrite_enabled,omitempty" xml:"password_overwrite_enabled,omitempty" yaml:"password_overwrite_enabled,omitempty"`
+	APIKeys                  []*APIKey `json:"api_keys,omitempty" xml:"api_keys,omitempty" yaml:"api_keys,omitempty"`
 }

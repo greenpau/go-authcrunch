@@ -197,6 +197,30 @@ func init() {
 						},
 					},
 				},
+				{
+					Name:  "api",
+					Usage: "api key management",
+					Subcommands: []*cli.Command{
+						{
+							Name:   "key",
+							Usage:  "generate api key",
+							Action: generateAPIKeyHash,
+							Flags: []cli.Flag{
+								&cli.IntFlag{
+									Name:        "cost",
+									Usage:       "The hashing cost factor",
+									Value:       10,
+									DefaultText: "10",
+								},
+								&cli.StringFlag{
+									Name:     "db-path",
+									Usage:    "Sets `PATH` to the database file",
+									Required: false,
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}

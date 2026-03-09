@@ -69,7 +69,7 @@ func init() {
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
 	app.SetVersion(appVersion, "1.1.19")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.1.18-5-g69ff7d7")
+	app.SetGitCommit(gitCommit, "v1.1.19-2-g14c254b")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
@@ -824,20 +824,67 @@ func (db *Database) AddAPIKey(r *requests.Request) error {
 	}
 
 	s := r.Key.Payload
+
 	if s == "" {
 		s = util.GetRandomString(72)
 	}
 
-	if len(s) < 64 {
-		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is too short")
+	if !strings.HasPrefix(r.Key.Payload, "bcrypt:") {
+		if len(s) < 64 {
+			return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is too short")
+		}
+		if len(s) > 72 {
+			return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is too long")
+		}
+		if !apiKeyRegexPattern.MatchString(s) {
+			return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is non compliant")
+		}
 	}
 
-	if len(s) > 72 {
-		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is too long")
-	}
+	if r.Key.Prefix != "" {
+		if r.Key.Payload == "" {
+			return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, fmt.Errorf("api key payload is empty"))
+		}
+		if refUser, exists := db.refAPIKey[r.Key.Prefix]; exists {
+			if refUser.ID != user.ID {
+				return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, fmt.Errorf("api key prefix is mapped to another user"))
+			}
+		} else {
+			var hk *Password
+			var err error
+			if strings.HasPrefix(r.Key.Payload, "bcrypt:") {
+				hk, err = ParseHashedPassword(s)
+				if err != nil {
+					return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, err)
+				}
+			} else {
+				failCount := 0
+				for {
+					hk, err = NewPassword(s)
+					if err != nil {
+						if failCount > 10 {
+							return err
+						}
+						failCount++
+						continue
+					}
+				}
+			}
+			r.Response.Payload = s
+			r.Key.Payload = hk.Hash
+			r.Key.Usage = "api"
+			r.Key.Comment = strings.ToUpper(util.GetRandomStringFromRange(8, 14))
+			if err := user.AddAPIKey(r); err != nil {
+				return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, err)
 
-	if !apiKeyRegexPattern.MatchString(s) {
-		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is non compliant")
+			}
+			db.refAPIKey[r.Key.Prefix] = user
+		}
+
+		if err := db.commit(); err != nil {
+			return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, err)
+		}
+		return nil
 	}
 
 	failCount := 0
@@ -1010,7 +1057,7 @@ func (db *Database) LookupAPIKey(r *requests.Request) error {
 	if r.Key.Payload == "" {
 		return errors.ErrLookupAPIKeyPayloadEmpty
 	}
-	if len(r.Key.Payload) < 72 {
+	if len(r.Key.Payload) < 64 || len(r.Key.Payload) > 72 {
 		return errors.ErrLookupAPIKeyMalformedPayload
 	}
 	r.Key.Prefix = string(r.Key.Payload[:24])

@@ -29,7 +29,7 @@ import (
 )
 
 var apiKeyTitleRegexPattern = regexp.MustCompile(`^[\w\@\.\s\(\)]+$`)
-var apiKeyRegexPattern1 = regexp.MustCompile(`^[A-Za-z0-9]{72,96}$`)
+var apiKeyRegexPattern1 = regexp.MustCompile(`^[A-Za-z0-9]{64,72}$`)
 
 // AddUserAPIKey adds API key to user identity.
 func (p *Portal) AddUserAPIKey(

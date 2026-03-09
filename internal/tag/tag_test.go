@@ -891,6 +891,11 @@ func TestTagCompliance(t *testing.T) {
 			entry: &translate.MessageData{},
 			opts:  &Options{},
 		},
+		{
+			name:  "test local.APIKey struct",
+			entry: &local.APIKey{},
+			opts:  &Options{},
+		},
 	}
 
 	for _, tc := range testcases {

@@ -37,6 +37,35 @@ type Password struct {
 	DisabledAt time.Time `json:"disabled_at,omitempty" xml:"disabled_at,omitempty" yaml:"disabled_at,omitempty"`
 }
 
+// ParseHashedPassword creates a Password instance from a formatted string.
+func ParseHashedPassword(s string) (*Password, error) {
+	if !strings.HasPrefix(s, "bcrypt:") {
+		return nil, errors.ErrPasswordHashed.WithArgs("unsupported format")
+	}
+
+	arr := strings.SplitN(s, ":", 3)
+	if len(arr) != 3 {
+		return nil, errors.ErrPasswordHashed.WithArgs("invalid format")
+	}
+
+	cost, err := strconv.Atoi(arr[1])
+	if err != nil {
+		return nil, errors.ErrPasswordHashed.WithArgs("cost conversion failed")
+	}
+
+	if cost < 8 {
+		return nil, errors.ErrPasswordHashed.WithArgs("cost value is too low")
+	}
+
+	return &Password{
+		Purpose:   "generic",
+		Algorithm: "bcrypt",
+		Cost:      cost,
+		Hash:      arr[2],
+		CreatedAt: time.Now().UTC(),
+	}, nil
+}
+
 // NewPassword returns an instance of Password.
 func NewPassword(s string) (*Password, error) {
 	return NewPasswordWithOptions(s, "generic", "bcrypt", nil)

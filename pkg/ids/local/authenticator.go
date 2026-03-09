@@ -105,6 +105,34 @@ func (sa *Authenticator) Configure(fp string, users []*User) error {
 					}
 				}
 			}
+
+			if len(user.APIKeys) > 0 {
+				sa.logger.Debug(
+					"updating api keys for statically-defined identity store user",
+					zap.String("user", user.Username),
+					zap.String("email", user.EmailAddress),
+					zap.Int("api_key_count", len(user.APIKeys)),
+				)
+				for _, key := range user.APIKeys {
+					if len(key.ID) != 24 {
+						return fmt.Errorf("provided api key id is not 24 characters long")
+					}
+					req := &requests.Request{
+						User: requests.User{
+							Username: user.Username,
+							Email:    user.EmailAddress,
+						},
+						Key: requests.Key{
+							Usage:   "api",
+							Prefix:  key.ID,
+							Payload: key.Payload,
+						},
+					}
+					if err := sa.db.AddAPIKey(req); err != nil {
+						return err
+					}
+				}
+			}
 		}
 	}
 

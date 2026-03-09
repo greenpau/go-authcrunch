@@ -12,6 +12,7 @@
   * [Reload Database](#reload-database)
   * [Database Info](#database-info)
   * [Generating Hashed Password](#generating-hashed-password)
+  * [Generating API Key](#generating-api-key)
   * [User Info](#user-info)
   * [Adding New Users](#adding-new-users)
   * [Deleting Users](#deleting-users)
@@ -330,6 +331,36 @@ You can also provide custom cost.
 ```bash
 authdbctl generate password hash --cost 10 --password SomeFunkyPassword
 ```
+
+### Generating API Key
+
+The following command generates hashed API key
+
+```bash
+authdbctl generate api key
+```
+
+The output follows. Entered `12345678` when prompted "Enter Password".
+
+```text
+$ authdbctl generate api key
+Database: :memory:
+Cost: 10
+Status: Generating hash for API key
+secret: XnxJ5W0AAcDb2FO1nefd35fTx6jrOAXB29xQ9IuYZRiQeexIH0Vk9IzWih8invXUngQGJGEw
+api key XnxJ5W0AAcDb2FO1nefd35fT "bcrypt:10:$2a$10$2QKmYR9Q5wvl8UUNkICUoOf5KMVixTEhbUor5Y3oUfQsrz5iiG.K6"
+```
+
+The output can be used in `Caddyfile` to add the API key to a user:
+
+```
+		local identity store localdb {
+			user webadmin {
+				api key XnxJ5W0AAcDb2FO1nefd35fT "bcrypt:10:$2a$10$2QKmYR9Q5wvl8UUNkICUoOf5KMVixTEhbUor5Y3oUfQsrz5iiG.K6"
+			}
+    }
+```
+
 
 ### User Info
 
