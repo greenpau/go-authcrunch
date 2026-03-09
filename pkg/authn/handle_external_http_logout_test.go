@@ -171,7 +171,28 @@ func TestHandleHTTPExternalLogoutProviders(t *testing.T) {
 			realm:        "google",
 			driver:       "google",
 			logoutURL:    "https://accounts.google.com/logout",
-			wantLocation: "https://accounts.google.com/logout",
+			wantLocation: "https://accounts.google.com/logout?continue=",
+		},
+		{
+			name:         "azure oauth2 logout redirect",
+			realm:        "azure",
+			driver:       "azure",
+			logoutURL:    "https://login.microsoftonline.com/common/oauth2/v2.0/logout",
+			wantLocation: "https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=",
+		},
+		{
+			name:         "gitlab oauth2 logout redirect",
+			realm:        "gitlab",
+			driver:       "gitlab",
+			logoutURL:    "https://gitlab.com/oauth/logout",
+			wantLocation: "https://gitlab.com/oauth/logout?post_logout_redirect_uri=",
+		},
+		{
+			name:         "cognito oauth2 logout redirect",
+			realm:        "cognito",
+			driver:       "cognito",
+			logoutURL:    "https://auth.example.com/logout?client_id=foo",
+			wantLocation: "https://auth.example.com/logout?client_id=foo&logout_uri=",
 		},
 		{
 			name:         "generic oauth2 logout redirect",
@@ -217,6 +238,7 @@ func TestHandleHTTPExternalLogoutProviders(t *testing.T) {
 				Host:   "auth.example.com",
 			}
 			rr := requests.NewRequest()
+			rr.Upstream.BaseURL = "https://auth.example.com"
 
 			err := p.handleHTTPExternalLogout(context.Background(), rw, r, rr, "oauth2")
 			tests.EvalObjectsWithLog(t, "error", nil, err, []string{})

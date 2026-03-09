@@ -21,6 +21,7 @@ import (
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 )
@@ -87,10 +88,13 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 
 	switch provider.GetDriver() {
 	case "cognito":
-		// Add redirect_uri to the logout URL.
 		providerLogoutURL += "&logout_uri=" + rr.Upstream.BaseURL + path.Join(rr.Upstream.BasePath, "/logout")
 	case "google":
 		providerLogoutURL += "?continue=" + rr.Upstream.BaseURL + path.Join(rr.Upstream.BasePath, "/logout")
+	case "azure":
+		providerLogoutURL += "?post_logout_redirect_uri=" + url.QueryEscape(rr.Upstream.BaseURL+path.Join(rr.Upstream.BasePath, "/logout"))
+	case "gitlab", "okta":
+		providerLogoutURL += "?post_logout_redirect_uri=" + url.QueryEscape(rr.Upstream.BaseURL+path.Join(rr.Upstream.BasePath, "/logout"))
 	}
 
 	return p.handleHTTPRedirectExternal(ctx, w, r, rr, providerLogoutURL)
