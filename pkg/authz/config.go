@@ -16,6 +16,8 @@ package authz
 
 import (
 	"context"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
@@ -24,8 +26,10 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
-	"strings"
 )
+
+// DefaultAPIKeyHeaderName is the default header used to search for API keys.
+const DefaultAPIKeyHeaderName = "X-Api-Key"
 
 // PolicyConfig is Gatekeeper configuration.
 type PolicyConfig struct {
@@ -69,7 +73,8 @@ type PolicyConfig struct {
 	cryptoRawConfigs []string
 	// Holds raw identity provider configuration.
 	authProxyRawConfig []string
-
+	// APIKeyHeaderName holds custom API key header name.
+	APIKeyHeaderName string `json:"api_key_header_name,omitempty" xml:"api_key_header_name,omitempty" yaml:"api_key_header_name,omitempty"`
 	// Indicated that the config was successfully validated.
 	validated bool
 }
@@ -82,6 +87,11 @@ func (cfg *PolicyConfig) AddRawCryptoConfigs(s string) {
 // AddRawIdpConfig add raw identity provider configs.
 func (cfg *PolicyConfig) AddRawIdpConfig(s string) {
 	cfg.authProxyRawConfig = append(cfg.authProxyRawConfig, s)
+}
+
+// SetAPIKeyHeaderName sets API key header name. Overwrites default DefaultAPIKeyHeaderName.
+func (cfg *PolicyConfig) SetAPIKeyHeaderName(s string) {
+	cfg.APIKeyHeaderName = s
 }
 
 // parseRawCryptoConfigs parses raw crypto configs into CryptoKeyConfigs
@@ -153,6 +163,10 @@ func (cfg *PolicyConfig) Validate() error {
 	}
 	if err := cfg.parseRawAuthProxyConfig(); err != nil {
 		return err
+	}
+
+	if cfg.APIKeyHeaderName == "" {
+		cfg.APIKeyHeaderName = DefaultAPIKeyHeaderName
 	}
 
 	// Set authentication redirect URL.

@@ -194,6 +194,7 @@ func TestNewServer(t *testing.T) {
                         ]
                       }
                     ],
+					"api_key_header_name": "X-Api-Key",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
                     "auth_url_path": "/auth",

@@ -15,6 +15,8 @@
 package authz
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
@@ -23,7 +25,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
-	"testing"
 )
 
 func TestNewGatekeeper(t *testing.T) {
@@ -138,6 +139,7 @@ func TestNewGatekeeper(t *testing.T) {
                     "conditions": ["match roles everyone Everyone"]
                   }
                 ],
+				"api_key_header_name": "X-Api-Key",
                 "auth_redirect_query_param": "redirect_url",
                 "auth_redirect_status_code": 302,
                 "auth_url_path": "/auth",

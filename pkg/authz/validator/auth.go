@@ -16,12 +16,13 @@ package validator
 
 import (
 	"context"
+	"net/http"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
-	"net/http"
-	"strings"
 )
 
 // parseCustomAuthHeader authorizes HTTP requests based on the presence and the
@@ -97,16 +98,16 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(ctx context.Context, r *http
 	return nil
 }
 
-func (v *TokenValidator) parseCustomAPIKeyAuthHeader(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
+func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
 	var tokenSecret, tokenRealm string
-	hdr := r.Header.Get("X-API-Key")
+	hdr := r.Header.Get(v.apiKeyHeaderName)
 	if hdr == "" {
 		return nil
 	}
 	entry := strings.TrimSpace(hdr)
 
 	ar.Token.Source = "apikey"
-	ar.Token.Name = "X-API-Key"
+	ar.Token.Name = v.apiKeyHeaderName
 	ar.Token.Found = true
 
 	sep := strings.Index(entry, " ")

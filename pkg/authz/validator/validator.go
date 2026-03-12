@@ -81,6 +81,7 @@ type TokenValidator struct {
 	customAuthEnabled bool
 	authProxyConfig   *authproxy.Config
 	authProxy         authproxy.Authenticator
+	apiKeyHeaderName  string
 }
 
 // NewTokenValidator returns an instance of TokenValidator
@@ -301,6 +302,11 @@ func (g *guardianWithMethodPathSrcAddrPathClaim) authorize(ctx context.Context, 
 		}
 	}
 	return errors.ErrAccessNotAllowedByPathACL
+}
+
+// SetAPIKeyHeaderName sets API key auth header name.
+func (v *TokenValidator) SetAPIKeyHeaderName(s string) {
+	v.apiKeyHeaderName = s
 }
 
 // Configure adds access list and keys for the verification of tokens.
