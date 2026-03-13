@@ -16,6 +16,7 @@ package authcrunch
 
 import (
 	"fmt"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"

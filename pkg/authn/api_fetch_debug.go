@@ -18,6 +18,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -41,7 +42,7 @@ func (p *Portal) FetchDebug(
 		"port":   5432,
 		"engine": "postgresql",
 	}
-	entry["version"] = "1.0.0"
+	entry["version"] = identity.GetVersion()
 	entry["database"] = database
 	resp["entry"] = entry
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)

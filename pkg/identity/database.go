@@ -74,6 +74,11 @@ func init() {
 	app.SetBuildDate(buildDate, "")
 }
 
+// GetVersion returns database version.
+func GetVersion() string {
+	return app.Banner()
+}
+
 // Policy represents database usage policy.
 type Policy struct {
 	Password PasswordPolicy `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
