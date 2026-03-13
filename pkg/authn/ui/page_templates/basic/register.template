@@ -149,7 +149,7 @@
               {{ end }}
 
               {{ if eq .Data.view "registered" }}
-              <div class="app-txt-section">
+              <div id="registered-section" class="app-txt-section">
                 <p>{{ .Data.i18n_registration_welcome }}</p>
                 <p>{{ .Data.i18n_things_to_keep_in_mind }}</p>
                 <ol class="list-decimal pl-8">
@@ -246,12 +246,108 @@
     {{ if eq .Data.ui_options.custom_js_required "yes" }}
       <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
     {{ end }}
-    {{ if .Message }}
+
     <script>
     function hideAlert() {
       document.getElementById("alerts").remove();
     }
+
+    // Check for the element and populate the field
+    document.addEventListener("DOMContentLoaded", function() {
+      const alertDiv = document.getElementById("alerts");
+      const registeredDiv = document.getElementById("registered-section");
+      const usernameFieldId = "registrant";
+      const passwordFieldId = "registrant_password";
+      const emailFieldId = "registrant_email";
+      const firstNameFieldId = "first_name";
+      const lastNameFieldId = "last_name";
+      const codeFieldId = "registrant_code";
+
+      const usernameInput = document.getElementById(usernameFieldId);
+      const passwordInput = document.getElementById(passwordFieldId);
+      const emailInput = document.getElementById(emailFieldId);
+      const firstNameInput = document.getElementById(firstNameFieldId);
+      const lastNameInput = document.getElementById(lastNameFieldId);
+      const registrantCodeInput = document.getElementById(codeFieldId);
+
+      const registrationForm = firstNameInput ? firstNameInput.closest('form') : null;
+
+      const storedUsernameKey = "registration_username";
+      const storedPasswordKey = "registration_password";
+      const storedEmailKey = "registration_email";
+      const storedFirstNameKey = "registration_first_name";
+      const storedLastNameKey = "registration_last_name";
+      const storedCodeKey = "registration_code";
+
+      if (registeredDiv) {
+        sessionStorage.removeItem(storedUsernameKey);
+        sessionStorage.removeItem(storedPasswordKey);
+        sessionStorage.removeItem(storedEmailKey);
+        sessionStorage.removeItem(storedFirstNameKey);
+        sessionStorage.removeItem(storedLastNameKey);
+        sessionStorage.removeItem(storedCodeKey);
+      }
+
+      const storedUsername = sessionStorage.getItem(storedUsernameKey);
+      const storedPassword = sessionStorage.getItem(storedPasswordKey);
+      const storedEmail = sessionStorage.getItem(storedEmailKey);
+      const storedFirstName = sessionStorage.getItem(storedFirstNameKey);
+      const storedLastName = sessionStorage.getItem(storedLastNameKey);
+      const storedCode = sessionStorage.getItem(storedCodeKey);
+
+      if (registrationForm) {
+        if (usernameInput && storedUsername) {
+          usernameInput.value = storedUsername;
+        }
+        if (passwordInput && storedPassword) {
+          passwordInput.value = storedPassword;
+        }
+        if (emailInput && storedEmail) {
+          emailInput.value = storedEmail;
+        }
+        if (firstNameInput && storedFirstName) {
+          firstNameInput.value = storedFirstName;
+        }
+        if (lastNameInput && storedLastName) {
+          lastNameInput.value = storedLastName;
+        }
+        if (registrantCodeInput && storedCode) {
+          registrantCodeInput.value = storedCode;
+        }
+      }
+
+      if (registrationForm) {
+        registrationForm.addEventListener("submit", function() {
+          if (usernameInput) {
+            sessionStorage.setItem(storedUsernameKey, usernameInput.value);
+          }
+          if (passwordInput) {
+            sessionStorage.setItem(storedPasswordKey, passwordInput.value);
+          }
+          if (emailInput) {
+            sessionStorage.setItem(storedEmailKey, emailInput.value);
+          }
+          if (firstNameInput) {
+            sessionStorage.setItem(storedFirstNameKey, firstNameInput.value);
+          }
+          if (lastNameInput) {
+            sessionStorage.setItem(storedLastNameKey, lastNameInput.value);
+          }
+          if (registrantCodeInput) {
+            sessionStorage.setItem(storedCodeKey, registrantCodeInput.value);
+          }
+        });
+        registrationForm.addEventListener("reset", function() {
+          sessionStorage.removeItem(storedUsernameKey);
+          sessionStorage.removeItem(storedPasswordKey);
+          sessionStorage.removeItem(storedEmailKey);
+          sessionStorage.removeItem(storedFirstNameKey);
+          sessionStorage.removeItem(storedLastNameKey);
+          sessionStorage.removeItem(storedCodeKey);
+        });
+      }
+    });
+
     </script>
-    {{ end }}
   </body>
 </html>
