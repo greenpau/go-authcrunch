@@ -67,21 +67,22 @@ type guardianWithMethodPathSrcAddrPathClaim struct {
 
 // TokenValidator validates tokens in http requests.
 type TokenValidator struct {
-	keystore          *kms.CryptoKeyStore
-	authHeaders       map[string]interface{}
-	authCookies       map[string]interface{}
-	authQueryParams   map[string]interface{}
-	cache             *cache.TokenCache
-	accessList        *acl.AccessList
-	guardian          guardian
-	tokenSources      []string
-	opts              *options.TokenValidatorOptions
-	basicAuthEnabled  bool
-	apiKeyAuthEnabled bool
-	customAuthEnabled bool
-	authProxyConfig   *authproxy.Config
-	authProxy         authproxy.Authenticator
-	apiKeyHeaderName  string
+	keystore            *kms.CryptoKeyStore
+	authHeaders         map[string]interface{}
+	authCookies         map[string]interface{}
+	authQueryParams     map[string]interface{}
+	cache               *cache.TokenCache
+	accessList          *acl.AccessList
+	guardian            guardian
+	tokenSources        []string
+	opts                *options.TokenValidatorOptions
+	basicAuthEnabled    bool
+	apiKeyAuthEnabled   bool
+	customAuthEnabled   bool
+	authProxyConfig     *authproxy.Config
+	authProxy           authproxy.Authenticator
+	apiKeyHeaderName    string
+	authRealmHeaderName string
 }
 
 // NewTokenValidator returns an instance of TokenValidator
@@ -307,6 +308,11 @@ func (g *guardianWithMethodPathSrcAddrPathClaim) authorize(ctx context.Context, 
 // SetAPIKeyHeaderName sets API key auth header name.
 func (v *TokenValidator) SetAPIKeyHeaderName(s string) {
 	v.apiKeyHeaderName = s
+}
+
+// SetAuthRealmHeaderName sets authentication realm header name.
+func (v *TokenValidator) SetAuthRealmHeaderName(s string) {
+	v.authRealmHeaderName = s
 }
 
 // Configure adds access list and keys for the verification of tokens.

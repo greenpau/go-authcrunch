@@ -151,6 +151,9 @@ func (g *Gatekeeper) configure() error {
 	// Configure API key auth header name
 	g.tokenValidator.SetAPIKeyHeaderName(g.config.APIKeyHeaderName)
 
+	// Configure authentication realm header name
+	g.tokenValidator.SetAuthRealmHeaderName(g.config.AuthRealmHeaderName)
+
 	g.logger.Debug(
 		"Configured gatekeeper",
 		zap.String("gatekeeper_name", g.config.Name),
@@ -160,6 +163,7 @@ func (g *Gatekeeper) configure() error {
 		zap.Any("token_validator_options", g.opts),
 		zap.Any("access_list_rules", g.config.AccessListRules),
 		zap.String("api_key_auth_header_name", g.config.APIKeyHeaderName),
+		zap.String("auth_realm_header_name", g.config.AuthRealmHeaderName),
 		zap.String("forbidden_path", g.config.ForbiddenURL),
 	)
 	return nil

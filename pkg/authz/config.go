@@ -31,6 +31,9 @@ import (
 // DefaultAPIKeyHeaderName is the default header used to search for API keys.
 const DefaultAPIKeyHeaderName = "X-Api-Key"
 
+// DefaultAuthRealmHeaderName is the default header used to search for authentication realm.
+const DefaultAuthRealmHeaderName = "X-Auth-Realm"
+
 // PolicyConfig is Gatekeeper configuration.
 type PolicyConfig struct {
 	Name                       string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
@@ -75,6 +78,8 @@ type PolicyConfig struct {
 	authProxyRawConfig []string
 	// APIKeyHeaderName holds custom API key header name.
 	APIKeyHeaderName string `json:"api_key_header_name,omitempty" xml:"api_key_header_name,omitempty" yaml:"api_key_header_name,omitempty"`
+	// AuthRealmHeaderName holds custom authentication realm header name.
+	AuthRealmHeaderName string `json:"auth_realm_header_name,omitempty" xml:"auth_realm_header_name,omitempty" yaml:"auth_realm_header_name,omitempty"`
 	// Indicated that the config was successfully validated.
 	validated bool
 }
@@ -92,6 +97,11 @@ func (cfg *PolicyConfig) AddRawIdpConfig(s string) {
 // SetAPIKeyHeaderName sets API key header name. Overwrites default DefaultAPIKeyHeaderName.
 func (cfg *PolicyConfig) SetAPIKeyHeaderName(s string) {
 	cfg.APIKeyHeaderName = s
+}
+
+// SetAuthRealmHeaderName sets authentication realm header name. Overwrites default DefaultAuthRealmHeaderName.
+func (cfg *PolicyConfig) SetAuthRealmHeaderName(s string) {
+	cfg.AuthRealmHeaderName = s
 }
 
 // parseRawCryptoConfigs parses raw crypto configs into CryptoKeyConfigs
@@ -167,6 +177,10 @@ func (cfg *PolicyConfig) Validate() error {
 
 	if cfg.APIKeyHeaderName == "" {
 		cfg.APIKeyHeaderName = DefaultAPIKeyHeaderName
+	}
+
+	if cfg.AuthRealmHeaderName == "" {
+		cfg.AuthRealmHeaderName = DefaultAuthRealmHeaderName
 	}
 
 	// Set authentication redirect URL.

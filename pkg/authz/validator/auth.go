@@ -58,18 +58,8 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(ctx context.Context, r *http
 		ar.Token.Name = "Basic"
 		ar.Token.Found = true
 
-		sep := strings.Index(entry, " ")
-		if sep < 0 {
-			tokenSecret = entry
-		} else {
-			tokenSecret = entry[:sep]
-			directives := parseAuthHeaderDirectives(entry[sep+1:])
-			if directives != nil {
-				if realm, exists := directives["realm"]; exists {
-					tokenRealm = realm
-				}
-			}
-		}
+		tokenSecret = entry
+		tokenRealm = r.Header.Get(v.authRealmHeaderName)
 		break
 	}
 
@@ -99,29 +89,17 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(ctx context.Context, r *http
 }
 
 func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
-	var tokenSecret, tokenRealm string
 	hdr := r.Header.Get(v.apiKeyHeaderName)
 	if hdr == "" {
 		return nil
 	}
-	entry := strings.TrimSpace(hdr)
+	tokenSecret := strings.TrimSpace(hdr)
 
 	ar.Token.Source = "apikey"
 	ar.Token.Name = v.apiKeyHeaderName
 	ar.Token.Found = true
 
-	sep := strings.Index(entry, " ")
-	if sep < 0 {
-		tokenSecret = entry
-	} else {
-		tokenSecret = entry[:sep]
-		directives := parseAuthHeaderDirectives(entry[sep+1:])
-		if directives != nil {
-			if realm, exists := directives["realm"]; exists {
-				tokenRealm = realm
-			}
-		}
-	}
+	tokenRealm := r.Header.Get(v.authRealmHeaderName)
 
 	if tokenRealm != "" {
 		// Check if the realm is registered.
@@ -142,16 +120,4 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 	ar.Token.Name = apr.Response.Name
 	ar.Token.Payload = apr.Response.Payload
 	return nil
-}
-
-func parseAuthHeaderDirectives(s string) map[string]string {
-	m := make(map[string]string)
-	for _, entry := range strings.Split(s, ",") {
-		kv := strings.SplitN(strings.TrimSpace(entry), "=", 2)
-		if len(kv) != 2 {
-			continue
-		}
-		m[kv[0]] = strings.Trim(kv[1], `"'`)
-	}
-	return m
 }
