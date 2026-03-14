@@ -16,10 +16,12 @@ package validators
 
 import (
 	"fmt"
-	charsetutil "github.com/greenpau/go-authcrunch/pkg/util/charset"
 	"net"
 	"regexp"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/registry"
+	charsetutil "github.com/greenpau/go-authcrunch/pkg/util/charset"
 )
 
 const usernameCharset = "0123456789abcdefghijklmnopqrstuvwxyz"
@@ -91,6 +93,24 @@ func ValidateUserInputEmail(v string, opts map[string]interface{}) error {
 				if len(rr) < 1 {
 					return fmt.Errorf("the email address domain is misconfigured")
 				}
+			}
+		}
+
+		if rawRestrictions, exists := opts["domain_restrictions"]; exists {
+			restrictions, ok := rawRestrictions.([]string)
+			if !ok {
+				return fmt.Errorf("domain_restrictions must be a slice of strings")
+			}
+
+			userDomain := strings.ToLower(emailParts[1])
+
+			ruleset, err := registry.NewDomainRestrictionRuleset(restrictions)
+			if err != nil {
+				return fmt.Errorf("domain_restrictions failure: %v", err)
+			}
+
+			if ruleset.ShouldDeny(userDomain) {
+				return fmt.Errorf("user provided domain is not allowed")
 			}
 		}
 	}

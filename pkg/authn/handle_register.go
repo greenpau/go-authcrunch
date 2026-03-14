@@ -16,12 +16,14 @@ package authn
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"path"
 	"strings"
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/validators"
+	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/util"
@@ -35,6 +37,41 @@ type registerRequest struct {
 	registrationID string
 }
 
+type registerEndpoint struct {
+	registrationID  string
+	acknowledgement bool
+	realmName       string
+}
+
+func parseRegisterEndpoint(p string) (*registerEndpoint, error) {
+	sp, err := getEndpoint(p, "/register/")
+	if err != nil {
+		return nil, err
+	}
+
+	arr := strings.Split(sp, "/")
+
+	var endpoint *registerEndpoint
+	switch len(arr) {
+	case 1:
+		endpoint = &registerEndpoint{
+			realmName: arr[0],
+		}
+	case 3:
+		if arr[1] != "ack" {
+			return nil, fmt.Errorf("malformed registration endpoint ack request")
+		}
+		endpoint = &registerEndpoint{
+			realmName:       arr[0],
+			acknowledgement: true,
+			registrationID:  arr[2],
+		}
+	default:
+		return nil, fmt.Errorf("malformed registration endpoint request")
+	}
+	return endpoint, nil
+}
+
 func (p *Portal) handleHTTPRegister(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
 	p.disableClientCache(w)
 	if rr.Response.Authenticated {
@@ -42,7 +79,7 @@ func (p *Portal) handleHTTPRegister(ctx context.Context, w http.ResponseWriter, 
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/portal")
 	}
 
-	if strings.Contains(r.URL.Path, "/register/ack/") {
+	if strings.Contains(r.URL.Path, "/register/") && strings.Contains(r.URL.Path, "/ack/") {
 		if r.Method != "POST" {
 			// Handle registration acknowledgement.
 			return p.handleHTTPRegisterAck(ctx, w, r, rr)
@@ -66,6 +103,26 @@ func (p *Portal) handleHTTPRegisterScreen(ctx context.Context, w http.ResponseWr
 	return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 }
 
+func (p *Portal) fetchUserRegistry(r *http.Request, rr *requests.Request) (registry.UserRegistry, error) {
+	registerEndpoint, err := parseRegisterEndpoint(r.URL.Path)
+	if err != nil {
+		p.logger.Warn(
+			"failed to parse register endpoint",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.Error(err),
+		)
+		return nil, err
+	}
+
+	userRegistry := p.GetUserRegistryByRealmName(registerEndpoint.realmName)
+	if userRegistry == nil {
+		return nil, fmt.Errorf("user registry not found")
+	}
+
+	return userRegistry, nil
+}
+
 func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, reg *registerRequest) error {
 	if len(p.config.UserRegistries) < 1 {
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusServiceUnavailable)
@@ -75,33 +132,39 @@ func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http
 	resp.BaseURL(rr.Upstream.BasePath)
 	resp.Data["view"] = reg.view
 
+	userRegistry, err := p.fetchUserRegistry(r, rr)
+	if err != nil {
+		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
+	}
+	resp.Data["registration_realm_name"] = userRegistry.GetRealmName()
+
 	switch reg.view {
 	case "register":
-		resp.PageTitle = p.userRegistry.GetTitle()
-		if p.userRegistry.GetRequireAcceptTerms() {
+		resp.PageTitle = userRegistry.GetTitle()
+		if userRegistry.GetRequireAcceptTerms() {
 			resp.Data["require_accept_terms"] = true
 		}
 
-		if p.userRegistry.GetCode() != "" {
+		if userRegistry.GetCode() != "" {
 			resp.Data["require_registration_code"] = true
 		}
 
-		if p.userRegistry.GetTermsConditionsLink() != "" {
-			resp.Data["terms_conditions_link"] = p.userRegistry.GetTermsConditionsLink()
+		if userRegistry.GetTermsConditionsLink() != "" {
+			resp.Data["terms_conditions_link"] = userRegistry.GetTermsConditionsLink()
 		} else {
 			resp.Data["terms_conditions_link"] = path.Join(rr.Upstream.BasePath, "/terms-and-conditions")
 		}
 
-		if p.userRegistry.GetPrivacyPolicyLink() != "" {
-			resp.Data["privacy_policy_link"] = p.userRegistry.GetPrivacyPolicyLink()
+		if userRegistry.GetPrivacyPolicyLink() != "" {
+			resp.Data["privacy_policy_link"] = userRegistry.GetPrivacyPolicyLink()
 		} else {
 			resp.Data["privacy_policy_link"] = path.Join(rr.Upstream.BasePath, "/privacy-policy")
 		}
 
-		resp.Data["username_validate_pattern"] = p.userRegistry.GetUsernamePolicyRegex()
-		resp.Data["username_validate_title"] = p.userRegistry.GetUsernamePolicySummary()
-		resp.Data["password_validate_pattern"] = p.userRegistry.GetPasswordPolicyRegex()
-		resp.Data["password_validate_title"] = p.userRegistry.GetPasswordPolicySummary()
+		resp.Data["username_validate_pattern"] = userRegistry.GetUsernamePolicyRegex()
+		resp.Data["username_validate_title"] = userRegistry.GetUsernamePolicySummary()
+		resp.Data["password_validate_pattern"] = userRegistry.GetPasswordPolicyRegex()
+		resp.Data["password_validate_title"] = userRegistry.GetPasswordPolicySummary()
 		if reg.message != "" {
 			resp.Message = reg.message
 		}
@@ -166,6 +229,11 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 	var userAccept, validUserRegistration bool
 	validUserRegistration = true
 
+	userRegistry, err := p.fetchUserRegistry(r, rr)
+	if err != nil {
+		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
+	}
+
 	if r.ContentLength > maxBytesLimit || r.ContentLength < minBytesLimit {
 		violations = append(violations, "payload size")
 	}
@@ -221,14 +289,14 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 
 	if validUserRegistration {
 		// Inspect registration values.
-		if p.userRegistry.GetCode() != "" {
-			if userCode != p.userRegistry.GetCode() {
+		if userRegistry.GetCode() != "" {
+			if userCode != userRegistry.GetCode() {
 				validUserRegistration = false
 				message = "Failed processing the registration form due to invalid verification code"
 			}
 		}
 
-		if p.userRegistry.GetRequireAcceptTerms() {
+		if userRegistry.GetRequireAcceptTerms() {
 			if !userAccept {
 				validUserRegistration = false
 				message = "Failed processing the registration form due to the failure to accept terms and conditions"
@@ -254,8 +322,11 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 				}
 			case "email":
 				emailOpts := make(map[string]interface{})
-				if p.userRegistry.GetRequireDomainMailRecord() {
+				if userRegistry.GetRequireDomainMailRecord() {
 					emailOpts["check_domain_mx"] = true
+				}
+				if len(userRegistry.GetDomainRestrictions()) > 0 {
+					emailOpts["domain_restrictions"] = userRegistry.GetDomainRestrictions()
 				}
 				if err := validators.ValidateUserInput(k, userMail, emailOpts); err != nil {
 					validUserRegistration = false
@@ -273,12 +344,14 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 			"password":          userSecret,
 			"email":             userMail,
 			"registration_code": registrationCode,
+			"realm_name":        userRegistry.GetRealmName(),
 		}
-		if err := p.userRegistry.AddRegistrationEntry(registrationID, cachedEntry); err != nil {
+		if err := userRegistry.AddRegistrationEntry(registrationID, cachedEntry); err != nil {
 			p.logger.Warn(
 				"failed adding a record to registration cache",
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
+				zap.String("realm_name", userRegistry.GetRealmName()),
 				zap.Error(err),
 			)
 			message = "Internal registration error"
@@ -289,6 +362,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
 				zap.String("registration_id", registrationID),
+				zap.String("realm_name", userRegistry.GetRealmName()),
 			)
 
 			// Send notification about registration.
@@ -300,6 +374,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 				"registration_code": registrationCode,
 				"username":          userHandle,
 				"email":             userMail,
+				"realm_name":        userRegistry.GetRealmName(),
 			}
 
 			regURL, err := addrutil.GetCurrentURLWithSuffix(r, "/register")
@@ -312,21 +387,26 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 				)
 			}
 			regData["registration_url"] = regURL
+			regData["realm_name"] = userRegistry.GetRealmName()
 
 			regData["src_ip"] = addrutil.GetSourceAddress(r)
 			regData["src_conn_ip"] = addrutil.GetSourceConnAddress(r)
 			regData["timestamp"] = time.Now().UTC().Format(time.UnixDate)
-			if err := p.userRegistry.Notify(regData); err != nil {
+			if err := userRegistry.Notify(regData); err != nil {
 				p.logger.Warn(
 					"Failed to send notification",
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 					zap.String("registration_id", registrationID),
 					zap.String("registration_type", "registration_confirmation"),
+					zap.String("realm_name", userRegistry.GetRealmName()),
 					zap.Error(err),
 				)
-				p.userRegistry.DeleteRegistrationEntry(registrationID)
-				message = "Internal registration messaging error"
+				userRegistry.DeleteRegistrationEntry(registrationID)
+				message = translate.Translate("internal_registration_messaging_error", p.ui.Language, map[string]interface{}{
+					"admin_emails": strings.Join(userRegistry.GetAdminEmails(), ", "),
+					"Count":        len(userRegistry.GetAdminEmails()),
+				})
 				validUserRegistration = false
 			}
 		}
@@ -339,6 +419,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 			zap.String("request_id", rr.ID),
 			zap.String("src_ip", addrutil.GetSourceAddress(r)),
 			zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+			zap.String("realm_name", userRegistry.GetRealmName()),
 			zap.String("error", message),
 		)
 		reg := &registerRequest{view: "register", message: message}
@@ -352,22 +433,34 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 		zap.String("email", userMail),
 		zap.String("src_ip", addrutil.GetSourceAddress(r)),
 		zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+		zap.String("realm_name", userRegistry.GetRealmName()),
 	)
 	reg := &registerRequest{view: "registered"}
 	return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 }
 
 func (p *Portal) handleHTTPRegisterAck(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
+	userRegistry, err := p.fetchUserRegistry(r, rr)
+	if err != nil {
+		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
+	}
+
 	reg := &registerRequest{
 		view: "ackfail",
 	}
-	registrationID, err := getEndpointKeyID(r.URL.Path, "/register/ack/")
+
+	registerEndpoint, err := parseRegisterEndpoint(r.URL.Path)
+	if err != nil {
+		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
+	}
+	registrationID := registerEndpoint.registrationID
+
 	if err != nil {
 		reg.message = "Malformed registration acknowledgement request"
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
-	if _, err := p.userRegistry.GetRegistrationEntry(registrationID); err != nil {
+	if _, err := userRegistry.GetRegistrationEntry(registrationID); err != nil {
 		reg.message = "Registration identifier not found"
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
@@ -398,13 +491,19 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 
 	registrationCode := strings.TrimSpace(r.FormValue("registration_code"))
 
-	registrationID, err := getEndpointKeyID(r.URL.Path, "/register/ack/")
+	registerEndpoint, err := parseRegisterEndpoint(r.URL.Path)
 	if err != nil {
 		reg.message = "Malformed registration acknowledgement request"
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
+	registrationID := registerEndpoint.registrationID
 
-	usr, err := p.userRegistry.GetRegistrationEntry(registrationID)
+	userRegistry, err := p.fetchUserRegistry(r, rr)
+	if err != nil {
+		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
+	}
+
+	usr, err := userRegistry.GetRegistrationEntry(registrationID)
 	if err != nil {
 		reg.message = "Registration identifier not found"
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
@@ -435,12 +534,12 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 		},
 	}
 
-	if err := p.userRegistry.DeleteRegistrationEntry(registrationID); err != nil {
+	if err := userRegistry.DeleteRegistrationEntry(registrationID); err != nil {
 		reg.message = "Registration session terminated"
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
-	if err := p.userRegistry.AddUser(req); err != nil {
+	if err := userRegistry.AddUser(req); err != nil {
 		p.logger.Warn(
 			"registration request backend erred",
 			zap.String("session_id", rr.Upstream.SessionID),
@@ -471,12 +570,13 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 		)
 	}
 	regData["registration_url"] = regURL
+	regData["realm_name"] = userRegistry.GetRealmName()
 
 	regData["src_ip"] = addrutil.GetSourceAddress(r)
 	regData["src_conn_ip"] = addrutil.GetSourceConnAddress(r)
 	regData["timestamp"] = time.Now().UTC().Format(time.UnixDate)
 
-	if err := p.userRegistry.Notify(regData); err != nil {
+	if err := userRegistry.Notify(regData); err != nil {
 		p.logger.Warn(
 			"Failed to send notification",
 			zap.String("session_id", rr.Upstream.SessionID),

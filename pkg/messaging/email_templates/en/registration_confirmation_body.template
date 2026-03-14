@@ -2,7 +2,7 @@
   <body>
     <p>
       Please confirm your registration by clicking this
-      <a href="{{ .registration_url }}/ack/{{ .registration_id }}">link</a>
+      <a href="{{ .registration_url }}/{{ .realm_name }}/ack/{{ .registration_id }}">link</a>
       and providing the registration code <b><code>{{ .registration_code }}</code></b>
       within the next 45 minutes. If you haven't done so, please re-register.
     </p>

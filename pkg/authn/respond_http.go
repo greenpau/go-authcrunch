@@ -195,7 +195,7 @@ func (p *Portal) logRequest(msg string, r *http.Request, rr *requests.Request) {
 	)
 }
 
-func (p *Portal) handleHTTPRenderError(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, err error) error {
+func (p *Portal) handleHTTPRenderError(ctx context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request, err error) error {
 	p.logger.Error(
 		"Failed HTML response rendering",
 		zap.String("session_id", rr.Upstream.SessionID),
@@ -234,7 +234,7 @@ func (p *Portal) handleHTTPRenderPlainText(_ context.Context, w http.ResponseWri
 	return nil
 }
 
-func (p *Portal) injectSessionID(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) {
+func (p *Portal) injectSessionID(_ context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) {
 	if cookie, err := r.Cookie(p.cookie.SessionID); err == nil {
 		v, err := url.Parse(cookie.Value)
 		if err == nil && v.String() != "" {

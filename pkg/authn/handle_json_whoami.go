@@ -17,12 +17,13 @@ package authn
 import (
 	"context"
 	"encoding/json"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/user"
-	"go.uber.org/zap"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/user"
+	"go.uber.org/zap"
 )
 
 func (p *Portal) handleJSONWhoami(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
@@ -104,7 +105,7 @@ func (p *Portal) handleJSONWhoami(ctx context.Context, w http.ResponseWriter, r 
 	return nil
 }
 
-func (p *Portal) handleJSONWhoamiPlain(ctx context.Context, w http.ResponseWriter, usr *user.User) error {
+func (p *Portal) handleJSONWhoamiPlain(_ context.Context, w http.ResponseWriter, usr *user.User) error {
 	respBytes, _ := json.Marshal(usr.AsMap())
 	w.WriteHeader(200)
 	w.Write(respBytes)

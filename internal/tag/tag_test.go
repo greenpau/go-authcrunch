@@ -896,6 +896,16 @@ func TestTagCompliance(t *testing.T) {
 			entry: &local.APIKey{},
 			opts:  &Options{},
 		},
+		{
+			name:  "test registry.DomainRestrictionRule struct",
+			entry: &registry.DomainRestrictionRule{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test registry.DomainRestrictionRuleset struct",
+			entry: &registry.DomainRestrictionRuleset{},
+			opts:  &Options{},
+		},
 	}
 
 	for _, tc := range testcases {

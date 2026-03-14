@@ -36,18 +36,6 @@ func getEndpoint(p, s string) (string, error) {
 	return strings.TrimPrefix(p[i:], s), nil
 }
 
-func getEndpointKeyID(p, s string) (string, error) {
-	sp, err := getEndpoint(p, s)
-	if err != nil {
-		return "", err
-	}
-	arr := strings.Split(sp, "/")
-	if len(arr) != 1 {
-		return "", fmt.Errorf("invalid key id")
-	}
-	return arr[0], nil
-}
-
 func (p *Portal) handleHTTPPortal(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, parsedUser *user.User) error {
 	p.disableClientCache(w)
 	p.injectRedirectURL(ctx, w, r, rr)

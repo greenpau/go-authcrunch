@@ -52,11 +52,11 @@
 
           <div class="mt-3">
               {{ if eq .Data.view "register" }}
-              <form method="POST" action="{{ pathjoin .ActionEndpoint "/register" }}" class="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-8">
+              <form method="POST" action="{{ pathjoin .ActionEndpoint "/register" .Data.registration_realm_name }}" class="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-8">
               {{ end }}
 
               {{ if eq .Data.view "ack" }}
-              <form method="POST" action="{{ pathjoin .ActionEndpoint "/register/ack" .Data.registration_id }}">
+              <form method="POST" action="{{ pathjoin .ActionEndpoint "/register" .Data.registration_realm_name "ack" .Data.registration_id }}">
               {{ end }}
 
               {{ if eq .Data.view "register" }}

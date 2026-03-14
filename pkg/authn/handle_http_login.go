@@ -263,7 +263,7 @@ func (p *Portal) identifyUserRequest(rr *requests.Request, identity map[string]s
 	return backend.Request(operator.IdentifyUser, rr)
 }
 
-func (p *Portal) authenticateLoginRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, credentials map[string]string) error {
+func (p *Portal) authenticateLoginRequest(_ context.Context, _ http.ResponseWriter, _ *http.Request, rr *requests.Request, credentials map[string]string) error {
 	rr.User.Username = credentials["username"]
 	rr.User.Password = credentials["password"]
 	backend := p.getIdentityStoreByRealm(credentials["realm"])
@@ -387,7 +387,7 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 	return nil
 }
 
-func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) {
+func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) {
 	var redirectLocation string
 
 	usr.SetExpiresAtClaim(time.Now().Add(time.Duration(p.keystore.GetTokenLifetime(nil, nil)) * time.Second).UTC().Unix())
@@ -540,7 +540,7 @@ func injectPortalRoles(m map[string]interface{}, cfg *PortalConfig) {
 	m["roles"] = updatedRoles
 }
 
-func (p *Portal) transformUser(ctx context.Context, rr *requests.Request, m map[string]interface{}) error {
+func (p *Portal) transformUser(_ context.Context, rr *requests.Request, m map[string]interface{}) error {
 	if p.transformer == nil {
 		return nil
 	}

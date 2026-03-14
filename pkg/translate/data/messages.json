@@ -14,6 +14,44 @@
         }
     },
     {
+        "id": "internal_registration_messaging_error.zero",
+        "description": "Error message for registration system failures, handling 0 admin emails.",
+        "other": {
+            "en": "Internal registration messaging error. Please visit our support page to contact an administrator directly.",
+            "de": "Interner Fehler bei der Registrierungsnachricht. Bitte besuchen Sie unsere Support-Seite, um einen Administrator direkt zu kontaktieren.",
+            "fr": "Erreur interne de messagerie d'inscription. Veuillez consulter notre page d'assistance pour contacter directement un administrateur.",
+            "ja": "登録メッセージングの内部エラーが発生しました。サポートページより管理者へ直接ご連絡ください。",
+            "zh": "内部注册消息错误。请访问我们的支持页面以直接联系管理员。",
+            "he": "שגיאת הודעות רישום פנימית. נא לבקר בדף התמיכה שלנו כדי ליצור קשר ישירות עם מנהל מערכת.",
+            "ar": "خطأ داخلي في رسائل التسجيل. يرجى زيارة صفحة الدعم الخاصة بنا للتواصل مع المسؤول مباشرة.",
+            "ru": "Внутренняя ошибка сообщений регистрации. Пожалуйста, посетите нашу страницу поддержки, чтобы связаться с администратором напрямую."
+        }
+    },
+    {
+        "id": "internal_registration_messaging_error",
+        "description": "Error message for registration system failures, handling 0, 1, or many admin emails.",
+        "one": {
+            "en": "Internal registration messaging error. Please reach out to the following administrative email directly: {{.admin_emails}}",
+            "de": "Interner Fehler bei der Registrierungsnachricht. Bitte wenden Sie sich direkt an die folgende Administrations-E-Mails: {{.admin_emails}}",
+            "fr": "Erreur interne de messagerie d'inscription. Veuillez contacter directement l'adresse e-mail administrative suivante : {{.admin_emails}}",
+            "ja": "登録メッセージングの内部エラーが発生しました。以下の管理者メールアドレスまで直接ご連絡ください：{{.admin_emails}}",
+            "zh": "内部注册消息错误。请直接联系以下管理员邮箱：{{.admin_emails}}",
+            "he": "שגיאת הודעות רישום פנימית. נא ליצור קשר ישירות עם כתובת המייל המנהלית הבאה: {{.admin_emails}}",
+            "ar": "خطأ داخلي في رسائل التسجيل. يرجى التواصل مباشرة مع بريد المسؤول الإلكتروني التالي: {{.admin_emails}}",
+            "ru": "Внутренняя ошибка сообщений регистрации. Пожалуйста, свяжитесь напрямую со следующим адресом администратора: {{.admin_emails}}"
+        },
+        "other": {
+            "en": "Internal registration messaging error. Please reach out to the following administrative emails directly: {{.admin_emails}}",
+            "de": "Interner Fehler bei der Registrierungsnachricht. Bitte wenden Sie sich direkt an die folgenden Administrations-E-Mails: {{.admin_emails}}",
+            "fr": "Erreur interne de messagerie d'inscription. Veuillez contacter directement les adresses e-mail administratives suivantes : {{.admin_emails}}",
+            "ja": "登録メッセージングの内部エラーが発生しました。以下の管理者メールアドレスまで直接ご連絡ください：{{.admin_emails}}",
+            "zh": "内部注册消息错误。请直接联系以下管理员邮箱：{{.admin_emails}}",
+            "he": "שגיאת הודעות רישום פנימית. נא ליצור קשר ישירות עם כתובות המייל המנהליות הבאות: {{.admin_emails}}",
+            "ar": "خطأ داخلي في رسائل التسجيل. يرجى التواصل مباشرة مع رسائل البريد الإلكتروني الإدارية التالية: {{.admin_emails}}",
+            "ru": "Внутренняя ошибка сообщений регистрации. Пожалуйста, свяжитесь напрямую со следующими адресами администраторов: {{.admin_emails}}"
+        }
+    },
+    {
         "id": "registration_label",
         "description": "Noun for the registration process or the registration page title.",
         "other": {

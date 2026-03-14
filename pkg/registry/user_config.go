@@ -47,9 +47,13 @@ type UserRegistryConfig struct {
 	AdminEmails []string `json:"admin_emails,omitempty" xml:"admin_emails,omitempty" yaml:"admin_emails,omitempty"`
 	// The name of the identity store associated with the Config.
 	IdentityStore string `json:"identity_store,omitempty" xml:"identity_store,omitempty" yaml:"identity_store,omitempty"`
+	// The name of the authentication realm of identity store associated with the Config.
+	RealmName string `json:"realm_name,omitempty" xml:"realm_name,omitempty" yaml:"realm_name,omitempty"`
+	// DomainRestrictions holds the allow and deny rules for domains in email addresses.
+	DomainRestrictions []string `json:"domain_restrictions,omitempty" xml:"domain_restrictions,omitempty" yaml:"domain_restrictions,omitempty"`
 
-	credentials *credentials.Config `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
-	messaging   *messaging.Config   `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
+	credentials *credentials.Config
+	messaging   *messaging.Config
 }
 
 // Validate validates user registration configuration.
@@ -72,19 +76,25 @@ func (cfg *UserRegistryConfig) Validate() error {
 	if cfg.IdentityStore == "" {
 		return errors.ErrUserRegistrationConfig.WithArgs(cfg.Name, "identity store name is not set")
 	}
+
+	if len(cfg.DomainRestrictions) > 0 {
+		_, err := NewDomainRestrictionRuleset(cfg.DomainRestrictions)
+		if err != nil {
+			return errors.ErrUserRegistrationConfig.WithArgs(cfg.Name, err)
+		}
+	}
+
 	return nil
 }
 
 // SetCredentials binds to shared credentials.
 func (cfg *UserRegistryConfig) SetCredentials(c *credentials.Config) {
 	cfg.credentials = c
-	return
 }
 
 // SetMessaging binds to messaging config.
 func (cfg *UserRegistryConfig) SetMessaging(c *messaging.Config) {
 	cfg.messaging = c
-	return
 }
 
 // ValidateMessaging validates messaging provider and credentials used for

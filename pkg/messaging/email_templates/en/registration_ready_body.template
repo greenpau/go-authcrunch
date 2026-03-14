@@ -9,6 +9,7 @@
     <ul style="list-style-type: disc">
       <li>Registration ID: {{ .registration_id }}</li>
       <li>Registration URL: <code>{{ .registration_url }}</code></li>
+      <li>Realm Name: <code>{{ .realm_name }}</code></li>
       <li>Session ID: {{ .session_id }}</li>
       <li>Request ID: {{ .request_id }}</li>
       <li>Username: <code>{{ .username }}</code></li>

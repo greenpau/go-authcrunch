@@ -17,6 +17,7 @@ package translate
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -33,6 +34,7 @@ var localizers map[string]*i18n.Localizer
 type MessageData struct {
 	ID          string            `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
 	Description string            `json:"description,omitempty" xml:"description,omitempty" yaml:"description,omitempty"`
+	Zero        map[string]string `json:"zero,omitempty" xml:"zero,omitempty" yaml:"zero,omitempty"`
 	One         map[string]string `json:"one,omitempty" xml:"one,omitempty" yaml:"one,omitempty"`
 	Other       map[string]string `json:"other,omitempty" xml:"other,omitempty" yaml:"other,omitempty"`
 }
@@ -69,7 +71,11 @@ func init() {
 				ID:          m.ID,
 				Description: m.Description,
 				One:         m.One[langCode],
+				Zero:        m.Zero[langCode],
 				Other:       m.Other[langCode],
+				Many:        m.Other[langCode],
+				Two:         m.Other[langCode],
+				Few:         m.Other[langCode],
 			})
 		}
 	}
@@ -98,18 +104,34 @@ func Translate(id string, langID LangID, data map[string]interface{}) string {
 		TemplateData: data,
 		DefaultMessage: &i18n.Message{
 			ID:    id,
+			One:   id,
 			Other: id,
+			Many:  id,
+			Few:   id,
+			Zero:  id,
 		},
 	}
 
 	if data != nil {
-		if count, ok := data["Count"]; ok {
+		if count, ok := data["Count"].(int); ok {
 			config.PluralCount = count
+			if count == 0 {
+				config.MessageID = id + ".zero"
+				config.DefaultMessage = &i18n.Message{
+					ID:    id + ".zero",
+					One:   id + ".zero",
+					Other: id + ".zero",
+					Many:  id + ".zero",
+					Few:   id + ".zero",
+					Zero:  id + ".zero",
+				}
+			}
 		}
 	}
 
 	translation, err := localizer.Localize(&config)
 	if err != nil {
+		fmt.Printf("ERROR: translation: %s: %v\n", id, err)
 		return id
 	}
 	return translation

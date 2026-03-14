@@ -16,6 +16,7 @@ package translate
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -120,6 +121,39 @@ func TestTranslate(t *testing.T) {
 			id:       "non_existent_key",
 			langID:   English,
 			expected: "non_existent_key",
+		},
+
+		{
+			name:   "test zero admin emails in internal registration messaging error",
+			id:     "internal_registration_messaging_error",
+			langID: English,
+			data: map[string]interface{}{
+				"Count": 0,
+			},
+			expected: "Internal registration messaging error. Please visit our support page to contact an administrator directly.",
+		},
+		{
+			name:   "test one admin email in internal registration messaging error",
+			id:     "internal_registration_messaging_error",
+			langID: English,
+			data: map[string]interface{}{
+				"Count":        1,
+				"admin_emails": strings.Join([]string{"admin@localhost.localdomain"}, ", "),
+			},
+			expected: "Internal registration messaging error. Please reach out to the following administrative email directly: admin@localhost.localdomain",
+		},
+		{
+			name:   "test many admin emails in internal registration messaging error",
+			id:     "internal_registration_messaging_error",
+			langID: English,
+			data: map[string]interface{}{
+				"Count": 2,
+				"admin_emails": strings.Join([]string{
+					"admin@localhost.localdomain",
+					"admin2@localhost.localdomain",
+				}, ", "),
+			},
+			expected: "Internal registration messaging error. Please reach out to the following administrative emails directly: admin@localhost.localdomain, admin2@localhost.localdomain",
 		},
 	}
 

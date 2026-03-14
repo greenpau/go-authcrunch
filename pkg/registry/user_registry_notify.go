@@ -31,7 +31,9 @@ func (r *LocaUserRegistry) Notify(data map[string]string) error {
 	var rcpts []string
 
 	commonRequiredFields := []string{
-		"session_id", "request_id", "timestamp",
+		"session_id",
+		"request_id",
+		"timestamp",
 		"template",
 	}
 
@@ -49,17 +51,28 @@ func (r *LocaUserRegistry) Notify(data map[string]string) error {
 	switch tmplName {
 	case "registration_confirmation":
 		requiredFields = []string{
-			"registration_id", "username", "email", "registration_url",
-			"registration_code", "src_ip", "src_conn_ip",
+			"registration_id",
+			"username",
+			"email",
+			"registration_url",
+			"registration_code",
+			"src_ip",
+			"src_conn_ip",
 		}
 	case "registration_ready":
 		requiredFields = []string{
-			"registration_id", "username", "email", "registration_url",
-			"src_ip", "src_conn_ip",
+			"registration_id",
+			"username",
+			"email",
+			"registration_url",
+			"src_ip",
+			"src_conn_ip",
 		}
 	case "registration_verdict":
 		requiredFields = []string{
-			"username", "email", "verdict",
+			"username",
+			"email",
+			"verdict",
 		}
 	default:
 		return errors.ErrNotifyRequestTemplateUnsupported.WithArgs(tmplName)

@@ -94,9 +94,9 @@ func manageRegistrationCache(c *RegistrationCache) {
 		select {
 		case <-c.exit:
 			c.managed = false
-			break
+			// break
 		default:
-			break
+			// 	break
 		}
 		if !c.managed {
 			c.mu.Unlock()
@@ -120,7 +120,6 @@ func manageRegistrationCache(c *RegistrationCache) {
 		}
 		c.mu.Unlock()
 	}
-	return
 }
 
 // Run starts management of RegistrationCache instance.
@@ -219,7 +218,6 @@ func (c *RegistrationCache) Expire(registrationID string) {
 	if entry, exists := c.Entries[registrationID]; exists {
 		entry.expired = true
 	}
-	return
 }
 
 // Valid checks whether RegistrationCacheEntry is non-expired.

@@ -16,6 +16,7 @@ package registry
 
 import (
 	"encoding/json"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -55,10 +56,13 @@ type UserRegistry interface {
 
 	GetEmailProvider() string
 	GetRequireDomainMailRecord() bool
+	GetDomainRestrictions() []string
 	GetAdminEmails() []string
 
 	Notify(map[string]string) error
 	GetIdentityStoreName() string
+	GetRealmName() string
+	SetRealmName(string)
 }
 
 // NewUserRegistry returns UserRegistry instance.
@@ -188,4 +192,25 @@ func (r *LocaUserRegistry) GetRequireDomainMailRecord() bool {
 // GetIdentityStoreName returns associated identity store name.
 func (r *LocaUserRegistry) GetIdentityStoreName() string {
 	return r.config.IdentityStore
+}
+
+// GetRealmName returns associated identity store name.
+func (r *LocaUserRegistry) GetRealmName() string {
+	if r.config.RealmName == "" {
+		return r.config.IdentityStore
+	}
+	return r.config.RealmName
+}
+
+// SetRealmName returns associated identity store name.
+func (r *LocaUserRegistry) SetRealmName(realmName string) {
+	if r.config.RealmName != "" {
+		return
+	}
+	r.config.RealmName = realmName
+}
+
+// GetDomainRestrictions returns list of domain restrictions.
+func (r *LocaUserRegistry) GetDomainRestrictions() []string {
+	return r.config.DomainRestrictions
 }

@@ -53,7 +53,7 @@ const (
 type Portal struct {
 	id                string
 	config            *PortalConfig
-	userRegistry      registry.UserRegistry
+	userRegistries    map[string]registry.UserRegistry
 	validator         *validator.TokenValidator
 	keystore          *kms.CryptoKeyStore
 	identityStores    []ids.IdentityStore
@@ -728,17 +728,20 @@ func (p *Portal) AddUserRegistry(userRegistry registry.UserRegistry) error {
 	if len(p.config.UserRegistries) < 1 {
 		return fmt.Errorf("auth portal has no user registries configured")
 	}
-	if len(p.config.UserRegistries) > 1 {
-		return fmt.Errorf("auth portal does not support multiple user registries: %v", p.config.UserRegistries)
-	}
 
-	p.userRegistry = userRegistry
+	if p.userRegistries == nil {
+		p.userRegistries = make(map[string]registry.UserRegistry)
+	}
+	if _, exists := p.userRegistries[userRegistry.GetIdentityStoreName()]; exists {
+		return fmt.Errorf("auth portal has multiple user registries supporting the same identity store: %v", p.config.UserRegistries)
+	}
+	p.userRegistries[userRegistry.GetIdentityStoreName()] = userRegistry
 
 	p.logger.Debug(
 		"Configured user registration",
 		zap.String("portal_name", p.config.Name),
 		zap.String("portal_id", p.id),
-		zap.Any("user_registry", p.userRegistry.GetConfig()),
+		zap.Any("user_registry", userRegistry.GetConfig()),
 	)
 
 	return nil
@@ -754,4 +757,27 @@ func (p *Portal) GetIdentityStoreNames() map[string]string {
 		m[store.GetName()] = store.GetRealm()
 	}
 	return m
+}
+
+// GetUserRegistryByRealmName returns UserRegistry by realm name.
+func (p *Portal) GetUserRegistryByRealmName(realmName string) registry.UserRegistry {
+	if p.userRegistries == nil {
+		return nil
+	}
+
+	for _, userRegistry := range p.userRegistries {
+		identityStoreName := userRegistry.GetIdentityStoreName()
+		for _, identityStore := range p.identityStores {
+			if identityStore.GetName() != identityStoreName {
+				continue
+			}
+			if identityStore.GetRealm() != realmName {
+				continue
+			}
+			userRegistry.SetRealmName(realmName)
+			return userRegistry
+		}
+	}
+
+	return nil
 }

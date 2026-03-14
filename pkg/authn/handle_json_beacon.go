@@ -16,12 +16,13 @@ package authn
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
-	"net/http"
 )
 
-func (p *Portal) handleJSONBeacon(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
+func (p *Portal) handleJSONBeacon(ctx context.Context, w http.ResponseWriter, _ *http.Request, _ *requests.Request, usr *user.User) error {
 	if usr == nil {
 		return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Access denied")
 	}
