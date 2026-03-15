@@ -17,6 +17,7 @@ package ids
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/ids/ldap"
 	"github.com/greenpau/go-authcrunch/pkg/ids/local"
@@ -69,9 +70,9 @@ func (cfg *IdentityStoreConfig) Validate() error {
 		requiredFields = []string{
 			"realm",
 			"servers",
-			"groups",
 		}
 		optionalFields = []string{
+			"groups",
 			"bind_username",
 			"bind_password",
 			"attributes",
@@ -84,6 +85,8 @@ func (cfg *IdentityStoreConfig) Validate() error {
 			"username_recovery_enabled",
 			"password_recovery_enabled",
 			"contact_support_enabled",
+			"full_automatic_group_mapping_enabled",
+			"short_automatic_group_mapping_enabled",
 			"support_link",
 			"support_email",
 			"fallback_roles",

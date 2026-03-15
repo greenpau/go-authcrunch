@@ -34,19 +34,21 @@ import (
 
 // Authenticator represents database connector.
 type Authenticator struct {
-	mux               sync.Mutex
-	realm             string
-	servers           []*AuthServer
-	username          string
-	password          string
-	searchBaseDN      string
-	searchUserFilter  string
-	searchGroupFilter string
-	userAttributes    UserAttributes
-	fallbackRoles     []string
-	rootCAs           *x509.CertPool
-	groups            []*UserGroup
-	logger            *zap.Logger
+	mux                               sync.Mutex
+	realm                             string
+	servers                           []*AuthServer
+	username                          string
+	password                          string
+	searchBaseDN                      string
+	searchUserFilter                  string
+	searchGroupFilter                 string
+	userAttributes                    UserAttributes
+	fallbackRoles                     []string
+	rootCAs                           *x509.CertPool
+	groups                            []*UserGroup
+	shortAutomaticGroupMappingEnabled bool
+	fullAutomaticGroupMappingEnabled  bool
+	logger                            *zap.Logger
 }
 
 // NewAuthenticator returns an instance of Authenticator.
@@ -249,10 +251,13 @@ func (sa *Authenticator) ConfigureSearch(cfg *Config) error {
 
 // ConfigureUserGroups configures user group bindings for LDAP searching.
 func (sa *Authenticator) ConfigureUserGroups(cfg *Config) error {
+	sa.shortAutomaticGroupMappingEnabled = cfg.ShortAutomaticGroupMappingEnabled
+	sa.fullAutomaticGroupMappingEnabled = cfg.FullAutomaticGroupMappingEnabled
 	groups := cfg.Groups
-	if len(groups) == 0 {
-		return fmt.Errorf("no groups found")
+	if len(groups) == 0 && !sa.shortAutomaticGroupMappingEnabled && !sa.fullAutomaticGroupMappingEnabled {
+		return fmt.Errorf("no groups found and automatic group mapping is also not enabled")
 	}
+
 	for i, group := range groups {
 		if group.GroupDN == "" {
 			return fmt.Errorf("Base DN for group %d is empty", i)
@@ -274,6 +279,8 @@ func (sa *Authenticator) ConfigureUserGroups(cfg *Config) error {
 			zap.String("phase", "user_groups"),
 			zap.String("roles", strings.Join(saGroup.Roles, ", ")),
 			zap.String("dn", saGroup.GroupDN),
+			zap.Bool("short_automatic_group_mapping_enabled", sa.shortAutomaticGroupMappingEnabled),
+			zap.Bool("full_automatic_group_mapping_enabled", sa.fullAutomaticGroupMappingEnabled),
 		)
 		sa.groups = append(sa.groups, saGroup)
 	}
@@ -324,7 +331,6 @@ func (sa *Authenticator) AuthenticateUser(r *requests.Request) error {
 		searchUserFilter := strings.ReplaceAll(sa.searchUserFilter, "%s", ldap.EscapeFilter(r.User.Username))
 
 		req := ldap.NewSearchRequest(
-			// group.GroupDN,
 			sa.searchBaseDN,
 			ldap.ScopeWholeSubtree,
 			ldap.NeverDerefAliases,
@@ -471,7 +477,7 @@ func (sa *Authenticator) searchGroups(conn *ldap.Conn, reqData map[string]interf
 
 	for _, entry := range resp.Entries {
 		for _, g := range sa.groups {
-			if g.GroupDN != entry.DN {
+			if !strings.EqualFold(g.GroupDN, entry.DN) {
 				continue
 			}
 			for _, role := range g.Roles {
@@ -481,6 +487,18 @@ func (sa *Authenticator) searchGroups(conn *ldap.Conn, reqData map[string]interf
 				roles[role] = true
 			}
 		}
+		if sa.fullAutomaticGroupMappingEnabled {
+			roles[strings.ToLower(entry.DN)] = true
+		}
+		if sa.shortAutomaticGroupMappingEnabled {
+			if firstDN, err := parseFirstDN(entry.DN); err == nil {
+				roles[firstDN] = true
+			}
+		}
+	}
+
+	if len(roles) < 1 {
+		return fmt.Errorf("no roles found for groups associated with %s", userDN)
 	}
 	return nil
 }
@@ -589,7 +607,6 @@ func (sa *Authenticator) findUser(ldapConnection *ldap.Conn, server *AuthServer,
 	searchUserFilter := strings.ReplaceAll(sa.searchUserFilter, "%s", ldap.EscapeFilter(r.User.Username))
 
 	req := ldap.NewSearchRequest(
-		// group.GroupDN,
 		sa.searchBaseDN,
 		ldap.ScopeWholeSubtree,
 		ldap.NeverDerefAliases,
@@ -688,7 +705,7 @@ func (sa *Authenticator) findUser(ldapConnection *ldap.Conn, server *AuthServer,
 		if attr.Name == sa.userAttributes.MemberOf {
 			for _, v := range attr.Values {
 				for _, g := range sa.groups {
-					if g.GroupDN != v {
+					if !strings.EqualFold(g.GroupDN, v) {
 						continue
 					}
 					for _, role := range g.Roles {

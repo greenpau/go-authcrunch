@@ -70,6 +70,11 @@ type Config struct {
 
 	// The roles assigned to a user when no matching LDAP groups found.
 	FallbackRoles []string `json:"fallback_roles,omitempty" xml:"fallback_roles,omitempty" yaml:"fallback_roles,omitempty"`
+
+	// Enables short automatic group mapping, e.g. from `cn=Admin,ou=Groups,dc=example,dc=com` to `admin`
+	ShortAutomaticGroupMappingEnabled bool `json:"short_automatic_group_mapping_enabled,omitempty" xml:"short_automatic_group_mapping_enabled,omitempty" yaml:"short_automatic_group_mapping_enabled,omitempty"`
+	// Enables full automatic group mapping, e.g. from `cn=Admin,ou=Groups,dc=example,dc=com` to `cn=admin,ou=groups,dc=example,dc=com`
+	FullAutomaticGroupMappingEnabled bool `json:"full_automatic_group_mapping_enabled,omitempty" xml:"full_automatic_group_mapping_enabled,omitempty" yaml:"full_automatic_group_mapping_enabled,omitempty"`
 }
 
 // UserGroup represent the binding between BaseDN and a serarch filter.
@@ -251,6 +256,8 @@ func (b *IdentityStore) Configure() error {
 		zap.String("name", b.config.Name),
 		zap.String("kind", storeKind),
 		zap.Any("login_icon", b.config.LoginIcon),
+		zap.Bool("short_automatic_group_mapping_enabled", b.config.ShortAutomaticGroupMappingEnabled),
+		zap.Bool("full_automatic_group_mapping_enabled", b.config.FullAutomaticGroupMappingEnabled),
 	)
 
 	b.configured = true
