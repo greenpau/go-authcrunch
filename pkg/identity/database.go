@@ -67,9 +67,9 @@ func init() {
 	app = versioned.NewPackageManager("authdb")
 	app.Description = "authdb"
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
-	app.SetVersion(appVersion, "1.1.23")
+	app.SetVersion(appVersion, "1.1.24")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.1.23-1-g88c83ce")
+	app.SetGitCommit(gitCommit, "v1.1.23-2-gacb1545")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
