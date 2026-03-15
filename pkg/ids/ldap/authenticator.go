@@ -18,10 +18,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	ldap "github.com/go-ldap/ldap/v3"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"net"
 	"net/url"
@@ -29,6 +25,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	ldap "github.com/go-ldap/ldap/v3"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"go.uber.org/zap"
 )
 
 // Authenticator represents database connector.
@@ -320,7 +321,7 @@ func (sa *Authenticator) AuthenticateUser(r *requests.Request) error {
 		}
 		defer ldapConnection.Close()
 
-		searchUserFilter := strings.ReplaceAll(sa.searchUserFilter, "%s", r.User.Username)
+		searchUserFilter := strings.ReplaceAll(sa.searchUserFilter, "%s", ldap.EscapeFilter(r.User.Username))
 
 		req := ldap.NewSearchRequest(
 			// group.GroupDN,
@@ -374,7 +375,7 @@ func (sa *Authenticator) AuthenticateUser(r *requests.Request) error {
 				"LDAP auth binding failed",
 				zap.String("server", server.Address),
 				zap.String("dn", user.DN),
-				zap.String("username", r.User.Username),
+				zap.String("username", ldap.EscapeFilter(r.User.Username)),
 				zap.String("error", err.Error()),
 			)
 			return errors.ErrIdentityStoreLdapAuthFailed.WithArgs(err)
@@ -384,7 +385,7 @@ func (sa *Authenticator) AuthenticateUser(r *requests.Request) error {
 			"LDAP auth succeeded",
 			zap.String("server", server.Address),
 			zap.String("dn", user.DN),
-			zap.String("username", r.User.Username),
+			zap.String("username", ldap.EscapeFilter(r.User.Username)),
 		)
 		return nil
 	}
@@ -423,8 +424,37 @@ func (sa *Authenticator) searchGroups(conn *ldap.Conn, reqData map[string]interf
 		roles = make(map[string]bool)
 	}
 
-	req := ldap.NewSearchRequest(reqData["base_dn"].(string), ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0,
-		reqData["timeout"].(int), false, reqData["search_group_filter"].(string), []string{"dn"}, nil,
+	if reqData == nil {
+		return fmt.Errorf("failed building group search LDAP request, request data is nil")
+	}
+
+	userDN, userDNFound := reqData["user_dn"].(string)
+	if _, err := ldap.ParseDN(userDN); err != nil {
+		return fmt.Errorf("failed building group search LDAP request, request data contains invalid user DN format: %v", err)
+	}
+
+	baseDN, baseDNFound := reqData["base_dn"].(string)
+	if _, err := ldap.ParseDN(baseDN); err != nil {
+		return fmt.Errorf("failed building group search LDAP request, request data contains invalid base DN format: %v", err)
+	}
+
+	timeout, timeoutFound := reqData["timeout"].(int)
+
+	searchGroupFilter, searchGroupFilterFound := reqData["search_group_filter"].(string)
+
+	if !searchGroupFilterFound || !userDNFound || !baseDNFound || !timeoutFound {
+		return fmt.Errorf("failed building group search LDAP request, request data missing search parameters")
+	}
+
+	req := ldap.NewSearchRequest(
+		baseDN,
+		ldap.ScopeWholeSubtree,
+		ldap.NeverDerefAliases, 0,
+		timeout,
+		false,
+		searchGroupFilter,
+		[]string{"dn"},
+		nil,
 	)
 	if req == nil {
 		return fmt.Errorf("failed building group search LDAP request")
@@ -436,7 +466,7 @@ func (sa *Authenticator) searchGroups(conn *ldap.Conn, reqData map[string]interf
 	}
 
 	if len(resp.Entries) < 1 {
-		return fmt.Errorf("no groups found for %s", reqData["user_dn"].(string))
+		return fmt.Errorf("no groups found for %s", userDN)
 	}
 
 	for _, entry := range resp.Entries {
@@ -556,7 +586,7 @@ func (sa *Authenticator) dial(server *AuthServer) (*ldap.Conn, error) {
 }
 
 func (sa *Authenticator) findUser(ldapConnection *ldap.Conn, server *AuthServer, r *requests.Request) error {
-	searchUserFilter := strings.ReplaceAll(sa.searchUserFilter, "%s", r.User.Username)
+	searchUserFilter := strings.ReplaceAll(sa.searchUserFilter, "%s", ldap.EscapeFilter(r.User.Username))
 
 	req := ldap.NewSearchRequest(
 		// group.GroupDN,
@@ -622,18 +652,20 @@ func (sa *Authenticator) findUser(ldapConnection *ldap.Conn, server *AuthServer,
 
 	if server.PosixGroups {
 		// Handle POSIX group memberships.
+		searchGroupFilter := strings.Replace(sa.searchGroupFilter, "%s", ldap.EscapeFilter(user.DN), -1)
 		searchGroupRequest := map[string]interface{}{
 			"user_dn":             user.DN,
 			"base_dn":             sa.searchBaseDN,
-			"search_group_filter": strings.ReplaceAll(sa.searchGroupFilter, "%s", user.DN),
+			"search_group_filter": searchGroupFilter,
 			"timeout":             server.Timeout,
 		}
+
 		if err := sa.searchGroups(ldapConnection, searchGroupRequest, userRoles); err != nil {
 			sa.logger.Error(
-				"LDAP group search failed, request",
+				"LDAP group search failed",
 				zap.String("server", server.Address),
 				zap.String("base_dn", sa.searchBaseDN),
-				zap.String("search_group_filter", sa.searchGroupFilter),
+				zap.String("search_group_filter", searchGroupFilter),
 				zap.Error(err),
 			)
 			return err

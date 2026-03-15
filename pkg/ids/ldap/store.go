@@ -33,8 +33,8 @@ const (
 )
 
 var (
-	emailRegexPattern    = regexp.MustCompile("^[a-zA-Z0-9.+\\._~-]{1,61}@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-	usernameRegexPattern = regexp.MustCompile("^[a-zA-Z0-9.+\\._~-]{1,61}$")
+	emailRegexPattern    = regexp.MustCompile(`^[a-zA-Z0-9.+\._~-]{1,61}@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$`)
+	usernameRegexPattern = regexp.MustCompile(`^[a-zA-Z0-9.+\._~-]{1,61}$`)
 )
 
 // Config holds the configuration for the IdentityStore.
