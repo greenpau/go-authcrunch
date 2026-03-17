@@ -17,48 +17,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
 	"go.uber.org/zap"
-	"golang.org/x/term"
 )
-
-func (wr *wrapper) readUserInputWithTimeout(prompt string, timeout time.Duration) (string, error) {
-	wr.logger.Debug("prompted user for input", zap.String("prompt", prompt), zap.Duration("timeout", timeout))
-	fmt.Print(prompt)
-
-	type result struct {
-		pw  string
-		err error
-	}
-
-	resChan := make(chan result, 1)
-	fd := int(os.Stdin.Fd())
-
-	go func() {
-		byteInput, err := term.ReadPassword(fd)
-		resChan <- result{string(byteInput), err}
-	}()
-
-	select {
-	case res := <-resChan:
-		fmt.Println()
-		if res.err != nil {
-			return "", res.err
-		}
-		return res.pw, nil
-
-	case <-time.After(timeout):
-		wr.logger.Error("user input timed out")
-		return "", errors.New("user input timed out")
-	}
-}
 
 func (wr *wrapper) authenticate() error {
 	apiEndpoint := "/login"
@@ -162,8 +129,41 @@ func (wr *wrapper) authenticate() error {
 			return fmt.Errorf("the handling of %s 2 is not implemented", authResponse.NextChallenge)
 		case authResponse.NextChallenge == "mfa":
 			authRequest.ChallengeKind = authResponse.NextChallenge
-			// TODO: authRequest.ChallengeResponse = either app or u2f
-			return fmt.Errorf("the handling of %s 3 is not implemented", authResponse.NextChallenge)
+			userInput, err := wr.readUserInputWithTimeout("Enter 1 for MFA Application token OR enter 2 for U2F/Webatuhn: ", 30*time.Second)
+			if err != nil {
+				return err
+			}
+			userInput = strings.TrimSpace(userInput)
+			switch userInput {
+			case "1":
+				if wr.config.TotpSecret != "" {
+					passcode, err := generateTOTP(wr.config.TotpSecret, wr.config.TotpCodeLength, wr.config.TotpCodeLifetime)
+					if err != nil {
+						return err
+					}
+					authRequest.ChallengeResponse = passcode
+				} else {
+					userInput, err := wr.readUserInputWithTimeout("Please authenticator app code: ", 30*time.Second)
+					if err != nil {
+						return err
+					}
+					authRequest.ChallengeResponse = userInput
+				}
+			case "2":
+				authRequest.ChallengeResponse = "webauthn"
+			default:
+				return fmt.Errorf("the handling of %s aborted due to unsupported user choice: %s", authResponse.NextChallenge, userInput)
+			}
+		case strings.HasPrefix(authResponse.NextChallenge, "mfa:u2f:"):
+			webauthnChallenge, err := decodeWebauthnChallenge(strings.Replace(authResponse.NextChallenge, "mfa:u2f:", "", 1))
+			if err != nil {
+				return fmt.Errorf("the handling of webauthn challenge aborted: %v", err)
+			}
+			wr.logger.Debug(
+				"decoded WebAuthn challenge",
+				zap.Any("webauthn_challenge", webauthnChallenge),
+			)
+			return fmt.Errorf("the handling of webauthn challenge is not implemented")
 		default:
 			return fmt.Errorf("the handling of %s is not implemented", authResponse.NextChallenge)
 		}

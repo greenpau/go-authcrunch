@@ -16,10 +16,13 @@ package authn
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
@@ -109,8 +112,18 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 		if checkpoint.Type != authRequest.ChallengeKind {
 			return fmt.Errorf("expected authentication checkpoint type %s, but got something else", checkpoint.Type)
 		}
-		switch checkpoint.Type {
-		case "password":
+
+		if checkpoint.FailedAttempts >= 5 {
+			return fmt.Errorf("user reached maximum number of allowed failed attempts for %s checkpoint type", checkpoint.Type)
+		}
+
+		challengeContainsOnlyNumbers := strings.IndexFunc(
+			authRequest.ChallengeResponse, func(r rune) bool {
+				return !unicode.IsDigit(r)
+			}) == -1 && len(authRequest.ChallengeResponse) > 0
+
+		switch {
+		case checkpoint.Type == "password":
 			rr.Flags.Enabled = true
 			rr.User.Username = authRequest.Username
 			rr.User.Password = authRequest.ChallengeResponse
@@ -139,7 +152,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			)
 			checkpoint.Passed = true
 			prevCheckpointPassed = true
-		case "totp":
+		case checkpoint.Type == "totp" || (checkpoint.Type == "mfa" && challengeContainsOnlyNumbers):
 			rr.Flags.Enabled = true
 			rr.User.Username = authRequest.Username
 			rr.MfaToken.Passcode = authRequest.ChallengeResponse
@@ -190,6 +203,102 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				return fmt.Errorf("totp passcode authentication failed")
 			}
 
+			p.logger.Info(
+				"user authentication checkpoint passed",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.Int("checkpoint_id", checkpoint.ID),
+				zap.String("checkpoint_name", checkpoint.Name),
+				zap.String("checkpoint_type", checkpoint.Type),
+			)
+			checkpoint.Passed = true
+			prevCheckpointPassed = true
+		case (checkpoint.Type == "u2f" || checkpoint.Type == "mfa") && authRequest.ChallengeResponse == "webauthn":
+			rr.Flags.Enabled = true
+			rr.User.Username = authRequest.Username
+			if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
+				rr.Response.Code = http.StatusUnauthorized
+				checkpoint.FailedAttempts++
+				p.logger.Warn(
+					"failed fetching totp tokens",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.Int("checkpoint_id", checkpoint.ID),
+					zap.String("src_ip", addrutil.GetSourceAddress(r)),
+					zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+					zap.String("checkpoint_name", checkpoint.Name),
+					zap.String("checkpoint_type", checkpoint.Type),
+				)
+				return fmt.Errorf("failed fetching totp tokens")
+			}
+
+			creds := []map[string]string{}
+			tokenBundle := rr.Response.Payload.(*identity.MfaTokenBundle)
+			for _, token := range tokenBundle.Get() {
+				if token.Type != "u2f" {
+					continue
+				}
+				if token.Disabled {
+					continue
+				}
+				cred := make(map[string]string)
+				cred["id"] = token.Parameters["u2f_id"]
+				cred["type"] = token.Parameters["u2f_type"]
+				cred["transports"] = token.Parameters["u2f_transports"]
+				creds = append(creds, cred)
+			}
+
+			if len(creds) == 0 {
+				rr.Response.Code = http.StatusUnauthorized
+				checkpoint.FailedAttempts++
+				p.logger.Warn(
+					"no u2f tokens found",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.Int("checkpoint_id", checkpoint.ID),
+					zap.String("src_ip", addrutil.GetSourceAddress(r)),
+					zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+					zap.String("checkpoint_name", checkpoint.Name),
+					zap.String("checkpoint_type", checkpoint.Type),
+				)
+				return fmt.Errorf("no u2f tokens found")
+			}
+
+			usr.Authenticator.TempChallenge = util.GetRandomString(64)
+			webauthChallenge := make(map[string]any)
+			webauthChallenge["challenge"] = usr.Authenticator.TempChallenge
+			webauthChallenge["rp_name"] = "AUTHP"
+			webauthChallenge["timeout"] = 60000
+			webauthChallenge["user_verification"] = "discouraged"
+			webauthChallenge["ext_uvm"] = false
+			webauthChallenge["ext_loc"] = false
+			webauthChallenge["tx_auth_simple"] = "Could you please verify yourself?"
+			webauthChallenge["credentials"] = creds
+
+			jsonChallenge, err := json.Marshal(webauthChallenge)
+			if err != nil {
+				return fmt.Errorf("failed to marshal webauth challenge to JSON: %v", err)
+			}
+			usr.Authenticator.NextChallenge = "mfa:u2f:" + base64.StdEncoding.EncodeToString(jsonChallenge)
+		case checkpoint.Type == "u2f":
+			rr.Flags.Enabled = true
+			rr.User.Username = authRequest.Username
+			rr.WebAuthn.Challenge = usr.Authenticator.TempChallenge
+			if err := backend.Request(operator.Authenticate, rr); err != nil {
+				rr.Response.Code = http.StatusUnauthorized
+				checkpoint.FailedAttempts++
+				p.logger.Warn(
+					"u2f authentication failed",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.Int("checkpoint_id", checkpoint.ID),
+					zap.String("src_ip", addrutil.GetSourceAddress(r)),
+					zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+					zap.String("checkpoint_name", checkpoint.Name),
+					zap.String("checkpoint_type", checkpoint.Type),
+				)
+				return fmt.Errorf("u2f authentication failed")
+			}
 			p.logger.Info(
 				"user authentication checkpoint passed",
 				zap.String("session_id", rr.Upstream.SessionID),
