@@ -596,10 +596,39 @@ func (user *User) GetMetadata() *UserMetadata {
 // satisfied prior to successfully authenticating a user.
 func (user *User) GetChallenges() []string {
 	var challenges []string
+
+	// TODO: check if user has configured custom authentication challenge schema
 	challenges = append(challenges, "password")
-	if len(user.MfaTokens) > 0 {
-		challenges = append(challenges, "mfa")
+
+	counter1 := 0
+	counter2 := 0
+	for _, token := range user.MfaTokens {
+		switch token.Type {
+		case "totp":
+			counter1++
+		case "u2f":
+			counter2++
+		}
 	}
+
+	if counter1+counter2 == 0 {
+		return challenges
+	}
+
+	if counter1 > 0 && counter2 > 0 {
+		challenges = append(challenges, "mfa")
+		return challenges
+	}
+
+	if counter1 > 0 {
+		challenges = append(challenges, "totp")
+		return challenges
+	}
+
+	if counter2 > 0 {
+		challenges = append(challenges, "u2f")
+	}
+
 	return challenges
 }
 

@@ -129,7 +129,7 @@ func (v *TokenValidator) parseAuthHeader(_ context.Context, r *http.Request, ar 
 
 // AuthorizeCookies authorizes HTTP requests based on the presence and the
 // content of the tokens in HTTP cookies.
-func (v *TokenValidator) parseCookies(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) {
+func (v *TokenValidator) parseCookies(_ context.Context, r *http.Request, ar *requests.AuthorizationRequest) {
 	for _, cookie := range r.Cookies() {
 		if _, exists := v.authCookies[cookie.Name]; !exists {
 			continue
@@ -149,8 +149,6 @@ func (v *TokenValidator) parseCookies(ctx context.Context, r *http.Request, ar *
 // Authorize authorizes HTTP requests based on the presence and the content of
 // the tokens in the requests.
 func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) (usr *user.User, err error) {
-	// var token, tokenName, tokenSource string
-	// var found bool
 	for _, sourceName := range v.tokenSources {
 		switch sourceName {
 		case tokenSourceHeader:

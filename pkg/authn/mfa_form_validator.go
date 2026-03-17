@@ -16,10 +16,11 @@ package authn
 
 import (
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 func validateAuthU2FTokenForm(r *http.Request, rr *requests.Request) error {
@@ -175,58 +176,4 @@ func validateAddMfaTokenForm(r *http.Request, rr *requests.Request) error {
 	}
 	rr.MfaToken.Digits = digitsInt
 	return nil
-}
-
-func validateTestMfaTokenURL(endpoint string) (string, string, error) {
-	arr, err := parseEndpointPath(endpoint, "/test/app/", 2)
-	if err != nil {
-		return "", "", fmt.Errorf("malformed URL: %v", err)
-	}
-	tokenID, err := parseID(arr[1])
-	if err != nil {
-		return "", "", fmt.Errorf("malformed URL: %v", err)
-	}
-	switch arr[0] {
-	case "4", "6", "8":
-	default:
-		return "", "", fmt.Errorf("malformed URL")
-	}
-	return tokenID, arr[0], nil
-}
-
-func validateTestU2FTokenURL(endpoint string) (string, error) {
-	arr, err := parseEndpointPath(endpoint, "/test/u2f/", 2)
-	if err != nil {
-		return "", fmt.Errorf("malformed URL: %v", err)
-	}
-	switch arr[0] {
-	case "generic":
-	default:
-		return "", fmt.Errorf("unsupported URL identifier")
-	}
-	tokenID, err := parseID(arr[1])
-	if err != nil {
-		return "", fmt.Errorf("malformed URL: %v", err)
-	}
-	return tokenID, nil
-}
-
-func parseEndpointPath(p, prefix string, length int) ([]string, error) {
-	p = strings.TrimPrefix(p, prefix)
-	arr := strings.Split(p, "/")
-	if len(arr) != length {
-		return arr, fmt.Errorf("unexpected endpoint path")
-	}
-	return arr, nil
-}
-
-func parseID(s string) (string, error) {
-	s = strings.TrimSpace(s)
-	if len(s) == 0 {
-		return "", fmt.Errorf("id is empty")
-	}
-	if len(s) > 96 {
-		return "", fmt.Errorf("id is too long")
-	}
-	return s, nil
 }

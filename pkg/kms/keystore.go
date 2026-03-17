@@ -202,6 +202,7 @@ func (ks *CryptoKeyStore) ParseToken(ar *requests.AuthorizationRequest) (*user.U
 				continue
 			}
 		}
+
 		parsedToken, err := jwtlib.Parse(ar.Token.Payload, k.ProvideKey)
 		if err != nil && !strings.Contains(err.Error(), "is expired") {
 			continue

@@ -358,7 +358,7 @@ func (v *TokenValidator) Configure(ctx context.Context, keys []*kms.CryptoKey, a
 	return nil
 }
 
-func (v *TokenValidator) addAccessList(ctx context.Context, accessList *acl.AccessList) error {
+func (v *TokenValidator) addAccessList(_ context.Context, accessList *acl.AccessList) error {
 	if accessList == nil {
 		return errors.ErrNoAccessList
 	}
@@ -370,7 +370,7 @@ func (v *TokenValidator) addAccessList(ctx context.Context, accessList *acl.Acce
 	return nil
 }
 
-func (v *TokenValidator) addKeys(ctx context.Context, keys []*kms.CryptoKey) error {
+func (v *TokenValidator) addKeys(_ context.Context, keys []*kms.CryptoKey) error {
 	var tokenNames []string
 	tokenMap := make(map[string]bool)
 	if len(keys) == 0 {

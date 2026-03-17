@@ -123,7 +123,7 @@ func (cfg *IdentityStoreConfig) Validate() error {
 }
 
 func validateFields(m map[string]interface{}, requiredFields, optionalFields []string) error {
-	if m == nil || len(m) == 0 {
+	if len(m) == 0 {
 		return fmt.Errorf("empty identity store parameters")
 	}
 

@@ -39,11 +39,11 @@ func (p *Portal) handleHTTPLogin(ctx context.Context, w http.ResponseWriter, r *
 	if usr != nil {
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/portal")
 	}
-	if r.Method != "POST" {
-		return p.handleHTTPLoginScreen(ctx, w, r, rr)
+	if r.Method == http.MethodPost {
+		return p.handleHTTPLoginRequest(ctx, w, r, rr)
 	}
 
-	return p.handleHTTPLoginRequest(ctx, w, r, rr)
+	return p.handleHTTPLoginScreen(ctx, w, r, rr)
 }
 
 func (p *Portal) handleHTTPLoginScreen(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
@@ -113,7 +113,7 @@ func (p *Portal) getAuthenticatorByRealm(realm string) map[string]string {
 // authentication.
 func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
 	p.disableClientCache(w)
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 1024)
@@ -129,81 +129,17 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 		return p.handleHTTPErrorWithLog(ctx, w, r, rr, rr.Response.Code, err.Error())
 	}
 
-	// Create a temporary user.
-	m := make(map[string]interface{})
-	m["sub"] = rr.User.Username
-	m["email"] = rr.User.Email
-	if rr.User.FullName != "" {
-		m["name"] = rr.User.FullName
-	}
-	if len(rr.User.Roles) > 0 {
-		m["roles"] = rr.User.Roles
-	}
-	m["jti"] = rr.Upstream.SessionID
-	m["exp"] = time.Now().Add(time.Duration(5) * time.Second).UTC().Unix()
-	m["iat"] = time.Now().UTC().Unix()
-	m["nbf"] = time.Now().Add(time.Duration(60) * time.Second * -1).UTC().Unix()
-	if _, exists := m["origin"]; !exists {
-		m["origin"] = rr.Upstream.Realm
-	}
-	m["iss"] = util.GetIssuerURL(r)
-	m["addr"] = addrutil.GetSourceAddress(r)
-
-	combineGroupRoles(m)
-
-	// Perform user claim transformation if necessary.
-	if err := p.transformUser(ctx, rr, m); err != nil {
-		return err
-	}
-
-	// Inject portal-specific roles.
-	injectPortalRoles(m, p.config)
-	usr, err := user.NewUser(m)
+	usr, err := p.createSandboxUser(ctx, w, r, rr)
 	if err != nil {
 		rr.Response.Code = http.StatusBadRequest
 		return p.handleHTTPErrorWithLog(ctx, w, r, rr, http.StatusBadRequest, err.Error())
 	}
 
-	// Build a list of additional verification/acceptance challenges.
-	if err := p.injectUserChallenges(usr, m, rr.User.Challenges); err != nil {
-		p.logger.Warn(
-			"user checkpoint injection failed",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-			zap.Any("user", m),
-			zap.Any("challenges", rr.User.Challenges),
-			zap.Error(err),
-		)
-		rr.Response.Code = http.StatusInternalServerError
-		return err
-	}
-
-	// Build a list of additional user-specific UI links.
-	if v, exists := m["frontend_links"]; exists {
-		if err := usr.AddFrontendLinks(v); err != nil {
-			p.logger.Warn(
-				"frontend link creation failed",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.Any("user", m),
-				zap.Error(err),
-			)
-			rr.Response.Code = http.StatusInternalServerError
-			return err
-		}
-	}
-
-	usr.Authenticator.Name = rr.Upstream.Name
-	usr.Authenticator.Realm = rr.Upstream.Realm
-	usr.Authenticator.Method = rr.Upstream.Method
-
-	// Grant temporary cookie and redirect to sandbox URL for authentication.
-	usr.Authenticator.TempSessionID = util.GetRandomStringFromRange(36, 48)
-	usr.Authenticator.TempSecret = util.GetRandomStringFromRange(36, 48)
 	if err := p.sandboxes.Add(usr.Authenticator.TempSessionID, usr); err != nil {
 		rr.Response.Code = http.StatusInternalServerError
 		return p.handleHTTPErrorWithLog(ctx, w, r, rr, http.StatusInternalServerError, err.Error())
 	}
+
 	redirectLocation := fmt.Sprintf("%s%s/%s",
 		rr.Upstream.BaseURL,
 		path.Join(rr.Upstream.BasePath, "/sandbox/"),
@@ -259,7 +195,15 @@ func (p *Portal) identifyUserRequest(rr *requests.Request, identity map[string]s
 	rr.Upstream.Method = backend.GetKind()
 	rr.Upstream.Realm = backend.GetRealm()
 	rr.Flags.Enabled = true
-	rr.User.Username = identity["user"]
+	if v, exists := identity["username"]; exists {
+		rr.User.Username = v
+	}
+	if v, exists := identity["user"]; exists {
+		rr.User.Username = v
+	}
+	if rr.User.Username == "" {
+		return fmt.Errorf("no username found in identify user request")
+	}
 	return backend.Request(operator.IdentifyUser, rr)
 }
 
@@ -327,7 +271,7 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 	m["jti"] = rr.Upstream.SessionID
 	m["exp"] = time.Now().Add(time.Duration(p.keystore.GetTokenLifetime(nil, nil)) * time.Second).UTC().Unix()
 	m["iat"] = time.Now().UTC().Unix()
-	m["nbf"] = time.Now().Add(time.Duration(60)*time.Second*-1).UTC().Unix() * 1000
+	m["nbf"] = time.Now().Add(time.Duration(60) * time.Second * -1).UTC().Unix()
 	if _, exists := m["origin"]; !exists {
 		m["origin"] = rr.Upstream.Realm
 	}
@@ -360,19 +304,17 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 	usr.Authenticator.Method = backend["kind"]
 
 	// Build a list of additional user-specific UI links.
-	if rr.Response.Workflow != "json-api" {
-		if v, exists := m["frontend_links"]; exists {
-			if err := usr.AddFrontendLinks(v); err != nil {
-				p.logger.Warn(
-					"frontend link creation failed",
-					zap.String("session_id", rr.Upstream.SessionID),
-					zap.String("request_id", rr.ID),
-					zap.Any("user", m),
-					zap.Error(err),
-				)
-				rr.Response.Code = http.StatusInternalServerError
-				return err
-			}
+	if v, exists := m["frontend_links"]; exists {
+		if err := usr.AddFrontendLinks(v); err != nil {
+			p.logger.Warn(
+				"frontend link creation failed",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.Any("user", m),
+				zap.Error(err),
+			)
+			rr.Response.Code = http.StatusInternalServerError
+			return err
 		}
 	}
 
@@ -417,12 +359,6 @@ func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.R
 	// Add a cookie with identity token, if id_token is available.
 	if rr.Response.IdentityTokenCookie.Enabled {
 		w.Header().Add("Set-Cookie", p.cookie.GetIdentityTokenCookie(rr.Response.IdentityTokenCookie.Name, rr.Response.IdentityTokenCookie.Payload))
-	}
-
-	if rr.Response.Workflow == "json-api" {
-		// Do not perform redirects to API logins.
-		rr.Response.Code = http.StatusOK
-		return
 	}
 
 	// Delete sandbox cookie, if present.

@@ -37,6 +37,12 @@ func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, body [
 	var resp *http.Response
 	var err error
 
+	if wr.config.accessToken == "" {
+		if authErr := wr.authenticate(); authErr != nil {
+			return "", fmt.Errorf("authentication failed: %v", authErr)
+		}
+	}
+
 	maxAttempts := c.Int("retries")
 	if maxAttempts < 1 {
 		maxAttempts = 1
@@ -45,7 +51,7 @@ func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, body [
 	for i := 1; i <= maxAttempts; i++ {
 		req, _ := http.NewRequest(method, url, bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-		req.Header.Set("Authorization", c.String("access-token-name")+"="+wr.config.token)
+		req.Header.Set("Authorization", wr.config.accessTokenName+"="+wr.config.accessToken)
 
 		respBody, resp, err = wr.browser.Do(req)
 
@@ -62,16 +68,22 @@ func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, body [
 			zap.String("url", url),
 			zap.Error(err),
 			zap.Any("server_response", errorData),
+			zap.String("access_token_name", wr.config.accessTokenName),
+			zap.String("access_token", wr.config.accessToken),
 		)
 
-		if msg, ok := errorData["message"].(string); ok && msg == "Access denied" {
-			wr.logger.Debug("access denied detected, attempting to re-authenticate", zap.Int("attempt", i))
+		if msg, ok := errorData["message"].(string); ok && strings.ToLower(msg) == "access denied" {
+			wr.logger.Debug("access denied detected, attempting to re-authenticate", zap.Int("attempt", i), zap.String("response_body", respBody))
 			if authErr := wr.authenticate(); authErr != nil {
 				return "", fmt.Errorf("re-authentication failed: %v", authErr)
 			}
 		}
 
 		if msg, ok := errorData["message"].(string); ok && strings.ToLower(msg) == "not implemented" {
+			return "", fmt.Errorf("operation is %s", msg)
+		}
+
+		if msg, ok := errorData["message"].(string); ok && strings.ToLower(msg) == "forbidden" {
 			return "", fmt.Errorf("operation is %s", msg)
 		}
 

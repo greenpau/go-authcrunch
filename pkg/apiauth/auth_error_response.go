@@ -12,25 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authn
+package apiauth
 
-import (
-	"fmt"
-	"net/http"
-
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-)
-
-func validateSandboxPasswordForm(r *http.Request, rr *requests.Request) error {
-	if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
-		return fmt.Errorf("Unsupported content type")
-	}
-	if err := r.ParseForm(); err != nil {
-		return fmt.Errorf("Failed parsing submitted form")
-	}
-	if r.PostFormValue("secret") == "" {
-		return fmt.Errorf("Password is empty")
-	}
-	rr.User.Password = r.PostFormValue("secret")
-	return nil
+// AuthErrorResponse is the response to authentication request with an error.
+type AuthErrorResponse struct {
+	Message   string `json:"message,omitempty" xml:"message,omitempty" yaml:"message,omitempty"`
+	Error     bool   `json:"error,omitempty" xml:"error,omitempty" yaml:"error,omitempty"`
+	Timestamp string `json:"timestamp,omitempty" xml:"timestamp,omitempty" yaml:"timestamp,omitempty"`
 }

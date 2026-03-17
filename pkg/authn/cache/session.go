@@ -79,9 +79,7 @@ func manageSessionCache(c *SessionCache) {
 		select {
 		case <-c.exit:
 			c.managed = false
-			break
 		default:
-			break
 		}
 		if !c.managed {
 			c.mu.Unlock()

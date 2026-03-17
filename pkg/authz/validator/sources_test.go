@@ -197,7 +197,7 @@ func TestAuthorizationSources(t *testing.T) {
 				}
 			}
 
-			handler := func(w http.ResponseWriter, r *http.Request) {
+			handler := func(_ http.ResponseWriter, r *http.Request) {
 				ctx := context.Background()
 				var msgs []string
 				msgs = append(msgs, fmt.Sprintf("test name: %s", tc.name))

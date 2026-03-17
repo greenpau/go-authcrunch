@@ -5,6 +5,7 @@
 
 * [Getting Started](#getting-started)
 * [Configuration Files](#configuration-files)
+  * [TOTP Configuration](#totp-configuration)
 * [Commands](#commands)
   * [Server Metadata](#server-metadata)
   * [List Realms](#list-realms)
@@ -103,6 +104,20 @@ The configuration file contains the following:
 The `authdbctl` stores the JWT token acquired after a successful authentication
 in `~/.config/authdbctl/token.jwt`.
 
+### TOTP Configuration
+
+The following configuration contains password and TOTP shared secret for `jsmith`. 
+
+```
+base_url: "https://auth.myfiosgateway.com:8443/auth"
+username: jsmith
+password: My@Password123
+totp_secret: mrYEe39OnjZquTrFfg44IFlbGTDMrURlW8wORistVDivuOyzhtIkDYIemscayW6QcwumJe9f33C6a6ruUaZn5qxTKkJq
+totp_code_length: 6
+realm: "local"
+```
+
+If you do not provide TOTP configuration, you will be prompted for it.
 
 ## Commands
 

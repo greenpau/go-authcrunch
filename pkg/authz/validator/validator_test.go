@@ -1032,7 +1032,7 @@ func TestAuthorize(t *testing.T) {
 				tc.want["token_name"] = "access_token"
 			}
 
-			handler := func(w http.ResponseWriter, r *http.Request) {
+			handler := func(_ http.ResponseWriter, r *http.Request) {
 				ctx := context.Background()
 				var msgs []string
 				msgs = append(msgs, fmt.Sprintf("test name: %s", tc.name))
@@ -1116,14 +1116,14 @@ func TestAddKeys(t *testing.T) {
 		{
 			name: "add keys",
 			keys: []*kms.CryptoKey{
-				&kms.CryptoKey{},
+				{},
 			},
 			verifyFound: true,
 		},
 		{
 			name: "add non verify key",
 			keys: []*kms.CryptoKey{
-				&kms.CryptoKey{},
+				{},
 			},
 			verifyFound:      true,
 			verifyNotCapable: true,
@@ -1133,7 +1133,7 @@ func TestAddKeys(t *testing.T) {
 		{
 			name: "add key without token name",
 			keys: []*kms.CryptoKey{
-				&kms.CryptoKey{},
+				{},
 			},
 			verifyFound:       true,
 			verifyNoTokenName: true,
@@ -1143,7 +1143,7 @@ func TestAddKeys(t *testing.T) {
 		{
 			name: "add key without token lifetime",
 			keys: []*kms.CryptoKey{
-				&kms.CryptoKey{},
+				{},
 			},
 			verifyFound:         true,
 			verifyNoMaxLifetime: true,
@@ -1153,7 +1153,7 @@ func TestAddKeys(t *testing.T) {
 		{
 			name: "add key with empty token name with spaces",
 			keys: []*kms.CryptoKey{
-				&kms.CryptoKey{},
+				{},
 			},
 			verifyFound:          true,
 			verifyEmptyTokenName: true,

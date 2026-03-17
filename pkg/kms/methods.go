@@ -33,9 +33,9 @@ var (
 	}
 
 	algoMethodMap = map[string][]string{
-		"hmac":  []string{"HS512", "HS384", "HS256"},
-		"rsa":   []string{"RS512", "RS384", "RS256"},
-		"ecdsa": []string{"ES512", "ES384", "ES256"},
+		"hmac":  {"HS512", "HS384", "HS256"},
+		"rsa":   {"RS512", "RS384", "RS256"},
+		"ecdsa": {"ES512", "ES384", "ES256"},
 	}
 )
 

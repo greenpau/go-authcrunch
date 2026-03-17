@@ -15,129 +15,166 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
-	"strings"
+	"os"
+	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/apiauth"
 	"go.uber.org/zap"
-	"golang.org/x/net/html"
+	"golang.org/x/term"
 )
 
-func (wr *wrapper) authenticate() error {
+func (wr *wrapper) readUserInputWithTimeout(prompt string, timeout time.Duration) (string, error) {
+	wr.logger.Debug("prompted user for input", zap.String("prompt", prompt), zap.Duration("timeout", timeout))
+	fmt.Print(prompt)
 
-	var formKind, formURI string
-	var formData url.Values
+	type result struct {
+		pw  string
+		err error
+	}
+
+	resChan := make(chan result, 1)
+	fd := int(os.Stdin.Fd())
+
+	go func() {
+		byteInput, err := term.ReadPassword(fd)
+		resChan <- result{string(byteInput), err}
+	}()
+
+	select {
+	case res := <-resChan:
+		fmt.Println()
+		if res.err != nil {
+			return "", res.err
+		}
+		return res.pw, nil
+
+	case <-time.After(timeout):
+		wr.logger.Error("user input timed out")
+		return "", errors.New("user input timed out")
+	}
+}
+
+func (wr *wrapper) authenticate() error {
+	apiEndpoint := "/login"
+	var authRequest *apiauth.AuthRequest
+	var authResponse *apiauth.AuthResponse
+
 	var counter int
 	for {
 		counter++
-		if counter > 25 {
+		if counter > 10 {
 			return fmt.Errorf("reached max attempts threshold")
 		}
 
-		if formKind == "" {
-			formKind = "login"
-			formURI = "/login"
-			formData = url.Values{}
-			formData.Set("username", wr.config.Username)
-			formData.Set("realm", wr.config.Realm)
+		if authRequest == nil {
+			authRequest = &apiauth.AuthRequest{}
+		}
+		authRequest.Username = wr.config.Username
+		authRequest.Realm = wr.config.Realm
 
-			req, _ := http.NewRequest(http.MethodGet, wr.config.BaseURL+"/", nil)
-			wr.browser.Do(req)
+		jsonData, err := json.Marshal(authRequest)
+		if err != nil {
+			return fmt.Errorf("failed to marshal auth request: %v", err)
 		}
 
-		req, _ := http.NewRequest(http.MethodPost, wr.config.BaseURL+formURI, strings.NewReader(formData.Encode()))
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		wr.logger.Debug("making authentication request", zap.Any("auth_request", authRequest))
+
+		req, _ := http.NewRequest(http.MethodPost, wr.config.BaseURL+apiEndpoint, bytes.NewBuffer(jsonData))
+		req.Header.Add("Accept", "application/json")
+		req.Header.Add("Content-Type", "application/json")
 		respBody, resp, err := wr.browser.Do(req)
 		if err != nil {
 			return fmt.Errorf("failed connecting to auth portal sandbox: %v", err)
 		}
 
-		redirectURL := resp.Header.Get("Location")
-
-		if redirectURL != "" {
-			wr.logger.Debug("request redirected", zap.String("redirect_url", redirectURL), zap.String("base_url", wr.config.BaseURL+"/"))
-			req, _ := http.NewRequest(http.MethodGet, redirectURL, nil)
-			respBody, resp, err = wr.browser.Do(req)
-			for _, cookie := range resp.Cookies() {
-				if cookie.Name == wr.config.CookieName {
-					wr.config.token = cookie.Value
-				}
+		if resp.StatusCode != 200 {
+			authErrorResponse := &apiauth.AuthErrorResponse{}
+			if err := json.Unmarshal([]byte(respBody), authErrorResponse); err != nil {
+				return fmt.Errorf("failed to parse auth error response: %s: %v", respBody, err)
 			}
-
+			wr.logger.Debug("authentication error", zap.Int("status_code", resp.StatusCode), zap.Any("auth_response", authErrorResponse))
+			return fmt.Errorf("authentication failed, status_code: %d", resp.StatusCode)
 		}
 
-		respData, err := parseResponse(respBody)
-		if err != nil {
-			return fmt.Errorf("failed parsing auth portal sandbox response: %v", err)
+		if authResponse == nil {
+			authResponse = &apiauth.AuthResponse{}
 		}
 
-		if len(respData) > 0 {
-			wr.logger.Debug("received response data", zap.Any("data", respData))
+		if err := json.Unmarshal([]byte(respBody), authResponse); err != nil {
+			return fmt.Errorf("failed to parse auth response: %s: %v", respBody, err)
 		}
 
-		formKind = respData["form_kind"]
-		var terminateLoop, continueLoop bool
-		switch formKind {
-		case "login", "password-auth":
-			formURI = respData["form_action"]
-		case "":
-			if redirectURL != "" && !strings.Contains(redirectURL, "/sandbox/") {
-				continueLoop = true
-			} else {
-				// Inspect headers and cookies for the presence of auth token.
-				terminateLoop = true
+		wr.logger.Debug("parsed authentication response", zap.Any("auth_response", authResponse))
+
+		if authResponse.SandboxID != "" {
+			authRequest.SandboxID = authResponse.SandboxID
+			authRequest.SandboxSecret = authResponse.SandboxSecret
+		}
+
+		if authResponse.Authenticated {
+			wr.config.tokenAcquired = true
+			wr.config.accessToken = authResponse.AccessToken
+			if authResponse.RefreshToken != "" {
+				wr.config.refreshToken = authResponse.RefreshToken
 			}
-		default:
-			return fmt.Errorf("the %q form is unsupported", formKind)
-		}
-
-		if terminateLoop {
-			wr.logger.Debug("logged in successfully")
 			break
 		}
 
-		if continueLoop {
-			continue
-		}
+		authRequest.SandboxID = authResponse.SandboxID
+		authRequest.SandboxSecret = authResponse.SandboxSecret
 
-		formData = url.Values{}
-		for k, v := range respData {
-			if !strings.HasPrefix(k, "input_") {
-				continue
-			}
-			k = strings.TrimPrefix(k, "input_")
-			if v != "" {
-				formData.Set(k, v)
+		switch {
+		case authResponse.NextChallenge == "password":
+			authRequest.ChallengeKind = authResponse.NextChallenge
+			if wr.config.Password != "" {
+				authRequest.ChallengeResponse = wr.config.Password
 			} else {
-				switch {
-				case (k == "secret") && (formKind == "password-auth") && (wr.config.Password == ""):
-					input, err := wr.readUserInput("password")
-					if err != nil {
-						return err
-					}
-					formData.Set(k, string(input))
-				case (k == "secret") && (formKind == "password-auth"):
-					formData.Set(k, wr.config.Password)
-				default:
-					return fmt.Errorf("the %q input in %q form is unsupported: %v", k, formKind, respData)
+				userInput, err := wr.readUserInputWithTimeout("Please enter password: ", 30*time.Second)
+				if err != nil {
+					return err
 				}
+				authRequest.ChallengeResponse = userInput
 			}
+		case authResponse.NextChallenge == "totp":
+			authRequest.ChallengeKind = authResponse.NextChallenge
+			if wr.config.TotpSecret != "" {
+				passcode, err := generateTOTP(wr.config.TotpSecret, wr.config.TotpCodeLength, wr.config.TotpCodeLifetime)
+				if err != nil {
+					return err
+				}
+				authRequest.ChallengeResponse = passcode
+			} else {
+				userInput, err := wr.readUserInputWithTimeout("Please authenticator app code: ", 30*time.Second)
+				if err != nil {
+					return err
+				}
+				authRequest.ChallengeResponse = userInput
+			}
+		case authResponse.NextChallenge == "u2f":
+			authRequest.ChallengeKind = authResponse.NextChallenge
+			// TODO: authRequest.ChallengeResponse = u2f
+			return fmt.Errorf("the handling of %s 2 is not implemented", authResponse.NextChallenge)
+		case authResponse.NextChallenge == "mfa":
+			authRequest.ChallengeKind = authResponse.NextChallenge
+			// TODO: authRequest.ChallengeResponse = either app or u2f
+			return fmt.Errorf("the handling of %s 3 is not implemented", authResponse.NextChallenge)
+		default:
+			return fmt.Errorf("the handling of %s is not implemented", authResponse.NextChallenge)
 		}
-
-		wr.logger.Debug(
-			"prepared form inputs",
-			zap.String("form_kind", formKind),
-			zap.String("form_uri", formURI),
-			zap.Any("data", formData),
-		)
 	}
 
-	if wr.config.token != "" {
+	if wr.config.tokenAcquired {
 		wr.logger.Debug(
 			"auth token acquired",
-			zap.String("token", wr.config.token),
+			zap.String("access_token", wr.config.accessToken),
+			zap.String("access_token_name", wr.config.accessTokenName),
+			zap.String("refresh_token", wr.config.refreshToken),
 		)
 		if err := wr.commitToken(); err != nil {
 			return err
@@ -145,90 +182,6 @@ func (wr *wrapper) authenticate() error {
 		log.Printf("auth token acquired: %s", wr.config.TokenPath)
 		return nil
 	}
-	return fmt.Errorf("failed to obtain auth token")
-}
 
-func parseResponse(s string) (map[string]string, error) {
-	m := make(map[string]string)
-	doc, err := html.Parse(strings.NewReader(s))
-	if err != nil {
-		return nil, err
-	}
-
-	var f func(*html.Node) error
-	f = func(n *html.Node) error {
-		if n.Type == html.ElementNode && n.Data == "form" {
-			if err := parseResponseForm(m, n); err != nil {
-				return err
-			}
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if err := f(c); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	if err := f(doc); err != nil {
-		return nil, err
-	}
-
-	return m, nil
-}
-
-func parseResponseForm(m map[string]string, doc *html.Node) error {
-	var formKind string
-	for _, a := range doc.Attr {
-		switch a.Key {
-		case "class", "action":
-			m["form_"+a.Key] = a.Val
-		}
-		if a.Key == "action" {
-			switch {
-			case strings.HasSuffix(a.Val, "/password-auth"):
-				formKind = "password-auth"
-			default:
-				return fmt.Errorf("detected unsupported form: %s", a.Val)
-			}
-			m["form_kind"] = formKind
-		}
-	}
-
-	if _, exists := m["form_kind"]; !exists {
-		return fmt.Errorf("failed to identify form kind")
-	}
-
-	var f func(*html.Node) error
-	f = func(n *html.Node) error {
-		if n.Data == "input" {
-			var elemKey, elemVal string
-			elem := make(map[string]string)
-			for _, a := range n.Attr {
-				switch a.Key {
-				case "id", "name", "value":
-					elem[a.Key] = a.Val
-				}
-			}
-			if _, exists := elem["name"]; !exists {
-				return fmt.Errorf("input has no name field: %v", elem)
-			}
-			elemKey = elem["name"]
-
-			if v, exists := elem["value"]; exists {
-				elemVal = v
-			}
-			m["input_"+elemKey] = elemVal
-		}
-
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if err := f(c); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	if err := f(doc); err != nil {
-		return err
-	}
-	return nil
+	return fmt.Errorf("not implemented")
 }

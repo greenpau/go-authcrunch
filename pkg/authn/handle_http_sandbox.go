@@ -218,7 +218,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 			continue
 		}
 		switch checkpoint.Type {
-		case "password", "mfa":
+		case "password", "mfa", "totp", "u2f":
 			verifiedCount++
 		}
 	}
@@ -306,7 +306,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				m["view"] = "redirect"
 				return m, nil
 			}
-		case "mfa":
+		case "mfa", "totp", "u2f":
 			if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
 				checkpoint.FailedAttempts++
 				m["title"] = "Authorization Failed"

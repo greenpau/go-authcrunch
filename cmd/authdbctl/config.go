@@ -16,31 +16,40 @@ package main
 
 import (
 	"bufio"
-	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
-	"os"
-	"path/filepath"
-	"strings"
-	"unicode"
 )
 
 // Config holds the configuration for the CLI.
 type Config struct {
-	BaseURL    string `json:"base_url,omitempty" xml:"base_url,omitempty" yaml:"base_url,omitempty"`
-	TokenPath  string `json:"token_path,omitempty" xml:"token_path,omitempty" yaml:"token_path,omitempty"`
-	Username   string `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
-	Password   string `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
-	Realm      string `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
-	CookieName string `json:"cookie_name,omitempty" xml:"cookie_name,omitempty" yaml:"cookie_name,omitempty"`
-	path       string
-	token      string
+	BaseURL          string `json:"base_url,omitempty" xml:"base_url,omitempty" yaml:"base_url,omitempty"`
+	TokenPath        string `json:"token_path,omitempty" xml:"token_path,omitempty" yaml:"token_path,omitempty"`
+	Username         string `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
+	Password         string `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
+	TotpSecret       string `json:"totp_secret,omitempty" xml:"totp_secret,omitempty" yaml:"totp_secret,omitempty"`
+	TotpCodeLength   int    `json:"totp_code_length,omitempty" xml:"totp_code_length,omitempty" yaml:"totp_code_length,omitempty"`
+	TotpCodeLifetime int    `json:"totp_code_lifetime,omitempty" xml:"totp_code_lifetime,omitempty" yaml:"totp_code_lifetime,omitempty"`
+	Realm            string `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
+	CookieName       string `json:"cookie_name,omitempty" xml:"cookie_name,omitempty" yaml:"cookie_name,omitempty"`
+
+	path            string
+	accessToken     string
+	accessTokenName string
+	refreshToken    string
+	// refreshTokenName string
+	tokenAcquired bool
 }
 
 type wrapper struct {
@@ -99,7 +108,25 @@ func (wr *wrapper) configure(c *cli.Context) error {
 			return err
 		}
 	} else {
-		cfg.token = string(parseTokenBytes(tokenBytes))
+		tokenData := make(map[string]string)
+		err := json.Unmarshal(tokenBytes, &tokenData)
+		if err != nil {
+			wr.logger.Debug(
+				"token file parsing failed",
+				zap.String("path", cfg.TokenPath),
+				zap.Error(err),
+			)
+			return err
+		}
+		if v, ok := tokenData["access_token"]; ok {
+			cfg.accessToken = v
+		}
+		if v, ok := tokenData["access_token_name"]; ok {
+			cfg.accessTokenName = v
+		}
+		if v, ok := tokenData["refresh_token"]; ok {
+			cfg.refreshToken = v
+		}
 	}
 
 	for _, s := range []string{"username", "realm"} {
@@ -129,6 +156,18 @@ func (wr *wrapper) configure(c *cli.Context) error {
 		cfg.CookieName = "access_token"
 	}
 
+	if cfg.accessTokenName == "" {
+		cfg.accessTokenName = c.String("access-token-name")
+	}
+
+	if cfg.TotpCodeLength == 0 {
+		cfg.TotpCodeLength = 6
+	}
+
+	if cfg.TotpCodeLifetime == 0 {
+		cfg.TotpCodeLifetime = 30
+	}
+
 	wr.logger.Debug(
 		"runtime configuration",
 		zap.String("config_path", cfg.path),
@@ -136,6 +175,7 @@ func (wr *wrapper) configure(c *cli.Context) error {
 		zap.String("token_path", cfg.TokenPath),
 		zap.String("username", cfg.Username),
 		zap.String("realm", cfg.Realm),
+		zap.Any("FFF", cfg),
 	)
 
 	wr.config = cfg
@@ -147,20 +187,6 @@ func (wr *wrapper) configure(c *cli.Context) error {
 
 	wr.browser = browser
 	return nil
-}
-
-func parseTokenBytes(b []byte) []byte {
-	if len(b) == 0 {
-		return b
-	}
-	f := func(c rune) bool {
-		return unicode.IsSpace(c)
-	}
-	i := bytes.IndexFunc(b, f)
-	if i < 0 {
-		return b
-	}
-	return b[:i]
 }
 
 func (wr *wrapper) readUserInput(s string) (string, error) {
@@ -196,7 +222,21 @@ func (wr *wrapper) commitToken() error {
 	if err != nil {
 		return fmt.Errorf("failed opening %q file: %v", wr.config.TokenPath, err)
 	}
-	if _, err := fh.WriteString(wr.config.token + "\n"); err != nil {
+
+	data := make(map[string]string)
+	data["access_token"] = wr.config.accessToken
+	if wr.config.accessTokenName != "" {
+		data["access_token_name"] = wr.config.accessTokenName
+	}
+	if wr.config.refreshToken != "" {
+		data["refresh_token"] = wr.config.refreshToken
+	}
+	data["created_at"] = time.Now().UTC().Format(time.RFC3339Nano)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("failed marshaling data to %q file: %v", wr.config.TokenPath, err)
+	}
+	if _, err := fh.WriteString(string(jsonData) + "\n"); err != nil {
 		return fmt.Errorf("failed writing to %q file: %v", wr.config.TokenPath, err)
 	}
 	if err := fh.Close(); err != nil {

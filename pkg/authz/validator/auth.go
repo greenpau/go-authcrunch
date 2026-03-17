@@ -39,7 +39,7 @@ func (v *TokenValidator) parseCustomAuthHeader(ctx context.Context, r *http.Requ
 	return nil
 }
 
-func (v *TokenValidator) parseCustomBasicAuthHeader(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
+func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
 	var tokenSecret, tokenRealm string
 	hdr := r.Header.Get("Authorization")
 	if hdr == "" {

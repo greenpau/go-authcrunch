@@ -16,14 +16,14 @@ package authn
 
 import (
 	"context"
+	"net/http"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
-	"net/http"
-	"net/url"
-	"strings"
 )
 
 func (p *Portal) deleteAuthCookies(w http.ResponseWriter, r *http.Request) {
@@ -81,36 +81,6 @@ func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r 
 		}
 	}
 
-	return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
-}
-
-func (p *Portal) handleHTTPLogoutWithLocalRedirect(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
-	var refererExists bool
-	p.disableClientCache(w)
-	p.injectRedirectURL(ctx, w, r, rr)
-	h := addrutil.GetSourceHost(r)
-	for tokenName := range p.validator.GetAuthCookies() {
-		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, tokenName))
-	}
-	if rr.Response.RedirectURL == "" {
-		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.Referer))
-	}
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SessionID))
-	// The redirect_url query parameter exists.
-	if rr.Response.RedirectURL != "" {
-		return p.handleHTTPRedirect(ctx, w, r, rr, "/login?redirect_url="+rr.Response.RedirectURL)
-	}
-	// Find whether the redirect cookie exists. If so, do not inject redirect URL.
-	if cookie, err := r.Cookie(p.cookie.Referer); err == nil {
-		v, err := url.Parse(cookie.Value)
-		if err == nil && v.String() != "" {
-			refererExists = true
-		}
-	}
-	if !refererExists {
-		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.Referer))
-		return p.handleHTTPRedirect(ctx, w, r, rr, "/login?redirect_url="+r.RequestURI)
-	}
 	return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 }
 

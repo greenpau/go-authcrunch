@@ -98,8 +98,8 @@ func (p *Portal) handleHTTPAppsSingleSignOnMetadata(ctx context.Context, w http.
 	return nil
 }
 
-func (p *Portal) handleHTTPAppsSingleSignOnAssumeRole(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request,
-	provider sso.SingleSignOnProvider, roles []*assumeRoleEntry, usr *user.User) error {
+func (p *Portal) handleHTTPAppsSingleSignOnAssumeRole(_ context.Context, w http.ResponseWriter, _ *http.Request, _ *requests.Request,
+	_ sso.SingleSignOnProvider, _ []*assumeRoleEntry, _ *user.User) error {
 
 	/*
 		if strings.Contains(r.URL.Path, "/apps/sso/assume") {
@@ -164,7 +164,7 @@ func (p *Portal) handleHTTPAppsSingleSignOnAssumeRole(ctx context.Context, w htt
 
 // handleHTTPAppsSingleSignOnMenu renders SSO provider role selection page.
 func (p *Portal) handleHTTPAppsSingleSignOnMenu(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request,
-	provider sso.SingleSignOnProvider, roles []*assumeRoleEntry, usr *user.User) error {
+	_ sso.SingleSignOnProvider, roles []*assumeRoleEntry, _ *user.User) error {
 
 	resp := p.ui.GetArgs()
 	resp.PageTitle = translate.Translate("aws_sso_label", p.ui.Language, nil)
@@ -194,9 +194,9 @@ func (p *Portal) fetchSingleSignOnProvider(providerName string) (sso.SingleSignO
 	return nil, fmt.Errorf("provider name not found")
 }
 
-func (p *Portal) parseSingleSignOnProviderName() (string, string, error) {
-	return "aws", "metadata", nil
-}
+// func (p *Portal) parseSingleSignOnProviderName() (string, string, error) {
+// 	return "aws", "metadata", nil
+// }
 
 func fetchSingleSignOnRoles(providerName string, usr *user.User) []*assumeRoleEntry {
 	roles := []*assumeRoleEntry{}

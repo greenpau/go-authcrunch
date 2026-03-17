@@ -24,7 +24,7 @@ import (
 // ParseIdentity extracts user id/email and optional authentication realm
 // from HTTP request.
 func ParseIdentity(r *http.Request) (map[string]string, error) {
-	if r.Method == "POST" {
+	if r.Method == http.MethodPost {
 		return parseIdentityForm(r)
 	}
 	return nil, fmt.Errorf("Request method %s is unsupported", r.Method)
@@ -32,11 +32,11 @@ func ParseIdentity(r *http.Request) (map[string]string, error) {
 
 // ParseCredentials extracts credentials from HTTP request.
 func ParseCredentials(r *http.Request) (map[string]string, error) {
-	if r.Method == "POST" {
+	if r.Method == http.MethodPost {
 		return parseAuthForm(r)
 	}
-	if r.Method == "GET" {
-		return parseAuthRequest(r)
+	if r.Method == http.MethodGet {
+		return parseRequestAuthHeaders(r)
 	}
 	return nil, fmt.Errorf("Request method %s is unsupported", r.Method)
 }
@@ -124,7 +124,7 @@ func parseAuthForm(r *http.Request) (map[string]string, error) {
 	return kv, nil
 }
 
-func parseAuthRequest(r *http.Request) (map[string]string, error) {
+func parseRequestAuthHeaders(r *http.Request) (map[string]string, error) {
 	kv := make(map[string]string)
 	authzHeaderStr := r.Header.Get("Authorization")
 	if authzHeaderStr == "" {

@@ -219,7 +219,7 @@ func (p *PublicKey) parsePublicKeyPGP() error {
 	if kr[0].PrimaryKey == nil {
 		return errors.ErrPublicKeyParse.WithArgs(fmt.Errorf("PGP keyring entry has no public key"))
 	}
-	if kr[0].Identities == nil || len(kr[0].Identities) == 0 {
+	if len(kr[0].Identities) == 0 {
 		return errors.ErrPublicKeyParse.WithArgs(fmt.Errorf("PGP keyring entry has no identities"))
 	}
 	pk := kr[0].PrimaryKey

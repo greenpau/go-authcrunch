@@ -114,6 +114,7 @@ qtest: covdir
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestFetchGithubEmail ./pkg/idp/oauth/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewPortal ./pkg/authn/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestServeHTTP ./pkg/authn/*.go
+	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run Test.*AuthRequest ./pkg/apiauth/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestFactory ./pkg/authn/cookie/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewSingleSignOnProviderConfig ./pkg/sso/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewSingleSignOnProvider ./pkg/sso/*.go
@@ -135,7 +136,7 @@ qtest: covdir
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestRenderTemplate ./pkg/authn/ui/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/local/*.go
-	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestParseFirstDN ./pkg/ids/ldap/*.go
+	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestParseFirstDN ./pkg/ids/ldap/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authz/...
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewGatekeeper ./pkg/authz/*.go
 	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestAuthenticate ./pkg/authz/*.go

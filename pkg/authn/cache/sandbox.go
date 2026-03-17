@@ -91,9 +91,7 @@ func manageSandboxCache(c *SandboxCache) {
 		select {
 		case <-c.exit:
 			c.managed = false
-			break
 		default:
-			break
 		}
 		if !c.managed {
 			c.mu.Unlock()
@@ -117,7 +115,6 @@ func manageSandboxCache(c *SandboxCache) {
 		}
 		c.mu.Unlock()
 	}
-	return
 }
 
 // Run starts management of SandboxCache instance.
@@ -198,7 +195,6 @@ func (c *SandboxCache) Expire(sandboxID string) {
 	if entry, exists := c.Entries[sandboxID]; exists {
 		entry.expired = true
 	}
-	return
 }
 
 // Valid checks whether SandboxCacheEntry is non-expired.

@@ -455,11 +455,6 @@ func (p *Portal) handleHTTPRegisterAck(ctx context.Context, w http.ResponseWrite
 	}
 	registrationID := registerEndpoint.registrationID
 
-	if err != nil {
-		reg.message = "Malformed registration acknowledgement request"
-		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
-	}
-
 	if _, err := userRegistry.GetRegistrationEntry(registrationID); err != nil {
 		reg.message = "Registration identifier not found"
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)

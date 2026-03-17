@@ -83,6 +83,7 @@ type Authenticator struct {
 	TempSessionID string `json:"temp_session_id,omitempty" xml:"temp_session_id,omitempty" yaml:"temp_session_id,omitempty"`
 	TempChallenge string `json:"temp_challenge,omitempty" xml:"temp_challenge,omitempty" yaml:"temp_challenge,omitempty"`
 	URL           string `json:"url,omitempty" xml:"url,omitempty" yaml:"url,omitempty"`
+	NextChallenge string `json:"next_challenge,omitempty" xml:"next_challenge,omitempty" yaml:"next_challenge,omitempty"`
 }
 
 // Claims represents custom and standard JWT claims associated with User.
@@ -453,7 +454,13 @@ func NewCheckpoint(s string) (*Checkpoint, error) {
 	switch args[0] {
 	case "mfa":
 		c.Name = "Multi-factor authentication"
-		c.Type = "mfa"
+		c.Type = args[0]
+	case "totp":
+		c.Name = "Multi-factor authentication app"
+		c.Type = args[0]
+	case "u2f":
+		c.Name = "Multi-factor authentication with Universal 2nd Factor"
+		c.Type = args[0]
 	case "password":
 		c.Name = "Authenticate with password"
 		c.Type = "password"

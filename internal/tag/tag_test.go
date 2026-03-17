@@ -24,6 +24,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/apiauth"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	authncache "github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
@@ -837,8 +838,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test authn.AuthRequest struct",
-			entry: &authn.AuthRequest{},
+			name:  "test apiauth.AuthRequest struct",
+			entry: &apiauth.AuthRequest{},
 			opts:  &Options{},
 		},
 		{
@@ -852,8 +853,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test authn.AuthResponse struct",
-			entry: &authn.AuthResponse{},
+			name:  "test apiauth.AuthResponse struct",
+			entry: &apiauth.AuthResponse{},
 			opts:  &Options{},
 		},
 		{
@@ -904,6 +905,11 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test registry.DomainRestrictionRuleset struct",
 			entry: &registry.DomainRestrictionRuleset{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test apiauth.AuthErrorResponse struct",
+			entry: &apiauth.AuthErrorResponse{},
 			opts:  &Options{},
 		},
 	}
