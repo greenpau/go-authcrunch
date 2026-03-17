@@ -45,30 +45,31 @@ type UserMetadataBundle struct {
 
 // User is a user identity.
 type User struct {
-	ID             string          `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
-	Disabled       bool            `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
-	Human          bool            `json:"human,omitempty" xml:"human,omitempty" yaml:"human,omitempty"`
-	Username       string          `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
-	Title          string          `json:"title,omitempty" xml:"title,omitempty" yaml:"title,omitempty"`
-	Name           *Name           `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	Organization   *Organization   `json:"organization,omitempty" xml:"organization,omitempty" yaml:"organization,omitempty"`
-	Names          []*Name         `json:"names,omitempty" xml:"names,omitempty" yaml:"names,omitempty"`
-	Organizations  []*Organization `json:"organizations,omitempty" xml:"organizations,omitempty" yaml:"organizations,omitempty"`
-	StreetAddress  []*Location     `json:"street_address,omitempty" xml:"street_address,omitempty" yaml:"street_address,omitempty"`
-	EmailAddress   *EmailAddress   `json:"email_address,omitempty" xml:"email_address,omitempty" yaml:"email_address,omitempty"`
-	EmailAddresses []*EmailAddress `json:"email_addresses,omitempty" xml:"email_addresses,omitempty" yaml:"email_addresses,omitempty"`
-	Passwords      []*Password     `json:"passwords,omitempty" xml:"passwords,omitempty" yaml:"passwords,omitempty"`
-	PublicKeys     []*PublicKey    `json:"public_keys,omitempty" xml:"public_keys,omitempty" yaml:"public_keys,omitempty"`
-	APIKeys        []*APIKey       `json:"api_keys,omitempty" xml:"api_keys,omitempty" yaml:"api_keys,omitempty"`
-	MfaTokens      []*MfaToken     `json:"mfa_tokens,omitempty" xml:"mfa_tokens,omitempty" yaml:"mfa_tokens,omitempty"`
-	Lockout        *LockoutState   `json:"lockout,omitempty" xml:"lockout,omitempty" yaml:"lockout,omitempty"`
-	Avatar         *Image          `json:"avatar,omitempty" xml:"avatar,omitempty" yaml:"avatar,omitempty"`
-	Created        time.Time       `json:"created,omitempty" xml:"created,omitempty" yaml:"created,omitempty"`
-	LastModified   time.Time       `json:"last_modified,omitempty" xml:"last_modified,omitempty" yaml:"last_modified,omitempty"`
-	Revision       int             `json:"revision,omitempty" xml:"revision,omitempty" yaml:"revision,omitempty"`
-	Roles          []*Role         `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
-	Registration   *Registration   `json:"registration,omitempty" xml:"registration,omitempty" yaml:"registration,omitempty"`
-	rolesRef       map[string]interface{}
+	ID                string          `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
+	Disabled          bool            `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
+	Human             bool            `json:"human,omitempty" xml:"human,omitempty" yaml:"human,omitempty"`
+	Username          string          `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
+	Title             string          `json:"title,omitempty" xml:"title,omitempty" yaml:"title,omitempty"`
+	Name              *Name           `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Organization      *Organization   `json:"organization,omitempty" xml:"organization,omitempty" yaml:"organization,omitempty"`
+	Names             []*Name         `json:"names,omitempty" xml:"names,omitempty" yaml:"names,omitempty"`
+	Organizations     []*Organization `json:"organizations,omitempty" xml:"organizations,omitempty" yaml:"organizations,omitempty"`
+	StreetAddress     []*Location     `json:"street_address,omitempty" xml:"street_address,omitempty" yaml:"street_address,omitempty"`
+	EmailAddress      *EmailAddress   `json:"email_address,omitempty" xml:"email_address,omitempty" yaml:"email_address,omitempty"`
+	EmailAddresses    []*EmailAddress `json:"email_addresses,omitempty" xml:"email_addresses,omitempty" yaml:"email_addresses,omitempty"`
+	Passwords         []*Password     `json:"passwords,omitempty" xml:"passwords,omitempty" yaml:"passwords,omitempty"`
+	PublicKeys        []*PublicKey    `json:"public_keys,omitempty" xml:"public_keys,omitempty" yaml:"public_keys,omitempty"`
+	APIKeys           []*APIKey       `json:"api_keys,omitempty" xml:"api_keys,omitempty" yaml:"api_keys,omitempty"`
+	MfaTokens         []*MfaToken     `json:"mfa_tokens,omitempty" xml:"mfa_tokens,omitempty" yaml:"mfa_tokens,omitempty"`
+	Lockout           *LockoutState   `json:"lockout,omitempty" xml:"lockout,omitempty" yaml:"lockout,omitempty"`
+	MfaFailedAttempts int             `json:"mfa_failed_attempts,omitempty" xml:"mfa_failed_attempts,omitempty" yaml:"mfa_failed_attempts,omitempty"`
+	Avatar            *Image          `json:"avatar,omitempty" xml:"avatar,omitempty" yaml:"avatar,omitempty"`
+	Created           time.Time       `json:"created,omitempty" xml:"created,omitempty" yaml:"created,omitempty"`
+	LastModified      time.Time       `json:"last_modified,omitempty" xml:"last_modified,omitempty" yaml:"last_modified,omitempty"`
+	Revision          int             `json:"revision,omitempty" xml:"revision,omitempty" yaml:"revision,omitempty"`
+	Roles             []*Role         `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
+	Registration      *Registration   `json:"registration,omitempty" xml:"registration,omitempty" yaml:"registration,omitempty"`
+	rolesRef          map[string]interface{}
 }
 
 // NewUserMetadataBundle returns an instance of UserMetadataBundle.

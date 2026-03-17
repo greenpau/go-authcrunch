@@ -68,6 +68,8 @@ const (
 
 	ErrParseNameFailed StandardError = "failed to parse name: %s"
 
+	ErrMfaLockout StandardError = "MFA authentication is temporarily locked: %v"
+
 	ErrCreditCardUnsupportedIssuer      StandardError = "unsupported credit card issuer: %v"
 	ErrCreditCardUnsupportedAssociation StandardError = "unsupported credit card association: %v"
 )

@@ -307,6 +307,12 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				return m, nil
 			}
 		case "mfa", "totp", "u2f":
+			if err := backend.Request(operator.CheckMfaLockout, rr); err != nil {
+				rr.Response.Code = http.StatusForbidden
+				m["title"] = "Authorization Failed"
+				m["view"] = "error"
+				return m, fmt.Errorf("account temporarily locked due to too many failed MFA attempts")
+			}
 			if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
 				checkpoint.FailedAttempts++
 				m["title"] = "Authorization Failed"
@@ -366,6 +372,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				}
 				if tokenValidated {
 					// If validated successfully, continue.
+					backend.Request(operator.ResetMfaFailedAttempts, rr)
 					p.logger.Info(
 						"user authorization checkpoint passed",
 						zap.String("session_id", rr.Upstream.SessionID),
@@ -385,6 +392,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				}
 				m["view"] = "error"
 				checkpoint.FailedAttempts++
+				backend.Request(operator.IncrementMfaFailedAttempts, rr)
 				return m, fmt.Errorf("%s", strings.Join(tokenErrors, "\n"))
 			case uniConfigured && (action == "mfa-u2f-auth" || action == ""):
 				m["title"] = "Hardware Token"
@@ -400,8 +408,10 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					if err := backend.Request(operator.Authenticate, rr); err != nil {
 						m["view"] = "error"
 						checkpoint.FailedAttempts++
+						backend.Request(operator.IncrementMfaFailedAttempts, rr)
 						return m, fmt.Errorf("Token verification failed. Please retry")
 					}
+					backend.Request(operator.ResetMfaFailedAttempts, rr)
 					checkpoint.Passed = true
 					checkpoint.FailedAttempts = 0
 					verifiedCount++

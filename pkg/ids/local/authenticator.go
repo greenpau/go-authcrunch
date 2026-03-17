@@ -398,3 +398,25 @@ func (sa *Authenticator) GetMetadata() map[string]any {
 	defer sa.mux.Unlock()
 	return sa.db.GetMetadata()
 }
+
+// CheckMfaLockout checks whether a user is locked out due to too many
+// failed MFA attempts.
+func (sa *Authenticator) CheckMfaLockout(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.CheckMfaLockout(r)
+}
+
+// IncrementMfaFailedAttempts increments the MFA failed attempt counter.
+func (sa *Authenticator) IncrementMfaFailedAttempts(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.IncrementMfaFailedAttempts(r)
+}
+
+// ResetMfaFailedAttempts resets the MFA failed attempt counter.
+func (sa *Authenticator) ResetMfaFailedAttempts(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.ResetMfaFailedAttempts(r)
+}
