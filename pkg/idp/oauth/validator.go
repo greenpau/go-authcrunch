@@ -16,10 +16,11 @@ package oauth
 
 import (
 	"fmt"
+	"strings"
+
 	jwtlib "github.com/golang-jwt/jwt/v4"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
-	"strings"
 )
 
 type tokenField struct {
@@ -28,23 +29,22 @@ type tokenField struct {
 }
 
 var tokenFields = []tokenField{
-	{name: "sub",     path: []string{"sub"}},
-	{name: "name",    path: []string{"name"}},
-	{name: "email",   path: []string{"email"}},
-	{name: "iat",     path: []string{"iat"}},
-	{name: "exp",     path: []string{"exp"}},
-	{name: "jti",     path: []string{"jti"}},
-	{name: "iss",     path: []string{"iss"}},
-	{name: "groups",  path: []string{"groups"}},
+	{name: "sub", path: []string{"sub"}},
+	{name: "name", path: []string{"name"}},
+	{name: "email", path: []string{"email"}},
+	{name: "iat", path: []string{"iat"}},
+	{name: "exp", path: []string{"exp"}},
+	{name: "jti", path: []string{"jti"}},
+	{name: "iss", path: []string{"iss"}},
+	{name: "groups", path: []string{"groups"}},
 	{name: "picture", path: []string{"picture"}},
 	// Multiple potential paths we need to look for roles in the access token claims
 	{name: "roles", path: []string{"roles"}},
 	{name: "roles", path: []string{"realm_access", "roles"}}, // Keycloak
 	{name: "roles", path: []string{"app_metadata", "authorization", "roles"}},
-	{name: "given_name",  path: []string{"given_name"}},
+	{name: "given_name", path: []string{"given_name"}},
 	{name: "family_name", path: []string{"family_name"}},
 }
-
 
 func getNestedClaim(data map[string]interface{}, path []string) (interface{}, bool) {
 	var current interface{} = data
@@ -64,7 +64,6 @@ func getNestedClaim(data map[string]interface{}, path []string) (interface{}, bo
 	return current, true
 }
 
-
 func mergeClaims(a interface{}, b interface{}) interface{} {
 	aSlice, aOk := a.([]interface{})
 	bSlice, bOk := b.([]interface{})
@@ -75,7 +74,6 @@ func mergeClaims(a interface{}, b interface{}) interface{} {
 
 	return b
 }
-
 
 func (b *IdentityProvider) validateAccessToken(state string, data map[string]interface{}) (map[string]interface{}, error) {
 	var tokenString string
@@ -126,7 +124,7 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 		return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(b.config.IdentityTokenName, err)
 	}
 
-	if _, ok := token.Claims.(jwtlib.Claims); !ok && !token.Valid {
+	if !token.Valid {
 		return nil, errors.ErrIdentityProviderOAuthInvalidToken.WithArgs(b.config.IdentityTokenName, tokenString)
 	}
 	claims := token.Claims.(jwtlib.MapClaims)

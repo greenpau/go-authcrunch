@@ -35,7 +35,7 @@ const (
 
 // IdentityProvider represents OAuth-based identity provider.
 type IdentityProvider struct {
-	config           *Config `json:"config,omitempty" xml:"config,omitempty" yaml:"config,omitempty"`
+	config           *Config
 	metadata         map[string]interface{}
 	keys             map[string]*JwksKey
 	authorizationURL string
@@ -393,7 +393,6 @@ func (b *IdentityProvider) fetchMetadataURL() error {
 func (b *IdentityProvider) countFetchKeysAttempt() {
 	b.lastKeyFetch = time.Now().UTC()
 	b.keyFetchAttempts++
-	return
 }
 
 func (b *IdentityProvider) fetchKeysURL() error {

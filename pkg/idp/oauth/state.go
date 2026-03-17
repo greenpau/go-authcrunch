@@ -109,5 +109,4 @@ func manageStateManager(sm *stateManager) {
 		}
 		sm.mux.Unlock()
 	}
-	return
 }

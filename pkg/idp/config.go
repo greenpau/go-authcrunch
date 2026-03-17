@@ -17,6 +17,7 @@ package idp
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
 	"github.com/greenpau/go-authcrunch/pkg/idp/saml"
@@ -149,7 +150,7 @@ func (cfg *IdentityProviderConfig) Validate() error {
 }
 
 func validateFields(m map[string]interface{}, requiredFields, optionalFields []string) error {
-	if m == nil || len(m) == 0 {
+	if len(m) == 0 {
 		return fmt.Errorf("empty identity provider parameters")
 	}
 

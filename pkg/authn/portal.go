@@ -66,6 +66,7 @@ type Portal struct {
 	sessions          *cache.SessionCache
 	sandboxes         *cache.SandboxCache
 	loginOptions      map[string]interface{}
+	baseURL           string
 	logger            *zap.Logger
 }
 

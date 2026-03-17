@@ -21,7 +21,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -33,6 +32,7 @@ import (
 func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
 	p.injectSessionID(ctx, w, r, rr)
 	usr, _ := p.authorizeRequest(ctx, w, r, rr)
+
 	switch {
 	case r.URL.Path == "/" || r.URL.Path == "/auth" || r.URL.Path == "/auth/":
 		p.injectRedirectURL(ctx, w, r, rr)
@@ -234,73 +234,6 @@ func (p *Portal) handleHTTPRenderPlainText(_ context.Context, w http.ResponseWri
 	return nil
 }
 
-func (p *Portal) injectSessionID(_ context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) {
-	if cookie, err := r.Cookie(p.cookie.SessionID); err == nil {
-		v, err := url.Parse(cookie.Value)
-		if err == nil && v.String() != "" {
-			rr.Upstream.SessionID = util.SanitizeSessionID(v.String())
-			return
-		}
-	}
-	rr.Upstream.SessionID = util.GetRandomStringFromRange(36, 46)
-	w.Header().Add("Set-Cookie", p.cookie.GetSessionCookie(addrutil.GetSourceHost(r), rr.Upstream.SessionID))
-}
-
-func (p *Portal) injectRedirectURL(_ context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) {
-	if r.Method == "GET" {
-		q := r.URL.Query()
-		if redirectURL, exists := q["redirect_url"]; exists {
-			if len(p.config.TrustedLoginRedirectURIConfigs) < 1 {
-				p.logger.Debug(
-					"trust login redirect uri is not configured, but detected redirect_url attempt",
-					zap.String("session_id", rr.Upstream.SessionID),
-					zap.String("request_id", rr.ID),
-				)
-				return
-			}
-
-			if len(redirectURL) != 1 {
-				p.logger.Debug(
-					"unexpected redirect_url format",
-					zap.String("session_id", rr.Upstream.SessionID),
-					zap.String("request_id", rr.ID),
-				)
-				return
-			}
-
-			loginRedirectURL, err := url.Parse(redirectURL[0])
-			if err != nil {
-				p.logger.Debug(
-					"failed to parse provided redirect_url",
-					zap.String("session_id", rr.Upstream.SessionID),
-					zap.String("request_id", rr.ID),
-				)
-				return
-			}
-
-			if !redirects.Match(loginRedirectURL, p.config.TrustedLoginRedirectURIConfigs) {
-				p.logger.Debug(
-					"provided redirect_url is not trusted",
-					zap.String("session_id", rr.Upstream.SessionID),
-					zap.String("request_id", rr.ID),
-				)
-				return
-			}
-
-			c := p.cookie.GetCookie(addrutil.GetSourceHost(r), p.cookie.Referer, util.StripQueryParam(redirectURL[0], "login_hint"))
-			p.logger.Debug(
-				"redirect recorded",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.String("redirect_url", c),
-				zap.Any("redirect_url_any", redirectURL),
-			)
-			w.Header().Add("Set-Cookie", c)
-			rr.Response.RedirectURL = c
-		}
-	}
-}
-
 func (p *Portal) authorizeRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) (*user.User, error) {
 	extractBasePath(ctx, r, rr)
 	ar := requests.NewAuthorizationRequest()
@@ -331,59 +264,4 @@ func (p *Portal) authorizeRequest(ctx context.Context, w http.ResponseWriter, r 
 		rr.Response.Authenticated = true
 	}
 	return usr, nil
-}
-
-func extractBaseURLPath(_ context.Context, r *http.Request, rr *requests.Request, s string) {
-	baseURL, basePath := util.GetBaseURL(r, s)
-	rr.Upstream.BaseURL = baseURL
-	if basePath == "/" {
-		rr.Upstream.BasePath = basePath
-		return
-	}
-	if strings.HasSuffix(basePath, "/") {
-		rr.Upstream.BasePath = basePath
-		return
-	}
-	rr.Upstream.BasePath = basePath + "/"
-}
-
-func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request) {
-	switch {
-	case r.URL.Path == "/":
-		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
-		rr.Upstream.BasePath = "/"
-	case r.URL.Path == "/auth":
-		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
-		rr.Upstream.BasePath = "/auth/"
-	case strings.Contains(r.URL.Path, "/profile/"):
-		extractBaseURLPath(ctx, r, rr, "/profile")
-	case strings.HasSuffix(r.URL.Path, "/portal"):
-		extractBaseURLPath(ctx, r, rr, "/portal")
-	case strings.Contains(r.URL.Path, "/sandbox/"):
-		extractBaseURLPath(ctx, r, rr, "/sandbox/")
-	case strings.HasSuffix(r.URL.Path, "/recover"), strings.HasSuffix(r.URL.Path, "/forgot"):
-		extractBaseURLPath(ctx, r, rr, "/recover,/forgot")
-	case strings.HasSuffix(r.URL.Path, "/register"):
-		extractBaseURLPath(ctx, r, rr, "/register")
-	case strings.HasSuffix(r.URL.Path, "/whoami"):
-		extractBaseURLPath(ctx, r, rr, "/whoami")
-	case strings.Contains(r.URL.Path, "/saml/"):
-		extractBaseURLPath(ctx, r, rr, "/saml/")
-	case strings.Contains(r.URL.Path, "/oauth2/"):
-		extractBaseURLPath(ctx, r, rr, "/oauth2/")
-	case strings.HasSuffix(r.URL.Path, "/basic/login"):
-		extractBaseURLPath(ctx, r, rr, "/basic/login")
-	case strings.HasSuffix(r.URL.Path, "/logout"):
-		extractBaseURLPath(ctx, r, rr, "/logout")
-	case strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon"):
-		extractBaseURLPath(ctx, r, rr, "/assets/")
-	case strings.HasSuffix(r.URL.Path, "/login"):
-		extractBaseURLPath(ctx, r, rr, "/login")
-	case strings.HasPrefix(r.URL.Path, "/auth"):
-		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
-		rr.Upstream.BasePath = "/auth/"
-	default:
-		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
-		rr.Upstream.BasePath = "/"
-	}
 }
