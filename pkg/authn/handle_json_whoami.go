@@ -89,6 +89,7 @@ func (p *Portal) handleJSONWhoami(ctx context.Context, w http.ResponseWriter, r 
 			"failed returning id_token",
 			zap.String("session_id", rr.Upstream.SessionID),
 			zap.String("request_id", rr.ID),
+			zap.String("identity_token_cookie_name", provider.GetIdentityTokenCookieName()),
 			zap.String("error", "identity token cookie not found"),
 		)
 		return p.handleJSONWhoamiPlain(ctx, w, usr)

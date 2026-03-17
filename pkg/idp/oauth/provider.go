@@ -269,6 +269,8 @@ func (b *IdentityProvider) Configure() error {
 		zap.Int("retry_interval", b.config.RetryInterval),
 		zap.Strings("scopes", b.config.Scopes),
 		zap.Any("login_icon", b.config.LoginIcon),
+		zap.String("identity_token_cookie_name", b.config.IdentityTokenCookieName),
+		zap.Bool("identity_token_cookie_enabled", b.config.IdentityTokenCookieEnabled),
 	)
 
 	b.configured = true
