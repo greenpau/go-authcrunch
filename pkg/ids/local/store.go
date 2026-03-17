@@ -152,6 +152,12 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 		return b.authenticator.DeleteUser(r)
 	case operator.LookupAPIKey:
 		return b.authenticator.LookupAPIKey(r)
+	case operator.CheckMfaLockout:
+		return b.authenticator.CheckMfaLockout(r)
+	case operator.IncrementMfaFailedAttempts:
+		return b.authenticator.IncrementMfaFailedAttempts(r)
+	case operator.ResetMfaFailedAttempts:
+		return b.authenticator.ResetMfaFailedAttempts(r)
 	}
 
 	b.logger.Error(

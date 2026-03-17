@@ -620,6 +620,70 @@ func (db *Database) AuthenticateUser(r *requests.Request) error {
 	return nil
 }
 
+// CheckMfaLockout returns an error if the user is locked out due to
+// too many failed MFA attempts.
+func (db *Database) CheckMfaLockout(r *requests.Request) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	user, err := db.getUser(r.User.Username)
+	if err != nil {
+		return nil
+	}
+	if user.Lockout == nil || user.MfaFailedAttempts == 0 {
+		return nil
+	}
+	if user.Lockout.IsLocked() {
+		return errors.ErrMfaLockout.WithArgs("too many failed attempts")
+	}
+	// Lockout expired, auto-clear.
+	user.Lockout.Enabled = false
+	user.MfaFailedAttempts = 0
+	if err := db.commit(); err != nil {
+		// Revert in-memory state on persist failure.
+		user.Lockout.Enabled = true
+		return errors.ErrMfaLockout.WithArgs("too many failed attempts")
+	}
+	return nil
+}
+
+// IncrementMfaFailedAttempts increments the MFA failed attempt counter
+// and triggers a lockout if the threshold is exceeded.
+func (db *Database) IncrementMfaFailedAttempts(r *requests.Request) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	user, err := db.getUser(r.User.Username)
+	if err != nil {
+		return nil
+	}
+	user.MfaFailedAttempts++
+	if user.MfaFailedAttempts >= 10 {
+		if user.Lockout == nil {
+			user.Lockout = NewLockoutState()
+		}
+		user.Lockout.Lock(15 * time.Minute)
+	}
+	return db.commit()
+}
+
+// ResetMfaFailedAttempts resets the MFA failed attempt counter
+// and clears any active lockout.
+func (db *Database) ResetMfaFailedAttempts(r *requests.Request) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	user, err := db.getUser(r.User.Username)
+	if err != nil {
+		return nil
+	}
+	if user.MfaFailedAttempts == 0 {
+		return nil
+	}
+	user.MfaFailedAttempts = 0
+	if user.Lockout != nil {
+		user.Lockout.Enabled = false
+	}
+	return db.commit()
+}
+
 // getUser return User by either email address or username.
 func (db *Database) getUser(s string) (*User, error) {
 	if strings.Contains(s, "@") {

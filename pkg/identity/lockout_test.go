@@ -16,8 +16,35 @@ package identity
 
 import (
 	"testing"
+	"time"
 )
 
 func TestNewLockoutState(t *testing.T) {
 	NewLockoutState()
+}
+
+func TestLockoutState(t *testing.T) {
+	ls := NewLockoutState()
+	ls.Lock(15 * time.Minute)
+	if !ls.Enabled {
+		t.Fatalf("expected Enabled after Lock")
+	}
+	if ls.EndTime.Before(ls.StartTime) {
+		t.Fatalf("unexpected EndTime before StartTime")
+	}
+	if !ls.IsLocked() {
+		t.Fatalf("expected IsLocked to return true during active lockout")
+	}
+
+	ls2 := NewLockoutState()
+	if ls2.IsLocked() {
+		t.Fatalf("expected IsLocked to return false when not enabled")
+	}
+
+	ls3 := NewLockoutState()
+	ls3.Lock(1 * time.Millisecond)
+	time.Sleep(2 * time.Millisecond)
+	if ls3.IsLocked() {
+		t.Fatalf("expected IsLocked to return false after expiry")
+	}
 }

@@ -31,3 +31,18 @@ type LockoutState struct {
 func NewLockoutState() *LockoutState {
 	return &LockoutState{}
 }
+
+// Lock enables the lockout for the specified duration.
+func (l *LockoutState) Lock(duration time.Duration) {
+	l.Enabled = true
+	l.StartTime = time.Now().UTC()
+	l.EndTime = l.StartTime.Add(duration)
+}
+
+// IsLocked returns true if the lockout is active and has not expired.
+func (l *LockoutState) IsLocked() bool {
+	if !l.Enabled {
+		return false
+	}
+	return time.Now().UTC().Before(l.EndTime)
+}

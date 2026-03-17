@@ -68,6 +68,15 @@ const (
 	// LookupAPIKey operator signals the retrieval of user identity associated
 	// with an API key
 	LookupAPIKey
+	// CheckMfaLockout operator signals checking whether a user is locked out
+	// due to too many failed MFA attempts.
+	CheckMfaLockout
+	// IncrementMfaFailedAttempts operator signals incrementing the MFA failed
+	// attempt counter for a user.
+	IncrementMfaFailedAttempts
+	// ResetMfaFailedAttempts operator signals resetting the MFA failed
+	// attempt counter for a user.
+	ResetMfaFailedAttempts
 )
 
 // String returns string representation of an operator.
@@ -117,6 +126,12 @@ func (e Type) String() string {
 		return "IdentifyUser"
 	case LookupAPIKey:
 		return "LookupAPIKey"
+	case CheckMfaLockout:
+		return "CheckMfaLockout"
+	case IncrementMfaFailedAttempts:
+		return "IncrementMfaFailedAttempts"
+	case ResetMfaFailedAttempts:
+		return "ResetMfaFailedAttempts"
 	}
 	return fmt.Sprintf("Type(%d)", int(e))
 }
