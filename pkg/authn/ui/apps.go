@@ -35,7 +35,7 @@ var (
 		"profile/fonts/fonts.css":            "profile/fonts/fonts.css",
 		"profile/images/banner.jpg":          "profile/images/banner.jpg",
 		"profile/assets/index-Dg1KKZmD.css":  "profile/assets/index-Dg1KKZmD.css",
-		"profile/assets/index-DaTiwhmJ.js":   "profile/assets/index-DaTiwhmJ.js",
+		"profile/assets/index-YxE65L9G.js":   "profile/assets/index-YxE65L9G.js",
 		"profile/favicon.ico":                "profile/favicon.ico",
 		"profile/logo192.png":                "profile/logo192.png",
 		"profile/logo512.png":                "profile/logo512.png",

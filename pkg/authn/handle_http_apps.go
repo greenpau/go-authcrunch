@@ -80,6 +80,13 @@ func (p *Portal) handleHTTPApps(ctx context.Context, w http.ResponseWriter, r *h
 		}
 	}
 	w.WriteHeader(http.StatusOK)
+
+	if (strings.HasSuffix(assetPath, "/") || strings.HasSuffix(assetPath, "/index.html") || strings.Count(assetPath, "/") >= 3 || strings.HasSuffix(assetPath, "/new")) && rr.Upstream.BasePath != "/auth/" {
+		assetContent := strings.ReplaceAll(asset.Content, "/auth/"+appName, rr.Upstream.BasePath+appName)
+		io.WriteString(w, assetContent)
+		return nil
+	}
+
 	io.WriteString(w, asset.Content)
 	return nil
 }

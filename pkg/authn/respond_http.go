@@ -34,7 +34,7 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 	usr, _ := p.authorizeRequest(ctx, w, r, rr)
 
 	switch {
-	case r.URL.Path == "/" || r.URL.Path == "/auth" || r.URL.Path == "/auth/":
+	case r.URL.Path == "/" || r.URL.Path == "/auth" || r.URL.Path == "/auth/" || r.URL.Path == rr.Upstream.BasePath:
 		p.injectRedirectURL(ctx, w, r, rr)
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 	case strings.Contains(r.URL.Path, "/profile/"):
@@ -97,6 +97,8 @@ func (p *Portal) handleHTTPErrorWithLog(ctx context.Context, w http.ResponseWrit
 		zap.String("request_id", rr.ID),
 		zap.Any("error", msg),
 		zap.String("source_address", addrutil.GetSourceAddress(r)),
+		// zap.String("upstream_base_url", rr.Upstream.BaseURL),
+		// zap.String("upstream_base_path", rr.Upstream.BasePath),
 	)
 	return p.handleHTTPError(ctx, w, r, rr, code)
 }

@@ -23,6 +23,21 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
+func extractBasePathPrefix(path string) string {
+	if path == "" || path == "/" {
+		return "/"
+	}
+	basePath := path
+	if path[0] == '/' {
+		basePath = path[1:]
+	}
+	i := strings.IndexByte(basePath, '/')
+	if i == -1 {
+		return "/" + basePath + "/"
+	}
+	return "/" + basePath[:i] + "/"
+}
+
 func extractBaseURLPath(_ context.Context, r *http.Request, rr *requests.Request, s string) {
 	baseURL, basePath := util.GetBaseURL(r, s)
 	rr.Upstream.BaseURL = baseURL
@@ -34,6 +49,7 @@ func extractBaseURLPath(_ context.Context, r *http.Request, rr *requests.Request
 		rr.Upstream.BasePath = basePath
 		return
 	}
+
 	rr.Upstream.BasePath = basePath + "/"
 }
 
@@ -69,11 +85,11 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 		extractBaseURLPath(ctx, r, rr, "/assets/")
 	case strings.HasSuffix(r.URL.Path, "/login"):
 		extractBaseURLPath(ctx, r, rr, "/login")
-	case strings.HasPrefix(r.URL.Path, "/auth"):
+	case strings.HasPrefix(r.URL.Path, "/auth/"):
 		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
 		rr.Upstream.BasePath = "/auth/"
 	default:
 		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
-		rr.Upstream.BasePath = "/"
+		rr.Upstream.BasePath = extractBasePathPrefix(r.URL.Path)
 	}
 }
