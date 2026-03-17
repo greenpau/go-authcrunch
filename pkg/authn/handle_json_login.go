@@ -153,6 +153,9 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			checkpoint.Passed = true
 			prevCheckpointPassed = true
 		case checkpoint.Type == "totp" || (checkpoint.Type == "mfa" && challengeContainsOnlyNumbers):
+			if err := backend.Request(operator.CheckMfaLockout, rr); err != nil {
+				return fmt.Errorf("account temporarily locked due to too many failed MFA attempts")
+			}
 			rr.Flags.Enabled = true
 			rr.User.Username = authRequest.Username
 			rr.MfaToken.Passcode = authRequest.ChallengeResponse
@@ -190,6 +193,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			if !tokenValidated {
 				rr.Response.Code = http.StatusUnauthorized
 				checkpoint.FailedAttempts++
+				backend.Request(operator.IncrementMfaFailedAttempts, rr)
 				p.logger.Warn(
 					"totp passcode authentication failed",
 					zap.String("session_id", rr.Upstream.SessionID),
@@ -203,6 +207,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				return fmt.Errorf("totp passcode authentication failed")
 			}
 
+			backend.Request(operator.ResetMfaFailedAttempts, rr)
 			p.logger.Info(
 				"user authentication checkpoint passed",
 				zap.String("session_id", rr.Upstream.SessionID),
@@ -281,12 +286,16 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			}
 			usr.Authenticator.NextChallenge = "mfa:u2f:" + base64.StdEncoding.EncodeToString(jsonChallenge)
 		case checkpoint.Type == "u2f":
+			if err := backend.Request(operator.CheckMfaLockout, rr); err != nil {
+				return fmt.Errorf("account temporarily locked due to too many failed MFA attempts")
+			}
 			rr.Flags.Enabled = true
 			rr.User.Username = authRequest.Username
 			rr.WebAuthn.Challenge = usr.Authenticator.TempChallenge
 			if err := backend.Request(operator.Authenticate, rr); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
 				checkpoint.FailedAttempts++
+				backend.Request(operator.IncrementMfaFailedAttempts, rr)
 				p.logger.Warn(
 					"u2f authentication failed",
 					zap.String("session_id", rr.Upstream.SessionID),
@@ -299,6 +308,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				)
 				return fmt.Errorf("u2f authentication failed")
 			}
+			backend.Request(operator.ResetMfaFailedAttempts, rr)
 			p.logger.Info(
 				"user authentication checkpoint passed",
 				zap.String("session_id", rr.Upstream.SessionID),
