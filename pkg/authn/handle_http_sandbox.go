@@ -308,6 +308,14 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 			}
 		case "mfa", "totp", "u2f":
 			if err := backend.Request(operator.CheckMfaLockout, rr); err != nil {
+				p.logger.Warn(
+					"user locked out due to too many failed MFA attempts",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("src_ip", addrutil.GetSourceAddress(r)),
+					zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+					zap.String("checkpoint_type", checkpoint.Type),
+				)
 				rr.Response.Code = http.StatusForbidden
 				m["title"] = "Authorization Failed"
 				m["view"] = "error"
