@@ -154,6 +154,14 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			prevCheckpointPassed = true
 		case checkpoint.Type == "totp" || (checkpoint.Type == "mfa" && challengeContainsOnlyNumbers):
 			if err := backend.Request(operator.CheckMfaLockout, rr); err != nil {
+				p.logger.Warn(
+					"user locked out due to too many failed MFA attempts",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("src_ip", addrutil.GetSourceAddress(r)),
+					zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+					zap.String("checkpoint_type", checkpoint.Type),
+				)
 				return fmt.Errorf("account temporarily locked due to too many failed MFA attempts")
 			}
 			rr.Flags.Enabled = true
@@ -287,6 +295,14 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			usr.Authenticator.NextChallenge = "mfa:u2f:" + base64.StdEncoding.EncodeToString(jsonChallenge)
 		case checkpoint.Type == "u2f":
 			if err := backend.Request(operator.CheckMfaLockout, rr); err != nil {
+				p.logger.Warn(
+					"user locked out due to too many failed MFA attempts",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("src_ip", addrutil.GetSourceAddress(r)),
+					zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+					zap.String("checkpoint_type", checkpoint.Type),
+				)
 				return fmt.Errorf("account temporarily locked due to too many failed MFA attempts")
 			}
 			rr.Flags.Enabled = true
