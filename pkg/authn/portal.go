@@ -225,17 +225,23 @@ func (p *Portal) configureEssentials() error {
 	p.sandboxes = cache.NewSandboxCache()
 	p.sandboxes.Run()
 
-	p.logger.Debug(
-		"Configuring cookie parameters",
-		zap.String("portal_name", p.config.Name),
-		zap.Any("cookie_config", p.config.CookieConfig),
-	)
-
 	c, err := cookie.NewFactory(p.config.CookieConfig)
 	if err != nil {
 		return err
 	}
 	p.cookie = c
+
+	p.logger.Debug(
+		"Configured cookie parameters",
+		zap.String("portal_name", p.config.Name),
+		zap.Any("cookie_config", p.config.CookieConfig),
+		zap.String("session_id_cookie_name", p.cookie.SessionIDCookieName),
+		zap.String("sandbox_id_cookie_name", p.cookie.SandboxIDCookieName),
+		zap.String("referer_cookie_name", p.cookie.RefererCookieName),
+		zap.String("identity_token_cookie_name", p.cookie.IdentityTokenCookieName),
+		zap.String("access_token_cookie_name", p.cookie.AccessTokenCookieName),
+		zap.String("refresh_token_cookie_name", p.cookie.RefreshTokenCookieName),
+	)
 
 	p.logger.Debug(
 		"Configuring default portal user roles",
@@ -363,12 +369,21 @@ func (p *Portal) configureCryptoKeyStore() error {
 		return errors.ErrCryptoKeyStoreConfig.WithArgs(p.config.Name, err)
 	}
 
+	if p.config.TokenGrantorOptions == nil {
+		p.config.TokenGrantorOptions = options.NewTokenGrantorOptions()
+	}
+
+	if p.config.TokenGrantorOptions.AccessTokenCookieName == "" && p.config.CookieConfig != nil {
+		p.config.TokenGrantorOptions.AccessTokenCookieName = p.config.CookieConfig.AccessTokenCookieName
+	}
+
 	p.logger.Debug(
 		"Configured validator ACL",
 		zap.String("portal_name", p.config.Name),
 		zap.String("portal_id", p.id),
 		zap.Any("token_validator_options", p.config.TokenValidatorOptions),
 		zap.Any("token_grantor_options", p.config.TokenGrantorOptions),
+		zap.Any("auth_cookies", p.validator.GetAuthCookies()),
 	)
 	return nil
 }
@@ -781,4 +796,12 @@ func (p *Portal) GetUserRegistryByRealmName(realmName string) registry.UserRegis
 	}
 
 	return nil
+}
+
+// GetAccessTokenCookieName returns the name of access_token cookie issued by the Portal.
+func (p *Portal) GetAccessTokenCookieName() string {
+	if p.config.TokenGrantorOptions == nil {
+		return ""
+	}
+	return p.config.TokenGrantorOptions.AccessTokenCookieName
 }

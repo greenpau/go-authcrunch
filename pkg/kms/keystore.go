@@ -198,7 +198,7 @@ func (ks *CryptoKeyStore) AddKey(k *CryptoKey) error {
 func (ks *CryptoKeyStore) ParseToken(ar *requests.AuthorizationRequest) (*user.User, error) {
 	for _, k := range ks.verifyKeys {
 		if _, exists := reservedTokenNames[ar.Token.Name]; !exists {
-			if ar.Token.Name != k.Verify.Token.Name {
+			if (ar.Token.Name != k.Verify.Token.Name) && ar.Token.Source != "cookie" {
 				continue
 			}
 		}

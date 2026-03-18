@@ -14,6 +14,8 @@
 
 package requests
 
+import "encoding/json"
+
 // AuthorizationRequest hold the data associated with request authorization.
 type AuthorizationRequest struct {
 	ID        string                `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
@@ -56,4 +58,16 @@ type RedirectResponse struct {
 // NewAuthorizationRequest returns an instance of AuthorizationRequest.
 func NewAuthorizationRequest() *AuthorizationRequest {
 	return &AuthorizationRequest{}
+}
+
+// Dump returns JSON data map containing AuthorizationRequest.
+func (ar *AuthorizationRequest) Dump() string {
+	if ar == nil {
+		return "{}"
+	}
+	b, err := json.MarshalIndent(ar, "", "  ")
+	if err != nil {
+		return "{\"error\": \"" + err.Error() + "\"}"
+	}
+	return string(b)
 }

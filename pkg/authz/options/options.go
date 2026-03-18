@@ -16,15 +16,17 @@ package options
 
 // TokenValidatorOptions provides options for TokenValidator.
 type TokenValidatorOptions struct {
-	ValidateSourceAddress       bool `json:"validate_source_address,omitempty" xml:"validate_source_address,omitempty" yaml:"validate_source_address,omitempty"`
-	ValidateBearerHeader        bool `json:"validate_bearer_header,omitempty" xml:"validate_bearer_header,omitempty" yaml:"validate_bearer_header,omitempty"`
-	ValidateMethodPath          bool `json:"validate_method_path,omitempty" xml:"validate_method_path,omitempty" yaml:"validate_method_path,omitempty"`
-	ValidateAccessListPathClaim bool `json:"validate_access_list_path_claim,omitempty" xml:"validate_access_list_path_claim,omitempty" yaml:"validate_access_list_path_claim,omitempty"`
+	ValidateSourceAddress            bool     `json:"validate_source_address,omitempty" xml:"validate_source_address,omitempty" yaml:"validate_source_address,omitempty"`
+	ValidateBearerHeader             bool     `json:"validate_bearer_header,omitempty" xml:"validate_bearer_header,omitempty" yaml:"validate_bearer_header,omitempty"`
+	ValidateMethodPath               bool     `json:"validate_method_path,omitempty" xml:"validate_method_path,omitempty" yaml:"validate_method_path,omitempty"`
+	ValidateAccessListPathClaim      bool     `json:"validate_access_list_path_claim,omitempty" xml:"validate_access_list_path_claim,omitempty" yaml:"validate_access_list_path_claim,omitempty"`
+	AdditionalAccessTokenCookieNames []string `json:"additional_access_token_cookie_names,omitempty" xml:"additional_access_token_cookie_names,omitempty" yaml:"additional_access_token_cookie_names,omitempty"`
 }
 
 // TokenGrantorOptions provides options for TokenGrantor.
 type TokenGrantorOptions struct {
-	EnableSourceAddress bool `json:"enable_source_address,omitempty" xml:"enable_source_address,omitempty" yaml:"enable_source_address,omitempty"`
+	EnableSourceAddress   bool   `json:"enable_source_address,omitempty" xml:"enable_source_address,omitempty" yaml:"enable_source_address,omitempty"`
+	AccessTokenCookieName string `json:"access_token_cookie_name,omitempty" xml:"access_token_cookie_name,omitempty" yaml:"access_token_cookie_name,omitempty"`
 }
 
 // NewTokenValidatorOptions returns an instance of TokenValidatorOptions

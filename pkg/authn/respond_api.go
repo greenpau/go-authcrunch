@@ -29,11 +29,12 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 	p.disableClientCache(w)
 	p.injectSessionID(ctx, w, r, rr)
 	w.Header().Set("Content-Type", "application/json")
+
 	p.logger.Debug(
 		"Received API request",
 		zap.String("session_id", rr.Upstream.SessionID),
 		zap.String("request_id", rr.ID),
-		zap.String("url_path", r.URL.Path),
+		zap.String("url__base_path", rr.Upstream.BasePath),
 		zap.String("src_ip", addrutil.GetSourceAddress(r)),
 		zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
 	)
@@ -50,6 +51,8 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	switch {
+	case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/api/refresh_token"):
+		return p.handleAPIRefreshToken(ctx, w, r, rr, usr)
 	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/realms"):
 		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
 			p.logger.Debug(

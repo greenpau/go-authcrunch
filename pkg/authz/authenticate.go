@@ -66,7 +66,7 @@ func (g *Gatekeeper) Authenticate(w http.ResponseWriter, r *http.Request, ar *re
 }
 
 // handleAuthorizedUser handles authorized requests.
-func (g *Gatekeeper) handleAuthorizedUser(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest, usr *user.User) error {
+func (g *Gatekeeper) handleAuthorizedUser(_ http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest, usr *user.User) error {
 	g.injectHeaders(r, usr)
 	g.stripAuthToken(r, usr)
 
@@ -92,7 +92,7 @@ func (g *Gatekeeper) handleAuthorizedUser(w http.ResponseWriter, r *http.Request
 
 // parseSessionID extracts Session ID from HTTP request.
 func (g *Gatekeeper) parseSessionID(r *http.Request, ar *requests.AuthorizationRequest) {
-	if cookie, err := r.Cookie("AUTHP_SESSION_ID"); err == nil {
+	if cookie, err := r.Cookie(g.sessionIDCookieName); err == nil {
 		v, err := url.Parse(cookie.Value)
 		if err == nil && v.String() != "" {
 			ar.SessionID = util.SanitizeSessionID(v.String())

@@ -20,11 +20,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/internal/tests"
-	"github.com/greenpau/go-authcrunch/internal/testutils"
-	"github.com/greenpau/go-authcrunch/pkg/acl"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -32,6 +27,12 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/internal/testutils"
+	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 
 	"net/http/httptest"
 	"testing"
@@ -190,7 +191,7 @@ func buildClient(t *testing.T, ts *httptest.Server, req *testRequest) http.Clien
 			t.Fatalf("Failed to get JWT token for %v: %v", usr.AsMap(), err)
 		}
 		cookies := []*http.Cookie{
-			&http.Cookie{Name: "access_token", Value: usr.Token},
+			{Name: "access_token", Value: usr.Token},
 		}
 		req.token = usr.Token
 

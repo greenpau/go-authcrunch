@@ -17,6 +17,7 @@ package authcrunch
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
@@ -70,9 +71,9 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 	}
 
 	srv := &Server{
-		config:    config,
-		logger:    logger,
-		nameRefs:  newRefMap(),
+		config:   config,
+		logger:   logger,
+		nameRefs: newRefMap(),
 	}
 
 	for _, cfg := range config.IdentityProviders {
@@ -156,6 +157,17 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 	}
 
 	for _, cfg := range config.AuthorizationPolicies {
+		for _, portal := range srv.portals {
+			portalAccessTokenCookieName := portal.GetAccessTokenCookieName()
+			if portalAccessTokenCookieName == "" {
+				continue
+			}
+			if slices.Contains(cfg.AccessTokenCookieNames, portalAccessTokenCookieName) {
+				continue
+			}
+			cfg.AccessTokenCookieNames = append(cfg.AccessTokenCookieNames, portalAccessTokenCookieName)
+		}
+
 		gatekeeper, err := authz.NewGatekeeper(cfg, logger)
 		if err != nil {
 			return nil, err

@@ -55,7 +55,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 	// Parse sandbox cookie and authenticate temporary session ID
 	// and secret.
 	for _, cookie := range r.Cookies() {
-		if cookie.Name != p.cookie.SandboxID {
+		if cookie.Name != p.cookie.SandboxIDCookieName {
 			continue
 		}
 		v := strings.TrimSpace(cookie.Value)

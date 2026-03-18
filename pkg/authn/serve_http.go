@@ -16,10 +16,11 @@ package authn
 
 import (
 	"context"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/util"
 	"net/http"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
 // ServeHTTP is a gateway for the authentication portal.
@@ -34,7 +35,7 @@ func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.R
 	if p.config.UI.Title != "" {
 		rr.Response.Title = p.config.UI.Title
 	}
-	rr.Response.RedirectTokenName = p.cookie.Referer
+	rr.Response.RedirectTokenName = p.cookie.RefererCookieName
 	switch {
 	case strings.Contains(r.URL.Path, "/api/"):
 		return p.handleAPI(ctx, w, r, rr)

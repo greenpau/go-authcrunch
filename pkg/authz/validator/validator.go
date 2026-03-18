@@ -329,6 +329,10 @@ func (v *TokenValidator) Configure(ctx context.Context, keys []*kms.CryptoKey, a
 
 	v.opts = opts
 
+	for _, cookieName := range opts.AdditionalAccessTokenCookieNames {
+		v.authCookies[cookieName] = true
+	}
+
 	switch {
 	case opts.ValidateMethodPath && opts.ValidateSourceAddress && opts.ValidateAccessListPathClaim:
 		g := &guardianWithMethodPathSrcAddrPathClaim{accessList: accessList}

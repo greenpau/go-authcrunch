@@ -16,14 +16,15 @@ package authn
 
 import (
 	"context"
-	"github.com/greenpau/go-authcrunch/pkg/redirects"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
-	"go.uber.org/zap"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
+	"go.uber.org/zap"
 )
 
 func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, authMethod string) error {
@@ -43,12 +44,14 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(providerIdentityTokenCookieName))
 	}
 
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie())
+
 	h := addrutil.GetSourceHost(r)
 	for tokenName := range p.validator.GetAuthCookies() {
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, tokenName))
 	}
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.Referer))
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SessionID))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.RefererCookieName))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SessionIDCookieName))
 
 	cfg := provider.GetConfig()
 	logoutEnabled := false

@@ -175,6 +175,7 @@ func TestNewServer(t *testing.T) {
 					"portal_guest_roles": {
 						"authp/guest": true
 					},
+					"token_grantor_options": {},
                     "token_validator_options": {
                       "validate_bearer_header": true
                     },

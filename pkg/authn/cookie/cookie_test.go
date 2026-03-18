@@ -16,8 +16,9 @@ package cookie
 
 import (
 	"fmt"
-	"github.com/greenpau/go-authcrunch/internal/tests"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
 )
 
 func TestFactory(t *testing.T) {
@@ -44,7 +45,7 @@ func TestFactory(t *testing.T) {
 			host: "auth.contoso.com",
 			config: &Config{
 				Domains: map[string]*DomainConfig{
-					"contoso.com": &DomainConfig{
+					"contoso.com": {
 						Seq:    0,
 						Domain: "contoso.com",
 					},
@@ -62,7 +63,7 @@ func TestFactory(t *testing.T) {
 			host: "contoso.com",
 			config: &Config{
 				Domains: map[string]*DomainConfig{
-					"contoso.com": &DomainConfig{
+					"contoso.com": {
 						Seq:    0,
 						Domain: "contoso.com",
 					},
@@ -90,7 +91,7 @@ func TestFactory(t *testing.T) {
 			host: "auth.contoso.com",
 			config: &Config{
 				Domains: map[string]*DomainConfig{
-					"contoso.com": &DomainConfig{
+					"contoso.com": {
 						Seq:    0,
 						Domain: "contoso.com",
 					},
@@ -109,7 +110,7 @@ func TestFactory(t *testing.T) {
 			host: "auth.contoso.com",
 			config: &Config{
 				Domains: map[string]*DomainConfig{
-					"contoso.com": &DomainConfig{
+					"contoso.com": {
 						Seq:    0,
 						Domain: "contoso.com",
 					},
@@ -124,7 +125,7 @@ func TestFactory(t *testing.T) {
 			host: "auth.contoso.com",
 			config: &Config{
 				Domains: map[string]*DomainConfig{
-					"contoso.com": &DomainConfig{
+					"contoso.com": {
 						Seq:    0,
 						Domain: "contoso.com",
 						Path:   "/mydir",
@@ -143,12 +144,12 @@ func TestFactory(t *testing.T) {
 			host: "auth.contoso.com",
 			config: &Config{
 				Domains: map[string]*DomainConfig{
-					"contoso.com": &DomainConfig{
+					"contoso.com": {
 						Seq:      0,
 						Domain:   "contoso.com",
 						Lifetime: 900,
 					},
-					"foo.bar": &DomainConfig{
+					"foo.bar": {
 						Seq:      0,
 						Domain:   "foo.bar",
 						Lifetime: 900,
@@ -287,7 +288,7 @@ func TestFactory(t *testing.T) {
 			host: "bar.co.uk",
 			config: &Config{
 				Domains: map[string]*DomainConfig{
-					"bar.co.uk": &DomainConfig{
+					"bar.co.uk": {
 						Seq:    0,
 						Domain: "bar.co.uk",
 					},
@@ -374,7 +375,7 @@ func TestFactory(t *testing.T) {
 			host: "evil-example.com",
 			config: &Config{
 				Domains: map[string]*DomainConfig{
-					"example.com": &DomainConfig{
+					"example.com": {
 						Seq:    0,
 						Domain: "example.com",
 					},
@@ -392,7 +393,7 @@ func TestFactory(t *testing.T) {
 			host: "auth.example.com",
 			config: &Config{
 				Domains: map[string]*DomainConfig{
-					"example.com": &DomainConfig{
+					"example.com": {
 						Seq:    0,
 						Domain: "example.com",
 					},

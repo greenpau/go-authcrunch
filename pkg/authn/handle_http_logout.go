@@ -39,8 +39,9 @@ func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r 
 	for tokenName := range p.validator.GetAuthCookies() {
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, tokenName))
 	}
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.Referer))
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SessionID))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie())
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.RefererCookieName))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SessionIDCookieName))
 
 	if parsedUser != nil && parsedUser.Claims != nil {
 		p.logger.Debug(

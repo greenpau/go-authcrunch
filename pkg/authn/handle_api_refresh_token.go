@@ -16,22 +16,20 @@ package authn
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
-	"net/url"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/util"
-	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
+	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
-func (p *Portal) injectSessionID(_ context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) {
-	if cookie, err := r.Cookie(p.cookie.SessionIDCookieName); err == nil {
-		v, err := url.Parse(cookie.Value)
-		if err == nil && v.String() != "" {
-			rr.Upstream.SessionID = util.SanitizeSessionID(v.String())
-			return
-		}
-	}
-	rr.Upstream.SessionID = util.GetRandomStringFromRange(36, 46)
-	w.Header().Add("Set-Cookie", p.cookie.GetSessionCookie(addrutil.GetSourceHost(r), rr.Upstream.SessionID))
+func (p *Portal) handleAPIRefreshToken(_ context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request, _ *user.User) error {
+	rr.Response.Code = http.StatusOK
+	resp := make(map[string]interface{})
+	resp["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)
+	respBytes, _ := json.Marshal(resp)
+	w.WriteHeader(rr.Response.Code)
+	w.Write(respBytes)
+	return nil
 }

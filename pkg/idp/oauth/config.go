@@ -20,25 +20,23 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
-const defaultIdentityTokenCookieName string = "AUTHP_ID_TOKEN"
-
 // Config holds the configuration for the IdentityProvider.
 type Config struct {
-	Name              string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	Realm             string `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
-	Driver            string `json:"driver,omitempty" xml:"driver,omitempty" yaml:"driver,omitempty"`
-	DomainName        string `json:"domain_name,omitempty" xml:"domain_name,omitempty" yaml:"domain_name,omitempty"`
-	ClientID          string `json:"client_id,omitempty" xml:"client_id,omitempty" yaml:"client_id,omitempty"`
-	ClientSecret      string `json:"client_secret,omitempty" xml:"client_secret,omitempty" yaml:"client_secret,omitempty"`
-	ServerID          string `json:"server_id,omitempty" xml:"server_id,omitempty" yaml:"server_id,omitempty"`
-	ServerName        string `json:"server_name,omitempty" xml:"server_name,omitempty" yaml:"server_name,omitempty"`
-	AppSecret         string `json:"app_secret,omitempty" xml:"app_secret,omitempty" yaml:"app_secret,omitempty"`
-	TenantID          string `json:"tenant_id,omitempty" xml:"tenant_id,omitempty" yaml:"tenant_id,omitempty"`
-	IdentityTokenName string `json:"identity_token_name,omitempty" xml:"identity_token_name,omitempty" yaml:"identity_token_name,omitempty"`
+	Name         string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Realm        string `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
+	Driver       string `json:"driver,omitempty" xml:"driver,omitempty" yaml:"driver,omitempty"`
+	DomainName   string `json:"domain_name,omitempty" xml:"domain_name,omitempty" yaml:"domain_name,omitempty"`
+	ClientID     string `json:"client_id,omitempty" xml:"client_id,omitempty" yaml:"client_id,omitempty"`
+	ClientSecret string `json:"client_secret,omitempty" xml:"client_secret,omitempty" yaml:"client_secret,omitempty"`
+	ServerID     string `json:"server_id,omitempty" xml:"server_id,omitempty" yaml:"server_id,omitempty"`
+	ServerName   string `json:"server_name,omitempty" xml:"server_name,omitempty" yaml:"server_name,omitempty"`
+	AppSecret    string `json:"app_secret,omitempty" xml:"app_secret,omitempty" yaml:"app_secret,omitempty"`
+	TenantID     string `json:"tenant_id,omitempty" xml:"tenant_id,omitempty" yaml:"tenant_id,omitempty"`
 
 	// AWS Cognito User Pool ID
 	UserPoolID string `json:"user_pool_id,omitempty" xml:"user_pool_id,omitempty" yaml:"user_pool_id,omitempty"`
@@ -112,6 +110,10 @@ type Config struct {
 
 	// The name of the cookie storing id_token from OAuth provider.
 	IdentityTokenCookieName string `json:"identity_token_cookie_name,omitempty" xml:"identity_token_cookie_name,omitempty" yaml:"identity_token_cookie_name,omitempty"`
+
+	// The field name to id_token from OAuth provider.
+	IdentityTokenFieldName string `json:"identity_token_field_name,omitempty" xml:"identity_token_field_name,omitempty" yaml:"identity_token_field_name,omitempty"`
+
 	// Enables the storing of id_token from OAuth provider in a HTTP cookie.
 	IdentityTokenCookieEnabled bool `json:"identity_token_cookie_enabled,omitempty" xml:"identity_token_cookie_enabled,omitempty" yaml:"identity_token_cookie_enabled,omitempty"`
 }
@@ -173,13 +175,13 @@ func (cfg *Config) Validate() error {
 		}
 	}
 
-	switch cfg.IdentityTokenName {
+	switch cfg.IdentityTokenFieldName {
 	case "":
-		cfg.IdentityTokenName = "id_token"
+		cfg.IdentityTokenFieldName = "id_token"
 	case "id_token", "access_token":
 	default:
 		return errors.ErrIdentityProviderConfig.WithArgs(
-			fmt.Errorf("identity token name %q is unsupported", cfg.IdentityTokenName),
+			fmt.Errorf("identity token field name %q is unsupported", cfg.IdentityTokenFieldName),
 		)
 	}
 
@@ -348,7 +350,7 @@ func (cfg *Config) Validate() error {
 
 	// Configure default identity token name.
 	if cfg.IdentityTokenCookieEnabled && cfg.IdentityTokenCookieName == "" {
-		cfg.IdentityTokenCookieName = defaultIdentityTokenCookieName
+		cfg.IdentityTokenCookieName = cookie.DefaultIdentityTokenCookieName
 	}
 
 	return nil

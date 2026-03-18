@@ -16,10 +16,11 @@ package oauth
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"testing"
 )
 
 func TestValidateConfig(t *testing.T) {
@@ -49,12 +50,12 @@ func TestValidateConfig(t *testing.T) {
 				ClientSecret: "bar",
 				BaseAuthURL:  "https://localhost/oauth",
 				// After the validation.
-				ServerName:          "localhost",
-				IdentityTokenName:   "id_token",
-				Scopes:              []string{"openid", "email", "profile"},
-				ResponseType:        []string{"code"},
-				RequiredTokenFields: []string{"access_token", "id_token"},
-				MetadataURL:         "https://localhost/oauth/.well-known/openid-configuration",
+				ServerName:             "localhost",
+				IdentityTokenFieldName: "id_token",
+				Scopes:                 []string{"openid", "email", "profile"},
+				ResponseType:           []string{"code"},
+				RequiredTokenFields:    []string{"access_token", "id_token"},
+				MetadataURL:            "https://localhost/oauth/.well-known/openid-configuration",
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-codepen la-2x",
 					Color:           "white",
@@ -79,14 +80,14 @@ func TestValidateConfig(t *testing.T) {
 				ClientID:     "foo",
 				ClientSecret: "bar",
 				// After the validation.
-				ServerName:          "www.facebook.com",
-				IdentityTokenName:   "id_token",
-				Scopes:              []string{"email"},
-				BaseAuthURL:         "https://www.facebook.com/v12.0/dialog/",
-				ResponseType:        []string{"code"},
-				RequiredTokenFields: []string{"access_token"},
-				AuthorizationURL:    "https://www.facebook.com/v12.0/dialog/oauth",
-				TokenURL:            "https://graph.facebook.com/v12.0/oauth/access_token",
+				ServerName:             "www.facebook.com",
+				IdentityTokenFieldName: "id_token",
+				Scopes:                 []string{"email"},
+				BaseAuthURL:            "https://www.facebook.com/v12.0/dialog/",
+				ResponseType:           []string{"code"},
+				RequiredTokenFields:    []string{"access_token"},
+				AuthorizationURL:       "https://www.facebook.com/v12.0/dialog/oauth",
+				TokenURL:               "https://graph.facebook.com/v12.0/oauth/access_token",
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-facebook la-2x",
 					Color:           "white",
@@ -112,18 +113,18 @@ func TestValidateConfig(t *testing.T) {
 				ClientID:     "foo",
 				ClientSecret: "bar",
 				// After the validation.
-				ServerName:          "discord.com",
-				IdentityTokenName:   "id_token", // maybe change this to access_token
-				Scopes:              []string{"identify"},
-				BaseAuthURL:         "https://discord.com/oauth2",
-				ResponseType:        []string{"code"},
-				RequiredTokenFields: []string{"access_token"},
-				AuthorizationURL:    "https://discord.com/oauth2/authorize",
-				TokenURL:            "https://discord.com/api/oauth2/token",
+				ServerName:             "discord.com",
+				IdentityTokenFieldName: "id_token", // maybe change this to access_token
+				Scopes:                 []string{"identify"},
+				BaseAuthURL:            "https://discord.com/oauth2",
+				ResponseType:           []string{"code"},
+				RequiredTokenFields:    []string{"access_token"},
+				AuthorizationURL:       "https://discord.com/oauth2/authorize",
+				TokenURL:               "https://discord.com/api/oauth2/token",
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-discord la-2x",
 					Color:           "white",
-					Text: 					 "Discord",
+					Text:            "Discord",
 					BackgroundColor: "#5865f2",
 					TextColor:       "#37474f",
 				},
@@ -147,13 +148,13 @@ func TestValidateConfig(t *testing.T) {
 				ClientSecret: "bar",
 				BaseAuthURL:  "https://localhost/oauth",
 				// After the validation.
-				ServerName:          "localhost",
-				IdentityTokenName:   "id_token",
-				Scopes:              []string{"email"},
-				ResponseType:        []string{"code"},
-				RequiredTokenFields: []string{"access_token", "id_token"},
-				AuthorizationURL:    "https://localhost/oauth/apps/oauth2/authorize",
-				TokenURL:            "https://localhost/oauth/apps/oauth2/api/v1/token",
+				ServerName:             "localhost",
+				IdentityTokenFieldName: "id_token",
+				Scopes:                 []string{"email"},
+				ResponseType:           []string{"code"},
+				RequiredTokenFields:    []string{"access_token", "id_token"},
+				AuthorizationURL:       "https://localhost/oauth/apps/oauth2/authorize",
+				TokenURL:               "https://localhost/oauth/apps/oauth2/api/v1/token",
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-codepen la-2x",
 					Color:           "white",
@@ -188,12 +189,12 @@ func TestValidateConfig(t *testing.T) {
 					"openid", "email", "profile", "groups",
 				},
 				// After the validation.
-				ServerName:          "foo.okta.dev",
-				IdentityTokenName:   "id_token",
-				BaseAuthURL:         "https://foo.okta.dev/oauth2/default/",
-				MetadataURL:         "https://foo.okta.dev/oauth2/default/.well-known/openid-configuration?client_id=foo",
-				ResponseType:        []string{"code"},
-				RequiredTokenFields: []string{"access_token", "id_token"},
+				ServerName:             "foo.okta.dev",
+				IdentityTokenFieldName: "id_token",
+				BaseAuthURL:            "https://foo.okta.dev/oauth2/default/",
+				MetadataURL:            "https://foo.okta.dev/oauth2/default/.well-known/openid-configuration?client_id=foo",
+				ResponseType:           []string{"code"},
+				RequiredTokenFields:    []string{"access_token", "id_token"},
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-codepen la-2x",
 					Color:           "white",
@@ -218,14 +219,14 @@ func TestValidateConfig(t *testing.T) {
 				// ClientID:     "foo",
 				ClientSecret: "bar",
 				// After the validation.
-				ClientID:            "foo.apps.googleusercontent.com",
-				ServerName:          "accounts.google.com",
-				IdentityTokenName:   "id_token",
-				Scopes:              []string{"openid", "email", "profile"},
-				BaseAuthURL:         "https://accounts.google.com/o/oauth2/v2/",
-				MetadataURL:         "https://accounts.google.com/.well-known/openid-configuration",
-				ResponseType:        []string{"code"},
-				RequiredTokenFields: []string{"access_token", "id_token"},
+				ClientID:               "foo.apps.googleusercontent.com",
+				ServerName:             "accounts.google.com",
+				IdentityTokenFieldName: "id_token",
+				Scopes:                 []string{"openid", "email", "profile"},
+				BaseAuthURL:            "https://accounts.google.com/o/oauth2/v2/",
+				MetadataURL:            "https://accounts.google.com/.well-known/openid-configuration",
+				ResponseType:           []string{"code"},
+				RequiredTokenFields:    []string{"access_token", "id_token"},
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-google la-2x",
 					Color:           "white",
@@ -251,8 +252,8 @@ func TestValidateConfig(t *testing.T) {
 				ClientID:     "foo",
 				ClientSecret: "bar",
 				// After the validation.
-				ServerName:        "github.com",
-				IdentityTokenName: "id_token",
+				ServerName:             "github.com",
+				IdentityTokenFieldName: "id_token",
 				// Scopes:              []string{"openid", "email", "profile"},
 				Scopes:              []string{"read:user"},
 				BaseAuthURL:         "https://github.com/login/oauth/",
@@ -297,13 +298,13 @@ func TestValidateConfig(t *testing.T) {
 					"barfoo", "^a",
 				},
 				// After the validation.
-				DomainName:          "gitlab.com",
-				ServerName:          "gitlab.com",
-				IdentityTokenName:   "id_token",
-				BaseAuthURL:         "https://gitlab.com/",
-				MetadataURL:         "https://gitlab.com/.well-known/openid-configuration",
-				ResponseType:        []string{"code"},
-				RequiredTokenFields: []string{"access_token", "id_token"},
+				DomainName:             "gitlab.com",
+				ServerName:             "gitlab.com",
+				IdentityTokenFieldName: "id_token",
+				BaseAuthURL:            "https://gitlab.com/",
+				MetadataURL:            "https://gitlab.com/.well-known/openid-configuration",
+				ResponseType:           []string{"code"},
+				RequiredTokenFields:    []string{"access_token", "id_token"},
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-gitlab la-2x",
 					Color:           "white",
@@ -328,14 +329,14 @@ func TestValidateConfig(t *testing.T) {
 				ClientID:     "foo",
 				ClientSecret: "bar",
 				// After the validation.
-				ServerName:          "login.microsoftonline.com",
-				TenantID:            "common",
-				IdentityTokenName:   "id_token",
-				Scopes:              []string{"openid", "email", "profile"},
-				BaseAuthURL:         "https://login.microsoftonline.com/common/oauth2/v2.0/",
-				MetadataURL:         "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration",
-				ResponseType:        []string{"code"},
-				RequiredTokenFields: []string{"access_token", "id_token"},
+				ServerName:             "login.microsoftonline.com",
+				TenantID:               "common",
+				IdentityTokenFieldName: "id_token",
+				Scopes:                 []string{"openid", "email", "profile"},
+				BaseAuthURL:            "https://login.microsoftonline.com/common/oauth2/v2.0/",
+				MetadataURL:            "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration",
+				ResponseType:           []string{"code"},
+				RequiredTokenFields:    []string{"access_token", "id_token"},
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-windows la-2x",
 					Color:           "white",
@@ -375,12 +376,12 @@ func TestValidateConfig(t *testing.T) {
 					"barfoo", "^a",
 				},
 				// After the validation.
-				ServerName:          "gitlab.contoso.com",
-				IdentityTokenName:   "id_token",
-				BaseAuthURL:         "https://gitlab.contoso.com/",
-				MetadataURL:         "https://gitlab.contoso.com/.well-known/openid-configuration",
-				ResponseType:        []string{"code"},
-				RequiredTokenFields: []string{"access_token", "id_token"},
+				ServerName:             "gitlab.contoso.com",
+				IdentityTokenFieldName: "id_token",
+				BaseAuthURL:            "https://gitlab.contoso.com/",
+				MetadataURL:            "https://gitlab.contoso.com/.well-known/openid-configuration",
+				ResponseType:           []string{"code"},
+				RequiredTokenFields:    []string{"access_token", "id_token"},
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-gitlab la-2x",
 					Color:           "white",
@@ -465,11 +466,11 @@ func TestValidateConfig(t *testing.T) {
 				ClientID:     "foo",
 				ClientSecret: "bar",
 				// BaseAuthURL:  "https://localhost/oauth/",
-				IdentityTokenName: "foobar",
+				IdentityTokenFieldName: "foobar",
 			},
 			shouldErr: true,
 			err: errors.ErrIdentityProviderConfig.WithArgs(
-				fmt.Errorf("identity token name %q is unsupported", "foobar"),
+				fmt.Errorf("identity token field name %q is unsupported", "foobar"),
 			),
 		},
 		{
@@ -602,13 +603,13 @@ func TestValidateConfig(t *testing.T) {
 				MetadataURL:  "https://localhost/oauth/.well-known/openid-configuration",
 				DelayStart:   10,
 				// After the validation.
-				ServerName:          "localhost",
-				IdentityTokenName:   "id_token",
-				Scopes:              []string{"openid", "email", "profile"},
-				RetryAttempts:       2,
-				RetryInterval:       10,
-				ResponseType:        []string{"code"},
-				RequiredTokenFields: []string{"access_token", "id_token"},
+				ServerName:             "localhost",
+				IdentityTokenFieldName: "id_token",
+				Scopes:                 []string{"openid", "email", "profile"},
+				RetryAttempts:          2,
+				RetryInterval:          10,
+				ResponseType:           []string{"code"},
+				RequiredTokenFields:    []string{"access_token", "id_token"},
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-codepen la-2x",
 					Color:           "white",
@@ -639,12 +640,12 @@ func TestValidateConfig(t *testing.T) {
 				MetadataURL:   "https://localhost/oauth/.well-known/openid-configuration",
 				RetryAttempts: 10,
 				// After the validation.
-				ServerName:          "localhost",
-				IdentityTokenName:   "id_token",
-				Scopes:              []string{"openid", "email", "profile"},
-				RetryInterval:       5,
-				ResponseType:        []string{"code"},
-				RequiredTokenFields: []string{"access_token", "id_token"},
+				ServerName:             "localhost",
+				IdentityTokenFieldName: "id_token",
+				Scopes:                 []string{"openid", "email", "profile"},
+				RetryInterval:          5,
+				ResponseType:           []string{"code"},
+				RequiredTokenFields:    []string{"access_token", "id_token"},
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-codepen la-2x",
 					Color:           "white",
@@ -686,9 +687,9 @@ func TestValidateConfig(t *testing.T) {
 				},
 
 				// After the validation.
-				ServerName:        "localhost",
-				IdentityTokenName: "id_token",
-				Scopes:            []string{"openid", "email", "profile"},
+				ServerName:             "localhost",
+				IdentityTokenFieldName: "id_token",
+				Scopes:                 []string{"openid", "email", "profile"},
 				LoginIcon: &icons.LoginIcon{
 					ClassName:       "lab la-codepen la-2x",
 					Color:           "white",

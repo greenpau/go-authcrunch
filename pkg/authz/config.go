@@ -80,6 +80,12 @@ type PolicyConfig struct {
 	APIKeyHeaderName string `json:"api_key_header_name,omitempty" xml:"api_key_header_name,omitempty" yaml:"api_key_header_name,omitempty"`
 	// AuthRealmHeaderName holds custom authentication realm header name.
 	AuthRealmHeaderName string `json:"auth_realm_header_name,omitempty" xml:"auth_realm_header_name,omitempty" yaml:"auth_realm_header_name,omitempty"`
+
+	// SessionIDCookieName holds custom session cookie name.
+	SessionIDCookieName string `json:"session_id_cookie_name,omitempty" xml:"session_id_cookie_name,omitempty" yaml:"session_id_cookie_name,omitempty"`
+
+	AccessTokenCookieNames []string `json:"access_token_cookie_names,omitempty" xml:"access_token_cookie_names,omitempty" yaml:"access_token_cookie_names,omitempty"`
+
 	// Indicated that the config was successfully validated.
 	validated bool
 }

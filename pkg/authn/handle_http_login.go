@@ -146,7 +146,7 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 		usr.Authenticator.TempSessionID,
 	)
 
-	w.Header().Set("Set-Cookie", p.cookie.GetCookie(addrutil.GetSourceHost(r), p.cookie.SandboxID, usr.Authenticator.TempSecret))
+	w.Header().Set("Set-Cookie", p.cookie.GetCookie(addrutil.GetSourceHost(r), p.cookie.SandboxIDCookieName, usr.Authenticator.TempSecret))
 	w.Header().Set("Location", redirectLocation)
 	w.WriteHeader(http.StatusSeeOther)
 	return nil
@@ -354,19 +354,27 @@ func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.R
 	p.sessions.Add(rr.Upstream.SessionID, usr)
 
 	w.Header().Set("Authorization", "Bearer "+usr.Token)
-	w.Header().Set("Set-Cookie", p.cookie.GetCookie(h, usr.TokenName, usr.Token))
+
+	if p.config.TokenGrantorOptions != nil && p.config.TokenGrantorOptions.AccessTokenCookieName != "" {
+		w.Header().Set("Set-Cookie", p.cookie.GetCookie(h, p.config.TokenGrantorOptions.AccessTokenCookieName, usr.Token))
+	} else {
+		w.Header().Set("Set-Cookie", p.cookie.GetCookie(h, usr.TokenName, usr.Token))
+	}
 
 	// Add a cookie with identity token, if id_token is available.
 	if rr.Response.IdentityTokenCookie.Enabled {
-		w.Header().Add("Set-Cookie", p.cookie.GetIdentityTokenCookie(rr.Response.IdentityTokenCookie.Name, rr.Response.IdentityTokenCookie.Payload))
+		w.Header().Add("Set-Cookie", p.cookie.GetIdentityTokenCookie(rr.Upstream.BasePath, rr.Response.IdentityTokenCookie.Name, rr.Response.IdentityTokenCookie.Payload))
 	}
 
+	// Add refresh session cookie.
+	w.Header().Add("Set-Cookie", p.cookie.GetRefreshTokenCookie(rr.Upstream.BasePath, usr.Token))
+
 	// Delete sandbox cookie, if present.
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SandboxID))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SandboxIDCookieName))
 
 	// Determine whether redirect cookie is present and reditect to the page that
 	// forwarded a user to the authentication portal.
-	if cookie, err := r.Cookie(p.cookie.Referer); err == nil {
+	if cookie, err := r.Cookie(p.cookie.RefererCookieName); err == nil {
 		if redirectURL, err := url.Parse(cookie.Value); err == nil {
 			redirectLocation = redirectURL.String()
 			p.logger.Debug(
@@ -375,7 +383,7 @@ func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.R
 				zap.String("request_id", rr.ID),
 				zap.String("redirect_url", redirectLocation),
 			)
-			w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.Referer))
+			w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.RefererCookieName))
 		}
 	}
 	if redirectLocation == "" {

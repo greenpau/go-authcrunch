@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
@@ -41,8 +42,9 @@ type Gatekeeper struct {
 	// Enable authorization bypass for specific URIs.
 	bypassEnabled bool
 	// The names of the headers injected by an instance.
-	injectedHeaders map[string]bool
-	logger          *zap.Logger
+	injectedHeaders     map[string]bool
+	logger              *zap.Logger
+	sessionIDCookieName string
 }
 
 // NewGatekeeper returns an instance of Gatekeeper.
@@ -103,6 +105,7 @@ func (g *Gatekeeper) configure() error {
 	if g.config.ValidateSourceAddress {
 		g.opts.ValidateSourceAddress = true
 	}
+	g.opts.AdditionalAccessTokenCookieNames = g.config.AccessTokenCookieNames
 
 	// Load token configuration into key managers, extract token verification
 	// keys and add them to token validator.
@@ -154,6 +157,12 @@ func (g *Gatekeeper) configure() error {
 	// Configure authentication realm header name
 	g.tokenValidator.SetAuthRealmHeaderName(g.config.AuthRealmHeaderName)
 
+	if g.config.SessionIDCookieName != "" {
+		g.sessionIDCookieName = g.config.SessionIDCookieName
+	} else {
+		g.sessionIDCookieName = cookie.DefaultSessionIDCookieName
+	}
+
 	g.logger.Debug(
 		"Configured gatekeeper",
 		zap.String("gatekeeper_name", g.config.Name),
@@ -165,6 +174,8 @@ func (g *Gatekeeper) configure() error {
 		zap.String("api_key_auth_header_name", g.config.APIKeyHeaderName),
 		zap.String("auth_realm_header_name", g.config.AuthRealmHeaderName),
 		zap.String("forbidden_path", g.config.ForbiddenURL),
+		zap.String("session_id_cookie_name", g.sessionIDCookieName),
+		zap.Any("auth_cookies", g.tokenValidator.GetAuthCookies()),
 	)
 	return nil
 }

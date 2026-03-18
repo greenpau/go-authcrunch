@@ -58,7 +58,7 @@ func (p *Portal) handleHTTPPortal(ctx context.Context, w http.ResponseWriter, r 
 }
 
 func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
-	if cookie, err := r.Cookie(p.cookie.Referer); err == nil {
+	if cookie, err := r.Cookie(p.cookie.RefererCookieName); err == nil {
 		redirectURL, err := url.Parse(cookie.Value)
 		if err == nil {
 			p.logger.Debug(
@@ -68,7 +68,7 @@ func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWrit
 				zap.String("redirect_url", redirectURL.String()),
 			)
 			w.Header().Set("Location", redirectURL.String())
-			w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(addrutil.GetSourceHost(r), p.cookie.Referer))
+			w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(addrutil.GetSourceHost(r), p.cookie.RefererCookieName))
 			w.WriteHeader(http.StatusSeeOther)
 			return nil
 		}

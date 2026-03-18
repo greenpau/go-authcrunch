@@ -61,6 +61,18 @@ type User struct {
 	rkv map[string]interface{}
 }
 
+// Dump returns the JSON string representation of User.
+func (u *User) Dump() string {
+	if u == nil {
+		return "{}"
+	}
+	b, err := json.MarshalIndent(u, "", "  ")
+	if err != nil {
+		return "{ \"error\": \"" + err.Error() + "\" }"
+	}
+	return string(b)
+}
+
 // Checkpoint represents additional checks that a user needs to pass. Once
 // a user passes the checks, the Authorized is set to true. The checks
 // could be the acceptance of the terms of use, multi-factor authentication,
@@ -348,9 +360,9 @@ func (u *User) AddFrontendLinks(v interface{}) error {
 		entries = data
 	case []interface{}:
 		for _, entry := range data {
-			switch entry.(type) {
+			switch v := entry.(type) {
 			case string:
-				entries = append(entries, entry.(string))
+				entries = append(entries, v)
 			default:
 				return errors.ErrCheckpointInvalidType.WithArgs(data, data)
 			}
@@ -410,9 +422,9 @@ func NewCheckpoints(v interface{}) ([]*Checkpoint, error) {
 		entries = data
 	case []interface{}:
 		for _, entry := range data {
-			switch entry.(type) {
+			switch v := entry.(type) {
 			case string:
-				entries = append(entries, entry.(string))
+				entries = append(entries, v)
 			default:
 				return nil, errors.ErrCheckpointInvalidType.WithArgs(data, data)
 			}
@@ -500,9 +512,9 @@ func (c *Claims) unpackAudience(k string, v interface{}, mkv, tkv map[string]int
 		c.Audience = append(c.Audience, audiences)
 	case []interface{}:
 		for _, audience := range audiences {
-			switch audience.(type) {
+			switch v := audience.(type) {
 			case string:
-				c.Audience = append(c.Audience, audience.(string))
+				c.Audience = append(c.Audience, v)
 			default:
 				return errors.ErrInvalidAudience.WithArgs(audience)
 			}
@@ -545,9 +557,9 @@ func (c *Claims) unpackExpiresAt(k string, v interface{}, mkv map[string]interfa
 }
 
 func (c *Claims) unpackID(k string, v interface{}, mkv, tkv map[string]interface{}) error {
-	switch v.(type) {
+	switch val := v.(type) {
 	case string:
-		c.ID = v.(string)
+		c.ID = val
 	default:
 		return errors.ErrInvalidIDClaimType.WithArgs(v)
 	}
@@ -575,9 +587,9 @@ func (c *Claims) unpackIssuedAt(k string, v interface{}, mkv map[string]interfac
 }
 
 func (c *Claims) unpackIssuer(k string, v interface{}, mkv, tkv map[string]interface{}) error {
-	switch v.(type) {
+	switch iss := v.(type) {
 	case string:
-		c.Issuer = v.(string)
+		c.Issuer = iss
 	default:
 		return errors.ErrInvalidIssuerClaimType.WithArgs(v)
 	}
@@ -605,9 +617,9 @@ func (c *Claims) unpackNotBefore(k string, v interface{}, mkv map[string]interfa
 }
 
 func (c *Claims) unpackSubject(k string, v interface{}, mkv, tkv map[string]interface{}) error {
-	switch v.(type) {
+	switch sub := v.(type) {
 	case string:
-		c.Subject = v.(string)
+		c.Subject = sub
 	default:
 		return errors.ErrInvalidSubjectClaimType.WithArgs(v)
 	}
@@ -617,9 +629,9 @@ func (c *Claims) unpackSubject(k string, v interface{}, mkv, tkv map[string]inte
 }
 
 func (c *Claims) unpackMail(k string, v interface{}, mkv, tkv map[string]interface{}) error {
-	switch v.(type) {
+	switch email := v.(type) {
 	case string:
-		c.Email = v.(string)
+		c.Email = email
 	default:
 		return errors.ErrInvalidEmailClaimType.WithArgs(k, v)
 	}
@@ -635,9 +647,9 @@ func (c *Claims) unpackName(k string, v interface{}, mkv, tkv map[string]interfa
 	case []interface{}:
 		packedNames := []string{}
 		for _, n := range names {
-			switch n.(type) {
+			switch ns := n.(type) {
 			case string:
-				packedNames = append(packedNames, n.(string))
+				packedNames = append(packedNames, ns)
 			default:
 				return errors.ErrInvalidNameClaimType.WithArgs(v)
 			}
@@ -655,9 +667,9 @@ func (c *Claims) unpackRoles(v interface{}) error {
 	switch roles := v.(type) {
 	case []interface{}:
 		for _, role := range roles {
-			switch role.(type) {
+			switch rs := role.(type) {
 			case string:
-				c.Roles = append(c.Roles, role.(string))
+				c.Roles = append(c.Roles, rs)
 			default:
 				return errors.ErrInvalidRole.WithArgs(role)
 			}
@@ -676,13 +688,13 @@ func (c *Claims) unpackRoles(v interface{}) error {
 	return nil
 }
 
-func (c *Claims) unpackScopes(k string, v interface{}, mkv, tkv map[string]interface{}) error {
+func (c *Claims) unpackScopes(v interface{}, mkv, tkv map[string]interface{}) error {
 	switch scopes := v.(type) {
 	case []interface{}:
 		for _, scope := range scopes {
-			switch scope.(type) {
+			switch rs := scope.(type) {
 			case string:
-				c.Scopes = append(c.Scopes, scope.(string))
+				c.Scopes = append(c.Scopes, rs)
 			default:
 				return errors.ErrInvalidScope.WithArgs(scope)
 			}
@@ -707,9 +719,9 @@ func (c *Claims) unpackOrg(k string, v interface{}, mkv, tkv map[string]interfac
 	switch orgs := v.(type) {
 	case []interface{}:
 		for _, org := range orgs {
-			switch org.(type) {
+			switch rs := org.(type) {
 			case string:
-				c.Organizations = append(c.Organizations, org.(string))
+				c.Organizations = append(c.Organizations, rs)
 			default:
 				return errors.ErrInvalidOrg.WithArgs(org)
 			}
@@ -731,9 +743,9 @@ func (c *Claims) unpackOrg(k string, v interface{}, mkv, tkv map[string]interfac
 }
 
 func (c *Claims) unpackAddr(k string, v interface{}, mkv, tkv map[string]interface{}) error {
-	switch v.(type) {
+	switch val := v.(type) {
 	case string:
-		c.Address = v.(string)
+		c.Address = val
 	default:
 		return errors.ErrInvalidAddrType.WithArgs(v)
 	}
@@ -743,9 +755,9 @@ func (c *Claims) unpackAddr(k string, v interface{}, mkv, tkv map[string]interfa
 }
 
 func (c *Claims) unpackOrigin(k string, v interface{}, mkv, tkv map[string]interface{}) error {
-	switch v.(type) {
+	switch val := v.(type) {
 	case string:
-		c.Origin = v.(string)
+		c.Origin = val
 	default:
 		return errors.ErrInvalidOriginClaimType.WithArgs(v)
 	}
@@ -754,10 +766,10 @@ func (c *Claims) unpackOrigin(k string, v interface{}, mkv, tkv map[string]inter
 	return nil
 }
 
-func (c *Claims) unpackPicture(k string, v interface{}, mkv, tkv map[string]interface{}) error {
-	switch v.(type) {
+func (c *Claims) unpackPicture(k string, v interface{}, mkv map[string]interface{}) error {
+	switch val := v.(type) {
 	case string:
-		c.PictureURL = v.(string)
+		c.PictureURL = val
 	default:
 		return errors.ErrInvalidPictureClaimType.WithArgs(v)
 	}
@@ -777,9 +789,9 @@ func (c *Claims) unpackAppMetadata(v interface{}) error {
 					switch roles := appMetadataAuthz["roles"].(type) {
 					case []interface{}:
 						for _, role := range roles {
-							switch role.(type) {
+							switch rs := role.(type) {
 							case string:
-								c.Roles = append(c.Roles, role.(string))
+								c.Roles = append(c.Roles, rs)
 							default:
 								return errors.ErrInvalidRole.WithArgs(role)
 							}
@@ -806,9 +818,9 @@ func (c *Claims) unpackRealmAccess(v interface{}) error {
 			switch roles := realmAccess["roles"].(type) {
 			case []interface{}:
 				for _, role := range roles {
-					switch role.(type) {
+					switch rs := role.(type) {
 					case string:
-						c.Roles = append(c.Roles, role.(string))
+						c.Roles = append(c.Roles, rs)
 					default:
 						return errors.ErrInvalidRole.WithArgs(role)
 					}
@@ -828,7 +840,7 @@ func (c *Claims) unpackAccessListPaths(v interface{}) error {
 	case []interface{}:
 		paths := v.([]interface{})
 		for _, path := range paths {
-			switch path.(type) {
+			switch rs := path.(type) {
 			case string:
 				if c.AccessList == nil {
 					c.AccessList = &AccessListClaim{}
@@ -836,7 +848,7 @@ func (c *Claims) unpackAccessListPaths(v interface{}) error {
 				if c.AccessList.Paths == nil {
 					c.AccessList.Paths = make(map[string]interface{})
 				}
-				c.AccessList.Paths[path.(string)] = make(map[string]interface{})
+				c.AccessList.Paths[rs] = make(map[string]interface{})
 			default:
 				return errors.ErrInvalidAccessListPath.WithArgs(path)
 			}
@@ -865,7 +877,7 @@ func (c *Claims) unpackAccessList(v interface{}) error {
 			case []interface{}:
 				paths := acl["paths"].([]interface{})
 				for _, path := range paths {
-					switch path.(type) {
+					switch rs := path.(type) {
 					case string:
 						if c.AccessList == nil {
 							c.AccessList = &AccessListClaim{}
@@ -873,7 +885,7 @@ func (c *Claims) unpackAccessList(v interface{}) error {
 						if c.AccessList.Paths == nil {
 							c.AccessList.Paths = make(map[string]interface{})
 						}
-						c.AccessList.Paths[path.(string)] = make(map[string]interface{})
+						c.AccessList.Paths[rs] = make(map[string]interface{})
 					default:
 						return errors.ErrInvalidAccessListPath.WithArgs(path)
 					}
@@ -884,10 +896,10 @@ func (c *Claims) unpackAccessList(v interface{}) error {
 	return nil
 }
 
-func (c *Claims) unpackMetadata(k string, v interface{}, mkv, tkv map[string]interface{}) error {
-	switch v.(type) {
+func (c *Claims) unpackMetadata(k string, v interface{}, mkv map[string]interface{}) error {
+	switch m := v.(type) {
 	case map[string]interface{}:
-		c.Metadata = v.(map[string]interface{})
+		c.Metadata = m
 	default:
 		return errors.ErrInvalidMetadataClaimType.WithArgs(v)
 	}
@@ -949,7 +961,7 @@ func NewUser(data interface{}) (*User, error) {
 				return nil, err
 			}
 		case "scopes", "scope":
-			if err := c.unpackScopes(k, v, mkv, tkv); err != nil {
+			if err := c.unpackScopes(v, mkv, tkv); err != nil {
 				return nil, err
 			}
 		case "org":
@@ -965,7 +977,7 @@ func NewUser(data interface{}) (*User, error) {
 				return nil, err
 			}
 		case "picture":
-			if err := c.unpackPicture(k, v, mkv, tkv); err != nil {
+			if err := c.unpackPicture(k, v, mkv); err != nil {
 				return nil, err
 			}
 		case "app_metadata":
@@ -985,7 +997,7 @@ func NewUser(data interface{}) (*User, error) {
 				return nil, err
 			}
 		case "metadata":
-			if err := c.unpackMetadata(k, v, mkv, tkv); err != nil {
+			if err := c.unpackMetadata(k, v, mkv); err != nil {
 				return nil, err
 			}
 		case "frontend_links", "challenges":

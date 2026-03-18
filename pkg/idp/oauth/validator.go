@@ -77,24 +77,24 @@ func mergeClaims(a interface{}, b interface{}) interface{} {
 
 func (b *IdentityProvider) validateAccessToken(state string, data map[string]interface{}) (map[string]interface{}, error) {
 	var tokenString string
-	if v, exists := data[b.config.IdentityTokenName]; exists {
+	if v, exists := data[b.config.IdentityTokenFieldName]; exists {
 		tokenString = v.(string)
 	} else {
-		return nil, errors.ErrIdentityProviderOAuthAccessTokenNotFound.WithArgs(b.config.IdentityTokenName)
+		return nil, errors.ErrIdentityProviderOAuthAccessTokenNotFound.WithArgs(b.config.IdentityTokenFieldName)
 	}
 
 	token, err := jwtlib.Parse(tokenString, func(token *jwtlib.Token) (interface{}, error) {
 		switch {
 		case strings.HasPrefix(token.Method.Alg(), "RS"):
 			if _, validMethod := token.Method.(*jwtlib.SigningMethodRSA); !validMethod {
-				return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(b.config.IdentityTokenName, token.Header["alg"])
+				return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(b.config.IdentityTokenFieldName, token.Header["alg"])
 			}
 		case strings.HasPrefix(token.Method.Alg(), "ES"):
 			if _, validMethod := token.Method.(*jwtlib.SigningMethodECDSA); !validMethod {
-				return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(b.config.IdentityTokenName, token.Header["alg"])
+				return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(b.config.IdentityTokenFieldName, token.Header["alg"])
 			}
 		case strings.HasPrefix(token.Method.Alg(), "HS"):
-			return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(b.config.IdentityTokenName, token.Method.Alg())
+			return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(b.config.IdentityTokenFieldName, token.Method.Alg())
 		}
 
 		keyID, found := token.Header["kid"].(string)
@@ -114,30 +114,30 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 			}
 			key, exists = b.keys[keyID]
 			if !exists {
-				return nil, errors.ErrIdentityProviderOAuthAccessTokenKeyIDNotRegistered.WithArgs(b.config.IdentityTokenName, keyID)
+				return nil, errors.ErrIdentityProviderOAuthAccessTokenKeyIDNotRegistered.WithArgs(b.config.IdentityTokenFieldName, keyID)
 			}
 		}
 		return key.GetPublic(), nil
 	})
 
 	if err != nil {
-		return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(b.config.IdentityTokenName, err)
+		return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(b.config.IdentityTokenFieldName, err)
 	}
 
 	if !token.Valid {
-		return nil, errors.ErrIdentityProviderOAuthInvalidToken.WithArgs(b.config.IdentityTokenName, tokenString)
+		return nil, errors.ErrIdentityProviderOAuthInvalidToken.WithArgs(b.config.IdentityTokenFieldName, tokenString)
 	}
 	claims := token.Claims.(jwtlib.MapClaims)
 	if _, exists := claims["nonce"]; !exists {
-		return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(b.config.IdentityTokenName, "nonce not found")
+		return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(b.config.IdentityTokenFieldName, "nonce not found")
 	}
 	if err := b.state.validateNonce(state, claims["nonce"].(string)); err != nil {
-		return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(b.config.IdentityTokenName, err)
+		return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(b.config.IdentityTokenFieldName, err)
 	}
 
 	if !b.disableEmailClaimCheck {
 		if _, exists := claims["email"]; !exists {
-			return nil, errors.ErrIdentityProviderOAuthEmailNotFound.WithArgs(b.config.IdentityTokenName)
+			return nil, errors.ErrIdentityProviderOAuthEmailNotFound.WithArgs(b.config.IdentityTokenFieldName)
 		}
 	}
 
