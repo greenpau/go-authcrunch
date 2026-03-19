@@ -309,6 +309,10 @@ func TestTagCompliance(t *testing.T) {
 			},
 		},
 		{
+			name:  "test AuthChallengeRule struct",
+			entry: &identity.AuthChallengeRule{},
+		},
+		{
 			name:  "test ClientData struct",
 			entry: &identity.ClientData{},
 			opts: &Options{
