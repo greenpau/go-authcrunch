@@ -20,10 +20,21 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
+const (
+	passwordKeyword  = "password"
+	totpKeyword      = "totp"
+	u2fKeyword       = "u2f"
+	orKeyword        = "or"
+	ifKeyword        = "if"
+	andKeyword       = "and"
+	notKeyword       = "not"
+	availableKeyword = "available"
+)
+
 var validChallengeTypes = map[string]bool{
-	"password": true,
-	"totp":     true,
-	"u2f":      true,
+	passwordKeyword: true,
+	totpKeyword:     true,
+	u2fKeyword:      true,
 }
 
 type rule struct {
@@ -45,9 +56,9 @@ func parseRule(s string) (*rule, error) {
 	seen := make(map[string]bool)
 	i := 0
 
-	for i < len(args) && args[i] != "if" {
+	for i < len(args) && args[i] != ifKeyword {
 		ch := args[i]
-		if ch == "or" {
+		if ch == orKeyword {
 			r.hasOr = true
 			i++
 			continue
@@ -74,7 +85,7 @@ func parseRule(s string) (*rule, error) {
 	i++ // skip "if"
 	for i < len(args) {
 		tok := args[i]
-		if tok == "and" || tok == "not" || tok == "available" {
+		if tok == andKeyword || tok == notKeyword || tok == availableKeyword {
 			i++
 			continue
 		}

@@ -21,29 +21,16 @@ func (rs *Ruleset) Evaluate(registeredTypes map[string]bool) []string {
 		if r == nil || len(r.challenges) == 0 {
 			continue
 		}
-
-		if r.hasOr {
-			if !hasAnyChallenges(r.challenges, registeredTypes) {
-				continue
-			}
-		} else {
-			if !hasAllChallenges(r.challenges, registeredTypes) {
-				continue
-			}
+		if r.hasOr && !hasAnyChallenges(r.challenges, registeredTypes) {
+			continue
 		}
-
+		if !r.hasOr && !hasAllChallenges(r.challenges, registeredTypes) {
+			continue
+		}
 		if len(r.conditions) == 0 {
 			return r.challenges
 		}
-
-		matched := true
-		for _, cond := range r.conditions {
-			if registeredTypes[cond] {
-				matched = false
-				break
-			}
-		}
-		if matched {
+		if !hasRegisteredCondition(r.conditions, registeredTypes) {
 			return r.challenges
 		}
 	}
@@ -54,7 +41,7 @@ func (rs *Ruleset) Evaluate(registeredTypes map[string]bool) []string {
 // challenge types registered.
 func hasAllChallenges(challenges []string, registeredTypes map[string]bool) bool {
 	for _, ch := range challenges {
-		if ch == "password" {
+		if ch == passwordKeyword {
 			continue
 		}
 		if !registeredTypes[ch] {
@@ -68,10 +55,21 @@ func hasAllChallenges(challenges []string, registeredTypes map[string]bool) bool
 // non-password challenge type registered.
 func hasAnyChallenges(challenges []string, registeredTypes map[string]bool) bool {
 	for _, ch := range challenges {
-		if ch == "password" {
+		if ch == passwordKeyword {
 			continue
 		}
 		if registeredTypes[ch] {
+			return true
+		}
+	}
+	return false
+}
+
+// hasRegisteredCondition checks whether any condition type is
+// registered, meaning the "not available" condition is not met.
+func hasRegisteredCondition(conditions []string, registeredTypes map[string]bool) bool {
+	for _, cond := range conditions {
+		if registeredTypes[cond] {
 			return true
 		}
 	}

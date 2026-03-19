@@ -70,6 +70,22 @@ func TestNewRuleset(t *testing.T) {
 	}
 }
 
+func TestRulesetDump(t *testing.T) {
+	rs, err := NewRuleset([]string{"u2f", "password if u2f not available"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := rs.Dump()
+	if out == "" || out == "{}" {
+		t.Errorf("Dump() returned empty: %s", out)
+	}
+
+	var nilRs *Ruleset
+	if nilRs.Dump() != "{}" {
+		t.Errorf("nil Dump() should return {}")
+	}
+}
+
 func TestRulesetEvaluate(t *testing.T) {
 	testcases := []struct {
 		name       string

@@ -601,6 +601,9 @@ func (user *User) GetMetadata() *UserMetadata {
 func (user *User) GetChallenges() []string {
 	registeredTypes := make(map[string]bool)
 	for _, token := range user.MfaTokens {
+		if token.Disabled {
+			continue
+		}
 		switch token.Type {
 		case "totp":
 			registeredTypes["totp"] = true

@@ -14,7 +14,10 @@
 
 package authchal
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // Ruleset holds parsed auth challenge rules.
 type Ruleset struct {
@@ -38,4 +41,16 @@ func NewRuleset(statements []string) (*Ruleset, error) {
 		rs.rules = append(rs.rules, r)
 	}
 	return rs, nil
+}
+
+// Dump returns the JSON string representation of Ruleset.
+func (rs *Ruleset) Dump() string {
+	if rs == nil {
+		return "{}"
+	}
+	b, err := json.MarshalIndent(rs.statements, "", "  ")
+	if err != nil {
+		return "{\"error\": \"" + err.Error() + "\"}"
+	}
+	return string(b)
 }
