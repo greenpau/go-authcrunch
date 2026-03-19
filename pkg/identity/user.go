@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/authchal"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
@@ -45,32 +46,33 @@ type UserMetadataBundle struct {
 
 // User is a user identity.
 type User struct {
-	ID                 string               `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
-	Disabled           bool                 `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
-	Human              bool                 `json:"human,omitempty" xml:"human,omitempty" yaml:"human,omitempty"`
-	Username           string               `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
-	Title              string               `json:"title,omitempty" xml:"title,omitempty" yaml:"title,omitempty"`
-	Name               *Name                `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	Organization       *Organization        `json:"organization,omitempty" xml:"organization,omitempty" yaml:"organization,omitempty"`
-	Names              []*Name              `json:"names,omitempty" xml:"names,omitempty" yaml:"names,omitempty"`
-	Organizations      []*Organization      `json:"organizations,omitempty" xml:"organizations,omitempty" yaml:"organizations,omitempty"`
-	StreetAddress      []*Location          `json:"street_address,omitempty" xml:"street_address,omitempty" yaml:"street_address,omitempty"`
-	EmailAddress       *EmailAddress        `json:"email_address,omitempty" xml:"email_address,omitempty" yaml:"email_address,omitempty"`
-	EmailAddresses     []*EmailAddress      `json:"email_addresses,omitempty" xml:"email_addresses,omitempty" yaml:"email_addresses,omitempty"`
-	Passwords          []*Password          `json:"passwords,omitempty" xml:"passwords,omitempty" yaml:"passwords,omitempty"`
-	PublicKeys         []*PublicKey         `json:"public_keys,omitempty" xml:"public_keys,omitempty" yaml:"public_keys,omitempty"`
-	APIKeys            []*APIKey            `json:"api_keys,omitempty" xml:"api_keys,omitempty" yaml:"api_keys,omitempty"`
-	MfaTokens          []*MfaToken          `json:"mfa_tokens,omitempty" xml:"mfa_tokens,omitempty" yaml:"mfa_tokens,omitempty"`
-	Lockout            *LockoutState        `json:"lockout,omitempty" xml:"lockout,omitempty" yaml:"lockout,omitempty"`
-	MfaFailedAttempts  int                  `json:"mfa_failed_attempts,omitempty" xml:"mfa_failed_attempts,omitempty" yaml:"mfa_failed_attempts,omitempty"`
-	Avatar             *Image               `json:"avatar,omitempty" xml:"avatar,omitempty" yaml:"avatar,omitempty"`
-	Created            time.Time            `json:"created,omitempty" xml:"created,omitempty" yaml:"created,omitempty"`
-	LastModified       time.Time            `json:"last_modified,omitempty" xml:"last_modified,omitempty" yaml:"last_modified,omitempty"`
-	Revision           int                  `json:"revision,omitempty" xml:"revision,omitempty" yaml:"revision,omitempty"`
-	Roles              []*Role              `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
-	AuthChallengeRules []*AuthChallengeRule `json:"auth_challenge_rules,omitempty" xml:"auth_challenge_rules,omitempty" yaml:"auth_challenge_rules,omitempty"`
-	Registration       *Registration        `json:"registration,omitempty" xml:"registration,omitempty" yaml:"registration,omitempty"`
-	rolesRef           map[string]interface{}
+	ID                   string          `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
+	Disabled             bool            `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
+	Human                bool            `json:"human,omitempty" xml:"human,omitempty" yaml:"human,omitempty"`
+	Username             string          `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
+	Title                string          `json:"title,omitempty" xml:"title,omitempty" yaml:"title,omitempty"`
+	Name                 *Name           `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Organization         *Organization   `json:"organization,omitempty" xml:"organization,omitempty" yaml:"organization,omitempty"`
+	Names                []*Name         `json:"names,omitempty" xml:"names,omitempty" yaml:"names,omitempty"`
+	Organizations        []*Organization `json:"organizations,omitempty" xml:"organizations,omitempty" yaml:"organizations,omitempty"`
+	StreetAddress        []*Location     `json:"street_address,omitempty" xml:"street_address,omitempty" yaml:"street_address,omitempty"`
+	EmailAddress         *EmailAddress   `json:"email_address,omitempty" xml:"email_address,omitempty" yaml:"email_address,omitempty"`
+	EmailAddresses       []*EmailAddress `json:"email_addresses,omitempty" xml:"email_addresses,omitempty" yaml:"email_addresses,omitempty"`
+	Passwords            []*Password     `json:"passwords,omitempty" xml:"passwords,omitempty" yaml:"passwords,omitempty"`
+	PublicKeys           []*PublicKey    `json:"public_keys,omitempty" xml:"public_keys,omitempty" yaml:"public_keys,omitempty"`
+	APIKeys              []*APIKey       `json:"api_keys,omitempty" xml:"api_keys,omitempty" yaml:"api_keys,omitempty"`
+	MfaTokens            []*MfaToken     `json:"mfa_tokens,omitempty" xml:"mfa_tokens,omitempty" yaml:"mfa_tokens,omitempty"`
+	Lockout              *LockoutState   `json:"lockout,omitempty" xml:"lockout,omitempty" yaml:"lockout,omitempty"`
+	MfaFailedAttempts    int             `json:"mfa_failed_attempts,omitempty" xml:"mfa_failed_attempts,omitempty" yaml:"mfa_failed_attempts,omitempty"`
+	Avatar               *Image          `json:"avatar,omitempty" xml:"avatar,omitempty" yaml:"avatar,omitempty"`
+	Created              time.Time       `json:"created,omitempty" xml:"created,omitempty" yaml:"created,omitempty"`
+	LastModified         time.Time       `json:"last_modified,omitempty" xml:"last_modified,omitempty" yaml:"last_modified,omitempty"`
+	Revision             int             `json:"revision,omitempty" xml:"revision,omitempty" yaml:"revision,omitempty"`
+	Roles                []*Role         `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
+	AuthChallengeRules   []string        `json:"auth_challenge_rules,omitempty" xml:"auth_challenge_rules,omitempty" yaml:"auth_challenge_rules,omitempty"`
+	Registration         *Registration   `json:"registration,omitempty" xml:"registration,omitempty" yaml:"registration,omitempty"`
+	rolesRef             map[string]interface{}
+	authChallengeRuleset *authchal.Ruleset
 }
 
 // NewUserMetadataBundle returns an instance of UserMetadataBundle.
@@ -608,8 +610,10 @@ func (user *User) GetChallenges() []string {
 	}
 
 	if user.HasAuthChallengeRules() {
-		if challenges := evaluateAuthChallengeRules(user.GetAuthChallengeRules(), registeredTypes); len(challenges) > 0 {
-			return challenges
+		if rs := user.challengeRuleset(); rs != nil {
+			if challenges := rs.Evaluate(registeredTypes); len(challenges) > 0 {
+				return challenges
+			}
 		}
 	}
 
@@ -637,25 +641,38 @@ func (user *User) GetChallenges() []string {
 	return challenges
 }
 
-// AddAuthChallengeRule parses and adds an auth challenge rule.
+// AddAuthChallengeRule adds an auth challenge rule statement.
 func (user *User) AddAuthChallengeRule(s string) error {
-	rule, err := ParseAuthChallengeRule(s)
-	if err != nil {
+	// Validate the rule by parsing it.
+	if _, err := authchal.NewRuleset([]string{s}); err != nil {
 		return err
 	}
-	user.AuthChallengeRules = append(user.AuthChallengeRules, rule)
+	user.AuthChallengeRules = append(user.AuthChallengeRules, s)
+	user.authChallengeRuleset = nil
 	user.Revise()
 	return nil
 }
 
-// GetAuthChallengeRules returns the auth challenge rules.
-func (user *User) GetAuthChallengeRules() []*AuthChallengeRule {
+// GetAuthChallengeRules returns the auth challenge rule statements.
+func (user *User) GetAuthChallengeRules() []string {
 	return user.AuthChallengeRules
 }
 
 // HasAuthChallengeRules returns true if the user has auth challenge rules.
 func (user *User) HasAuthChallengeRules() bool {
 	return len(user.AuthChallengeRules) > 0
+}
+
+func (user *User) challengeRuleset() *authchal.Ruleset {
+	if user.authChallengeRuleset != nil {
+		return user.authChallengeRuleset
+	}
+	rs, err := authchal.NewRuleset(user.AuthChallengeRules)
+	if err != nil {
+		return nil
+	}
+	user.authChallengeRuleset = rs
+	return rs
 }
 
 // Revise increments revision number and last modified timestamp.
