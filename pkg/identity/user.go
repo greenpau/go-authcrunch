@@ -598,50 +598,52 @@ func (user *User) GetMetadata() *UserMetadata {
 
 // GetChallenges returns a list of challenges that should be
 // satisfied prior to successfully authenticating a user.
-func (user *User) GetChallenges() []string {
+func (user *User) GetChallenges() ([]string, error) {
 	registeredTypes := make(map[string]bool)
 	for _, token := range user.MfaTokens {
 		if token.Disabled {
 			continue
 		}
 		switch token.Type {
-		case "totp":
-			registeredTypes["totp"] = true
-		case "u2f":
-			registeredTypes["u2f"] = true
+		case authchal.TotpKeyword:
+			registeredTypes[authchal.TotpKeyword] = true
+		case authchal.U2fKeyword:
+			registeredTypes[authchal.U2fKeyword] = true
 		}
 	}
 
 	if user.HasAuthChallengeRules() {
-		if rs := user.challengeRuleset(); rs != nil {
-			if challenges := rs.Evaluate(registeredTypes); len(challenges) > 0 {
-				return challenges
-			}
+		rs, err := user.getAuthChallengeRuleset()
+		if err != nil {
+			return nil, err
+		}
+		if challenges := rs.ResolveChallenges(registeredTypes); len(challenges) > 0 {
+			return challenges, nil
 		}
 	}
 
 	var challenges []string
-	challenges = append(challenges, "password")
+	challenges = append(challenges, authchal.PasswordKeyword)
 
-	if !registeredTypes["totp"] && !registeredTypes["u2f"] {
-		return challenges
+	if !registeredTypes[authchal.TotpKeyword] && !registeredTypes[authchal.U2fKeyword] {
+		return challenges, nil
 	}
 
-	if registeredTypes["totp"] && registeredTypes["u2f"] {
-		challenges = append(challenges, "mfa")
-		return challenges
+	if registeredTypes[authchal.TotpKeyword] && registeredTypes[authchal.U2fKeyword] {
+		challenges = append(challenges, authchal.MfaKeyword)
+		return challenges, nil
 	}
 
-	if registeredTypes["totp"] {
-		challenges = append(challenges, "totp")
-		return challenges
+	if registeredTypes[authchal.TotpKeyword] {
+		challenges = append(challenges, authchal.TotpKeyword)
+		return challenges, nil
 	}
 
-	if registeredTypes["u2f"] {
-		challenges = append(challenges, "u2f")
+	if registeredTypes[authchal.U2fKeyword] {
+		challenges = append(challenges, authchal.U2fKeyword)
 	}
 
-	return challenges
+	return challenges, nil
 }
 
 // AddAuthChallengeRule adds an auth challenge rule statement.
@@ -666,16 +668,16 @@ func (user *User) HasAuthChallengeRules() bool {
 	return len(user.AuthChallengeRules) > 0
 }
 
-func (user *User) challengeRuleset() *authchal.Ruleset {
+func (user *User) getAuthChallengeRuleset() (*authchal.Ruleset, error) {
 	if user.authChallengeRuleset != nil {
-		return user.authChallengeRuleset
+		return user.authChallengeRuleset, nil
 	}
 	rs, err := authchal.NewRuleset(user.AuthChallengeRules)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	user.authChallengeRuleset = rs
-	return rs
+	return rs, nil
 }
 
 // Revise increments revision number and last modified timestamp.

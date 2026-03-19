@@ -14,37 +14,44 @@
 
 package authchal
 
-// Evaluate returns the challenge list from the first matching
+// ResolveChallenges returns the challenge list from the first matching
 // rule, or nil if no rules match.
-func (rs *Ruleset) Evaluate(registeredTypes map[string]bool) []string {
-	for _, r := range rs.rules {
-		if r == nil || len(r.challenges) == 0 {
+func (rs *Ruleset) ResolveChallenges(registeredTypes map[string]bool) []string {
+	for _, r := range rs.Rules {
+		if r == nil || len(r.Challenges) == 0 {
 			continue
 		}
-		if r.hasOr && !hasAnyChallenges(r.challenges, registeredTypes) {
+		if !challengesAvailable(r, registeredTypes) {
 			continue
 		}
-		if !r.hasOr && !hasAllChallenges(r.challenges, registeredTypes) {
+		if len(r.Conditions) == 0 {
+			return r.Challenges
+		}
+		if hasRegisteredCondition(r.Conditions, registeredTypes) {
 			continue
 		}
-		if len(r.conditions) == 0 {
-			return r.challenges
-		}
-		if !hasRegisteredCondition(r.conditions, registeredTypes) {
-			return r.challenges
-		}
+		return r.Challenges
 	}
 	return nil
+}
+
+// challengesAvailable checks whether the user has the required
+// challenge types registered based on the rule's or/and semantics.
+func challengesAvailable(r *Rule, registeredTypes map[string]bool) bool {
+	if r.HasOr {
+		return hasAnyChallenges(r.Challenges, registeredTypes)
+	}
+	return hasAllChallenges(r.Challenges, registeredTypes)
 }
 
 // hasAllChallenges checks whether the user has all non-password
 // challenge types registered.
 func hasAllChallenges(challenges []string, registeredTypes map[string]bool) bool {
 	for _, ch := range challenges {
-		if ch == passwordKeyword {
+		if ch == PasswordKeyword {
 			continue
 		}
-		if !registeredTypes[ch] {
+		if !isTypeRegistered(ch, registeredTypes) {
 			return false
 		}
 	}
@@ -55,14 +62,23 @@ func hasAllChallenges(challenges []string, registeredTypes map[string]bool) bool
 // non-password challenge type registered.
 func hasAnyChallenges(challenges []string, registeredTypes map[string]bool) bool {
 	for _, ch := range challenges {
-		if ch == passwordKeyword {
+		if ch == PasswordKeyword {
 			continue
 		}
-		if registeredTypes[ch] {
+		if isTypeRegistered(ch, registeredTypes) {
 			return true
 		}
 	}
 	return false
+}
+
+// isTypeRegistered checks whether a challenge type is registered.
+// The mfa type is a logical union of totp and u2f.
+func isTypeRegistered(ch string, registeredTypes map[string]bool) bool {
+	if ch == MfaKeyword {
+		return registeredTypes[TotpKeyword] || registeredTypes[U2fKeyword]
+	}
+	return registeredTypes[ch]
 }
 
 // hasRegisteredCondition checks whether any condition type is

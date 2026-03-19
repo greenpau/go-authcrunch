@@ -15,7 +15,10 @@
 package authchal
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
 )
 
 func TestParseRule(t *testing.T) {
@@ -23,6 +26,7 @@ func TestParseRule(t *testing.T) {
 		name       string
 		input      string
 		shouldErr  bool
+		err        error
 		challenges []string
 		conditions []string
 	}{
@@ -54,88 +58,76 @@ func TestParseRule(t *testing.T) {
 			conditions: []string{"u2f", "totp"},
 		},
 		{
-			name:      "empty input",
-			input:     "",
-			shouldErr: true,
-		},
-		{
-			name:      "unsupported challenge type",
-			input:     "sms",
-			shouldErr: true,
-		},
-		{
-			name:      "unsupported condition type",
-			input:     "password if sms not available",
-			shouldErr: true,
-		},
-		{
-			name:      "empty condition after if",
-			input:     "password if not available",
-			shouldErr: true,
-		},
-		{
-			name:      "duplicate challenge type",
-			input:     "password password",
-			shouldErr: true,
-		},
-		{
-			name:      "condition conflicts with challenge",
-			input:     "u2f if u2f not available",
-			shouldErr: true,
-		},
-		{
 			name:       "challenge with or and condition",
 			input:      "u2f or totp if password not available",
 			challenges: []string{"u2f", "totp"},
 			conditions: []string{"password"},
 		},
 		{
+			name:       "mfa challenge type",
+			input:      "mfa",
+			challenges: []string{"mfa"},
+		},
+		{
+			name:      "empty input",
+			input:     "",
+			shouldErr: true,
+			err:       fmt.Errorf("auth challenge rule: EOF"),
+		},
+		{
+			name:      "unsupported challenge type",
+			input:     "sms",
+			shouldErr: true,
+			err:       fmt.Errorf("unsupported challenge type: sms"),
+		},
+		{
+			name:      "unsupported condition type",
+			input:     "password if sms not available",
+			shouldErr: true,
+			err:       fmt.Errorf("unsupported condition type: sms"),
+		},
+		{
+			name:      "empty condition after if",
+			input:     "password if not available",
+			shouldErr: true,
+			err:       fmt.Errorf("empty condition in auth challenge rule"),
+		},
+		{
+			name:      "duplicate challenge type",
+			input:     "password password",
+			shouldErr: true,
+			err:       fmt.Errorf("duplicate challenge type: password"),
+		},
+		{
+			name:      "condition conflicts with challenge",
+			input:     "u2f if u2f not available",
+			shouldErr: true,
+			err:       fmt.Errorf("condition type u2f conflicts with challenge type"),
+		},
+		{
 			name:      "starts with if keyword",
 			input:     "if u2f not available",
 			shouldErr: true,
+			err:       fmt.Errorf("no challenge types specified"),
+		},
+		{
+			name:      "malformed input",
+			input:     `"unclosed`,
+			shouldErr: true,
+			err:       fmt.Errorf("auth challenge rule: parse error on line 1, column 10: extraneous or missing \" in quoted-field"),
 		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+			msgs = append(msgs, fmt.Sprintf("input: %s", tc.input))
 			r, err := parseRule(tc.input)
-			if tc.shouldErr {
-				if err == nil {
-					t.Fatal("expected error, got nil")
-				}
+			if tests.EvalErrWithLog(t, err, "parseRule", tc.shouldErr, tc.err, msgs) {
 				return
 			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if !strSliceEqual(r.challenges, tc.challenges) {
-				t.Errorf("challenges: got %v, want %v", r.challenges, tc.challenges)
-			}
-			if !strSliceEqual(r.conditions, tc.conditions) {
-				t.Errorf("conditions: got %v, want %v", r.conditions, tc.conditions)
-			}
+			tests.EvalObjectsWithLog(t, "challenges", tc.challenges, r.Challenges, msgs)
+			tests.EvalObjectsWithLog(t, "conditions", tc.conditions, r.Conditions, msgs)
 		})
-	}
-}
-
-func strSliceEqual(a, b []string) bool {
-	if len(a) == 0 && len(b) == 0 {
-		return true
-	}
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func TestParseRuleDecodeError(t *testing.T) {
-	_, err := parseRule(`"unclosed`)
-	if err == nil {
-		t.Fatal("expected error for malformed input")
 	}
 }

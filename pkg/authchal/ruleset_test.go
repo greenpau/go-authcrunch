@@ -15,7 +15,10 @@
 package authchal
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
 )
 
 func TestNewRuleset(t *testing.T) {
@@ -23,6 +26,7 @@ func TestNewRuleset(t *testing.T) {
 		name       string
 		statements []string
 		shouldErr  bool
+		err        error
 	}{
 		{
 			name:       "valid single rule",
@@ -46,25 +50,22 @@ func TestNewRuleset(t *testing.T) {
 		{
 			name:      "empty statements",
 			shouldErr: true,
+			err:       fmt.Errorf("no auth challenge rule statements found"),
 		},
 		{
 			name:       "invalid rule in chain",
 			statements: []string{"u2f", "sms"},
 			shouldErr:  true,
+			err:        fmt.Errorf("unsupported challenge type: sms"),
 		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
 			_, err := NewRuleset(tc.statements)
-			if tc.shouldErr {
-				if err == nil {
-					t.Fatal("expected error, got nil")
-				}
+			if tests.EvalErrWithLog(t, err, "NewRuleset", tc.shouldErr, tc.err, msgs) {
 				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
 			}
 		})
 	}
@@ -86,7 +87,7 @@ func TestRulesetDump(t *testing.T) {
 	}
 }
 
-func TestRulesetEvaluate(t *testing.T) {
+func TestRulesetResolveChallenges(t *testing.T) {
 	testcases := []struct {
 		name       string
 		statements []string
@@ -152,12 +153,29 @@ func TestRulesetEvaluate(t *testing.T) {
 			want:       []string{"password"},
 		},
 		{
+			name: "mfa rule with totp registered",
+			statements: []string{
+				"mfa",
+				"password if u2f and totp not available",
+			},
+			registered: map[string]bool{"totp": true},
+			want:       []string{"mfa"},
+		},
+		{
+			name: "mfa rule with neither registered",
+			statements: []string{
+				"mfa",
+				"password if u2f and totp not available",
+			},
+			registered: map[string]bool{},
+			want:       []string{"password"},
+		},
+		{
 			name: "no matching rule returns nil",
 			statements: []string{
 				"u2f",
 			},
 			registered: map[string]bool{},
-			want:       nil,
 		},
 		{
 			name: "conditional rule with condition met",
@@ -173,20 +191,18 @@ func TestRulesetEvaluate(t *testing.T) {
 				"password totp if u2f not available",
 			},
 			registered: map[string]bool{"u2f": true, "totp": true},
-			want:       nil,
 		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
 			rs, err := NewRuleset(tc.statements)
 			if err != nil {
 				t.Fatalf("failed to create ruleset: %v", err)
 			}
-			got := rs.Evaluate(tc.registered)
-			if !strSliceEqual(got, tc.want) {
-				t.Errorf("got %v, want %v", got, tc.want)
-			}
+			got := rs.ResolveChallenges(tc.registered)
+			tests.EvalObjectsWithLog(t, "challenges", tc.want, got, msgs)
 		})
 	}
 }

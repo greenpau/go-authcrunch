@@ -1115,7 +1115,11 @@ func (db *Database) IdentifyUser(r *requests.Request) error {
 	r.User.Email = user.GetMailClaim()
 	r.User.FullName = user.GetNameClaim()
 	r.User.Roles = user.GetRolesClaim()
-	r.User.Challenges = user.GetChallenges()
+	challenges, err := user.GetChallenges()
+	if err != nil {
+		return err
+	}
+	r.User.Challenges = challenges
 	r.Response.Code = 200
 	return nil
 }

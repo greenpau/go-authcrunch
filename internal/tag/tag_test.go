@@ -817,6 +817,11 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
+			name:  "test authchal.Rule struct",
+			entry: &authchal.Rule{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test authchal.Ruleset struct",
 			entry: &authchal.Ruleset{},
 			opts:  &Options{},

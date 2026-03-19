@@ -21,9 +21,15 @@ import (
 )
 
 const (
-	passwordKeyword  = "password"
-	totpKeyword      = "totp"
-	u2fKeyword       = "u2f"
+	// PasswordKeyword is the password challenge type.
+	PasswordKeyword = "password"
+	// TotpKeyword is the TOTP challenge type.
+	TotpKeyword = "totp"
+	// U2fKeyword is the U2F challenge type.
+	U2fKeyword = "u2f"
+	// MfaKeyword is the mixed MFA challenge type (soft or hard token).
+	MfaKeyword = "mfa"
+
 	orKeyword        = "or"
 	ifKeyword        = "if"
 	andKeyword       = "and"
@@ -32,18 +38,20 @@ const (
 )
 
 var validChallengeTypes = map[string]bool{
-	passwordKeyword: true,
-	totpKeyword:     true,
-	u2fKeyword:      true,
+	PasswordKeyword: true,
+	TotpKeyword:     true,
+	U2fKeyword:      true,
+	MfaKeyword:      true,
 }
 
-type rule struct {
-	challenges []string
-	conditions []string
-	hasOr      bool
+// Rule holds a parsed auth challenge rule.
+type Rule struct {
+	Challenges []string `json:"challenges,omitempty" xml:"challenges,omitempty" yaml:"challenges,omitempty"`
+	Conditions []string `json:"conditions,omitempty" xml:"conditions,omitempty" yaml:"conditions,omitempty"`
+	HasOr      bool     `json:"has_or,omitempty" xml:"has_or,omitempty" yaml:"has_or,omitempty"`
 }
 
-func parseRule(s string) (*rule, error) {
+func parseRule(s string) (*Rule, error) {
 	args, err := cfgutil.DecodeArgs(s)
 	if err != nil {
 		return nil, fmt.Errorf("auth challenge rule: %v", err)
@@ -52,14 +60,14 @@ func parseRule(s string) (*rule, error) {
 		return nil, fmt.Errorf("empty auth challenge rule")
 	}
 
-	r := &rule{}
+	r := &Rule{}
 	seen := make(map[string]bool)
 	i := 0
 
 	for i < len(args) && args[i] != ifKeyword {
 		ch := args[i]
 		if ch == orKeyword {
-			r.hasOr = true
+			r.HasOr = true
 			i++
 			continue
 		}
@@ -70,10 +78,10 @@ func parseRule(s string) (*rule, error) {
 			return nil, fmt.Errorf("duplicate challenge type: %s", ch)
 		}
 		seen[ch] = true
-		r.challenges = append(r.challenges, ch)
+		r.Challenges = append(r.Challenges, ch)
 		i++
 	}
-	if len(r.challenges) == 0 {
+	if len(r.Challenges) == 0 {
 		return nil, fmt.Errorf("no challenge types specified")
 	}
 
@@ -95,10 +103,10 @@ func parseRule(s string) (*rule, error) {
 		if seen[tok] {
 			return nil, fmt.Errorf("condition type %s conflicts with challenge type", tok)
 		}
-		r.conditions = append(r.conditions, tok)
+		r.Conditions = append(r.Conditions, tok)
 		i++
 	}
-	if len(r.conditions) == 0 {
+	if len(r.Conditions) == 0 {
 		return nil, fmt.Errorf("empty condition in auth challenge rule")
 	}
 

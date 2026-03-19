@@ -21,8 +21,8 @@ import (
 
 // Ruleset holds parsed auth challenge rules.
 type Ruleset struct {
-	rules      []*rule
-	statements []string
+	Rules      []*Rule  `json:"rules,omitempty" xml:"rules,omitempty" yaml:"rules,omitempty"`
+	Statements []string `json:"statements,omitempty" xml:"statements,omitempty" yaml:"statements,omitempty"`
 }
 
 // NewRuleset parses a list of auth challenge rule statements.
@@ -31,14 +31,14 @@ func NewRuleset(statements []string) (*Ruleset, error) {
 		return nil, fmt.Errorf("no auth challenge rule statements found")
 	}
 	rs := &Ruleset{
-		statements: statements,
+		Statements: statements,
 	}
 	for _, s := range statements {
 		r, err := parseRule(s)
 		if err != nil {
 			return nil, err
 		}
-		rs.rules = append(rs.rules, r)
+		rs.Rules = append(rs.Rules, r)
 	}
 	return rs, nil
 }
@@ -48,7 +48,7 @@ func (rs *Ruleset) Dump() string {
 	if rs == nil {
 		return "{}"
 	}
-	b, err := json.MarshalIndent(rs.statements, "", "  ")
+	b, err := json.MarshalIndent(rs, "", "  ")
 	if err != nil {
 		return "{\"error\": \"" + err.Error() + "\"}"
 	}
