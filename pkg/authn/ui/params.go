@@ -26,13 +26,13 @@ type Parameters struct {
 	MetaTitle               string            `json:"meta_title,omitempty" xml:"meta_title,omitempty" yaml:"meta_title,omitempty"`
 	MetaDescription         string            `json:"meta_description,omitempty" xml:"meta_description,omitempty" yaml:"meta_description,omitempty"`
 	MetaAuthor              string            `json:"meta_author,omitempty" xml:"meta_author,omitempty" yaml:"meta_author,omitempty"`
-	PrivateLinks            []Link            `json:"private_links,omitempty" xml:"private_links,omitempty" yaml:"private_links,omitempty"`
+	PrivateLinks            []*Link           `json:"private_links,omitempty" xml:"private_links,omitempty" yaml:"private_links,omitempty"`
 	AutoRedirectURL         string            `json:"auto_redirect_url,omitempty" xml:"auto_redirect_url,omitempty" yaml:"auto_redirect_url,omitempty"`
-	Realms                  []UserRealm       `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
+	Realms                  []*UserRealm      `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
 	PasswordRecoveryEnabled bool              `json:"password_recovery_enabled,omitempty" xml:"password_recovery_enabled,omitempty" yaml:"password_recovery_enabled,omitempty"`
 	CustomCSSPath           string            `json:"custom_css_path,omitempty" xml:"custom_css_path,omitempty" yaml:"custom_css_path,omitempty"`
 	CustomJsPath            string            `json:"custom_js_path,omitempty" xml:"custom_js_path,omitempty" yaml:"custom_js_path,omitempty"`
 	CustomHTMLHeaderPath    string            `json:"custom_html_header_path,omitempty" xml:"custom_html_header_path,omitempty" yaml:"custom_html_header_path,omitempty"`
-	StaticAssets            []StaticAsset     `json:"static_assets,omitempty" xml:"static_assets,omitempty" yaml:"static_assets,omitempty"`
+	StaticAssets            []*StaticAsset    `json:"static_assets,omitempty" xml:"static_assets,omitempty" yaml:"static_assets,omitempty"`
 	Language                string            `json:"language,omitempty" xml:"language,omitempty" yaml:"language,omitempty"`
 }

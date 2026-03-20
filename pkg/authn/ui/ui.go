@@ -45,11 +45,11 @@ type Factory struct {
 	PasswordRecoveryEnabled bool                 `json:"password_recovery_enabled,omitempty" xml:"password_recovery_enabled,omitempty" yaml:"password_recovery_enabled,omitempty"`
 	MfaEnabled              bool                 `json:"mfa_enabled,omitempty" xml:"mfa_enabled,omitempty" yaml:"mfa_enabled,omitempty"`
 	// The links visible to anonymous user
-	PublicLinks []Link `json:"public_links,omitempty" xml:"public_links,omitempty" yaml:"public_links,omitempty"`
+	PublicLinks []*Link `json:"public_links,omitempty" xml:"public_links,omitempty" yaml:"public_links,omitempty"`
 	// The links visible to authenticated user
-	PrivateLinks []Link `json:"private_links,omitempty" xml:"private_links,omitempty" yaml:"private_links,omitempty"`
+	PrivateLinks []*Link `json:"private_links,omitempty" xml:"private_links,omitempty" yaml:"private_links,omitempty"`
 	// The authentication realms/domains
-	Realms []UserRealm `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
+	Realms []*UserRealm `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
 	// The pass to authentication endpoint. This is where
 	// user credentials will be passed to via POST.
 	ActionEndpoint string           `json:"-"`
@@ -85,9 +85,9 @@ type Args struct {
 	ActionEndpoint          string                 `json:"action_endpoint,omitempty" xml:"action_endpoint,omitempty" yaml:"action_endpoint,omitempty"`
 	Message                 string                 `json:"message,omitempty" xml:"message,omitempty" yaml:"message,omitempty"`
 	MessageType             string                 `json:"message_type,omitempty" xml:"message_type,omitempty" yaml:"message_type,omitempty"`
-	PublicLinks             []Link                 `json:"public_links,omitempty" xml:"public_links,omitempty" yaml:"public_links,omitempty"`
-	PrivateLinks            []Link                 `json:"private_links,omitempty" xml:"private_links,omitempty" yaml:"private_links,omitempty"`
-	Realms                  []UserRealm            `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
+	PublicLinks             []*Link                `json:"public_links,omitempty" xml:"public_links,omitempty" yaml:"public_links,omitempty"`
+	PrivateLinks            []*Link                `json:"private_links,omitempty" xml:"private_links,omitempty" yaml:"private_links,omitempty"`
+	Realms                  []*UserRealm           `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
 	Authenticated           bool                   `json:"authenticated,omitempty" xml:"authenticated,omitempty" yaml:"authenticated,omitempty"`
 	Data                    map[string]interface{} `json:"data,omitempty" xml:"data,omitempty" yaml:"data,omitempty"`
 	RegistrationEnabled     bool                   `json:"registration_enabled,omitempty" xml:"registration_enabled,omitempty" yaml:"registration_enabled,omitempty"`
@@ -103,9 +103,9 @@ func NewFactory() *Factory {
 		LogoURL:         "/assets/images/logo.svg",
 		LogoDescription: "Authentication Portal",
 		Templates:       make(map[string]*Template),
-		PublicLinks:     []Link{},
-		PrivateLinks:    []Link{},
-		Realms:          []UserRealm{},
+		PublicLinks:     []*Link{},
+		PrivateLinks:    []*Link{},
+		Realms:          []*UserRealm{},
 	}
 }
 
@@ -207,7 +207,7 @@ func (args *Args) AddFrontendLinks(arr []string) {
 		if err != nil {
 			continue
 		}
-		lnk := Link{
+		lnk := &Link{
 			Title: parts[0],
 			Link:  parts[1],
 		}

@@ -28,17 +28,17 @@ func TestNewFactory(t *testing.T) {
 	f.Title = "Authentication"
 	f.LogoURL = "/images/logo.png"
 	f.LogoDescription = "Authentication Portal"
-	officeLink := Link{
+	officeLink := &Link{
 		Title: "Office 365",
 		Link:  "https://office.com/",
 		Style: "fa-windows",
 	}
 	f.PublicLinks = append(f.PublicLinks, officeLink)
-	f.PrivateLinks = append(f.PrivateLinks, Link{
+	f.PrivateLinks = append(f.PrivateLinks, &Link{
 		Title: "Prometheus",
 		Link:  "/prometheus",
 	})
-	f.PrivateLinks = append(f.PrivateLinks, Link{
+	f.PrivateLinks = append(f.PrivateLinks, &Link{
 		Title: "Alertmanager",
 		Link:  "/alertmanager",
 	})
