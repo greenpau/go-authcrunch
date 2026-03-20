@@ -175,7 +175,7 @@ func TestNewGatekeeper(t *testing.T) {
 				cfg.HeaderInjectionConfigs = tc.injectorConfigs
 				cfg.AccessListRules = tc.aclConfigs
 				cfg.CryptoRawConfigs = tc.cryptoRawConfigs
-				cfg.authProxyRawConfig = tc.authProxyRawConfig
+				cfg.AuthProxyRawConfig = tc.authProxyRawConfig
 			}
 
 			gatekeeper, err := NewGatekeeper(cfg, logger)

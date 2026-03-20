@@ -75,7 +75,7 @@ type PolicyConfig struct {
 	// Holds raw crypto configuration.
 	CryptoRawConfigs []string `json:"crypto_raw_configs,omitempty" xml:"crypto_raw_configs,omitempty" yaml:"crypto_raw_configs,omitempty"`
 	// Holds raw identity provider configuration.
-	authProxyRawConfig []string
+	AuthProxyRawConfig []string `json:"auth_proxy_raw_config,omitempty" xml:"auth_proxy_raw_config,omitempty" yaml:"auth_proxy_raw_config,omitempty"`
 	// APIKeyHeaderName holds custom API key header name.
 	APIKeyHeaderName string `json:"api_key_header_name,omitempty" xml:"api_key_header_name,omitempty" yaml:"api_key_header_name,omitempty"`
 	// AuthRealmHeaderName holds custom authentication realm header name.
@@ -105,9 +105,19 @@ func (cfg *PolicyConfig) OverwriteRawCryptoConfigs(arr []string) {
 	cfg.CryptoRawConfigs = arr
 }
 
-// AddRawIdpConfig add raw identity provider configs.
-func (cfg *PolicyConfig) AddRawIdpConfig(s string) {
-	cfg.authProxyRawConfig = append(cfg.authProxyRawConfig, s)
+// AddAuthProxyRawConfig add raw auth proxy config.
+func (cfg *PolicyConfig) AddAuthProxyRawConfig(s string) {
+	cfg.AuthProxyRawConfig = append(cfg.AuthProxyRawConfig, s)
+}
+
+// GetAuthProxyRawConfig returns raw auth proxy config.
+func (cfg *PolicyConfig) GetAuthProxyRawConfig() []string {
+	return cfg.AuthProxyRawConfig
+}
+
+// OverwriteAuthProxyRawConfig overwrite raw auth proxy config.
+func (cfg *PolicyConfig) OverwriteAuthProxyRawConfig(arr []string) {
+	cfg.AuthProxyRawConfig = arr
 }
 
 // SetAPIKeyHeaderName sets API key header name. Overwrites default DefaultAPIKeyHeaderName.
@@ -166,10 +176,10 @@ func (cfg *PolicyConfig) parseRawCryptoConfigs() error {
 // parseRawAuthProxyConfig parses raw auth proxy configs
 // into AuthProxyConfig.
 func (cfg *PolicyConfig) parseRawAuthProxyConfig() error {
-	if len(cfg.authProxyRawConfig) > 0 {
-		config, err := authproxy.ParseConfig(cfg.authProxyRawConfig)
+	if len(cfg.AuthProxyRawConfig) > 0 {
+		config, err := authproxy.ParseConfig(cfg.AuthProxyRawConfig)
 		if err != nil {
-			return errors.ErrConfigDirectiveFail.WithArgs("authproxy", cfg.authProxyRawConfig, err)
+			return errors.ErrConfigDirectiveFail.WithArgs("authproxy", cfg.AuthProxyRawConfig, err)
 		}
 		cfg.AuthProxyConfig = config
 	}
