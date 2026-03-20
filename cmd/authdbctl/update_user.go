@@ -64,6 +64,10 @@ var (
 				Name:  "add-roles",
 				Usage: "Append these roles to the existing ones",
 			},
+			&cli.StringSliceFlag{
+				Name:  "overwrite-auth-challenges",
+				Usage: "Replace existing auth challenge rules with these (comma-separated or multiple flags)",
+			},
 		},
 		Action: updateUser,
 	}
@@ -112,6 +116,11 @@ func updateUser(c *cli.Context) error {
 	if c.IsSet("add-roles") {
 		payload.Operation = "add_roles"
 		payload.User["roles"] = c.StringSlice("add-roles")
+	}
+
+	if c.IsSet("overwrite-auth-challenges") {
+		payload.Operation = "overwrite_auth_challenges"
+		payload.User["challenges"] = c.StringSlice("overwrite-auth-challenges")
 	}
 
 	reqData, err := json.Marshal(payload)

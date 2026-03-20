@@ -342,6 +342,11 @@ func (b *IdentityStore) AddUserRoles(_ string, _ string, _ []string) (map[string
 	return nil, fmt.Errorf("not implemented")
 }
 
+// OverwriteUserAuthChallengeRules overwrites user auth challenge rules in IdentityStore.
+func (b *IdentityStore) OverwriteUserAuthChallengeRules(_ string, _ string, _ []string) (map[string]any, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 // ResetUserPassword resets user password in IdentityStore.
 func (b *IdentityStore) ResetUserPassword(_ string, _ string) (map[string]any, error) {
 	return nil, fmt.Errorf("not implemented")

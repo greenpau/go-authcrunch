@@ -375,6 +375,26 @@ func (b *IdentityStore) OverwriteUserRoles(username string, emailAddress string,
 	return resp, nil
 }
 
+// OverwriteUserAuthChallengeRules overwrites user auth challenge rules in IdentityStore.
+func (b *IdentityStore) OverwriteUserAuthChallengeRules(username string, emailAddress string, rules []string) (map[string]any, error) {
+	if b.authenticator == nil {
+		return nil, fmt.Errorf("authenticator is nil")
+	}
+	req := &requests.Request{
+		User: requests.User{
+			Username:   username,
+			Email:      emailAddress,
+			Challenges: rules,
+		},
+	}
+	if err := b.authenticator.OverwriteUserAuthChallengeRules(req); err != nil {
+		return nil, err
+	}
+	resp := make(map[string]any)
+	resp["auth_challenge_rules"] = req.Response.Payload
+	return resp, nil
+}
+
 // AddUserRoles adds user roles to IdentityStore.
 func (b *IdentityStore) AddUserRoles(username string, emailAddress string, roles []string) (map[string]any, error) {
 	if b.authenticator == nil {

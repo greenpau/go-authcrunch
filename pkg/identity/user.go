@@ -646,6 +646,19 @@ func (user *User) GetChallenges() ([]string, error) {
 	return challenges, nil
 }
 
+// OverwriteAuthChallengeRules overwrites auth challenge rules for a user.
+func (user *User) OverwriteAuthChallengeRules(rules []string) error {
+	user.AuthChallengeRules = []string{}
+	user.authChallengeRuleset = nil
+	for _, rule := range rules {
+		if err := user.AddAuthChallengeRule(rule); err != nil {
+			return err
+		}
+	}
+	user.Revise()
+	return nil
+}
+
 // AddAuthChallengeRule adds an auth challenge rule statement.
 func (user *User) AddAuthChallengeRule(s string) error {
 	// Validate the rule by parsing it.

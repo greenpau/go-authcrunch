@@ -21,6 +21,7 @@
     * [Disable User](#disable-user)
     * [Password Reset](#password-reset)
     * [Update Roles](#update-roles)
+    * [Update Auth Challenges](#update-auth-challenges)
 * [Backlog](#backlog)
 
 <!-- end-markdown-toc -->
@@ -574,6 +575,20 @@ Alternatively, you can just add roles.
 
 ```bash
 authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --add-roles "baz"
+```
+
+#### Update Auth Challenges
+
+The following command updates user's auth challenge rules in local database on the server.
+
+```bash
+authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --overwrite-auth-challenges "u2f","password"
+```
+
+A successfuly response follows:
+
+```json
+{"auth_challenge_rules":["u2f","password"],"status":"success","timestamp":"2026-03-06T19:44:25.213519Z"}
 ```
 
 ## Backlog
