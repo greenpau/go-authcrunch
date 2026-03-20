@@ -67,7 +67,16 @@ func (ks *CryptoKeyStore) AddDefaults(m map[string]interface{}) error {
 		case "token_name":
 			ks.defaults[k] = v.(string)
 		case "token_lifetime":
-			ks.defaults[k] = int(v.(float64))
+			switch val := v.(type) {
+			case int:
+				ks.defaults[k] = val
+			case float64:
+				ks.defaults[k] = int(val)
+			case float32:
+				ks.defaults[k] = int(val)
+			default:
+				ks.defaults[k] = v
+			}
 		default:
 			ks.defaults[k] = v
 		}

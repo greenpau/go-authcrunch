@@ -17,9 +17,10 @@ package transformer
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"strings"
 )
 
 // Config represents a common set of configuration settings
@@ -378,10 +379,10 @@ func parseCustomNestedFieldValues(args []string) ([]string, interface{}, error) 
 }
 
 func hasReplPattern(s string) bool {
-	if strings.IndexRune(s, '{') < 0 {
+	if !strings.ContainsRune(s, '{') {
 		return false
 	}
-	if strings.IndexRune(s, '}') < 0 {
+	if !strings.ContainsRune(s, '}') {
 		return false
 	}
 	return true

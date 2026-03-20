@@ -17,6 +17,7 @@ package sso
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
@@ -79,7 +80,7 @@ func (cfg *SingleSignOnProviderConfig) Validate() error {
 }
 
 func validateFields(m map[string]interface{}, requiredFields, optionalFields []string) error {
-	if m == nil || len(m) == 0 {
+	if len(m) == 0 {
 		return fmt.Errorf("empty identity provider parameters")
 	}
 

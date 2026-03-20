@@ -343,6 +343,7 @@ func (p *Portal) configureCryptoKeyStore() error {
 
 	// Load token configuration into key managers, extract token verification
 	// keys and add them to token validator.
+
 	if p.config.CryptoKeyStoreConfig != nil {
 		// Add default token name, lifetime, etc.
 		if err := p.keystore.AddDefaults(p.config.CryptoKeyStoreConfig); err != nil {

@@ -73,7 +73,7 @@ type PolicyConfig struct {
 	// Allow to append scopes that come from the query parameter 'additionalScopes'
 	AdditionalScopes bool `json:"additional_scopes,omitempty" xml:"additional_scopes,omitempty" yaml:"additional_scopes,omitempty"`
 	// Holds raw crypto configuration.
-	cryptoRawConfigs []string
+	CryptoRawConfigs []string `json:"crypto_raw_configs,omitempty" xml:"crypto_raw_configs,omitempty" yaml:"crypto_raw_configs,omitempty"`
 	// Holds raw identity provider configuration.
 	authProxyRawConfig []string
 	// APIKeyHeaderName holds custom API key header name.
@@ -92,7 +92,17 @@ type PolicyConfig struct {
 
 // AddRawCryptoConfigs adds raw crypto configs.
 func (cfg *PolicyConfig) AddRawCryptoConfigs(s string) {
-	cfg.cryptoRawConfigs = append(cfg.cryptoRawConfigs, s)
+	cfg.CryptoRawConfigs = append(cfg.CryptoRawConfigs, s)
+}
+
+// GetRawCryptoConfigs returns raw crypto configs.
+func (cfg *PolicyConfig) GetRawCryptoConfigs() []string {
+	return cfg.CryptoRawConfigs
+}
+
+// OverwriteRawCryptoConfigs overwrite raw crypto configs.
+func (cfg *PolicyConfig) OverwriteRawCryptoConfigs(arr []string) {
+	cfg.CryptoRawConfigs = arr
 }
 
 // AddRawIdpConfig add raw identity provider configs.
@@ -115,7 +125,7 @@ func (cfg *PolicyConfig) SetAuthRealmHeaderName(s string) {
 func (cfg *PolicyConfig) parseRawCryptoConfigs() error {
 	var cryptoKeyConfig, cryptoKeyStoreConfig []string
 	var cryptoKeyConfigFound, cryptoKeyStoreConfigFound bool
-	for _, encodedArgs := range cfg.cryptoRawConfigs {
+	for _, encodedArgs := range cfg.CryptoRawConfigs {
 		args, err := cfgutil.DecodeArgs(encodedArgs)
 		if err != nil {
 			return errors.ErrConfigDirectiveFail.WithArgs("crypto", encodedArgs, err)

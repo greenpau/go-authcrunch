@@ -154,7 +154,10 @@ func TestNewGatekeeper(t *testing.T) {
                     "token_secret": "0e2fdcf8-6868-41a7-884b-7308795fc286",
                     "usage": "verify"
                   }
-                ]
+                ],
+				"crypto_raw_configs": [
+					"key verify 0e2fdcf8-6868-41a7-884b-7308795fc286"
+				]
               }
             }`,
 		},
@@ -171,7 +174,7 @@ func TestNewGatekeeper(t *testing.T) {
 				cfg.BypassConfigs = tc.bypassConfigs
 				cfg.HeaderInjectionConfigs = tc.injectorConfigs
 				cfg.AccessListRules = tc.aclConfigs
-				cfg.cryptoRawConfigs = tc.cryptoRawConfigs
+				cfg.CryptoRawConfigs = tc.cryptoRawConfigs
 				cfg.authProxyRawConfig = tc.authProxyRawConfig
 			}
 

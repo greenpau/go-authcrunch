@@ -63,7 +63,7 @@ func TestAuthenticate(t *testing.T) {
 				Action: "allow stop",
 			},
 		},
-		cryptoRawConfigs: []string{"key verify " + testutils.GetSharedKey()},
+		CryptoRawConfigs: []string{"key verify " + testutils.GetSharedKey()},
 	}
 
 	gatekeeper, err := NewGatekeeper(cfg, logger)
