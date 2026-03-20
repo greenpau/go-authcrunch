@@ -144,11 +144,6 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test ui.NavigationItem struct",
-			entry: &ui.NavigationItem{},
-			opts:  &Options{},
-		},
-		{
 			name:  "test requests.IdentityTokenCookie struct",
 			entry: &requests.IdentityTokenCookie{},
 			opts:  &Options{},
