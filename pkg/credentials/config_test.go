@@ -18,6 +18,7 @@ import (
 	// "fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
+
 	// "github.com/greenpau/go-authcrunch/pkg/errors"
 	"testing"
 )
@@ -25,33 +26,42 @@ import (
 func TestAddCredentials(t *testing.T) {
 	testcases := []struct {
 		name      string
-		entry     Credential
+		entry     []string
 		want      string
 		shouldErr bool
 		err       error
 	}{
 		{
 			name: "test valid generic credential",
-			entry: &Generic{
-				Name:     "default",
-				Username: "foo",
-				Password: "bar",
+			entry: []string{
+				"name default",
+				"username foo",
+				"password bar",
 			},
 			want: `{
-              "generic": [
-                {
-                  "name":     "default",
-                  "username": "foo",
-                  "password": "bar"
-                }
-              ]
+			  "generic": [
+			    {
+			      "name": "default",
+				  "password": "bar",
+				  "username": "foo"
+		        }
+			  ],
+			  "raw_credential_configs": [
+			    [
+			      "name default", 
+				  "username foo",
+				  "password bar"
+				]
+			  ]
             }`,
 		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := &Config{}
-			err := cfg.Add(tc.entry)
+
+			cfg.Add(tc.entry)
+			err := cfg.Validate()
 			if err != nil {
 				if !tc.shouldErr {
 					t.Fatalf("expected success, got: %v", err)

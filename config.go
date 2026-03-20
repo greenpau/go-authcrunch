@@ -48,11 +48,11 @@ func NewConfig() *Config {
 }
 
 // AddCredential adds a credential configuration.
-func (cfg *Config) AddCredential(c credentials.Credential) error {
+func (cfg *Config) AddCredential(instructions []string) {
 	if cfg.Credentials == nil {
 		cfg.Credentials = &credentials.Config{}
 	}
-	return cfg.Credentials.Add(c)
+	cfg.Credentials.Add(instructions)
 }
 
 // AddMessagingProvider adds a messaging provider configuration.
@@ -115,6 +115,13 @@ func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
 func (cfg *Config) Validate() error {
 	if cfg == nil {
 		return fmt.Errorf("config is nil")
+	}
+	if cfg.Credentials == nil {
+		cfg.Credentials = &credentials.Config{}
+	}
+
+	if err := cfg.Credentials.Validate(); err != nil {
+		return err
 	}
 
 	if len(cfg.AuthenticationPortals) < 1 && len(cfg.AuthorizationPolicies) < 1 {

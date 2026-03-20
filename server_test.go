@@ -25,7 +25,6 @@ import (
 
 	// "github.com/greenpau/go-authcrunch/pkg/authn/registration"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
-	"github.com/greenpau/go-authcrunch/pkg/credentials"
 
 	// "github.com/greenpau/go-authcrunch/pkg/errors"
 	"testing"
@@ -51,7 +50,7 @@ func TestNewServer(t *testing.T) {
 
 		identityStores    []*ids.IdentityStoreConfig
 		identityProviders []*idp.IdentityProviderConfig
-		credentials       []credentials.Credential
+		credentials       [][]string
 		messaging         []messaging.Provider
 		portals           []*authn.PortalConfig
 		policies          []*authz.PolicyConfig
@@ -70,11 +69,11 @@ func TestNewServer(t *testing.T) {
 		{
 			name:   "test server with valid local auth config",
 			logger: logutil.NewLogger(),
-			credentials: []credentials.Credential{
-				&credentials.Generic{
-					Name:     "foobar",
-					Username: "foo",
-					Password: "bar",
+			credentials: [][]string{
+				{
+					"name foobar",
+					"username foo",
+					"password bar",
 				},
 			},
 			messaging: []messaging.Provider{
@@ -211,7 +210,14 @@ func TestNewServer(t *testing.T) {
                       "password": "bar",
                       "username": "foo"
                     }
-                  ]
+                  ],
+				  "raw_credential_configs": [
+				    [
+				  	  "name foobar",
+					  "username foo",
+					 "password bar"
+					]
+				  ]
                 },
                 "identity_providers": [
                   {
@@ -271,7 +277,8 @@ func TestNewServer(t *testing.T) {
 			cfg := NewConfig()
 
 			for _, item := range tc.credentials {
-				if err := cfg.AddCredential(item); err != nil {
+				cfg.AddCredential(item)
+				if err := cfg.Credentials.Validate(); err != nil {
 					t.Fatal(err)
 				}
 			}

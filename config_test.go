@@ -16,19 +16,19 @@ package authcrunch
 
 import (
 	"fmt"
+	"path"
+	"path/filepath"
+	"testing"
+
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
-	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
-	"path"
-	"path/filepath"
-	"testing"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -44,7 +44,7 @@ func TestNewConfig(t *testing.T) {
 
 		identityStores    []*ids.IdentityStoreConfig
 		identityProviders []*idp.IdentityProviderConfig
-		credentials       []credentials.Credential
+		credentials       [][]string
 		messaging         []messaging.Provider
 		portals           []*authn.PortalConfig
 		policies          []*authz.PolicyConfig
@@ -160,6 +160,18 @@ func TestNewConfig(t *testing.T) {
 			err:       fmt.Errorf("identity provider %q has the same %q realm as %q", "provider1", "contoso", "localdb1"),
 		},
 		{
+			name: "test failed credentials config",
+			credentials: [][]string{
+				{
+					"name foobar",
+					"username foo",
+				},
+			},
+			shouldErr: true,
+			errPhase:  "AddCredential",
+			err:       errors.ErrCredKeyValueEmpty.WithArgs("password"),
+		},
+		{
 			name: "test failed identity provider config",
 			identityProviders: []*idp.IdentityProviderConfig{
 				{
@@ -186,18 +198,6 @@ func TestNewConfig(t *testing.T) {
 			shouldErr: true,
 			errPhase:  "Validate",
 			err:       errors.ErrPortalConfigBackendsNotFound,
-		},
-		{
-			name: "test failed credentials config",
-			credentials: []credentials.Credential{
-				&credentials.Generic{
-					Name:     "foobar",
-					Username: "foo",
-				},
-			},
-			shouldErr: true,
-			errPhase:  "AddCredential",
-			err:       errors.ErrCredKeyValueEmpty.WithArgs("password"),
 		},
 		{
 			name: "test failed messaging provider config",
@@ -227,11 +227,11 @@ func TestNewConfig(t *testing.T) {
 		},
 		{
 			name: "test valid local auth config",
-			credentials: []credentials.Credential{
-				&credentials.Generic{
-					Name:     "foobar",
-					Username: "foo",
-					Password: "bar",
+			credentials: [][]string{
+				{
+					"name foobar",
+					"username foo",
+					"password bar",
 				},
 			},
 			messaging: []messaging.Provider{
@@ -343,7 +343,8 @@ func TestNewConfig(t *testing.T) {
 			cfg := NewConfig()
 
 			for _, item := range tc.credentials {
-				err := cfg.AddCredential(item)
+				cfg.AddCredential(item)
+				err := cfg.Credentials.Validate()
 				if tests.EvalErrPhaseWithLog(t, err, "AddCredential", tc.errPhase, tc.shouldErr, tc.err, msgs) {
 					return
 				}
