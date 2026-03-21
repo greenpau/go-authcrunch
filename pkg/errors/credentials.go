@@ -16,6 +16,13 @@ package errors
 
 // Credentials Errors
 const (
-	ErrCredAddConfigType StandardError = "credential config %T is unsupported"
-	ErrCredKeyValueEmpty StandardError = "credential config %q key is empty"
+	ErrCredAddConfigType                      StandardError = "credential config %T is unsupported"
+	ErrCredKeyValueEmpty                      StandardError = "credential config %q key is empty"
+	ErrCredMalformedInstruction               StandardError = "malformed credential instruction: %s: %q"
+	ErrCredMalformedInstructionUnsupportedKey StandardError = "malformed credential instruction: unsupported key: %q"
+	ErrCredMalformedInstructionBadSyntax      StandardError = "malformed credential instruction: bad syntax: %q"
+	ErrCredMalformedInstructionKindMismatch   StandardError = "malformed credential instruction: kind mismatch, want: %q, got %q"
+	ErrCredMalformedInstructionThrown         StandardError = "malformed credential instruction with error: %v: %q"
+	ErrCredUnsupportedKind                    StandardError = "unsupported credential kind: %s"
+	ErrCredConfigEmpty                        StandardError = "credential config is empty"
 )

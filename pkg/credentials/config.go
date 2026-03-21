@@ -14,76 +14,37 @@
 
 package credentials
 
-import (
-	"fmt"
-
-	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-)
+import "github.com/greenpau/go-authcrunch/pkg/errors"
 
 // Config represents a collection of various credentials.
 type Config struct {
-	RawCredentialConfigs [][]string `json:"raw_credential_configs,omitempty" xml:"raw_credential_configs,omitempty" yaml:"raw_credential_configs,omitempty"`
-	Generic              []*Generic `json:"generic,omitempty" xml:"generic,omitempty" yaml:"generic,omitempty"`
-}
-
-// Credential is an interface to work with credentials.
-type Credential interface {
-	Validate() error
+	RawCredentialConfigs [][]string           `json:"raw_credential_configs,omitempty" xml:"raw_credential_configs,omitempty" yaml:"raw_credential_configs,omitempty"`
+	Generic              []*GenericCredential `json:"generic,omitempty" xml:"generic,omitempty" yaml:"generic,omitempty"`
 }
 
 // Validate validates credentials
 func (cfg *Config) Validate() error {
-	genericCredentials := []*Generic{}
+	genericCredentials := []*GenericCredential{}
+	count := 0
 	for _, instructions := range cfg.RawCredentialConfigs {
 		credRaw, err := NewCredential(instructions)
 		if err != nil {
 			return err
 		}
 
-		if err := credRaw.Validate(); err != nil {
-			return err
-		}
-
 		switch cred := credRaw.(type) {
-		case *Generic:
+		case *GenericCredential:
 			genericCredentials = append(genericCredentials, cred)
-		default:
-			return errors.ErrCredAddConfigType.WithArgs(credRaw)
+			count++
 		}
+	}
+
+	if count < 1 {
+		return errors.ErrCredConfigEmpty.WithArgs()
 	}
 
 	cfg.Generic = genericCredentials
 	return nil
-}
-
-// NewCredential parses instructions and returns Credential.
-func NewCredential(instructions []string) (Credential, error) {
-	cred := &Generic{}
-	for _, instruction := range instructions {
-		args, err := cfgutil.DecodeArgs(instruction)
-		if err != nil {
-			return nil, fmt.Errorf("malformed credential instruction: %v: %v", instruction, err)
-		}
-		if len(args) != 2 {
-			return nil, fmt.Errorf("malformed credential instruction: %v: bad syntax", instruction)
-		}
-		switch args[0] {
-		case "name":
-			cred.Name = args[1]
-		case "username":
-			cred.Username = args[1]
-		case "password":
-			cred.Password = args[1]
-		case "domain":
-			cred.Domain = args[1]
-		default:
-			return nil, fmt.Errorf("malformed credential instruction: %v: unsupported key", instruction)
-		}
-	}
-	err := cred.Validate()
-	return cred, err
 }
 
 // Add adds a credential config to Config.
@@ -102,7 +63,7 @@ func (cfg *Config) FindCredential(s string) bool {
 }
 
 // ExtractGeneric returns Generic credentials by name.
-func (cfg *Config) ExtractGeneric(s string) *Generic {
+func (cfg *Config) ExtractGeneric(s string) *GenericCredential {
 	for _, c := range cfg.Generic {
 		if c.Name == s {
 			return c

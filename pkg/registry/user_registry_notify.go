@@ -158,7 +158,7 @@ func (r *LocaUserRegistry) Notify(data map[string]string) error {
 			return errors.ErrNotifyRequestEmailProviderCredNotFound.WithArgs(r.config.EmailProvider)
 		}
 
-		var providerCred *credentials.Generic
+		var providerCred *credentials.GenericCredential
 		if providerCredName != "passwordless" {
 			if r.config.credentials == nil {
 				return errors.ErrNotifyRequestCredNil.WithArgs(r.config.EmailProvider)

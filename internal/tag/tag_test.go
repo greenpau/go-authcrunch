@@ -650,8 +650,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test credentials.Generic struct",
-			entry: &credentials.Generic{},
+			name:  "test credentials.GenericCredential struct",
+			entry: &credentials.GenericCredential{},
 			opts:  &Options{},
 		},
 		{

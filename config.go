@@ -15,7 +15,10 @@
 package authcrunch
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
@@ -120,8 +123,10 @@ func (cfg *Config) Validate() error {
 		cfg.Credentials = &credentials.Config{}
 	}
 
-	if err := cfg.Credentials.Validate(); err != nil {
-		return err
+	if len(cfg.Credentials.RawCredentialConfigs) > 0 {
+		if err := cfg.Credentials.Validate(); err != nil {
+			return err
+		}
 	}
 
 	if len(cfg.AuthenticationPortals) < 1 && len(cfg.AuthorizationPolicies) < 1 {
@@ -329,5 +334,34 @@ func (cfg *Config) AddUserRegistry(r *registry.UserRegistryConfig) error {
 		return err
 	}
 	cfg.UserRegistries = append(cfg.UserRegistries, r)
+	return nil
+}
+
+// LoadFromJSONFile loads configuration from a JSON file.
+func (cfg *Config) LoadFromJSONFile(filePath string) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, cfg)
+}
+
+// DumpToJSONFile stores configuration in a JSON file with pretty-printed formatting.
+func (cfg *Config) DumpToJSONFile(filePath string) error {
+	rawBytes, err := json.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	var prettyBuf bytes.Buffer
+	err = json.Indent(&prettyBuf, rawBytes, "", "\t")
+	if err != nil {
+		return fmt.Errorf("error indenting JSON: %w", err)
+	}
+
+	if err := os.WriteFile(filePath, prettyBuf.Bytes(), 0644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
 	return nil
 }

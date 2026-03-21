@@ -16,14 +16,15 @@ package credentials
 
 import (
 	// "fmt"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 
-	// "github.com/greenpau/go-authcrunch/pkg/errors"
 	"testing"
 )
 
-func TestAddCredentials(t *testing.T) {
+func TestValidateConfig(t *testing.T) {
 	testcases := []struct {
 		name      string
 		entry     []string
@@ -55,12 +56,55 @@ func TestAddCredentials(t *testing.T) {
 			  ]
             }`,
 		},
+		{
+			name: "test generic credential without name",
+			entry: []string{
+				"username foo",
+				"password bar",
+			},
+			shouldErr: true,
+			err:       errors.ErrCredKeyValueEmpty.WithArgs("name"),
+		},
+		{
+			name: "test generic credential without username",
+			entry: []string{
+				"name default",
+			},
+			shouldErr: true,
+			err:       errors.ErrCredKeyValueEmpty.WithArgs("username"),
+		},
+		{
+			name: "test generic credential without password",
+			entry: []string{
+				"name default",
+				"username foo",
+			},
+			shouldErr: true,
+			err:       errors.ErrCredKeyValueEmpty.WithArgs("password"),
+		},
+		{
+			name: "test mock credential",
+			entry: []string{
+				"name foo",
+				"kind mock",
+			},
+			shouldErr: true,
+			err:       errors.ErrCredUnsupportedKind.WithArgs("mock"),
+		},
+		{
+			name:      "test not credentials",
+			entry:     []string{},
+			shouldErr: true,
+			err:       errors.ErrCredConfigEmpty,
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := &Config{}
 
-			cfg.Add(tc.entry)
+			if len(tc.entry) > 0 {
+				cfg.Add(tc.entry)
+			}
 			err := cfg.Validate()
 			if err != nil {
 				if !tc.shouldErr {
@@ -79,6 +123,119 @@ func TestAddCredentials(t *testing.T) {
 
 			if diff := cmp.Diff(want, got); diff != "" {
 				t.Errorf("Add() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestFindCredential(t *testing.T) {
+	testcases := []struct {
+		name           string
+		instructions   [][]string
+		credentialName string
+		want           bool
+	}{
+		{
+			name: "find existing credential",
+			instructions: [][]string{
+				{
+					"name foo",
+					"username foo",
+					"password bar",
+				},
+			},
+			credentialName: "foo",
+			want:           true,
+		},
+		{
+			name: "find non-existing credential",
+			instructions: [][]string{
+				{
+					"name foo",
+					"username foo",
+					"password bar",
+				},
+			},
+			credentialName: "bar",
+			want:           false,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &Config{}
+			for _, instruction := range tc.instructions {
+				cfg.Add(instruction)
+			}
+			err := cfg.Validate()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.want, cfg.FindCredential(tc.credentialName)); diff != "" {
+				t.Errorf("FindCredential mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestExtractGeneric(t *testing.T) {
+	testcases := []struct {
+		name           string
+		instructions   [][]string
+		credentialName string
+		want           map[string]any
+	}{
+		{
+			name: "extract existing credential",
+			instructions: [][]string{
+				{
+					"name foo",
+					"username foo",
+					"password bar",
+				},
+			},
+			credentialName: "foo",
+			want: map[string]any{
+				"credential": &GenericCredential{
+					Name:     "foo",
+					Username: "foo",
+					Password: "bar"},
+			},
+		},
+		{
+			name: "extract non-existing credential",
+			instructions: [][]string{
+				{
+					"name foo",
+					"username foo",
+					"password bar",
+				},
+			},
+			credentialName: "bar",
+			want:           map[string]any{},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &Config{}
+			for _, instruction := range tc.instructions {
+				cfg.Add(instruction)
+			}
+			err := cfg.Validate()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			got := make(map[string]any)
+			cred := cfg.ExtractGeneric(tc.credentialName)
+			if cred != nil {
+				got["credential"] = cred
+			}
+
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("ExtractGeneric mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
