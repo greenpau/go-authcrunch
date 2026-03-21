@@ -158,6 +158,8 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 		return b.authenticator.IncrementMfaFailedAttempts(r)
 	case operator.ResetMfaFailedAttempts:
 		return b.authenticator.ResetMfaFailedAttempts(r)
+	case operator.OverwriteAuthChallengeRules:
+		return b.authenticator.OverwriteUserAuthChallengeRules(r)
 	}
 
 	b.logger.Error(

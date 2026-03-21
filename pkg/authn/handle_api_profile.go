@@ -126,6 +126,8 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	case "add_user_u2f_token":
 	case "fetch_user_info":
 	case "update_user_password":
+	case "fetch_user_auth_challenges":
+	case "overwrite_user_auth_challenges":
 	default:
 		resp["message"] = "Profile API received unsupported request type"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
@@ -231,6 +233,10 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return p.TestUserGPGKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	case "add_user_gpg_key":
 		return p.AddUserGPGKey(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
+	case "fetch_user_auth_challenges":
+		return p.FetchUserAuthChallenges(ctx, w, r, rr, parsedUser, resp, usr, backend)
+	case "overwrite_user_auth_challenges":
+		return p.OverwriteUserAuthChallenges(ctx, w, r, rr, parsedUser, resp, usr, backend, bodyData)
 	}
 
 	// Default response

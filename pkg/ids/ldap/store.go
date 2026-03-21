@@ -162,6 +162,8 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 		return b.IdentifyUser(r)
 	case operator.ChangePassword:
 		return errors.ErrOperatorNotAvailable.WithArgs(op)
+	case operator.OverwriteAuthChallengeRules:
+		return errors.ErrOperatorNotAvailable.WithArgs(op)
 	}
 	return errors.ErrOperatorNotSupported.WithArgs(op)
 }
