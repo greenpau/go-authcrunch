@@ -27,8 +27,10 @@ const (
 	TotpKeyword = "totp"
 	// U2fKeyword is the U2F challenge type.
 	U2fKeyword = "u2f"
-	// MfaKeyword is the mixed MFA challenge type (soft or hard token).
+	// MfaKeyword is the mixed MFA challenge type (totp, u2f, or email).
 	MfaKeyword = "mfa"
+	// EmailKeyword is the email challenge type.
+	EmailKeyword = "email"
 
 	orKeyword        = "or"
 	ifKeyword        = "if"
@@ -42,6 +44,7 @@ var validChallengeTypes = map[string]bool{
 	TotpKeyword:     true,
 	U2fKeyword:      true,
 	MfaKeyword:      true,
+	EmailKeyword:    true,
 }
 
 // Rule holds a parsed auth challenge rule.

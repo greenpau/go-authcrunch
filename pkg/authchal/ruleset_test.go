@@ -192,6 +192,25 @@ func TestRulesetResolveChallenges(t *testing.T) {
 			},
 			registered: map[string]bool{"u2f": true, "totp": true},
 		},
+		{
+			name: "mfa rule with email registered",
+			statements: []string{
+				"mfa",
+				"password if email not available",
+			},
+			registered: map[string]bool{"email": true},
+			want:       []string{"mfa"},
+		},
+		{
+			name: "three mfa types, first rule wins",
+			statements: []string{
+				"u2f",
+				"email or totp",
+				"password if u2f and totp and email not available",
+			},
+			registered: map[string]bool{"totp": true, "u2f": true, "email": true},
+			want:       []string{"u2f"},
+		},
 	}
 
 	for _, tc := range testcases {

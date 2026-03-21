@@ -73,10 +73,10 @@ func hasAnyChallenges(challenges []string, registeredTypes map[string]bool) bool
 }
 
 // isTypeRegistered checks whether a challenge type is registered.
-// The mfa type is a logical union of totp and u2f.
+// The mfa type is a logical union of totp, u2f, and email.
 func isTypeRegistered(ch string, registeredTypes map[string]bool) bool {
 	if ch == MfaKeyword {
-		return registeredTypes[TotpKeyword] || registeredTypes[U2fKeyword]
+		return registeredTypes[TotpKeyword] || registeredTypes[U2fKeyword] || registeredTypes[EmailKeyword]
 	}
 	return registeredTypes[ch]
 }

@@ -86,3 +86,40 @@ func TestGetChallengesCorruptRuleReturnsError(t *testing.T) {
 	}
 	tests.EvalErrWithLog(t, err, "GetChallenges", true, fmt.Errorf("unsupported challenge type: valid_rule_this_is_not"), msgs)
 }
+
+func TestGetChallengesEmail(t *testing.T) {
+	testcases := []struct {
+		name   string
+		tokens []*MfaToken
+		rules  []string
+		want   []string
+	}{
+		{
+			name:   "email token only",
+			tokens: []*MfaToken{{Type: "email"}},
+			want:   []string{authchal.PasswordKeyword, authchal.EmailKeyword},
+		},
+		{
+			name:   "email and totp",
+			tokens: []*MfaToken{{Type: "email"}, {Type: "totp"}},
+			want:   []string{authchal.PasswordKeyword, authchal.MfaKeyword},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+			user := &User{MfaTokens: tc.tokens}
+			for _, rule := range tc.rules {
+				if err := user.AddAuthChallengeRule(rule); err != nil {
+					t.Fatalf("failed to add rule: %v", err)
+				}
+			}
+			got, err := user.GetChallenges()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			tests.EvalObjectsWithLog(t, "challenges", tc.want, got, msgs)
+		})
+	}
+}

@@ -609,6 +609,8 @@ func (user *User) GetChallenges() ([]string, error) {
 			registeredTypes[authchal.TotpKeyword] = true
 		case authchal.U2fKeyword:
 			registeredTypes[authchal.U2fKeyword] = true
+		case authchal.EmailKeyword:
+			registeredTypes[authchal.EmailKeyword] = true
 		}
 	}
 
@@ -622,27 +624,22 @@ func (user *User) GetChallenges() ([]string, error) {
 		}
 	}
 
-	var challenges []string
-	challenges = append(challenges, authchal.PasswordKeyword)
-
-	if !registeredTypes[authchal.TotpKeyword] && !registeredTypes[authchal.U2fKeyword] {
-		return challenges, nil
+	var mfaTypes []string
+	for _, t := range []string{authchal.TotpKeyword, authchal.U2fKeyword, authchal.EmailKeyword} {
+		if registeredTypes[t] {
+			mfaTypes = append(mfaTypes, t)
+		}
 	}
 
-	if registeredTypes[authchal.TotpKeyword] && registeredTypes[authchal.U2fKeyword] {
+	challenges := []string{authchal.PasswordKeyword}
+	switch len(mfaTypes) {
+	case 0:
+		// password only
+	case 1:
+		challenges = append(challenges, mfaTypes[0])
+	default:
 		challenges = append(challenges, authchal.MfaKeyword)
-		return challenges, nil
 	}
-
-	if registeredTypes[authchal.TotpKeyword] {
-		challenges = append(challenges, authchal.TotpKeyword)
-		return challenges, nil
-	}
-
-	if registeredTypes[authchal.U2fKeyword] {
-		challenges = append(challenges, authchal.U2fKeyword)
-	}
-
 	return challenges, nil
 }
 

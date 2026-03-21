@@ -583,6 +583,7 @@ The following command updates user's authentication challenges in local database
 
 ```bash
 authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --overwrite-auth-challenges "u2f","password"
+authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --overwrite-auth-challenges "email","password"
 ```
 
 A successfuly response follows:
