@@ -59,9 +59,6 @@ func parseRule(s string) (*Rule, error) {
 	if err != nil {
 		return nil, fmt.Errorf("auth challenge rule: %v", err)
 	}
-	if len(args) == 0 {
-		return nil, fmt.Errorf("empty auth challenge rule")
-	}
 
 	r := &Rule{}
 	seen := make(map[string]bool)

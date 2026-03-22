@@ -211,6 +211,14 @@ func TestRulesetResolveChallenges(t *testing.T) {
 			registered: map[string]bool{"totp": true, "u2f": true, "email": true},
 			want:       []string{"u2f"},
 		},
+		{
+			name: "or rule with password skips password in availability check",
+			statements: []string{
+				"password or totp",
+			},
+			registered: map[string]bool{"totp": true},
+			want:       []string{"password", "totp"},
+		},
 	}
 
 	for _, tc := range testcases {
@@ -224,4 +232,15 @@ func TestRulesetResolveChallenges(t *testing.T) {
 			tests.EvalObjectsWithLog(t, "challenges", tc.want, got, msgs)
 		})
 	}
+}
+
+func TestRulesetResolveChallengesNilRule(t *testing.T) {
+	rs := &Ruleset{
+		Rules: []*Rule{
+			nil,
+			{Challenges: []string{"password"}},
+		},
+	}
+	got := rs.ResolveChallenges(map[string]bool{})
+	tests.EvalObjectsWithLog(t, "challenges", []string{"password"}, got, []string{"nil rule skipped"})
 }
