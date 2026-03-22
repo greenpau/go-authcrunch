@@ -71,14 +71,15 @@ func (p *Portal) handleAPICrudUser(ctx context.Context, w http.ResponseWriter, r
 	}
 
 	validOps := map[string]bool{
-		"info":            true,
-		"add":             true,
-		"delete":          true,
-		"disable":         true,
-		"enable":          true,
-		"reset_password":  true,
-		"overwrite_roles": true,
-		"add_roles":       true,
+		"info":                      true,
+		"add":                       true,
+		"delete":                    true,
+		"disable":                   true,
+		"enable":                    true,
+		"reset_password":            true,
+		"overwrite_roles":           true,
+		"add_roles":                 true,
+		"overwrite_auth_challenges": true,
 	}
 
 	if !validOps[req.Operation] {
@@ -358,6 +359,57 @@ func (p *Portal) handleAPICrudUser(ctx context.Context, w http.ResponseWriter, r
 				resp["status"] = "success"
 				p.logger.Debug(
 					"deleted user",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("api_endpoint", "server/user"),
+					zap.String("realm", req.Realm),
+					zap.String("operation", req.Operation),
+					zap.String("username", username),
+					zap.String("email", emailAddress),
+				)
+			}
+			resp["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)
+
+		case "overwrite_auth_challenges":
+			var challenges []string
+			if req.User != nil {
+				if v, ok := req.User["challenges"].([]any); ok {
+					for _, ch := range v {
+						if s, ok := ch.(string); ok {
+							challenges = append(challenges, s)
+						}
+					}
+				}
+			}
+			if len(challenges) < 1 {
+				p.logger.Warn(
+					"malformed request",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("operation", req.Operation),
+					zap.String("api_endpoint", "server/user"),
+					zap.String("error", "challenges are missing"),
+				)
+				return p.handleJSONError(ctx, w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			}
+
+			resp, err = ids.OverwriteUserAuthChallengeRules(username, emailAddress, challenges)
+			if err != nil {
+				p.logger.Warn(
+					"user operation failed",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("operation", req.Operation),
+					zap.String("api_endpoint", "server/user"),
+					zap.Error(err),
+				)
+				resp = make(map[string]any)
+				resp["status"] = "failure"
+				resp["error"] = err.Error()
+			} else {
+				resp["status"] = "success"
+				p.logger.Debug(
+					"updated user auth challenge rules",
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 					zap.String("api_endpoint", "server/user"),

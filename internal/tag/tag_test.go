@@ -25,6 +25,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
+	"github.com/greenpau/go-authcrunch/pkg/authchal"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	authncache "github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
@@ -808,6 +809,16 @@ func TestTagCompliance(t *testing.T) {
 		{
 			name:  "test acl.AccessList struct",
 			entry: &acl.AccessList{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test authchal.Rule struct",
+			entry: &authchal.Rule{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test authchal.Ruleset struct",
+			entry: &authchal.Ruleset{},
 			opts:  &Options{},
 		},
 		{

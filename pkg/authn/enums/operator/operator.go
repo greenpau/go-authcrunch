@@ -77,6 +77,9 @@ const (
 	// ResetMfaFailedAttempts operator signals resetting the MFA failed
 	// attempt counter for a user.
 	ResetMfaFailedAttempts
+	// OverwriteAuthChallengeRules operator signals overwriting authentication
+	// challenge rules for a user.
+	OverwriteAuthChallengeRules
 )
 
 // String returns string representation of an operator.
@@ -132,6 +135,8 @@ func (e Type) String() string {
 		return "IncrementMfaFailedAttempts"
 	case ResetMfaFailedAttempts:
 		return "ResetMfaFailedAttempts"
+	case OverwriteAuthChallengeRules:
+		return "OverwriteAuthChallengeRules"
 	}
 	return fmt.Sprintf("Type(%d)", int(e))
 }

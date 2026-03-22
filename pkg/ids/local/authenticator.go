@@ -214,6 +214,13 @@ func (sa *Authenticator) AddUserRoles(r *requests.Request) error {
 	return sa.db.AddUserRoles(r)
 }
 
+// OverwriteUserAuthChallengeRules overwrites user auth challenge rules in IdentityStore.
+func (sa *Authenticator) OverwriteUserAuthChallengeRules(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.OverwriteUserAuthChallengeRules(r)
+}
+
 // ResetUserPassword resets user password in database.
 func (sa *Authenticator) ResetUserPassword(r *requests.Request) error {
 	sa.mux.Lock()

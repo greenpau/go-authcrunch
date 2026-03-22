@@ -162,6 +162,8 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 		return b.IdentifyUser(r)
 	case operator.ChangePassword:
 		return errors.ErrOperatorNotAvailable.WithArgs(op)
+	case operator.OverwriteAuthChallengeRules:
+		return errors.ErrOperatorNotAvailable.WithArgs(op)
 	}
 	return errors.ErrOperatorNotSupported.WithArgs(op)
 }
@@ -339,6 +341,11 @@ func (b *IdentityStore) OverwriteUserRoles(_ string, _ string, _ []string) (map[
 
 // AddUserRoles adds user roles to IdentityStore.
 func (b *IdentityStore) AddUserRoles(_ string, _ string, _ []string) (map[string]any, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+// OverwriteUserAuthChallengeRules overwrites user auth challenge rules in IdentityStore.
+func (b *IdentityStore) OverwriteUserAuthChallengeRules(_ string, _ string, _ []string) (map[string]any, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 

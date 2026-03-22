@@ -158,6 +158,8 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 		return b.authenticator.IncrementMfaFailedAttempts(r)
 	case operator.ResetMfaFailedAttempts:
 		return b.authenticator.ResetMfaFailedAttempts(r)
+	case operator.OverwriteAuthChallengeRules:
+		return b.authenticator.OverwriteUserAuthChallengeRules(r)
 	}
 
 	b.logger.Error(
@@ -372,6 +374,26 @@ func (b *IdentityStore) OverwriteUserRoles(username string, emailAddress string,
 	}
 	resp := make(map[string]any)
 	resp["roles"] = req.Response.Payload
+	return resp, nil
+}
+
+// OverwriteUserAuthChallengeRules overwrites user auth challenge rules in IdentityStore.
+func (b *IdentityStore) OverwriteUserAuthChallengeRules(username string, emailAddress string, rules []string) (map[string]any, error) {
+	if b.authenticator == nil {
+		return nil, fmt.Errorf("authenticator is nil")
+	}
+	req := &requests.Request{
+		User: requests.User{
+			Username:   username,
+			Email:      emailAddress,
+			Challenges: rules,
+		},
+	}
+	if err := b.authenticator.OverwriteUserAuthChallengeRules(req); err != nil {
+		return nil, err
+	}
+	resp := make(map[string]any)
+	resp["auth_challenge_rules"] = req.Response.Payload
 	return resp, nil
 }
 

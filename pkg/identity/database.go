@@ -356,6 +356,36 @@ func (db *Database) AddUserRoles(r *requests.Request) error {
 	return nil
 }
 
+// OverwriteUserAuthChallengeRules overwrites user auth challenge rules in Database.
+func (db *Database) OverwriteUserAuthChallengeRules(r *requests.Request) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
+	if err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+
+	challenges := []string{}
+
+	for _, u := range db.Users {
+		if u.ID == user.ID {
+			if err := u.OverwriteAuthChallengeRules(r.User.Challenges); err != nil {
+				return errors.ErrUpdateUser.WithArgs(err)
+			}
+			challenges = u.GetAuthChallengeRules()
+			break
+		}
+	}
+
+	if err := db.commit(); err != nil {
+		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
+	}
+
+	r.Response.Payload = challenges
+	return nil
+}
+
 // AddUser adds user identity to the database.
 func (db *Database) AddUser(r *requests.Request) error {
 	db.mu.Lock()
@@ -1115,7 +1145,11 @@ func (db *Database) IdentifyUser(r *requests.Request) error {
 	r.User.Email = user.GetMailClaim()
 	r.User.FullName = user.GetNameClaim()
 	r.User.Roles = user.GetRolesClaim()
-	r.User.Challenges = user.GetChallenges()
+	challenges, err := user.GetChallenges()
+	if err != nil {
+		return err
+	}
+	r.User.Challenges = challenges
 	r.Response.Code = 200
 	return nil
 }

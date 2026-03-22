@@ -43,6 +43,7 @@ type IdentityStore interface {
 	GetMetadata(string) (map[string]any, error)
 	OverwriteUserRoles(string, string, []string) (map[string]any, error)
 	AddUserRoles(string, string, []string) (map[string]any, error)
+	OverwriteUserAuthChallengeRules(string, string, []string) (map[string]any, error)
 	Reload() error
 	Configured() bool
 	Request(operator.Type, *requests.Request) error
