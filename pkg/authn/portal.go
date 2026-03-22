@@ -53,7 +53,7 @@ const (
 type Portal struct {
 	id                string
 	config            *PortalConfig
-	userRegistries    map[string]registry.UserRegistry
+	userRegistries    map[string]registry.Provider
 	validator         *validator.TokenValidator
 	keystore          *kms.CryptoKeyStore
 	identityStores    []ids.IdentityStore
@@ -738,8 +738,8 @@ func (p *Portal) configureUserTransformer() error {
 	return nil
 }
 
-// AddUserRegistry adds registry.UserRegistry instance to Portal.
-func (p *Portal) AddUserRegistry(userRegistry registry.UserRegistry) error {
+// AddUserRegistry adds registry.Provider instance to Portal.
+func (p *Portal) AddUserRegistry(userRegistry registry.Provider) error {
 	p.config.UserRegistries = cfgutil.DedupStrArr(p.config.UserRegistries)
 
 	if len(p.config.UserRegistries) < 1 {
@@ -747,7 +747,7 @@ func (p *Portal) AddUserRegistry(userRegistry registry.UserRegistry) error {
 	}
 
 	if p.userRegistries == nil {
-		p.userRegistries = make(map[string]registry.UserRegistry)
+		p.userRegistries = make(map[string]registry.Provider)
 	}
 	if _, exists := p.userRegistries[userRegistry.GetIdentityStoreName()]; exists {
 		return fmt.Errorf("auth portal has multiple user registries supporting the same identity store: %v", p.config.UserRegistries)
@@ -758,7 +758,7 @@ func (p *Portal) AddUserRegistry(userRegistry registry.UserRegistry) error {
 		"Configured user registration",
 		zap.String("portal_name", p.config.Name),
 		zap.String("portal_id", p.id),
-		zap.Any("user_registry", userRegistry.GetConfig()),
+		zap.Any("user_registry", userRegistry.AsMap()),
 	)
 
 	return nil
@@ -777,7 +777,7 @@ func (p *Portal) GetIdentityStoreNames() map[string]string {
 }
 
 // GetUserRegistryByRealmName returns UserRegistry by realm name.
-func (p *Portal) GetUserRegistryByRealmName(realmName string) registry.UserRegistry {
+func (p *Portal) GetUserRegistryByRealmName(realmName string) registry.Provider {
 	if p.userRegistries == nil {
 		return nil
 	}

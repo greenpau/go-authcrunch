@@ -36,7 +36,7 @@ type refMap struct {
 	identityStores    map[string]ids.IdentityStore
 	identityProviders map[string]idp.IdentityProvider
 	ssoProviders      map[string]sso.SingleSignOnProvider
-	userRegistries    map[string]registry.UserRegistry
+	userRegistries    map[string]registry.Provider
 }
 
 // Server represents AAA SF server.
@@ -47,7 +47,7 @@ type Server struct {
 	identityStores    []ids.IdentityStore
 	identityProviders []idp.IdentityProvider
 	ssoProviders      []sso.SingleSignOnProvider
-	userRegistries    []registry.UserRegistry
+	userRegistries    []registry.Provider
 	nameRefs          refMap
 	logger            *zap.Logger
 }
@@ -59,7 +59,7 @@ func newRefMap() refMap {
 		identityStores:    make(map[string]ids.IdentityStore),
 		identityProviders: make(map[string]idp.IdentityProvider),
 		ssoProviders:      make(map[string]sso.SingleSignOnProvider),
-		userRegistries:    make(map[string]registry.UserRegistry),
+		userRegistries:    make(map[string]registry.Provider),
 	}
 }
 
@@ -121,13 +121,12 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		srv.ssoProviders = append(srv.ssoProviders, provider)
 	}
 
-	for _, cfg := range config.UserRegistries {
-		userRegistry, err := registry.NewUserRegistry(cfg, logger)
-		if err != nil {
-			return nil, errors.ErrNewServer.WithArgs("failed initializing user registry", err)
-		}
+	for _, userRegistry := range config.UserRegistration.GetProviders() {
 		if _, exists := srv.nameRefs.userRegistries[userRegistry.GetName()]; exists {
 			return nil, errors.ErrNewServer.WithArgs("duplicate user registry name", userRegistry.GetName())
+		}
+		if err := userRegistry.Activate(srv.logger); err != nil {
+			return nil, errors.ErrNewServer.WithArgs("failed configuring user registry", err)
 		}
 		srv.nameRefs.userRegistries[userRegistry.GetName()] = userRegistry
 		srv.userRegistries = append(srv.userRegistries, userRegistry)

@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
 func TestNewDomainRuleset(t *testing.T) {
@@ -91,7 +92,7 @@ func TestNewDomainRuleset(t *testing.T) {
 			name:       "malformed ruleset",
 			statements: []string{"deny foo.bar"},
 			shouldErr:  true,
-			err:        fmt.Errorf("malformed domain restriction rule: deny foo.bar"),
+			err:        errors.ErrUserRegistryConfigMalformedDomainRestrictionRule.WithArgs("deny foo.bar"),
 		},
 		{
 			name:       "ruleset without rule statement",

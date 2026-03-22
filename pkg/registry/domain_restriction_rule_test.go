@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
@@ -98,7 +99,7 @@ func TestNewDomainRestrictionRule(t *testing.T) {
 			name:      "test missing domain keyword",
 			statement: "allow foo foo.bar",
 			shouldErr: true,
-			err:       fmt.Errorf("malformed domain restriction rule, syntax: <allow|deny> [exact|partial|prefix|suffix|regex] domain <string>"),
+			err:       errors.ErrUserRegistryConfigMalformedDomainRestrictionRule.WithArgs("allow foo foo.bar"),
 		},
 		/*
 			{

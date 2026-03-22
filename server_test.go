@@ -275,7 +275,8 @@ func TestNewServer(t *testing.T) {
 					  "sender root@localhost"
 					]
 				  ]
-                }
+                },
+				"user_registration": {}
               }
 		    }`,
 		},

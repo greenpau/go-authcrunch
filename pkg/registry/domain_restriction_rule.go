@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
@@ -70,11 +71,11 @@ func NewDomainRestrictionRule(statement string) (*DomainRestrictionRule, error) 
 		domainMatchType = decodedArgs[1]
 		domainStr = decodedArgs[3]
 	default:
-		return nil, fmt.Errorf("malformed domain restriction rule: %s", statement)
+		return nil, errors.ErrUserRegistryConfigMalformedDomainRestrictionRule.WithArgs(statement)
 	}
 
 	if decodedArgs[len(decodedArgs)-2] != "domain" {
-		return nil, fmt.Errorf("malformed domain restriction rule, syntax: <allow|deny> [exact|partial|prefix|suffix|regex] domain <string>")
+		return nil, errors.ErrUserRegistryConfigMalformedDomainRestrictionRule.WithArgs(statement)
 	}
 
 	r := &DomainRestrictionRule{

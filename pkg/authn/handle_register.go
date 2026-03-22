@@ -103,7 +103,7 @@ func (p *Portal) handleHTTPRegisterScreen(ctx context.Context, w http.ResponseWr
 	return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 }
 
-func (p *Portal) fetchUserRegistry(r *http.Request, rr *requests.Request) (registry.UserRegistry, error) {
+func (p *Portal) fetchUserRegistry(r *http.Request, rr *requests.Request) (registry.Provider, error) {
 	registerEndpoint, err := parseRegisterEndpoint(r.URL.Path)
 	if err != nil {
 		p.logger.Warn(
@@ -322,7 +322,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 				}
 			case "email":
 				emailOpts := make(map[string]interface{})
-				if userRegistry.GetRequireDomainMailRecord() {
+				if userRegistry.GetRequireDomainMX() {
 					emailOpts["check_domain_mx"] = true
 				}
 				if len(userRegistry.GetDomainRestrictions()) > 0 {

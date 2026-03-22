@@ -35,6 +35,7 @@ import (
 type Config struct {
 	Credentials               *credentials.Config               `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
 	Messaging                 *messaging.Config                 `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
+	UserRegistration          *registry.Config                  `json:"user_registration,omitempty" xml:"user_registration,omitempty" yaml:"user_registration,omitempty"`
 	AuthenticationPortals     []*authn.PortalConfig             `json:"authentication_portals,omitempty" xml:"authentication_portals,omitempty" yaml:"authentication_portals,omitempty"`
 	AuthorizationPolicies     []*authz.PolicyConfig             `json:"authorization_policies,omitempty" xml:"authorization_policies,omitempty" yaml:"authorization_policies,omitempty"`
 	IdentityStores            []*ids.IdentityStoreConfig        `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
@@ -42,7 +43,6 @@ type Config struct {
 	SingleSignOnProviders     []*sso.SingleSignOnProviderConfig `json:"sso_providers,omitempty" xml:"sso_providers,omitempty" yaml:"sso_providers,omitempty"`
 	disabledIdentityStores    map[string]interface{}
 	disabledIdentityProviders map[string]interface{}
-	UserRegistries            []*registry.UserRegistryConfig `json:"user_registries,omitempty" xml:"user_registries,omitempty" yaml:"user_registries,omitempty"`
 }
 
 // NewConfig returns an instance of Config.
@@ -129,29 +129,41 @@ func (cfg *Config) Validate() error {
 		}
 	}
 
+	if cfg.UserRegistration == nil {
+		cfg.UserRegistration = &registry.Config{}
+	}
+
+	if len(cfg.UserRegistration.RawConfigs) > 0 {
+		if err := cfg.UserRegistration.Validate(); err != nil {
+			return err
+		}
+	}
+
 	if len(cfg.AuthenticationPortals) < 1 && len(cfg.AuthorizationPolicies) < 1 {
 		return fmt.Errorf("no portals and gatekeepers found")
 	}
 
 	identityStoreUserRegistry := make(map[string]string)
-	for _, userRegistry := range cfg.UserRegistries {
-		userRegistry.SetCredentials(cfg.Credentials)
-		userRegistry.SetMessaging(cfg.Messaging)
-		if err := userRegistry.ValidateMessaging(); err != nil {
+	for _, userRegistry := range cfg.UserRegistration.GetProviders() {
+		if err := userRegistry.SetCredentials(cfg.Credentials); err != nil {
 			return err
 		}
+		if err := userRegistry.SetMessaging(cfg.Messaging); err != nil {
+			return err
+		}
+
 		var identityStoreFound bool
 		for _, identityStore := range cfg.IdentityStores {
-			if identityStore.Name == userRegistry.IdentityStore {
+			if identityStore.Name == userRegistry.GetIdentityStoreName() {
 				identityStoreFound = true
-				identityStoreUserRegistry[identityStore.Name] = userRegistry.IdentityStore
+				identityStoreUserRegistry[identityStore.Name] = userRegistry.GetIdentityStoreName()
 				break
 			}
 		}
 		if !identityStoreFound {
 			return fmt.Errorf(
 				"identity store %q referenced in %q user registry not found",
-				userRegistry.IdentityStore, userRegistry.Name,
+				userRegistry.GetIdentityStoreName(), userRegistry.GetName(),
 			)
 		}
 	}
@@ -329,12 +341,11 @@ func (cfg *Config) filterDisabledIdentityProviders(arr []string) []string {
 }
 
 // AddUserRegistry adds a user registry configuration.
-func (cfg *Config) AddUserRegistry(r *registry.UserRegistryConfig) error {
-	if err := r.Validate(); err != nil {
-		return err
+func (cfg *Config) AddUserRegistry(instructions []string) {
+	if cfg.UserRegistration == nil {
+		cfg.UserRegistration = &registry.Config{}
 	}
-	cfg.UserRegistries = append(cfg.UserRegistries, r)
-	return nil
+	cfg.UserRegistration.RawConfigs = append(cfg.UserRegistration.RawConfigs, instructions)
 }
 
 // LoadFromJSONFile loads configuration from a JSON file.

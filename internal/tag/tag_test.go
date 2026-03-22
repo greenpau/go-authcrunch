@@ -155,8 +155,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test registry.LocaUserRegistry struct",
-			entry: &registry.LocaUserRegistry{},
+			name:  "test registry.LocalUserRegistryProvider struct",
+			entry: &registry.LocalUserRegistryProvider{},
 			opts:  &Options{},
 		},
 		{
@@ -546,8 +546,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test registry.UserRegistryConfig struct",
-			entry: &registry.UserRegistryConfig{},
+			name:  "test registry.Config struct",
+			entry: &registry.Config{},
 			opts: &Options{
 				AllowFieldMismatch: true,
 				AllowedFields: map[string]interface{}{

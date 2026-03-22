@@ -26,4 +26,18 @@ const (
 	ErrUserRegistryConfigCredentialsNil                       StandardError = "user registration config %q credentials is nil"
 	ErrUserRegistryConfigCredentialsNotFound                  StandardError = "user registration config %q credential %q not found"
 	ErrUserRegistryConfigAdminEmailNotFound                   StandardError = "user registration config %q registration admin email not found"
+
+	ErrUserRegistryConfigMalformedInstruction               StandardError = "malformed user registration config instruction: %s: %q"
+	ErrUserRegistryConfigMalformedInstructionUnsupportedKey StandardError = "malformed user registration config instruction: unsupported key: %q"
+	ErrUserRegistryConfigMalformedInstructionBadSyntax      StandardError = "malformed user registration config instruction: bad syntax: %q"
+	ErrUserRegistryConfigMalformedInstructionKindMismatch   StandardError = "malformed user registration config instruction: kind mismatch, want: %q, got %q"
+	ErrUserRegistryConfigMalformedInstructionThrown         StandardError = "malformed user registration config instruction with error: %v: %q"
+
+	ErrUserRegistryConfigUnsupportedKind StandardError = "unsupported user registration provider kind: %s"
+
+	ErrUserRegistryConfigKeyValueEmpty StandardError = "user registration config %q key is empty"
+
+	ErrUserRegistryConfigMalformedDomainRestrictionRule StandardError = "malformed domain restriction rule, syntax: <allow|deny> [exact|partial|prefix|suffix|regex] domain <string>, got %q"
+
+	ErrUserRegistryConfigEmpty StandardError = "user registration provider config is empty"
 )
