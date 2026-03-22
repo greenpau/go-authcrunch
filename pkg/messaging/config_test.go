@@ -15,112 +15,111 @@
 package messaging
 
 import (
+	// "fmt"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
+
 	"testing"
 )
 
-type dummyProvider struct {
-}
-
-func (p *dummyProvider) Validate() error {
-	return nil
-}
-
-func TestAddProviders(t *testing.T) {
-	tmpDir, err := tests.TempDir("TestAddMessagingProviders")
-	if err != nil {
-		t.Fatal(err)
-	}
-
+func TestValidateConfig(t *testing.T) {
 	testcases := []struct {
-		name         string
-		providerName string
-		entry        Provider
-		want         string
-		shouldErr    bool
-		err          error
+		name      string
+		entry     []string
+		want      string
+		shouldErr bool
+		err       error
 	}{
 		{
-			name:         "test valid email provider config",
-			providerName: "default",
-			entry: &EmailProvider{
-				Name:        "default",
-				Address:     "localhost",
-				Protocol:    "smtp",
-				Credentials: "default_email_creds",
-				SenderEmail: "root@localhost",
+			name: "test valid email provider config",
+			entry: []string{
+				"name default",
+				"kind email",
+				"address localhost",
+				"credentials default_email_creds",
+				"protocol smtp",
+				cfgutil.EncodeArgs([]string{"sender", "root@localhost", "My Auth Portal"}),
 			},
 			want: `{
-              "email_providers": [
-                {
-                  "address": "localhost",
-                  "credentials": "default_email_creds",
-                  "name": "default",
-                  "protocol": "smtp",
-				  "sender_email": "root@localhost"
-                }
-              ]
+				"email_providers": [
+					{
+						"address": "localhost",
+						"credentials": "default_email_creds",
+						"name": "default",
+						"protocol": "smtp",
+						"sender_email": "root@localhost",
+						"sender_name":  "My Auth Portal"
+					}
+				],
+				"raw_configs": [
+					[
+						"name default",
+						"kind email",
+						"address localhost",
+						"credentials default_email_creds",
+						"protocol smtp",
+						"sender root@localhost \"My Auth Portal\""
+					]
+				]
             }`,
 		},
 		{
-			name:         "test valid email provider passwordless config",
-			providerName: "default",
-			entry: &EmailProvider{
-				Name:         "default",
-				Address:      "localhost",
-				Protocol:     "smtp",
-				Passwordless: true,
-				SenderEmail:  "root@localhost",
+			name: "test valid file provider config",
+			entry: []string{
+				"name default",
+				"kind file",
+				"root_dir /var/spool/auth-messaging/",
+				cfgutil.EncodeArgs([]string{"sender", "root@localhost", "My Auth Portal"}),
 			},
 			want: `{
-              "email_providers": [
-                {
-                  "address": "localhost",
-                  "name": "default",
-                  "protocol": "smtp",
-				  "passwordless": true,
-                  "sender_email": "root@localhost"
-                }
-              ]
+				"file_providers": [
+					{
+						"name": "default",
+						"root_dir": "/var/spool/auth-messaging/",
+						"sender_email": "root@localhost",
+						"sender_name":  "My Auth Portal"
+					}
+				],
+				"raw_configs": [
+					[
+						"name default",
+						"kind file",
+						"root_dir /var/spool/auth-messaging/",
+						"sender root@localhost \"My Auth Portal\""
+					]
+				]
             }`,
 		},
 		{
-			name:         "test valid file provider config",
-			providerName: "default",
-			entry: &FileProvider{
-				Name:    "default",
-				RootDir: tmpDir,
-			},
-			want: `{
-              "file_providers": [
-                {
-                  "name": "default",
-				  "root_dir": "` + tmpDir + `"
-                }
-              ]
-            }`,
-		},
-		{
-			name:      "test invalid messaging provider config",
-			entry:     &dummyProvider{},
-			shouldErr: true,
-			err:       errors.ErrMessagingAddProviderConfigType.WithArgs(&dummyProvider{}),
-		},
-		{
-			name: "test file provider config without root directory",
-			entry: &FileProvider{
-				Name: "default",
+			name: "test email provider without name",
+			entry: []string{
+				"kind email",
+				"address localhost",
+				"credentials default_email_creds",
+				"protocol smtp",
+				cfgutil.EncodeArgs([]string{"sender", "root@localhost", "My Auth Portal"}),
 			},
 			shouldErr: true,
-			err:       errors.ErrMessagingProviderKeyValueEmpty.WithArgs("root_dir"),
+			err:       errors.ErrMessagingProviderKeyValueEmpty.WithArgs("name"),
+		},
+		{
+			name:      "test messaing provider without config",
+			entry:     []string{},
+			shouldErr: true,
+			err:       errors.ErrMessagingConfigEmpty.WithArgs(),
 		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := &Config{}
-			err := cfg.Add(tc.entry)
+
+			if len(tc.entry) > 0 {
+				cfg.Add(tc.entry)
+			}
+			err := cfg.Validate()
 			if err != nil {
 				if !tc.shouldErr {
 					t.Fatalf("expected success, got: %v", err)
@@ -136,53 +135,224 @@ func TestAddProviders(t *testing.T) {
 			got := tests.Unpack(t, cfg)
 			want := tests.Unpack(t, tc.want)
 
-			if !cfg.FindProvider(tc.providerName) {
-				t.Fatalf("failed FindProvider with %q", tc.providerName)
-			}
-
-			switch tc.entry.(type) {
-			case *EmailProvider:
-				p := cfg.ExtractEmailProvider(tc.providerName)
-				if p == nil {
-					t.Fatalf("failed to extract %q file provider", tc.providerName)
-				}
-				providerCreds := cfg.FindProviderCredentials(tc.providerName)
-				switch providerCreds {
-				case "passwordless":
-					if !p.Passwordless {
-						t.Fatalf("provider credentials mismatch: %v, %v", providerCreds, p.Credentials)
-					}
-				case p.Credentials:
-				default:
-					t.Fatalf("provider credentials mismatch: %v, %v", providerCreds, p.Credentials)
-				}
-			case *FileProvider:
-				p := cfg.ExtractFileProvider(tc.providerName)
-				if p == nil {
-					t.Fatalf("failed to extract %q file provider", tc.providerName)
-				}
-			}
-
-			if tc.name == "test valid email provider config" {
-				if cfg.FindProvider("foobar") {
-					t.Fatal("unexpected success with FindProvider")
-				}
-
-				if cfg.ExtractEmailProvider("foo") != nil {
-					t.Fatal("unexpected success with ExtractEmailProvider")
-				}
-
-				if cfg.ExtractFileProvider("foo") != nil {
-					t.Fatal("unexpected success with ExtractEmailProvider")
-				}
-				if cfg.FindProviderCredentials("foo") != "" {
-					t.Fatal("unexpected success with FindProviderCredentials")
-				}
-			}
-
 			if diff := cmp.Diff(want, got); diff != "" {
-				t.Logf("JSON: %s", tests.UnpackJSON(t, got))
 				t.Errorf("Add() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestFindProvider(t *testing.T) {
+	testcases := []struct {
+		name         string
+		instructions [][]string
+		providerName string
+		shouldFind   bool
+	}{
+		{
+			name: "find existing email provider",
+			instructions: [][]string{
+				{
+					"name default",
+					"kind email",
+					"address localhost",
+					"credentials default_email_creds",
+					"protocol smtp",
+					cfgutil.EncodeArgs([]string{"sender", "root@localhost", "My Auth Portal"}),
+				},
+			},
+			providerName: "default",
+			shouldFind:   true,
+		},
+		{
+			name: "find non-existing email provider",
+			instructions: [][]string{
+				{
+					"name default",
+					"kind email",
+					"address localhost",
+					"credentials default_email_creds",
+					"protocol smtp",
+					cfgutil.EncodeArgs([]string{"sender", "root@localhost", "My Auth Portal"}),
+				},
+			},
+			providerName: "foo",
+			shouldFind:   false,
+		},
+		{
+			name: "find existing file provider",
+			instructions: [][]string{
+				{
+					"name default",
+					"kind file",
+					"root_dir /var/spool/auth-messaging/",
+					cfgutil.EncodeArgs([]string{"sender", "root@localhost", "My Auth Portal"}),
+				},
+			},
+			providerName: "default",
+			shouldFind:   true,
+		},
+		{
+			name: "find non-existing file provider",
+			instructions: [][]string{
+				{
+					"name default",
+					"kind file",
+					"root_dir /var/spool/auth-messaging/",
+					cfgutil.EncodeArgs([]string{"sender", "root@localhost", "My Auth Portal"}),
+				},
+			},
+			providerName: "foo",
+			shouldFind:   false,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &Config{}
+			for _, instruction := range tc.instructions {
+				cfg.Add(instruction)
+			}
+			err := cfg.Validate()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(tc.shouldFind, cfg.FindProvider(tc.providerName)); diff != "" {
+				t.Errorf("FindProvider mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestExtractProvider(t *testing.T) {
+	instructions := [][]string{
+		{
+			"name default-email",
+			"kind email",
+			"address localhost",
+			"credentials default_email_creds",
+			"protocol smtp",
+			cfgutil.EncodeArgs([]string{"sender", "root@localhost", "My Auth Portal"}),
+		},
+		{
+			"name passwordless-email",
+			"kind email",
+			"address localhost",
+			"protocol smtps",
+			"passwordless",
+			cfgutil.EncodeArgs([]string{"sender", "root@localhost", "My Auth Portal"}),
+		},
+		{
+			"name default-file",
+			"kind file",
+			"root_dir /var/spool/auth-messaging/",
+			cfgutil.EncodeArgs([]string{"sender", "root@localhost", "My Auth Portal"}),
+		},
+	}
+
+	testcases := []struct {
+		name         string
+		providerName string
+		providerKind string
+		want         map[string]any
+	}{
+		{
+			name:         "extract existing email provider",
+			providerName: "default-email",
+			providerKind: EmailMessagingProviderKindLabel,
+			want: map[string]any{
+				"default-email": &EmailProvider{
+					Name:        "default-email",
+					Address:     "localhost",
+					Protocol:    "smtp",
+					Credentials: "default_email_creds",
+					SenderEmail: "root@localhost",
+					SenderName:  "My Auth Portal",
+				},
+				"kind":        EmailMessagingProviderKindLabel,
+				"credentials": "default_email_creds",
+			},
+		},
+		{
+			name:         "extract existing passwordless email provider",
+			providerName: "passwordless-email",
+			providerKind: EmailMessagingProviderKindLabel,
+			want: map[string]any{
+				"passwordless-email": &EmailProvider{
+					Name:         "passwordless-email",
+					Address:      "localhost",
+					Protocol:     "smtps",
+					Passwordless: true,
+					SenderEmail:  "root@localhost",
+					SenderName:   "My Auth Portal",
+				},
+				"kind":        EmailMessagingProviderKindLabel,
+				"credentials": "passwordless",
+			},
+		},
+		{
+			name:         "extract existing file provider",
+			providerName: "default-file",
+			providerKind: FileMessagingProviderKindLabel,
+			want: map[string]any{
+				"default-file": &FileProvider{
+					Name:        "default-file",
+					RootDir:     "/var/spool/auth-messaging/",
+					SenderEmail: "root@localhost",
+					SenderName:  "My Auth Portal",
+				},
+				"kind":        FileMessagingProviderKindLabel,
+				"credentials": "",
+			},
+		},
+		{
+			name:         "extract non existing email provider",
+			providerName: "foo",
+			providerKind: EmailMessagingProviderKindLabel,
+			want: map[string]any{
+				"kind":        UnknownMessagingProviderKindLabel,
+				"credentials": "",
+			},
+		},
+		{
+			name:         "extract non existing email provider",
+			providerName: "foo",
+			providerKind: FileMessagingProviderKindLabel,
+			want: map[string]any{
+				"kind":        UnknownMessagingProviderKindLabel,
+				"credentials": "",
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &Config{}
+			for _, instruction := range instructions {
+				cfg.Add(instruction)
+			}
+			err := cfg.Validate()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			got := make(map[string]any)
+
+			switch tc.providerKind {
+			case EmailMessagingProviderKindLabel:
+				if cfg.ExtractEmailProvider(tc.providerName) != nil {
+					got[tc.providerName] = cfg.ExtractEmailProvider(tc.providerName)
+				}
+			case FileMessagingProviderKindLabel:
+				if cfg.ExtractFileProvider(tc.providerName) != nil {
+					got[tc.providerName] = cfg.ExtractFileProvider(tc.providerName)
+				}
+			}
+			got["kind"] = cfg.GetProviderType(tc.providerName)
+			got["credentials"] = cfg.FindProviderCredentials(tc.providerName)
+
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("ExtractGeneric mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}

@@ -25,5 +25,13 @@ const (
 	ErrMessagingProviderAuthUnsupported             StandardError = "messaging provider does not support AUTH extension"
 
 	ErrMessagingProviderSend StandardError = "messaging provider send error: %v"
-	ErrMessagingProviderDir  StandardError = "messaging provider file dir error: %v"
+	ErrMessagingProviderDir  StandardError = "messaging provider file dir error: %s: %v"
+
+	ErrMessagingMalformedInstruction               StandardError = "malformed messaging provider instruction: %s: %q"
+	ErrMessagingMalformedInstructionUnsupportedKey StandardError = "malformed messaging provider instruction: unsupported key: %q"
+	ErrMessagingMalformedInstructionBadSyntax      StandardError = "malformed messaging provider instruction: bad syntax: %q"
+	ErrMessagingMalformedInstructionKindMismatch   StandardError = "malformed messaging provider instruction: kind mismatch, want: %q, got %q"
+	ErrMessagingMalformedInstructionThrown         StandardError = "malformed messaging provider instruction with error: %v: %q"
+	ErrMessagingUnsupportedKind                    StandardError = "unsupported messaging provider kind: %s"
+	ErrMessagingConfigEmpty                        StandardError = "messaging provider config is empty"
 )

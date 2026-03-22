@@ -59,11 +59,11 @@ func (cfg *Config) AddCredential(instructions []string) {
 }
 
 // AddMessagingProvider adds a messaging provider configuration.
-func (cfg *Config) AddMessagingProvider(p messaging.Provider) error {
+func (cfg *Config) AddMessagingProvider(instructions []string) {
 	if cfg.Messaging == nil {
 		cfg.Messaging = &messaging.Config{}
 	}
-	return cfg.Messaging.Add(p)
+	cfg.Messaging.Add(instructions)
 }
 
 // AddIdentityStore adds an identity store configuration.

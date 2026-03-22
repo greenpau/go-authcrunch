@@ -15,13 +15,13 @@
 package messaging
 
 import (
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/util"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
 // FileProviderSendInput is input for FileProvider.Send function.
@@ -36,14 +36,14 @@ func (p *FileProvider) Send(req *FileProviderSendInput) error {
 	fileInfo, err := os.Stat(p.RootDir)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return errors.ErrMessagingProviderDir.WithArgs(err)
+			return errors.ErrMessagingProviderDir.WithArgs(p.RootDir, err)
 		}
 		if err := os.MkdirAll(p.RootDir, 0700); err != nil {
-			return errors.ErrMessagingProviderDir.WithArgs(err)
+			return errors.ErrMessagingProviderDir.WithArgs(p.RootDir, err)
 		}
 	}
 	if fileInfo != nil && !fileInfo.IsDir() {
-		return errors.ErrMessagingProviderDir.WithArgs(p.RootDir + "is not a directory")
+		return errors.ErrMessagingProviderDir.WithArgs(p.RootDir, "is not a directory")
 	}
 
 	msgID := util.GetRandomString(64)
@@ -61,7 +61,7 @@ func (p *FileProvider) Send(req *FileProviderSendInput) error {
 
 	msg += "\r\n" + req.Body
 
-	if err := ioutil.WriteFile(fp, []byte(msg), 0600); err != nil {
+	if err := os.WriteFile(fp, []byte(msg), 0600); err != nil {
 		return errors.ErrMessagingProviderSend.WithArgs(err)
 	}
 	return nil

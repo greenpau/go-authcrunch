@@ -53,7 +53,7 @@ func NewGenericCredential(instructions []string) (*GenericCredential, error) {
 		case "domain":
 			cred.Domain = args[1]
 		case "kind":
-			if args[0] != GenericCredentialKindLabel {
+			if args[1] != GenericCredentialKindLabel {
 				return nil, errors.ErrCredMalformedInstructionKindMismatch.WithArgs(GenericCredentialKindLabel, args[1])
 			}
 		default:

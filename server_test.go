@@ -31,7 +31,6 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
-	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
 )
@@ -51,7 +50,7 @@ func TestNewServer(t *testing.T) {
 		identityStores    []*ids.IdentityStoreConfig
 		identityProviders []*idp.IdentityProviderConfig
 		credentials       [][]string
-		messaging         []messaging.Provider
+		messaging         [][]string
 		portals           []*authn.PortalConfig
 		policies          []*authz.PolicyConfig
 
@@ -76,13 +75,14 @@ func TestNewServer(t *testing.T) {
 					"password bar",
 				},
 			},
-			messaging: []messaging.Provider{
-				&messaging.EmailProvider{
-					Name:        "default",
-					Address:     "localhost",
-					Protocol:    "smtp",
-					Credentials: "foobar",
-					SenderEmail: "root@localhost",
+			messaging: [][]string{
+				{
+					"name default",
+					"kind email",
+					"address localhost",
+					"protocol smtp",
+					"credentials foobar",
+					"sender root@localhost",
 				},
 			},
 			identityStores: []*ids.IdentityStoreConfig{
@@ -264,7 +264,17 @@ func TestNewServer(t *testing.T) {
                       "protocol": "smtp",
                       "sender_email": "root@localhost"
                     }
-                  ]
+                  ],
+				  "raw_configs": [
+				    [
+				  	  "name default",
+					  "kind email",
+					  "address localhost",
+					  "protocol smtp",
+					  "credentials foobar",
+					  "sender root@localhost"
+					]
+				  ]
                 }
               }
 		    }`,
@@ -276,15 +286,16 @@ func TestNewServer(t *testing.T) {
 
 			cfg := NewConfig()
 
-			for _, item := range tc.credentials {
-				cfg.AddCredential(item)
+			for _, instructions := range tc.credentials {
+				cfg.AddCredential(instructions)
 				if err := cfg.Credentials.Validate(); err != nil {
 					t.Fatal(err)
 				}
 			}
 
-			for _, item := range tc.messaging {
-				if err := cfg.AddMessagingProvider(item); err != nil {
+			for _, instructions := range tc.messaging {
+				cfg.AddMessagingProvider(instructions)
+				if err := cfg.Messaging.Validate(); err != nil {
 					t.Fatal(err)
 				}
 			}

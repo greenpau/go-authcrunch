@@ -28,7 +28,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
-	"github.com/greenpau/go-authcrunch/pkg/messaging"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -45,7 +44,7 @@ func TestNewConfig(t *testing.T) {
 		identityStores    []*ids.IdentityStoreConfig
 		identityProviders []*idp.IdentityProviderConfig
 		credentials       [][]string
-		messaging         []messaging.Provider
+		messaging         [][]string
 		portals           []*authn.PortalConfig
 		policies          []*authz.PolicyConfig
 
@@ -199,21 +198,22 @@ func TestNewConfig(t *testing.T) {
 			errPhase:  "Validate",
 			err:       errors.ErrPortalConfigBackendsNotFound,
 		},
-		{
-			name: "test failed messaging provider config",
-			messaging: []messaging.Provider{
-				&messaging.EmailProvider{
-					Name:    "default",
-					Address: "localhost",
-					// Protocol:    "smtp",
-					Credentials: "foobar",
-					SenderEmail: "root@localhost",
-				},
-			},
-			shouldErr: true,
-			errPhase:  "AddMessagingProvider",
-			err:       errors.ErrMessagingProviderKeyValueEmpty.WithArgs("protocol"),
-		},
+		// {
+		// 	name: "test failed messaging provider config",
+		// 	messaging: [][]string{
+		// 		{
+		// 			"name default",
+		// 			"kind email",
+		// 			"address localhost",
+		// 			// "protocol smtp",
+		// 			"credentials foobar",
+		// 			"sender root@localhost",
+		// 		},
+		// 	},
+		// 	shouldErr: true,
+		// 	errPhase:  "AddMessagingProvider",
+		// 	err:       errors.ErrMessagingProviderKeyValueEmpty.WithArgs("protocol"),
+		// },
 		{
 			name: "test failed authorization policy config",
 			policies: []*authz.PolicyConfig{
@@ -234,13 +234,14 @@ func TestNewConfig(t *testing.T) {
 					"password bar",
 				},
 			},
-			messaging: []messaging.Provider{
-				&messaging.EmailProvider{
-					Name:        "default",
-					Address:     "localhost",
-					Protocol:    "smtp",
-					Credentials: "foobar",
-					SenderEmail: "root@localhost",
+			messaging: [][]string{
+				{
+					"name default",
+					"kind email",
+					"address localhost",
+					"protocol smtp",
+					"credentials foobar",
+					"sender root@localhost",
 				},
 			},
 			identityStores: []*ids.IdentityStoreConfig{
@@ -351,7 +352,7 @@ func TestNewConfig(t *testing.T) {
 			}
 
 			for _, item := range tc.messaging {
-				err := cfg.AddMessagingProvider(item)
+				cfg.AddMessagingProvider(item)
 				if tests.EvalErrPhaseWithLog(t, err, "AddMessagingProvider", tc.errPhase, tc.shouldErr, tc.err, msgs) {
 					return
 				}

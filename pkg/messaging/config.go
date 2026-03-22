@@ -18,36 +18,48 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
+const passwordlessKeyword = "passwordless"
+
 // Config represents a collection of various messaging providers.
 type Config struct {
+	RawConfigs     [][]string       `json:"raw_configs,omitempty" xml:"raw_configs,omitempty" yaml:"raw_configs,omitempty"`
 	EmailProviders []*EmailProvider `json:"email_providers,omitempty" xml:"email_providers,omitempty" yaml:"email_providers,omitempty"`
 	FileProviders  []*FileProvider  `json:"file_providers,omitempty" xml:"file_providers,omitempty" yaml:"file_providers,omitempty"`
 }
 
-// Provider is an interface to work with messaging providers.
-type Provider interface {
-	Validate() error
+// Add adds a messaging provider config to Config.
+func (cfg *Config) Add(instructions []string) {
+	cfg.RawConfigs = append(cfg.RawConfigs, instructions)
 }
 
-// Add adds a messaging provider to Config.
-func (cfg *Config) Add(c Provider) error {
-	switch v := c.(type) {
-	case *EmailProvider:
-	case *FileProvider:
-	default:
-		return errors.ErrMessagingAddProviderConfigType.WithArgs(v)
+// Validate validates credentials
+func (cfg *Config) Validate() error {
+	emailProviders := []*EmailProvider{}
+	fileProviders := []*FileProvider{}
+	count := 0
+
+	for _, instructions := range cfg.RawConfigs {
+		providerRaw, err := NewProvider(instructions)
+		if err != nil {
+			return err
+		}
+
+		switch provider := providerRaw.(type) {
+		case *EmailProvider:
+			emailProviders = append(emailProviders, provider)
+			count++
+		case *FileProvider:
+			fileProviders = append(fileProviders, provider)
+			count++
+		}
 	}
 
-	if err := c.Validate(); err != nil {
-		return err
+	if count < 1 {
+		return errors.ErrMessagingConfigEmpty.WithArgs()
 	}
 
-	switch v := c.(type) {
-	case *EmailProvider:
-		cfg.EmailProviders = append(cfg.EmailProviders, v)
-	case *FileProvider:
-		cfg.FileProviders = append(cfg.FileProviders, v)
-	}
+	cfg.EmailProviders = emailProviders
+	cfg.FileProviders = fileProviders
 	return nil
 }
 
@@ -72,7 +84,7 @@ func (cfg *Config) FindProviderCredentials(s string) string {
 	for _, p := range cfg.EmailProviders {
 		if p.Name == s {
 			if p.Passwordless {
-				return "passwordless"
+				return passwordlessKeyword
 			}
 			return p.Credentials
 		}
@@ -84,16 +96,16 @@ func (cfg *Config) FindProviderCredentials(s string) string {
 func (cfg *Config) GetProviderType(s string) string {
 	for _, p := range cfg.EmailProviders {
 		if p.Name == s {
-			return "email"
+			return EmailMessagingProviderKindLabel
 		}
 	}
 	for _, p := range cfg.FileProviders {
 		if p.Name == s {
-			return "file"
+			return FileMessagingProviderKindLabel
 		}
 	}
 
-	return "unknown"
+	return UnknownMessagingProviderKindLabel
 }
 
 // ExtractEmailProvider returns EmailProvider by name.

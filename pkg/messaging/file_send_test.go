@@ -15,9 +15,13 @@
 package messaging
 
 import (
+	"os"
+	"path/filepath"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
-	"testing"
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
 func TestFileProviderSend(t *testing.T) {
@@ -26,22 +30,51 @@ func TestFileProviderSend(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tmpDir += "/inbox"
+	// tmpDir += "/inbox"
 	// t.Logf("Temp dir: %s", tmpDir)
 
+	// Create a dummy file to block directory creation later
+	blockerFile := filepath.Join(tmpDir, "blocked_dir")
+	os.WriteFile(blockerFile, []byte("TODO"), 0644)
+
+	defer os.RemoveAll(tmpDir)
+
 	testcases := []struct {
-		name      string
-		provider  *FileProvider
-		want      string
-		shouldErr bool
-		err       error
+		name                 string
+		provider             *FileProvider
+		want                 string
+		shouldErr            bool
+		err                  error
+		shouldSkipCompareErr bool
 	}{
 		{
 			name: "test sending notification",
 			provider: &FileProvider{
-				Name:    "default",
-				RootDir: tmpDir,
+				Name:        "default",
+				RootDir:     filepath.Join(tmpDir, "inbox"),
+				SenderEmail: "foo@localhost",
 			},
+		},
+		{
+			name: "test root dir is not directory",
+			provider: &FileProvider{
+				Name:        "default",
+				RootDir:     blockerFile,
+				SenderEmail: "foo@localhost",
+			},
+			shouldErr: true,
+			err:       errors.ErrMessagingProviderDir.WithArgs(blockerFile, "is not a directory"),
+		},
+		{
+			name: "test root dir does not exist",
+			provider: &FileProvider{
+				Name:        "default",
+				RootDir:     filepath.Join(blockerFile, "nested"),
+				SenderEmail: "foo@localhost",
+			},
+			shouldErr:            true,
+			err:                  errors.ErrMessagingProviderDir.WithArgs(filepath.Join(blockerFile, "nested"), "XXXX"),
+			shouldSkipCompareErr: true,
 		},
 	}
 	for _, tc := range testcases {
@@ -60,6 +93,9 @@ func TestFileProviderSend(t *testing.T) {
 			if err != nil {
 				if !tc.shouldErr {
 					t.Fatalf("expected success, got: %v", err)
+				}
+				if tc.shouldSkipCompareErr {
+					return
 				}
 				if diff := cmp.Diff(err.Error(), tc.err.Error()); diff != "" {
 					t.Fatalf("unexpected error: %v, want: %v", err, tc.err)
