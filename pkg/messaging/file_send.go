@@ -24,15 +24,8 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
-// FileProviderSendInput is input for FileProvider.Send function.
-type FileProviderSendInput struct {
-	Subject    string   `json:"subject,omitempty" xml:"subject,omitempty" yaml:"subject,omitempty"`
-	Body       string   `json:"body,omitempty" xml:"body,omitempty" yaml:"body,omitempty"`
-	Recipients []string `json:"recipients,omitempty" xml:"recipients,omitempty" yaml:"recipients,omitempty"`
-}
-
 // Send writes a message to a file system.
-func (p *FileProvider) Send(req *FileProviderSendInput) error {
+func (p *FileProvider) Send(req *SendInput) error {
 	fileInfo, err := os.Stat(p.RootDir)
 	if err != nil {
 		if !os.IsNotExist(err) {

@@ -169,7 +169,7 @@ func (r *LocaUserRegistry) Notify(data map[string]string) error {
 			}
 		}
 
-		if err := provider.Send(&messaging.EmailProviderSendInput{
+		if err := provider.Send(&messaging.SendInput{
 			Subject:     qpEmailSubj,
 			Body:        qpEmailBody,
 			Recipients:  rcpts,
@@ -182,7 +182,7 @@ func (r *LocaUserRegistry) Notify(data map[string]string) error {
 		if provider == nil {
 			return errors.ErrNotifyRequestEmailProviderNotFound.WithArgs(r.config.EmailProvider)
 		}
-		if err := provider.Send(&messaging.FileProviderSendInput{
+		if err := provider.Send(&messaging.SendInput{
 			Subject:    qpEmailSubj,
 			Body:       qpEmailBody,
 			Recipients: rcpts,

@@ -127,3 +127,19 @@ func (cfg *Config) ExtractFileProvider(s string) *FileProvider {
 	}
 	return nil
 }
+
+// ExtractProvider returns Provider by name.
+func (cfg *Config) ExtractProvider(s string) Provider {
+	var provider Provider
+	for _, p := range cfg.EmailProviders {
+		if p.Name == s {
+			provider = p
+		}
+	}
+	for _, p := range cfg.FileProviders {
+		if p.Name == s {
+			provider = p
+		}
+	}
+	return provider
+}

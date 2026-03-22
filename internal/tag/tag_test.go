@@ -165,13 +165,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test messaging.FileProviderSendInput struct",
-			entry: &messaging.FileProviderSendInput{},
-			opts:  &Options{},
-		},
-		{
-			name:  "test messaging.EmailProviderSendInput struct",
-			entry: &messaging.EmailProviderSendInput{},
+			name:  "test messaging.SendInput struct",
+			entry: &messaging.SendInput{},
 			opts:  &Options{},
 		},
 		{

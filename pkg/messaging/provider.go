@@ -27,6 +27,7 @@ type Provider interface {
 	Validate() error
 	AsMap() map[string]any
 	Kind() string
+	Send(*SendInput) error
 }
 
 // NewProvider parses instructions and returns Provider.

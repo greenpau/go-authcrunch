@@ -84,7 +84,7 @@ func TestFileProviderSend(t *testing.T) {
 				t.Fatalf("unexpected validation error: %v", err)
 			}
 
-			err = tc.provider.Send(&FileProviderSendInput{
+			err = tc.provider.Send(&SendInput{
 				Subject:    "foo",
 				Body:       "foobar",
 				Recipients: []string{"root@localhost"},

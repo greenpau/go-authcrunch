@@ -21,21 +21,12 @@ import (
 
 	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
-	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
-// EmailProviderSendInput is input for EmailProvider.Send function.
-type EmailProviderSendInput struct {
-	Subject     string                         `json:"subject,omitempty" xml:"subject,omitempty" yaml:"subject,omitempty"`
-	Body        string                         `json:"body,omitempty" xml:"body,omitempty" yaml:"body,omitempty"`
-	Recipients  []string                       `json:"recipients,omitempty" xml:"recipients,omitempty" yaml:"recipients,omitempty"`
-	Credentials *credentials.GenericCredential `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
-}
-
 // Send sends an email message.
-func (e *EmailProvider) Send(req *EmailProviderSendInput) error {
+func (e *EmailProvider) Send(req *SendInput) error {
 	dial := smtp.Dial
 	if e.Protocol == "smtps" {
 		dial = func(addr string) (*smtp.Client, error) {
