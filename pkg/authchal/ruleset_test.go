@@ -15,7 +15,9 @@
 package authchal
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
@@ -71,6 +73,18 @@ func TestNewRuleset(t *testing.T) {
 	}
 }
 
+// forceMarshalError triggers a marshal failure in the test-only
+// MarshalJSON below. Not safe with t.Parallel().
+var forceMarshalError bool
+
+func (r *Rule) MarshalJSON() ([]byte, error) {
+	if forceMarshalError {
+		return nil, fmt.Errorf("forced marshal error")
+	}
+	type plain Rule
+	return json.Marshal((*plain)(r))
+}
+
 func TestRulesetDump(t *testing.T) {
 	rs, err := NewRuleset([]string{"u2f", "password if u2f not available"})
 	if err != nil {
@@ -84,6 +98,12 @@ func TestRulesetDump(t *testing.T) {
 	var nilRs *Ruleset
 	if nilRs.Dump() != "{}" {
 		t.Errorf("nil Dump() should return {}")
+	}
+
+	forceMarshalError = true
+	defer func() { forceMarshalError = false }()
+	if !strings.Contains(rs.Dump(), "error") {
+		t.Errorf("Dump() should return error JSON when marshal fails")
 	}
 }
 
