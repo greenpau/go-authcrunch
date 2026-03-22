@@ -87,6 +87,44 @@ func TestGetChallengesCorruptRuleReturnsError(t *testing.T) {
 	tests.EvalErrWithLog(t, err, "GetChallenges", true, fmt.Errorf("unsupported challenge type: valid_rule_this_is_not"), msgs)
 }
 
+func TestOverwriteAuthChallengeRules(t *testing.T) {
+	user := &User{
+		MfaTokens: []*MfaToken{{Type: "u2f"}},
+	}
+	if err := user.OverwriteAuthChallengeRules([]string{"u2f", "password if u2f not available"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	msgs := []string{"overwrite should set rules"}
+	tests.EvalObjectsWithLog(t, "rules", []string{"u2f", "password if u2f not available"}, user.GetAuthChallengeRules(), msgs)
+
+	got, err := user.GetChallenges()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	tests.EvalObjectsWithLog(t, "challenges", []string{authchal.U2fKeyword}, got, msgs)
+
+	// second call uses cached ruleset
+	got, err = user.GetChallenges()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	tests.EvalObjectsWithLog(t, "challenges cached", []string{authchal.U2fKeyword}, got, msgs)
+}
+
+func TestOverwriteAuthChallengeRulesInvalid(t *testing.T) {
+	user := &User{}
+	msgs := []string{"invalid rule should return error"}
+	err := user.OverwriteAuthChallengeRules([]string{"sms"})
+	tests.EvalErrWithLog(t, err, "OverwriteAuthChallengeRules", true, fmt.Errorf("unsupported challenge type: sms"), msgs)
+}
+
+func TestAddAuthChallengeRuleInvalid(t *testing.T) {
+	user := &User{}
+	msgs := []string{"invalid rule should return error"}
+	err := user.AddAuthChallengeRule("sms")
+	tests.EvalErrWithLog(t, err, "AddAuthChallengeRule", true, fmt.Errorf("unsupported challenge type: sms"), msgs)
+}
+
 func TestGetChallengesEmail(t *testing.T) {
 	testcases := []struct {
 		name   string
