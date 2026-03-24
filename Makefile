@@ -42,16 +42,6 @@ linter:
 	@golint -set_exit_status $(TEST_DIR)
 	@echo "$@: complete"
 
-.PHONY: gtest
-gtest:
-	@go test $(VERBOSE) -coverprofile=.coverage/coverage.out $(TEST_DIR)
-	@echo "$@: complete"
-
-.PHONY: test
-test: templates info covdir linter gtest coverage
-	@echo "$@: complete"
-
-
 .PHONY: install-test-tools
 install-test-tools:
 	@echo "$@: started"
@@ -85,8 +75,8 @@ run-reports:
 	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
 	@echo "$@: complete"
 
-.PHONY: ctest
-ctest: templates covdir linter install-test-tools run-tests run-reports
+.PHONY: test
+test: templates covdir linter install-test-tools run-tests run-reports
 	@if grep -q '"Action":"fail"' .coverage/test_output.jsonl; then \
 		echo "ERROR: Go tests failed! See .coverage/test_output.jsonl for details."; \
 		exit 1; \
@@ -100,13 +90,13 @@ covdir:
 	@rm -rf .coverage/{coverage,test_output}.{html,jsonl,out}
 	@echo "$@: complete"
 
-.PHONY: coverage
-coverage:
-	@#go tool cover -help
-	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
-	@go test -covermode=count -coverprofile=.coverage/coverage.out $(TEST_DIR)
-	@go tool cover -func=.coverage/coverage.out | grep -v "100.0"
-	@echo "$@: complete"
+# .PHONY: coverage
+# coverage:
+# 	@#go tool cover -help
+# 	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
+# 	@go test -covermode=count -coverprofile=.coverage/coverage.out $(TEST_DIR)
+# 	@go tool cover -func=.coverage/coverage.out | grep -v "100.0"
+# 	@echo "$@: complete"
 
 .PHONY: templates
 templates: license

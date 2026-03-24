@@ -1,5 +1,5 @@
 ---
-name: build
+name: test
 
 on:
   workflow_dispatch: {}
@@ -52,14 +52,12 @@ jobs:
         make dep
     - name: Run tests
       run: |
-        make ctest
+        make test
     - name: Run build
       run: |
         make
-    - name: Generate coverage report
-      run: make coverage
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
       with:
         name: Test Coverage Artifacts
-        path: .coverage/
+        path: .coverage
