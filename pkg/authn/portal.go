@@ -327,6 +327,13 @@ func (p *Portal) configureCryptoKeyStore() error {
 		p.config.TokenValidatorOptions = options.NewTokenValidatorOptions()
 	}
 	p.config.TokenValidatorOptions.ValidateBearerHeader = true
+	p.config.TokenValidatorOptions.AuthorizationCookieNames = []string{p.config.CookieConfig.AccessTokenCookieName}
+	p.config.TokenValidatorOptions.AuthorizationHeaderNames = []string{
+		strings.ToLower(p.config.CookieConfig.AccessTokenCookieName),
+	}
+	p.config.TokenValidatorOptions.AuthorizationQueryParamNames = []string{
+		strings.ToLower(p.config.CookieConfig.AccessTokenCookieName),
+	}
 
 	// The below line is disabled because path match is not part of the ACL.
 	// p.config.TokenValidatorOptions.ValidateMethodPath = true

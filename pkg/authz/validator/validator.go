@@ -100,11 +100,10 @@ func NewTokenValidator(keystoreConfig *kms.CryptoKeyStoreConfig, logger *zap.Log
 		authQueryParams: make(map[string]interface{}),
 	}
 
-	for _, name := range defaultTokenNames {
-		v.authHeaders[name] = true
-		v.authCookies[name] = true
-		v.authQueryParams[name] = true
-	}
+	// for _, name := range defaultAuthorizationTokenNames {
+	// 	v.authHeaders[name] = true
+	// 	v.authQueryParams[name] = true
+	// }
 
 	v.cache = cache.NewTokenCache(0)
 	v.tokenSources = defaultTokenSources
@@ -335,8 +334,14 @@ func (v *TokenValidator) Configure(ctx context.Context, keys []*kms.CryptoKey, a
 
 	v.opts = opts
 
-	for _, cookieName := range opts.AdditionalAccessTokenCookieNames {
+	for _, cookieName := range opts.AuthorizationCookieNames {
 		v.authCookies[cookieName] = true
+	}
+	for _, headerName := range opts.AuthorizationHeaderNames {
+		v.authHeaders[headerName] = true
+	}
+	for _, queryParamName := range opts.AuthorizationQueryParamNames {
+		v.authQueryParams[queryParamName] = true
 	}
 
 	switch {

@@ -122,7 +122,23 @@ func (g *Gatekeeper) configure() error {
 	if g.config.ValidateSourceAddress {
 		g.opts.ValidateSourceAddress = true
 	}
-	g.opts.AdditionalAccessTokenCookieNames = g.config.AccessTokenCookieNames
+
+	if len(g.config.AccessTokenCookieNames) > 0 {
+		g.opts.AuthorizationCookieNames = g.config.AccessTokenCookieNames
+	} else {
+		g.opts.AuthorizationCookieNames = []string{
+			"access_token",
+			"jwt_access_token",
+		}
+	}
+	g.opts.AuthorizationHeaderNames = []string{
+		"access_token",
+		"jwt_access_token",
+	}
+	g.opts.AuthorizationQueryParamNames = []string{
+		"access_token",
+		"jwt_access_token",
+	}
 
 	// Load access list.
 	if len(g.config.AccessListRules) == 0 {

@@ -16,11 +16,13 @@ package options
 
 // TokenValidatorOptions provides options for TokenValidator.
 type TokenValidatorOptions struct {
-	ValidateSourceAddress            bool     `json:"validate_source_address,omitempty" xml:"validate_source_address,omitempty" yaml:"validate_source_address,omitempty"`
-	ValidateBearerHeader             bool     `json:"validate_bearer_header,omitempty" xml:"validate_bearer_header,omitempty" yaml:"validate_bearer_header,omitempty"`
-	ValidateMethodPath               bool     `json:"validate_method_path,omitempty" xml:"validate_method_path,omitempty" yaml:"validate_method_path,omitempty"`
-	ValidateAccessListPathClaim      bool     `json:"validate_access_list_path_claim,omitempty" xml:"validate_access_list_path_claim,omitempty" yaml:"validate_access_list_path_claim,omitempty"`
-	AdditionalAccessTokenCookieNames []string `json:"additional_access_token_cookie_names,omitempty" xml:"additional_access_token_cookie_names,omitempty" yaml:"additional_access_token_cookie_names,omitempty"`
+	ValidateSourceAddress        bool     `json:"validate_source_address,omitempty" xml:"validate_source_address,omitempty" yaml:"validate_source_address,omitempty"`
+	ValidateBearerHeader         bool     `json:"validate_bearer_header,omitempty" xml:"validate_bearer_header,omitempty" yaml:"validate_bearer_header,omitempty"`
+	ValidateMethodPath           bool     `json:"validate_method_path,omitempty" xml:"validate_method_path,omitempty" yaml:"validate_method_path,omitempty"`
+	ValidateAccessListPathClaim  bool     `json:"validate_access_list_path_claim,omitempty" xml:"validate_access_list_path_claim,omitempty" yaml:"validate_access_list_path_claim,omitempty"`
+	AuthorizationCookieNames     []string `json:"authorization_cookie_names,omitempty" xml:"authorization_cookie_names,omitempty" yaml:"authorization_cookie_names,omitempty"`
+	AuthorizationHeaderNames     []string `json:"authorization_header_names,omitempty" xml:"authorization_header_names,omitempty" yaml:"authorization_header_names,omitempty"`
+	AuthorizationQueryParamNames []string `json:"authorization_query_param_names,omitempty" xml:"authorization_query_param_names,omitempty" yaml:"authorization_query_param_names,omitempty"`
 }
 
 // TokenGrantorOptions provides options for TokenGrantor.

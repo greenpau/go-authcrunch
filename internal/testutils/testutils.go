@@ -17,8 +17,10 @@ package testutils
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
@@ -119,6 +121,87 @@ func NewTestGuestAccessListWithLogger() *acl.AccessList {
 	return accessList
 }
 
+// NewTestDefaultAccessListWithLogger return default ACL with logger.
+func NewTestDefaultAccessListWithLogger() *acl.AccessList {
+	ctx := context.Background()
+	logger := logutil.NewLogger()
+
+	rules := []*acl.RuleConfiguration{}
+	defaultPortalACLAction := "allow log"
+	adminRoles := []string{"authp/admin"}
+	userRoles := []string{"authp/user"}
+	guestRoles := []string{"authp/guest"}
+
+	adminRolePatterns := []*regexp.Regexp{
+		regexp.MustCompile("/admin$"),
+	}
+	userRolePatterns := []*regexp.Regexp{
+		regexp.MustCompile("/user$"),
+	}
+	guestRolePatterns := []*regexp.Regexp{
+		regexp.MustCompile("/guest$"),
+	}
+
+	// Configure ACL by role names
+	for _, roleName := range adminRoles {
+		aclConfig := &acl.RuleConfiguration{
+			Comment:    "admin role name match",
+			Conditions: []string{"match role " + roleName},
+			Action:     defaultPortalACLAction,
+		}
+		rules = append(rules, aclConfig)
+	}
+	for _, roleName := range userRoles {
+		aclConfig := &acl.RuleConfiguration{
+			Comment:    "user role name match",
+			Conditions: []string{"match role " + roleName},
+			Action:     defaultPortalACLAction,
+		}
+		rules = append(rules, aclConfig)
+	}
+	for _, roleName := range guestRoles {
+		aclConfig := &acl.RuleConfiguration{
+			Comment:    "guest role name match",
+			Conditions: []string{"match role " + roleName},
+			Action:     defaultPortalACLAction,
+		}
+		rules = append(rules, aclConfig)
+	}
+
+	// Configure ACL by role patterns
+	for _, roleNameRegex := range adminRolePatterns {
+		aclConfig := &acl.RuleConfiguration{
+			Comment:    "admin role name pattern match",
+			Conditions: []string{"regex match role " + roleNameRegex.String()},
+			Action:     defaultPortalACLAction,
+		}
+		rules = append(rules, aclConfig)
+	}
+	for _, roleNameRegex := range userRolePatterns {
+		aclConfig := &acl.RuleConfiguration{
+			Comment:    "user role name pattern match",
+			Conditions: []string{"regex match role " + roleNameRegex.String()},
+			Action:     defaultPortalACLAction,
+		}
+		rules = append(rules, aclConfig)
+	}
+	for _, roleNameRegex := range guestRolePatterns {
+		aclConfig := &acl.RuleConfiguration{
+			Comment:    "guest role name pattern match",
+			Conditions: []string{"regex match role " + roleNameRegex.String()},
+			Action:     defaultPortalACLAction,
+		}
+		rules = append(rules, aclConfig)
+	}
+
+	accessList := acl.NewAccessList()
+	accessList.SetLogger(logger)
+	if err := accessList.AddRules(ctx, rules); err != nil {
+		panic(err)
+	}
+	return accessList
+}
+
 // NewTestCryptoKeyStore returns an instance of CryptoKeyStore with
 // loaded HMAC key pair.
 func NewTestCryptoKeyStore() (*kms.CryptoKeyStore, error) {
@@ -142,4 +225,22 @@ func GetCookie(name, value string, ttl int) *http.Cookie {
 		Value:   value,
 		Expires: time.Now().Add(30 * time.Duration(ttl)),
 	}
+}
+
+// NewTestTokenValidatorOptions returns an instance of TokenValidatorOptions.
+func NewTestTokenValidatorOptions(cookieName string) *options.TokenValidatorOptions {
+	opts := options.NewTokenValidatorOptions()
+	opts.ValidateBearerHeader = true
+	opts.AuthorizationCookieNames = []string{
+		cookieName,
+	}
+	opts.AuthorizationHeaderNames = []string{
+		"access_token",
+		"jwt_access_token",
+	}
+	opts.AuthorizationQueryParamNames = []string{
+		"access_token",
+		"jwt_access_token",
+	}
+	return opts
 }

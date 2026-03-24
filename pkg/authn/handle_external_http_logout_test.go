@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
@@ -94,15 +95,27 @@ func TestHandleHTTPExternalLogout(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Logf("Test name: %s", tc.name)
 			f, _ := cookie.NewFactory(nil)
-			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
+
+			cryptoKeyStore, err := testutils.NewTestCryptoKeyStore()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			v, err := validator.NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
+
+			v, err := validator.NewTokenValidator(cryptoKeyStore.GetConfig(), logutil.NewLogger())
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+
+			accessList := testutils.NewTestDefaultAccessListWithLogger()
+
+			tokenValidatorOptions := testutils.NewTestTokenValidatorOptions("AUTHP_ACCESS_TOKEN")
+
+			if err := v.Configure(context.TODO(), cryptoKeyStore.GetVerifyKeys(), accessList, tokenValidatorOptions); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
 			provider := &mockIdentityProvider{
 				realm:                   "generic",
 				name:                    "generic",
@@ -228,6 +241,7 @@ func TestHandleHTTPExternalLogoutProviders(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Logf("Test name: %s", tc.name)
 			f, _ := cookie.NewFactory(nil)
 			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
 			if err != nil {

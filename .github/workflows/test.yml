@@ -53,11 +53,19 @@ jobs:
     - name: Run tests
       run: |
         make test
+    - name: Debug coverage dir
+      if: always()
+      run: |
+        echo "--- .coverage contents ---"
+        ls -la .coverage/ || echo "Directory missing or empty"
     - name: Run build
       run: |
         make
     - name: Upload coverage report
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: Test Coverage Artifacts
-        path: .coverage
+        path: .coverage/
+        include-hidden-files: true
+        if-no-files-found: error

@@ -59,9 +59,9 @@ run-tests:
 
 #QUICK_TEST_DIR="./pkg/kms/..."
 # QUICK_TEST_DIR="./pkg/authz/validator"
-QUICK_TEST_DIR="./pkg/authn"
-# QUICK_TEST_PATTERN_RUN="-run"
-# QUICK_TEST_PATTERN="TestAuthorizationSources"
+QUICK_TEST_DIR="./pkg/authn/cookie"
+QUICK_TEST_PATTERN_RUN="-run"
+QUICK_TEST_PATTERN="TestFactory"
 .PHONY: run-quick-tests
 run-quick-tests:
 	@echo "$@: started"

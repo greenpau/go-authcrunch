@@ -22,6 +22,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 
 	// "github.com/greenpau/go-authcrunch/pkg/authn/registration"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
@@ -124,6 +125,7 @@ func TestNewServer(t *testing.T) {
 					IdentityStores: []string{
 						"localdb",
 					},
+					CookieConfig: cookie.NewConfig(),
 				},
 			},
 			policies: []*authz.PolicyConfig{
@@ -178,10 +180,24 @@ func TestNewServer(t *testing.T) {
 					"portal_guest_roles": {
 						"authp/guest": true
 					},
-					"token_grantor_options": {},
-                    "token_validator_options": {
-                      "validate_bearer_header": true
-                    },
+					"cookie_config": {
+						"access_token_cookie_name":   "AUTHP_ACCESS_TOKEN",
+						"cookie_name_prefix":         "AUTHP",
+						"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+						"referer_cookie_name":        "AUTHP_REDIRECT_URL",
+						"refresh_token_cookie_name":  "AUTHP_REFRESH_TOKEN",
+						"sandbox_id_cookie_name":     "AUTHP_SANDBOX_ID",
+						"session_id_cookie_name":     "AUTHP_SESSION_ID"
+					},
+					"token_grantor_options": {
+						"access_token_cookie_name": "AUTHP_ACCESS_TOKEN"
+					},
+					"token_validator_options": {
+						"authorization_cookie_names":      ["AUTHP_ACCESS_TOKEN"],
+						"authorization_header_names":      ["authp_access_token"],
+						"authorization_query_param_names": ["authp_access_token"],
+						"validate_bearer_header": true
+					},
                     "ui": {
 					  "language": "en",
                       "theme": "basic"
@@ -198,6 +214,9 @@ func TestNewServer(t *testing.T) {
                         ]
                       }
                     ],
+					"access_token_cookie_names": [
+						"AUTHP_ACCESS_TOKEN"
+					],
 					"api_key_header_name": "X-Api-Key",
 					"auth_realm_header_name": "X-Auth-Realm",
                     "auth_redirect_query_param": "redirect_url",
@@ -292,6 +311,7 @@ func TestNewServer(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Logf("Test name: %s", tc.name)
 
 			cfg := NewConfig()
 

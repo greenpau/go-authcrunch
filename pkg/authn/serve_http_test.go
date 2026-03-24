@@ -26,6 +26,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
+	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 
 	// "github.com/greenpau/go-authcrunch/pkg/authn/backends/local"
@@ -83,6 +84,7 @@ func TestServeHTTP(t *testing.T) {
 			},
 		},
 		IdentityStores: []string{"local_backend"},
+		CookieConfig:   cookie.NewConfig(),
 	}
 
 	storeCfg := &ids.IdentityStoreConfig{

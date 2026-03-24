@@ -31,10 +31,6 @@ const (
 )
 
 var (
-	defaultTokenNames = []string{
-		"access_token",
-		"jwt_access_token",
-	}
 	defaultTokenSourcePriority = map[string]int{
 		tokenSourceCookie: 0,
 		tokenSourceHeader: 1,

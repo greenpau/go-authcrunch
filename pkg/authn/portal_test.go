@@ -116,6 +116,7 @@ func TestNewPortal(t *testing.T) {
 					IdentityStores: []string{
 						"local_backend",
 					},
+					CookieConfig: cookie.NewConfig(),
 				}
 			},
 			identityStoreConfigs: []*ids.IdentityStoreConfig{
@@ -144,9 +145,23 @@ func TestNewPortal(t *testing.T) {
 				"portal_guest_roles": {
 					"authp/guest": true
 				},
-				"token_grantor_options": {},
+				"cookie_config": {
+					"access_token_cookie_name":   "AUTHP_ACCESS_TOKEN",
+					"cookie_name_prefix":         "AUTHP",
+					"identity_token_cookie_name": "AUTHP_ID_TOKEN",
+					"referer_cookie_name":        "AUTHP_REDIRECT_URL",
+					"refresh_token_cookie_name":  "AUTHP_REFRESH_TOKEN",
+					"sandbox_id_cookie_name":     "AUTHP_SANDBOX_ID",
+					"session_id_cookie_name":     "AUTHP_SESSION_ID"
+				},
+				"token_grantor_options": {
+					"access_token_cookie_name": "AUTHP_ACCESS_TOKEN"
+				},
 				"token_validator_options": {
-				  "validate_bearer_header": true
+				  	"authorization_cookie_names":      ["AUTHP_ACCESS_TOKEN"],
+				  	"authorization_header_names":      ["authp_access_token"],
+				  	"authorization_query_param_names": ["authp_access_token"],
+				  	"validate_bearer_header": true
 				},
 				"access_list_configs": [
 					{
@@ -177,6 +192,7 @@ func TestNewPortal(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Logf("Test name: %s", tc.name)
 			if tc.disabled {
 				return
 			}
