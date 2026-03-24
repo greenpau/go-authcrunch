@@ -17,6 +17,7 @@ package testutils
 import (
 	"context"
 	"fmt"
+
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -120,20 +121,13 @@ func NewTestGuestAccessListWithLogger() *acl.AccessList {
 
 // NewTestCryptoKeyStore returns an instance of CryptoKeyStore with
 // loaded HMAC key pair.
-func NewTestCryptoKeyStore() *kms.CryptoKeyStore {
-	configs, err := kms.ParseCryptoKeyConfigs(`crypto key sign-verify ` + GetSharedKey())
+func NewTestCryptoKeyStore() (*kms.CryptoKeyStore, error) {
+	ksCfg, err := kms.NewCryptoKeyStoreConfig([]string{`crypto key sign-verify ` + GetSharedKey()})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	keys, err := kms.GetKeysFromConfigs(configs)
-	if err != nil {
-		panic(err)
-	}
-	ks := kms.NewCryptoKeyStore()
-	if err := ks.AddKeys(keys); err != nil {
-		panic(err)
-	}
-	return ks
+
+	return kms.NewCryptoKeyStore(ksCfg, logutil.NewLogger())
 }
 
 // GetSharedKey returns shared key for HS algorithms.

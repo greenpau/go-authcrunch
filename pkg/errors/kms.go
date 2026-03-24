@@ -31,6 +31,9 @@ const (
 	ErrCryptoKeyConfigNoConfigFound             StandardError = "no key configs found"
 	ErrCryptoKeyConfigKeyInvalid                StandardError = "key config %d is invalid: %v"
 
+	// CryptoKeyStoreConfig
+	ErrCryptoKeyStoreConfigEntryInvalid StandardError = "key store config entry %q is invalid: %v"
+
 	// KeyManager
 	ErrKeyManagerAddKeyNil                  StandardError = "kms: failed adding nil key to key manager"
 	ErrKeyManagerCryptoKeyConfigInvalidType StandardError = "kms: failed key manager with invalid token config type: %T"

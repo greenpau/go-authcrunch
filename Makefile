@@ -7,6 +7,7 @@ VERBOSE:=-v
 ifdef TEST
 	TEST:="-run ${TEST}"
 endif
+TEST_DIR:="./..."
 
 all: info build
 	@echo "$@: complete"
@@ -38,35 +39,72 @@ build: templates
 .PHONY: linter
 linter:
 	@echo "Running lint checks"
-	@golint -set_exit_status ./...
+	@golint -set_exit_status $(TEST_DIR)
 	@echo "$@: complete"
 
 .PHONY: gtest
 gtest:
-	@go test $(VERBOSE) -coverprofile=.coverage/coverage.out ./...
+	@go test $(VERBOSE) -coverprofile=.coverage/coverage.out $(TEST_DIR)
 	@echo "$@: complete"
 
 .PHONY: test
 test: templates info covdir linter gtest coverage
 	@echo "$@: complete"
 
-.PHONY: ctest
-ctest: templates covdir linter
+
+.PHONY: install-test-tools
+install-test-tools:
+	@echo "$@: started"
 	@richgo version || go install github.com/kyoh86/richgo@latest
-	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./...
+	@tparse -v || go install github.com/mfridman/tparse@latest
+	@go-test-report version || go install github.com/vakenbolt/go-test-report@latest
+	@echo "$@: complete"
+
+.PHONY: run-tests
+run-tests:
+	@echo "$@: started"
+	@go test -json $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out $(TEST_DIR) | tee .coverage/test_output.jsonl
+	@echo "$@: complete"
+
+
+#QUICK_TEST_DIR="./pkg/kms/..."
+# QUICK_TEST_DIR="./pkg/authz/validator"
+QUICK_TEST_DIR="./pkg/authn"
+# QUICK_TEST_PATTERN_RUN="-run"
+# QUICK_TEST_PATTERN="TestAuthorizationSources"
+.PHONY: run-quick-tests
+run-quick-tests:
+	@echo "$@: started"
+	@go test -json $(VERBOSE) -coverprofile=.coverage/coverage.out $(QUICK_TEST_PATTERN_RUN) $(QUICK_TEST_PATTERN) $(QUICK_TEST_DIR) | tee .coverage/test_output.jsonl
+	@echo "$@: complete"
+
+.PHONY: run-reports
+run-reports:
+	@echo "$@: started"
+	@cat .coverage/test_output.jsonl | go-test-report -o .coverage/test_output.html
+	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
+	@echo "$@: complete"
+
+.PHONY: ctest
+ctest: templates covdir linter install-test-tools run-tests run-reports
+	@if grep -q '"Action":"fail"' .coverage/test_output.jsonl; then \
+		echo "ERROR: Go tests failed! See .coverage/test_output.jsonl for details."; \
+		exit 1; \
+	fi
 	@echo "$@: complete"
 
 .PHONY: covdir
 covdir:
 	@echo "Creating .coverage/ directory"
 	@mkdir -p .coverage
+	@rm -rf .coverage/{coverage,test_output}.{html,jsonl,out}
 	@echo "$@: complete"
 
 .PHONY: coverage
 coverage:
 	@#go tool cover -help
 	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
-	@go test -covermode=count -coverprofile=.coverage/coverage.out ./...
+	@go test -covermode=count -coverprofile=.coverage/coverage.out $(TEST_DIR)
 	@go tool cover -func=.coverage/coverage.out | grep -v "100.0"
 	@echo "$@: complete"
 
@@ -89,76 +127,11 @@ clean:
 	@echo "$@: complete"
 
 .PHONY: qtest
-qtest: covdir
-	@echo "Perform quick tests ..."
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/tagging/...
-	@#time richgo test -v -coverprofile=.coverage/coverage.out internal/tag/*.go
-	@#time richgo test -v -coverprofile=.coverage/coverage.out internal/testutils/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/util/data/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/util/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewConfig ./*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewServer ./*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run "(NewLocalUserRegistryProvider)" ./pkg/registry/...
-	@time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/registry/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/waf/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestAuthorize ./pkg/authz/validator/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out  -run TestAddProviders ./pkg/messaging/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/messaging/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run "Test(NewFileProvider|ValidateFileProvider)" ./pkg/messaging/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/translate/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out  -run TestNewEmailTemplatesLibrary ./pkg/messaging/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/credentials/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/errors/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/requests/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestInjectRedirectURL ./pkg/authn/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestFetchGithubEmail ./pkg/idp/oauth/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewPortal ./pkg/authn/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestServeHTTP ./pkg/authn/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run Test.*AuthRequest ./pkg/apiauth/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestFactory ./pkg/authn/cookie/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewSingleSignOnProviderConfig ./pkg/sso/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewSingleSignOnProvider ./pkg/sso/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestParseRequestURL ./pkg/sso/request*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestGetMetadata ./pkg/sso/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestValidateJwksKey ./pkg/authn/backends/oauth2/jwks*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestTransformData ./pkg/authn/transformer/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/transformer/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/redirects/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/icons/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/idp/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/idp/saml/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/idp/oauth/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewJwksKeyFromRSAPublicKeyPEM ./pkg/idp/oauth/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewIdentityProviderConfig ./pkg/idp/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/ui/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewPageTemplatesLibrary ./pkg/authn/ui/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestExtractTemplatePhrases ./pkg/authn/ui/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestRenderTemplate ./pkg/authn/ui/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/ids/local/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestParseFirstDN ./pkg/ids/ldap/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authz/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewGatekeeper ./pkg/authz/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestAuthenticate ./pkg/authz/*.go
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/util/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/kms/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run GetKeysFromConfig ./pkg/kms/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/acl/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run NewAclRule ./pkg/acl/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestCustomAccessList ./pkg/acl/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestNewAclRuleCondition ./pkg/acl/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestMatchAclRuleCondition ./pkg/acl/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/user/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authproxy/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/identity/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out ./pkg/authn/backends/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run NewPublicKey ./pkg/identity/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run NewIdentityStore ./pkg/ids/local/...
-	@#time richgo test $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out -run TestTranslate ./pkg/translate/...
-	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html;
-	@#go tool cover -func=.coverage/coverage.out | grep -v "100.0"
-	@#go tool cover -func=.coverage/coverage.out;
+qtest: covdir install-test-tools run-quick-tests run-reports
+	@if grep -q '"Action":"fail"' .coverage/test_output.jsonl; then \
+		echo "ERROR: Go tests failed! See .coverage/test_output.jsonl for details."; \
+		exit 1; \
+	fi
 	@echo "$@: complete"
 
 .PHONY: dep
@@ -180,7 +153,7 @@ license:
 .PHONY: upgrade
 upgrade:
 	@echo "Making upgrade"
-	@go get -u ./...
+	@go get -u $(TEST_DIR)
 	@go mod tidy
 	@echo "$@: complete"
 

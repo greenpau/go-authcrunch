@@ -16,11 +16,12 @@ package cache
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"testing"
-	"time"
 )
 
 func TestTokenCache(t *testing.T) {
@@ -76,8 +77,11 @@ func TestTokenCache(t *testing.T) {
 			var msgs []string
 			msgs = append(msgs, fmt.Sprintf("test name: %s", tc.name))
 			usr := testutils.NewTestUser()
-			ks := testutils.NewTestCryptoKeyStore()
-			err := ks.SignToken("access_token", "HS512", usr)
+			ks, err := testutils.NewTestCryptoKeyStore()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			err = ks.SignToken("access_token", "HS512", usr)
 			if tc.emptyToken {
 				usr.Token = ""
 			}

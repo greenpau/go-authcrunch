@@ -526,6 +526,11 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
+			name:  "test kms.CryptoKeyStoreConfig struct",
+			entry: &kms.CryptoKeyStoreConfig{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test cache.SandboxCacheEntry struct",
 			entry: &authncache.SandboxCacheEntry{},
 			opts:  &Options{},

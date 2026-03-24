@@ -161,6 +161,10 @@ func TestNewServer(t *testing.T) {
 							"conditions": ["match role authp/guest"]
 						}
                     ],
+					"crypto_key_store_config": {
+					  "auto_generate_algo": "ES512",
+					  "auto_generate_tag": "default"
+					},
                     "identity_stores": [
                       "localdb"
                     ],
@@ -198,6 +202,10 @@ func TestNewServer(t *testing.T) {
 					"auth_realm_header_name": "X-Auth-Realm",
                     "auth_redirect_query_param": "redirect_url",
                     "auth_redirect_status_code": 302,
+					"crypto_key_store_config": {
+				  		"auto_generate_algo": "ES512",
+				  		"auto_generate_tag": "default"
+					},
                     "auth_url_path": "/auth",
                     "disable_auth_redirect": true,
                     "name": "mygatekeeper"

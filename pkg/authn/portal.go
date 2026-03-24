@@ -338,34 +338,25 @@ func (p *Portal) configureCryptoKeyStore() error {
 		return errors.ErrCryptoKeyStoreConfig.WithArgs(p.config.Name, err)
 	}
 
-	p.keystore = kms.NewCryptoKeyStore()
-	p.keystore.SetLogger(p.logger)
+	ks, err := kms.NewCryptoKeyStore(p.config.CryptoKeyStoreConfig, p.logger)
+	if err != nil {
+		return errors.ErrCryptoKeyStoreConfig.WithArgs(p.config.Name, err)
+	}
+	p.keystore = ks
 
 	// Load token configuration into key managers, extract token verification
 	// keys and add them to token validator.
-
-	if p.config.CryptoKeyStoreConfig != nil {
-		// Add default token name, lifetime, etc.
-		if err := p.keystore.AddDefaults(p.config.CryptoKeyStoreConfig); err != nil {
-			return errors.ErrCryptoKeyStoreConfig.WithArgs(p.config.Name, err)
-		}
-	}
-
-	if len(p.config.CryptoKeyConfigs) == 0 {
-		if err := p.keystore.AutoGenerate("default", "ES512"); err != nil {
-			return errors.ErrCryptoKeyStoreConfig.WithArgs(p.config.Name, err)
-		}
-	} else {
-		if err := p.keystore.AddKeysWithConfigs(p.config.CryptoKeyConfigs); err != nil {
-			return errors.ErrCryptoKeyStoreConfig.WithArgs(p.config.Name, err)
-		}
-	}
 
 	if err := p.keystore.HasVerifyKeys(); err != nil {
 		return errors.ErrCryptoKeyStoreConfig.WithArgs(p.config.Name, err)
 	}
 
-	p.validator = validator.NewTokenValidator()
+	tokenValidator, err := validator.NewTokenValidator(p.keystore.GetConfig(), p.logger)
+	if err != nil {
+		return errors.ErrCryptoKeyStoreConfig.WithArgs(p.config.Name, err)
+	}
+	p.validator = tokenValidator
+
 	if err := p.validator.Configure(ctx, p.keystore.GetVerifyKeys(), accessList, p.config.TokenValidatorOptions); err != nil {
 		return errors.ErrCryptoKeyStoreConfig.WithArgs(p.config.Name, err)
 	}
@@ -379,12 +370,13 @@ func (p *Portal) configureCryptoKeyStore() error {
 	}
 
 	p.logger.Debug(
-		"Configured validator ACL",
+		"Configured validator and grantor",
 		zap.String("portal_name", p.config.Name),
 		zap.String("portal_id", p.id),
 		zap.Any("token_validator_options", p.config.TokenValidatorOptions),
 		zap.Any("token_grantor_options", p.config.TokenGrantorOptions),
 		zap.Any("auth_cookies", p.validator.GetAuthCookies()),
+		zap.Any("portal_access_list_rules", accessList.GetRules()),
 	)
 	return nil
 }

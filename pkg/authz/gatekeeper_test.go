@@ -42,7 +42,7 @@ func TestNewGatekeeper(t *testing.T) {
 		bypassConfigs      []*bypass.Config
 		injectorConfigs    []*injector.Config
 		aclConfigs         []*acl.RuleConfiguration
-		cryptoRawConfigs   []string
+		cryptoRawConfig    []string
 		authProxyRawConfig []string
 	}{
 		{
@@ -111,8 +111,8 @@ func TestNewGatekeeper(t *testing.T) {
 					Action:     "allow stop",
 				},
 			},
-			cryptoRawConfigs: []string{
-				"key verify 0e2fdcf8-6868-41a7-884b-7308795fc286",
+			cryptoRawConfig: []string{
+				"crypto key verify 0e2fdcf8-6868-41a7-884b-7308795fc286",
 			},
 			want: `{
               "config": {
@@ -144,19 +144,13 @@ func TestNewGatekeeper(t *testing.T) {
                 "auth_redirect_query_param": "redirect_url",
                 "auth_redirect_status_code": 302,
                 "auth_url_path": "/auth",
-                "crypto_key_configs": [
-                  {
-                    "algorithm": "hmac",
-                    "id": "0",
-                    "source": "config",
-                    "token_lifetime": 900,
-                    "token_name": "access_token",
-                    "token_secret": "0e2fdcf8-6868-41a7-884b-7308795fc286",
-                    "usage": "verify"
-                  }
-                ],
-				"crypto_raw_configs": [
-					"key verify 0e2fdcf8-6868-41a7-884b-7308795fc286"
+                "crypto_key_store_config": {
+					"auto_generate_algo": "ES512",
+					"auto_generate_tag": "default",
+					"raw_key_configs": ["crypto key verify 0e2fdcf8-6868-41a7-884b-7308795fc286"]
+				},
+				"raw_crypto_key_store_config": [
+					"crypto key verify 0e2fdcf8-6868-41a7-884b-7308795fc286"
 				]
               }
             }`,
@@ -174,7 +168,7 @@ func TestNewGatekeeper(t *testing.T) {
 				cfg.BypassConfigs = tc.bypassConfigs
 				cfg.HeaderInjectionConfigs = tc.injectorConfigs
 				cfg.AccessListRules = tc.aclConfigs
-				cfg.CryptoRawConfigs = tc.cryptoRawConfigs
+				cfg.RawCryptoKeyStoreConfig = tc.cryptoRawConfig
 				cfg.AuthProxyRawConfig = tc.authProxyRawConfig
 			}
 

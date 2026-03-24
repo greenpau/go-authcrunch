@@ -73,7 +73,7 @@ func TestFileProviderSend(t *testing.T) {
 				SenderEmail: "foo@localhost",
 			},
 			shouldErr:            true,
-			err:                  errors.ErrMessagingProviderDir.WithArgs(filepath.Join(blockerFile, "nested"), "XXXX"),
+			err:                  errors.ErrMessagingProviderDir.WithArgs(filepath.Join(blockerFile, "nested"), ""),
 			shouldSkipCompareErr: true,
 		},
 	}

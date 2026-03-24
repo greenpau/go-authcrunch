@@ -26,7 +26,9 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 )
 
 func TestAuthorizationSources(t *testing.T) {
@@ -170,15 +172,25 @@ func TestAuthorizationSources(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			ks := testutils.NewTestCryptoKeyStore()
+			ks, err := testutils.NewTestCryptoKeyStore()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			keys := ks.GetKeys()
 			signingKey := keys[0]
 			opts := options.NewTokenValidatorOptions()
 			if tc.enableBearerHeaderViolations {
 				opts.ValidateBearerHeader = true
 			}
+			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			validator, err := NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-			validator := NewTokenValidator()
 			accessList := testutils.NewTestGuestAccessList()
 
 			if err := validator.Configure(ctx, keys, accessList, opts); err != nil {

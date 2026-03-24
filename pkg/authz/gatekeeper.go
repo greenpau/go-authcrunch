@@ -90,8 +90,25 @@ func (g *Gatekeeper) configure() error {
 		g.injectedHeaders[entry.Header] = true
 	}
 
+	// Load token configuration into key managers, extract token verification
+	// keys and add them to token validator.
+
+	ks, err := kms.NewCryptoKeyStore(g.config.CryptoKeyStoreConfig, g.logger)
+	if err != nil {
+		return errors.ErrCryptoKeyStoreConfig.WithArgs(g.config.Name, err)
+	}
+
+	if err := ks.HasVerifyKeys(); err != nil {
+		return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
+	}
+
 	// Initialize token validator and associated options.
-	g.tokenValidator = validator.NewTokenValidator()
+	tokenValidator, err := validator.NewTokenValidator(ks.GetConfig(), g.logger)
+	if err != nil {
+		return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
+	}
+	g.tokenValidator = tokenValidator
+
 	g.opts = options.NewTokenValidatorOptions()
 	if g.config.ValidateMethodPath {
 		g.opts.ValidateMethodPath = true
@@ -106,28 +123,6 @@ func (g *Gatekeeper) configure() error {
 		g.opts.ValidateSourceAddress = true
 	}
 	g.opts.AdditionalAccessTokenCookieNames = g.config.AccessTokenCookieNames
-
-	// Load token configuration into key managers, extract token verification
-	// keys and add them to token validator.
-	ks := kms.NewCryptoKeyStore()
-	if g.config.CryptoKeyStoreConfig != nil {
-		// Add default token name, lifetime, etc.
-		if err := ks.AddDefaults(g.config.CryptoKeyStoreConfig); err != nil {
-			return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
-		}
-	}
-	if len(g.config.CryptoKeyConfigs) == 0 {
-		if err := ks.AutoGenerate("default", "ES512"); err != nil {
-			return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
-		}
-	} else {
-		if err := ks.AddKeysWithConfigs(g.config.CryptoKeyConfigs); err != nil {
-			return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
-		}
-		if err := ks.HasVerifyKeys(); err != nil {
-			return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
-		}
-	}
 
 	// Load access list.
 	if len(g.config.AccessListRules) == 0 {

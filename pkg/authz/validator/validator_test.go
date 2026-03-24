@@ -964,11 +964,21 @@ func TestAuthorize(t *testing.T) {
 			ctx := context.Background()
 			logger := logutil.NewLogger()
 
-			ks := testutils.NewTestCryptoKeyStore()
+			ks, err := testutils.NewTestCryptoKeyStore()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			keys := ks.GetKeys()
 			signingKey := keys[0]
 
-			validator := NewTokenValidator()
+			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			validator, err := NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
 			if !tc.optionsDisabled {
 				opts = options.NewTokenValidatorOptions()
@@ -1166,7 +1176,14 @@ func TestAddKeys(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var err error
 			ctx := context.Background()
-			validator := NewTokenValidator()
+			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			validator, err := NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			for _, k := range tc.keys {
 				if tc.verifyFound {
 					k.Verify = kms.NewCryptoKeyOperator()
@@ -1237,8 +1254,15 @@ func TestSetAllowedTokenNames(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			validator := NewTokenValidator()
-			err := validator.setAllowedTokenNames(tc.tokenNames)
+			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			validator, err := NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			err = validator.setAllowedTokenNames(tc.tokenNames)
 			if tests.EvalErr(t, err, "token names", tc.shouldErr, tc.err) {
 				return
 			}
@@ -1292,8 +1316,15 @@ func TestSetSourcePriority(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			validator := NewTokenValidator()
-			err := validator.SetSourcePriority(tc.sources)
+			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			validator, err := NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			err = validator.SetSourcePriority(tc.sources)
 			if tests.EvalErr(t, err, "token sources", tc.shouldErr, tc.err) {
 				return
 			}

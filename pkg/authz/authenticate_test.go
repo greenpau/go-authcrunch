@@ -63,7 +63,7 @@ func TestAuthenticate(t *testing.T) {
 				Action: "allow stop",
 			},
 		},
-		CryptoRawConfigs: []string{"key verify " + testutils.GetSharedKey()},
+		RawCryptoKeyStoreConfig: []string{"crypto key verify " + testutils.GetSharedKey()},
 	}
 
 	gatekeeper, err := NewGatekeeper(cfg, logger)
@@ -186,7 +186,11 @@ func buildClient(t *testing.T, ts *httptest.Server, req *testRequest) http.Clien
 		usr := testutils.NewTestUser()
 		usr.SetRolesClaim(req.roles)
 
-		ks := testutils.NewTestCryptoKeyStore()
+		ks, err := testutils.NewTestCryptoKeyStore()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
 		if err := ks.SignToken("access_token", "HS512", usr); err != nil {
 			t.Fatalf("Failed to get JWT token for %v: %v", usr.AsMap(), err)
 		}

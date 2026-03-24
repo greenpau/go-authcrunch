@@ -17,7 +17,6 @@ package authn
 import (
 	"regexp"
 	"slices"
-	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
@@ -27,7 +26,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
-	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 const (
@@ -57,10 +55,10 @@ type PortalConfig struct {
 	AccessListConfigs []*acl.RuleConfiguration `json:"access_list_configs,omitempty" xml:"access_list_configs,omitempty" yaml:"access_list_configs,omitempty"`
 	// TokenValidatorOptions holds the configuration for the token validator.
 	TokenValidatorOptions *options.TokenValidatorOptions `json:"token_validator_options,omitempty" xml:"token_validator_options,omitempty" yaml:"token_validator_options,omitempty"`
-	// CryptoKeyConfigs hold the configurations for the keys used to issue and validate user tokens.
-	CryptoKeyConfigs []*kms.CryptoKeyConfig `json:"crypto_key_configs,omitempty" xml:"crypto_key_configs,omitempty" yaml:"crypto_key_configs,omitempty"`
+	// Holds raw crypto configuration.
+	RawCryptoKeyStoreConfig []string `json:"raw_crypto_key_store_config,omitempty" xml:"raw_crypto_key_store_config,omitempty" yaml:"raw_crypto_key_store_config,omitempty"`
 	// CryptoKeyStoreConfig hold the default configuration for the keys, e.g. token name and lifetime.
-	CryptoKeyStoreConfig map[string]interface{} `json:"crypto_key_store_config,omitempty" xml:"crypto_key_store_config,omitempty" yaml:"crypto_key_store_config,omitempty"`
+	CryptoKeyStoreConfig *kms.CryptoKeyStoreConfig `json:"crypto_key_store_config,omitempty" xml:"crypto_key_store_config,omitempty" yaml:"crypto_key_store_config,omitempty"`
 	// TokenGrantorOptions holds the configuration for the tokens issues by Authenticator.
 	TokenGrantorOptions *options.TokenGrantorOptions `json:"token_grantor_options,omitempty" xml:"token_grantor_options,omitempty" yaml:"token_grantor_options,omitempty"`
 	// TrustedLoginRedirectURIConfigs holds the configuration of trusted login redirect URIs.
@@ -73,7 +71,6 @@ type PortalConfig struct {
 	PortalUserRoles map[string]interface{} `json:"portal_user_roles,omitempty" xml:"portal_user_roles,omitempty" yaml:"portal_user_roles,omitempty"`
 	// PortalGuestRoles holds the list of role names without admin or user privileges in the portal.
 	PortalGuestRoles map[string]interface{} `json:"portal_guest_roles,omitempty" xml:"portal_guest_roles,omitempty" yaml:"portal_guest_roles,omitempty"`
-
 	// PortalAdminRolePatterns holds the list of regular expressions for the role names granted to do administrative tasks in the portal.
 	PortalAdminRolePatterns []string `json:"portal_admin_role_patterns,omitempty" xml:"portal_admin_role_patterns,omitempty" yaml:"portal_admin_role_patterns,omitempty"`
 	adminRolePatterns       []*regexp.Regexp
@@ -87,70 +84,23 @@ type PortalConfig struct {
 	guestPortalRoles        []string
 	// API holds the configuration for API endpoints.
 	API *APIConfig `json:"api,omitempty" xml:"api,omitempty" yaml:"api,omitempty"`
-
-	// Holds raw crypto configuration.
-	CryptoRawConfigs []string `json:"crypto_raw_configs,omitempty" xml:"crypto_raw_configs,omitempty" yaml:"crypto_raw_configs,omitempty"`
-
 	// Indicated that the config was successfully validated.
 	validated bool
 }
 
-// AddRawCryptoConfigs adds raw crypto configs.
-func (cfg *PortalConfig) AddRawCryptoConfigs(s string) {
-	cfg.CryptoRawConfigs = append(cfg.CryptoRawConfigs, s)
+// AddRawCryptoKeyStoreConfig adds raw crypto key store configs.
+func (cfg *PortalConfig) AddRawCryptoKeyStoreConfig(s string) {
+	cfg.RawCryptoKeyStoreConfig = append(cfg.RawCryptoKeyStoreConfig, s)
 }
 
-// GetRawCryptoConfigs returns raw crypto configs.
-func (cfg *PortalConfig) GetRawCryptoConfigs() []string {
-	return cfg.CryptoRawConfigs
+// GetRawCryptoKeyStoreConfig returns raw crypto key store configs.
+func (cfg *PortalConfig) GetRawCryptoKeyStoreConfig() []string {
+	return cfg.RawCryptoKeyStoreConfig
 }
 
-// OverwriteRawCryptoConfigs overwrite raw crypto configs.
-func (cfg *PortalConfig) OverwriteRawCryptoConfigs(arr []string) {
-	cfg.CryptoRawConfigs = arr
-}
-
-// parseRawCryptoConfigs parses raw crypto configs into CryptoKeyConfigs
-// and CryptoKeyStoreConfig.
-func (cfg *PortalConfig) parseRawCryptoConfigs() error {
-	var cryptoKeyConfig, cryptoKeyStoreConfig []string
-	var cryptoKeyConfigFound, cryptoKeyStoreConfigFound bool
-	for _, encodedArgs := range cfg.CryptoRawConfigs {
-		args, err := cfgutil.DecodeArgs(encodedArgs)
-		if err != nil {
-			return errors.ErrConfigDirectiveFail.WithArgs("crypto", encodedArgs, err)
-		}
-		if len(args) < 3 {
-			return errors.ErrConfigDirectiveShort.WithArgs("crypto", args)
-		}
-		cryptoKeyConfig = append(cryptoKeyConfig, encodedArgs)
-		switch args[0] {
-		case "key":
-			cryptoKeyConfigFound = true
-		case "default":
-			cryptoKeyStoreConfig = append(cryptoKeyStoreConfig, encodedArgs)
-			cryptoKeyStoreConfigFound = true
-		default:
-			return errors.ErrConfigDirectiveValueUnsupported.WithArgs("crypto", args)
-		}
-	}
-
-	if cryptoKeyConfigFound {
-		configs, err := kms.ParseCryptoKeyConfigs(strings.Join(cryptoKeyConfig, "\n"))
-		if err != nil {
-			return errors.ErrConfigDirectiveFail.WithArgs("crypto.key", cryptoKeyConfig, err)
-		}
-		cfg.CryptoKeyConfigs = configs
-	}
-
-	if cryptoKeyStoreConfigFound {
-		configs, err := kms.ParseCryptoKeyStoreConfig(strings.Join(cryptoKeyStoreConfig, "\n"))
-		if err != nil {
-			return errors.ErrConfigDirectiveFail.WithArgs("crypto.keystore", cryptoKeyStoreConfig, err)
-		}
-		cfg.CryptoKeyStoreConfig = configs
-	}
-	return nil
+// OverwriteRawCryptoKeyStoreConfig overwrite raw crypto key store configs.
+func (cfg *PortalConfig) OverwriteRawCryptoKeyStoreConfig(arr []string) {
+	cfg.RawCryptoKeyStoreConfig = arr
 }
 
 // GetReservedPortalRoles returns the names of reserved portal roles.
@@ -253,9 +203,11 @@ func (cfg *PortalConfig) Validate() error {
 		return err
 	}
 
-	if err := cfg.parseRawCryptoConfigs(); err != nil {
+	rawCryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(cfg.RawCryptoKeyStoreConfig)
+	if err != nil {
 		return err
 	}
+	cfg.CryptoKeyStoreConfig = rawCryptoKeyStoreConfig
 
 	for _, redirURIConfig := range cfg.TrustedLogoutRedirectURIConfigs {
 		if err := redirURIConfig.Validate(); err != nil {

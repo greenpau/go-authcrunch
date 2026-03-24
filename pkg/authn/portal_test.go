@@ -165,6 +165,10 @@ func TestNewPortal(t *testing.T) {
 						"conditions": ["match role authp/guest"]
 					}
 				],
+				"crypto_key_store_config": {
+					"auto_generate_algo": "ES512",
+					"auto_generate_tag": "default"
+				},
 				"identity_stores": ["local_backend"]
               }
             }`,
@@ -197,7 +201,7 @@ func TestNewPortal(t *testing.T) {
 					cfg.TokenGrantorOptions = tc.tokenGrantorOptions
 				}
 				for _, s := range tc.cryptoRawConfigs {
-					cfg.AddRawCryptoConfigs(s)
+					cfg.AddRawCryptoKeyStoreConfig(s)
 				}
 			}
 

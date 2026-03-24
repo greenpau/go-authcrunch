@@ -27,6 +27,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
+	"go.uber.org/zap"
 )
 
 type guardian interface {
@@ -86,9 +87,14 @@ type TokenValidator struct {
 }
 
 // NewTokenValidator returns an instance of TokenValidator
-func NewTokenValidator() *TokenValidator {
+func NewTokenValidator(keystoreConfig *kms.CryptoKeyStoreConfig, logger *zap.Logger) (*TokenValidator, error) {
+	ks, err := kms.NewCryptoKeyStore(keystoreConfig, logger)
+	if err != nil {
+		return nil, err
+	}
+
 	v := &TokenValidator{
-		keystore:        kms.NewCryptoKeyStore(),
+		keystore:        ks,
 		authHeaders:     make(map[string]interface{}),
 		authCookies:     make(map[string]interface{}),
 		authQueryParams: make(map[string]interface{}),
@@ -102,7 +108,7 @@ func NewTokenValidator() *TokenValidator {
 
 	v.cache = cache.NewTokenCache(0)
 	v.tokenSources = defaultTokenSources
-	return v
+	return v, nil
 }
 
 // GetAuthCookies returns auth cookies registered with TokenValidator.

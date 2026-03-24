@@ -16,15 +16,18 @@ package kms
 
 import (
 	"fmt"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
-	"os"
-	"strings"
-	"testing"
-	"time"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 )
 
 func newTestUser() *user.User {
@@ -48,7 +51,7 @@ func newTestUser() *user.User {
 func TestGetKeysFromConfig(t *testing.T) {
 	var testcases = []struct {
 		name   string
-		config string
+		config []string
 		env    map[string]string
 		want   map[string]interface{}
 		log    bool
@@ -59,10 +62,10 @@ func TestGetKeysFromConfig(t *testing.T) {
 	}{
 		{
 			name: "default shared key in default context",
-			config: `
-                crypto key token name "foobar token"
-                crypto key sign-verify foobar
-            `,
+			config: []string{
+				cfgutil.EncodeArgs([]string{"crypto", "key", "token", "name", "foobar token"}),
+				"crypto key sign-verify foobar",
+			},
 			keyPair: []int{0, 0},
 			want: map[string]interface{}{
 				"config_count": 1,
@@ -75,9 +78,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "shared secret embedded in environment variable",
-			config: `
-                crypto key cb315f43c868 sign-verify from env JWT_SHARED_SECRET
-            `,
+			config: []string{
+				"crypto key cb315f43c868 sign-verify from env JWT_SHARED_SECRET",
+			},
 			env: map[string]string{
 				"JWT_TOKEN_LIFETIME": "3600",
 				"JWT_SHARED_SECRET":  "foobar",
@@ -94,9 +97,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "rsa key embedded in environment variable",
-			config: `
-                crypto key cb315f43c868 sign-verify from env JWT_SHARED_SECRET
-            `,
+			config: []string{
+				"crypto key cb315f43c868 sign-verify from env JWT_SHARED_SECRET",
+			},
 			env: map[string]string{
 				"JWT_TOKEN_LIFETIME": "3600",
 				"JWT_SHARED_SECRET":  "file:./../../testdata/rskeys/test_2_pri.pem",
@@ -114,9 +117,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		{
 			name: "bad rsa key embedded in environment variable",
 			// log:  true,
-			config: `
-                crypto key cb315f43c868 sign-verify from env JWT_SHARED_SECRET
-            `,
+			config: []string{
+				"crypto key cb315f43c868 sign-verify from env JWT_SHARED_SECRET",
+			},
 			env: map[string]string{
 				"JWT_SHARED_SECRET": "-----BEGIN PRIVATE",
 			},
@@ -126,9 +129,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		{
 			name: "bad rsa key embedded in environment variable",
 			// log:  true,
-			config: `
-                crypto key cb315f43c868 sign-verify from env JWT_SHARED_SECRET
-            `,
+			config: []string{
+				"crypto key cb315f43c868 sign-verify from env JWT_SHARED_SECRET",
+			},
 			env: map[string]string{
 				"JWT_SHARED_SECRET": "-----BEGIN PRIVATE ---END PRIVATE",
 			},
@@ -137,10 +140,10 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "load private and public rsa keys from file path",
-			config: `
-                crypto key k9738a405e99 sign from file ./../../testdata/rskeys/test_2_pri.pem
-                crypto key k9738a405e99 verify from file ./../../testdata/rskeys/test_2_pub.pem
-            `,
+			config: []string{
+				"crypto key k9738a405e99 sign from file ./../../testdata/rskeys/test_2_pri.pem",
+				"crypto key k9738a405e99 verify from file ./../../testdata/rskeys/test_2_pub.pem",
+			},
 			keyPair: []int{0, 1},
 			want: map[string]interface{}{
 				"config_count": 2,
@@ -153,10 +156,10 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "load private and public rsa and ecdsa keys from file path",
-			config: `
-                crypto key k9738a405e99 sign-verify from file ./../../testdata/misckeys/rsa_test_2_pri.pem
-                crypto key k9738a405e11 sign-verify from file ./../../testdata/misckeys/ecdsa_test_2_pri.pem
-            `,
+			config: []string{
+				"crypto key k9738a405e99 sign-verify from file ./../../testdata/misckeys/rsa_test_2_pri.pem",
+				"crypto key k9738a405e11 sign-verify from file ./../../testdata/misckeys/ecdsa_test_2_pri.pem",
+			},
 			keyPair: []int{0, 0},
 			want: map[string]interface{}{
 				"config_count": 2,
@@ -171,9 +174,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "load private rsa key from file path for both sign and verify",
-			config: `
-                crypto key k9738a405e99 sign-verify from file ./../../testdata/rskeys/test_1_pri.pem
-            `,
+			config: []string{
+				"crypto key k9738a405e99 sign-verify from file ./../../testdata/rskeys/test_1_pri.pem",
+			},
 			keyPair: []int{0, 0},
 			want: map[string]interface{}{
 				"config_count": 1,
@@ -186,10 +189,10 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "load private and public ecdsa keys from file path",
-			config: `
-                crypto key k9738a405e99 sign from file ./../../testdata/ecdsakeys/test_2_pri.pem
-                crypto key k9738a405e99 verify from file ./../../testdata/ecdsakeys/test_2_pub.pem
-            `,
+			config: []string{
+				"crypto key k9738a405e99 sign from file ./../../testdata/ecdsakeys/test_2_pri.pem",
+				"crypto key k9738a405e99 verify from file ./../../testdata/ecdsakeys/test_2_pub.pem",
+			},
 			keyPair: []int{0, 1},
 			want: map[string]interface{}{
 				"config_count": 2,
@@ -202,9 +205,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "load private ecdsa key from file path for both sign and verify",
-			config: `
-                crypto key k9738a405e99 sign-verify from file ./../../testdata/ecdsakeys/test_1_pri.pem
-            `,
+			config: []string{
+				"crypto key k9738a405e99 sign-verify from file ./../../testdata/ecdsakeys/test_1_pri.pem",
+			},
 			keyPair: []int{0, 0},
 			want: map[string]interface{}{
 				"config_count": 1,
@@ -217,9 +220,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "load private ecdsa key from environment variable with file path for both sign and verify",
-			config: `
-                crypto key cb315f43c868 sign-verify from env JWT_SECRET_FILE as file
-            `,
+			config: []string{
+				"crypto key cb315f43c868 sign-verify from env JWT_SECRET_FILE as file",
+			},
 			env: map[string]string{
 				"JWT_SECRET_FILE": "./../../testdata/rskeys/test_1_pri.pem",
 			},
@@ -235,9 +238,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "load keys from rsa directory path",
-			config: `
-                crypto key k9738a405e99 verify from directory ./../../testdata/rskeys
-            `,
+			config: []string{
+				"crypto key k9738a405e99 verify from directory ./../../testdata/rskeys",
+			},
 			want: map[string]interface{}{
 				"config_count": 1,
 				"key_count":    4,
@@ -255,9 +258,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 
 		{
 			name: "load keys from rsa directory path via env vars",
-			config: `
-                crypto key cb315f43c868 sign-verify from env JWT_SECRET_DIR as directory
-            `,
+			config: []string{
+				"crypto key cb315f43c868 sign-verify from env JWT_SECRET_DIR as directory",
+			},
 			env: map[string]string{
 				"JWT_SECRET_DIR": "./../../testdata/rskeys",
 			},
@@ -277,17 +280,17 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "load keys from rsa directory path",
-			config: `
-                crypto key k9738a405e99 verify from directory ./../../testdata/nokeys/docs
-            `,
+			config: []string{
+				"crypto key k9738a405e99 verify from directory ./../../testdata/nokeys/docs",
+			},
 			shouldErr: true,
 			err:       errors.ErrWalkDir.WithArgs("no crypto keys found"),
 		},
 		{
 			name: "load keys from rsa directory path",
-			config: `
-                crypto key k9738a405e99 verify from directory ./../../testdata/nokeys/bad
-            `,
+			config: []string{
+				"crypto key k9738a405e99 verify from directory ./../../testdata/nokeys/bad",
+			},
 			shouldErr: true,
 			err: errors.ErrWalkDir.WithArgs(
 				errors.ErrCryptoKeyConfigReadFile.WithArgs(
@@ -298,9 +301,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "load keys from ecdsa directory path",
-			config: `
-                crypto key k9738a405e99 verify from directory ./../../testdata/ecdsakeys
-            `,
+			config: []string{
+				"crypto key k9738a405e99 verify from directory ./../../testdata/ecdsakeys",
+			},
 			want: map[string]interface{}{
 				"config_count": 1,
 				"key_count":    6,
@@ -321,9 +324,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "private rsa key wrapped in ec header",
-			config: `
-                crypto key k9738a405e99 sign-verify from file ./../../testdata/malformed/ec_header_rsa_pri.pem
-            `,
+			config: []string{
+				"crypto key k9738a405e99 sign-verify from file ./../../testdata/malformed/ec_header_rsa_pri.pem",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigReadFile.WithArgs(
 				"./../../testdata/malformed/ec_header_rsa_pri.pem",
@@ -332,9 +335,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "private ec key wrapped in rsa header",
-			config: `
-                crypto key k9738a405e99 sign-verify from file ./../../testdata/malformed/rsa_header_ec_pri.pem
-            `,
+			config: []string{
+				"crypto key k9738a405e99 sign-verify from file ./../../testdata/malformed/rsa_header_ec_pri.pem",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigReadFile.WithArgs(
 				"./../../testdata/malformed/rsa_header_ec_pri.pem",
@@ -343,9 +346,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "public key passed as private",
-			config: `
-                crypto key k9738a405e99 sign-verify from file ./../../testdata/malformed/rsa_pub_as_pri.pem
-            `,
+			config: []string{
+				"crypto key k9738a405e99 sign-verify from file ./../../testdata/malformed/rsa_pub_as_pri.pem",
+			},
 			shouldErr: true,
 
 			err: errors.ErrCryptoKeyConfigReadFile.WithArgs(
@@ -357,9 +360,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "private key passed as public",
-			config: `
-                crypto key k9738a405e99 sign-verify from file ./../../testdata/malformed/rsa_pri_as_pub.pem
-            `,
+			config: []string{
+				"crypto key k9738a405e99 sign-verify from file ./../../testdata/malformed/rsa_pri_as_pub.pem",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigReadFile.WithArgs(
 				"./../../testdata/malformed/rsa_pri_as_pub.pem",
@@ -370,9 +373,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 		},
 		{
 			name: "cert passed as private key",
-			config: `
-                crypto key k9738a405e99 sign-verify from file ./../../testdata/malformed/cert.pem
-            `,
+			config: []string{
+				"crypto key k9738a405e99 sign-verify from file ./../../testdata/malformed/cert.pem",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigReadFile.WithArgs(
 				"./../../testdata/malformed/cert.pem",
@@ -384,6 +387,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
 			msgs = append(msgs, fmt.Sprintf("config: %s", tc.config))
+
 			for k, v := range tc.env {
 				if strings.HasPrefix(v, "file:") {
 					b, err := extractBytesFromFile(strings.TrimPrefix(v, "file:"))
@@ -456,7 +460,15 @@ func TestGetKeysFromConfig(t *testing.T) {
 				pubKey = keys[j]
 			}
 
-			ks := NewCryptoKeyStore()
+			ksCfg, err := NewCryptoKeyStoreConfig(tc.config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ks, err := NewCryptoKeyStore(ksCfg, logutil.NewLogger())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
 			if err := ks.AddKeys([]*CryptoKey{privKey, pubKey}); err != nil {
 				t.Fatal(err)
 			}

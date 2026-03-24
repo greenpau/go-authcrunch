@@ -24,15 +24,26 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
 )
 
-func buildLogoutPortal(trustedConfigs []*redirects.RedirectURIMatchConfig) *Portal {
+func buildLogoutPortal(trustedConfigs []*redirects.RedirectURIMatchConfig) (*Portal, error) {
 	f, _ := cookie.NewFactory(nil)
-	v := validator.NewTokenValidator()
+
+	cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
+	if err != nil {
+		return nil, err
+	}
+	v, err := validator.NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
+	if err != nil {
+		return nil, err
+	}
+
 	return &Portal{
 		config: &PortalConfig{
 			Name:                            "testPortal",
@@ -41,7 +52,7 @@ func buildLogoutPortal(trustedConfigs []*redirects.RedirectURIMatchConfig) *Port
 		logger:    zap.L(),
 		cookie:    f,
 		validator: v,
-	}
+	}, nil
 }
 
 func TestHandleHTTPLogout(t *testing.T) {
@@ -61,8 +72,8 @@ func TestHandleHTTPLogout(t *testing.T) {
 		wantLocation   string
 	}{
 		{
-			name:        "redirect_uri honored when trusted",
-			redirectURI: "https://app.example.com/bye",
+			name:           "redirect_uri honored when trusted",
+			redirectURI:    "https://app.example.com/bye",
 			trustedConfigs: []*redirects.RedirectURIMatchConfig{trustedConfig},
 			parsedUser: &user.User{
 				Claims: &user.Claims{
@@ -73,8 +84,8 @@ func TestHandleHTTPLogout(t *testing.T) {
 			wantLocation: "https://app.example.com/bye",
 		},
 		{
-			name:        "redirect_uri rejected when untrusted",
-			redirectURI: "https://evil.example.com/steal",
+			name:           "redirect_uri rejected when untrusted",
+			redirectURI:    "https://evil.example.com/steal",
 			trustedConfigs: []*redirects.RedirectURIMatchConfig{trustedConfig},
 			parsedUser: &user.User{
 				Claims: &user.Claims{
@@ -85,8 +96,8 @@ func TestHandleHTTPLogout(t *testing.T) {
 			wantLocation: "/login",
 		},
 		{
-			name:        "OAuth user goes to realm logout",
-			redirectURI: "https://app.example.com/bye",
+			name:           "OAuth user goes to realm logout",
+			redirectURI:    "https://app.example.com/bye",
 			trustedConfigs: []*redirects.RedirectURIMatchConfig{trustedConfig},
 			parsedUser: &user.User{
 				Claims: &user.Claims{
@@ -97,11 +108,11 @@ func TestHandleHTTPLogout(t *testing.T) {
 			wantLocation: "/oauth2/generic/logout",
 		},
 		{
-			name:        "redirect_uri honored for unauthenticated caller",
-			redirectURI: "https://app.example.com/bye",
+			name:           "redirect_uri honored for unauthenticated caller",
+			redirectURI:    "https://app.example.com/bye",
 			trustedConfigs: []*redirects.RedirectURIMatchConfig{trustedConfig},
-			parsedUser:   nil,
-			wantLocation: "https://app.example.com/bye",
+			parsedUser:     nil,
+			wantLocation:   "https://app.example.com/bye",
 		},
 		{
 			name:           "no trusted config falls to login",
@@ -114,7 +125,10 @@ func TestHandleHTTPLogout(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			p := buildLogoutPortal(tc.trustedConfigs)
+			p, err := buildLogoutPortal(tc.trustedConfigs)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			rw := buildCustomResponseWriter()
 			reqURL := &url.URL{
 				Scheme:   "https",
@@ -129,7 +143,7 @@ func TestHandleHTTPLogout(t *testing.T) {
 			}
 			rr := requests.NewRequest()
 
-			err := p.handleHTTPLogout(context.Background(), rw, r, rr, tc.parsedUser)
+			err = p.handleHTTPLogout(context.Background(), rw, r, rr, tc.parsedUser)
 			tests.EvalObjectsWithLog(t, "error", nil, err, []string{})
 			tests.EvalObjectsWithLog(t, "status_code", http.StatusFound, rw.statusCode, []string{})
 

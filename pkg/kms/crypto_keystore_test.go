@@ -16,13 +16,15 @@ package kms
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	jwtlib "github.com/golang-jwt/jwt/v4"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
-	"testing"
-	"time"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 )
 
 type TestUserClaims struct {
@@ -39,7 +41,7 @@ type TestUserClaims struct {
 func TestKeystoreOperators(t *testing.T) {
 	testcases := []struct {
 		name            string
-		config          string
+		config          []string
 		signTokenName   string
 		signAlgorithm   string
 		verifyTokenName string
@@ -54,8 +56,10 @@ func TestKeystoreOperators(t *testing.T) {
 		shouldErr       bool
 	}{
 		{
-			name:   "user with roles claims and ip address",
-			config: `crypto key sign-verify foobar`,
+			name: "user with roles claims and ip address",
+			config: []string{
+				"crypto key sign-verify foobar",
+			},
 			claims: &TestUserClaims{
 				Roles: []string{"admin", "editor", "viewer"},
 				StandardClaims: jwtlib.StandardClaims{
@@ -69,8 +73,10 @@ func TestKeystoreOperators(t *testing.T) {
 			addr:  "127.0.0.1",
 		},
 		{
-			name:   "user with groups claims and ip address",
-			config: `crypto key sign-verify foobar`,
+			name: "user with groups claims and ip address",
+			config: []string{
+				"crypto key sign-verify foobar",
+			},
 			claims: &TestUserClaims{
 				Groups: []string{"admin", "editor", "viewer"},
 				StandardClaims: jwtlib.StandardClaims{
@@ -84,8 +90,10 @@ func TestKeystoreOperators(t *testing.T) {
 			addr:  "127.0.0.1",
 		},
 		{
-			name:   "user with role claim and ip address",
-			config: `crypto key sign-verify foobar`,
+			name: "user with role claim and ip address",
+			config: []string{
+				"crypto key sign-verify foobar",
+			},
 			claims: &TestUserClaims{
 				Role:    "admin",
 				Address: "192.168.1.1",
@@ -100,8 +108,10 @@ func TestKeystoreOperators(t *testing.T) {
 			addr:  "192.168.1.1",
 		},
 		{
-			name:   "user with group claim and ip address",
-			config: `crypto key sign-verify foobar`,
+			name: "user with group claim and ip address",
+			config: []string{
+				"crypto key sign-verify foobar",
+			},
 			claims: &TestUserClaims{
 				Group:   "admin",
 				Address: "192.168.1.1",
@@ -116,8 +126,10 @@ func TestKeystoreOperators(t *testing.T) {
 			addr:  "192.168.1.1",
 		},
 		{
-			name:   "user with expired token",
-			config: `crypto key sign-verify foobar`,
+			name: "user with expired token",
+			config: []string{
+				"crypto key sign-verify foobar",
+			},
 			claims: &TestUserClaims{
 				Roles: []string{"admin", "editor", "viewer"},
 				StandardClaims: jwtlib.StandardClaims{
@@ -133,8 +145,10 @@ func TestKeystoreOperators(t *testing.T) {
 			err:       errors.ErrCryptoKeyStoreParseTokenExpired,
 		},
 		{
-			name:   "user with not yet ready token",
-			config: `crypto key sign-verify foobar`,
+			name: "user with not yet ready token",
+			config: []string{
+				"crypto key sign-verify foobar",
+			},
 			claims: &TestUserClaims{
 				Roles: []string{"admin", "editor", "viewer"},
 				AppMetadata: map[string]interface{}{
@@ -157,13 +171,10 @@ func TestKeystoreOperators(t *testing.T) {
 			err:       errors.ErrCryptoKeyStoreTokenData,
 		},
 		{
-			name:      "nil keys",
-			shouldErr: true,
-			err:       errors.ErrCryptoKeyStoreAddKeyNil,
-		},
-		{
-			name:            "token name mismatch",
-			config:          `crypto key sign-verify foobar`,
+			name: "token name mismatch",
+			config: []string{
+				"crypto key sign-verify foobar",
+			},
 			verifyTokenName: `foobar`,
 			claims: &TestUserClaims{
 				Group:   "admin",
@@ -181,8 +192,10 @@ func TestKeystoreOperators(t *testing.T) {
 			err:       errors.ErrCryptoKeyStoreParseTokenFailed,
 		},
 		{
-			name:            "failed verification",
-			config:          `crypto key sign-verify foobar`,
+			name: "failed verification",
+			config: []string{
+				"crypto key sign-verify foobar",
+			},
 			sign:            true,
 			signAlgorithm:   "HS512",
 			verifyTokenName: `foobar`,
@@ -192,8 +205,10 @@ func TestKeystoreOperators(t *testing.T) {
 			err:             errors.ErrCryptoKeyStoreParseTokenFailed,
 		},
 		{
-			name:            "failed signing due to algo mismatch",
-			config:          `crypto key sign-verify foobar`,
+			name: "failed signing due to algo mismatch",
+			config: []string{
+				"crypto key sign-verify foobar",
+			},
 			sign:            true,
 			signAlgorithm:   "RS512",
 			verifyTokenName: `foobar`,
@@ -204,8 +219,10 @@ func TestKeystoreOperators(t *testing.T) {
 			err:             errors.ErrUnsupportedSigningMethod.WithArgs("RS512"),
 		},
 		{
-			name:            "failed signing due to token name mismatch",
-			config:          `crypto key sign-verify foobar`,
+			name: "failed signing due to token name mismatch",
+			config: []string{
+				"crypto key sign-verify foobar",
+			},
 			sign:            true,
 			signAlgorithm:   "RS512",
 			signTokenName:   `foobar`,
@@ -220,30 +237,19 @@ func TestKeystoreOperators(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var signedToken string
 			var msgs []string
-			var keys []*CryptoKey
 			msgs = append(msgs, fmt.Sprintf("test name: %s", tc.name))
-			if tc.config != "" {
-				configs, err := ParseCryptoKeyConfigs(tc.config)
-				if err != nil {
-					t.Fatalf("failed parsing configs: %v", err)
-				}
-				keys, err = GetKeysFromConfigs(configs)
-				if err != nil {
-					t.Fatalf("failed getting keys from configs: %v", err)
-				}
-			} else {
-				keys = []*CryptoKey{nil}
+
+			ksCfg, err := NewCryptoKeyStoreConfig(tc.config)
+			if err != nil {
+				t.Fatalf("failed NewCryptoKeyStoreConfig: %v", err)
 			}
 
-			ks := NewCryptoKeyStore()
-			if err := ks.AddKeys(keys); err != nil {
-				if !tc.operatorErr {
-					if tests.EvalErrWithLog(t, err, "add keys", tc.shouldErr, tc.err, msgs) {
-						return
-					}
-					t.Fatalf("failed adding keys to crypto key store: %v", err)
-				}
+			ks, err := NewCryptoKeyStore(ksCfg, logutil.NewLogger())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
+
+			keys := ks.GetKeys()
 
 			privKey := keys[0]
 			// pubKey := keys[0]
@@ -315,8 +321,14 @@ func TestCryptoKeyStoreAutoGenerate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
 			msgs = append(msgs, fmt.Sprintf("algorithm: %s", tc.algorithm))
-			ks := NewCryptoKeyStore()
-			err := ks.AutoGenerate(tc.tag, tc.algorithm)
+			ksCfg, err := NewCryptoKeyStoreConfig([]string{
+				fmt.Sprintf("crypto default autogenerate tag %s", tc.tag),
+				fmt.Sprintf("crypto default autogenerate algorithm %s", tc.algorithm),
+			})
+			if err != nil {
+				t.Fatalf("unexpected NewCryptoKeyStoreConfig error: %v", err)
+			}
+			_, err = NewCryptoKeyStore(ksCfg, logutil.NewLogger())
 			if tests.EvalErrWithLog(t, err, nil, tc.shouldErr, tc.err, msgs) {
 				return
 			}

@@ -28,8 +28,10 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
 )
 
@@ -43,17 +45,17 @@ type mockIdentityProvider struct {
 	identityTokenCookieName string
 }
 
-func (m *mockIdentityProvider) GetRealm() string                       { return m.realm }
-func (m *mockIdentityProvider) GetName() string                        { return m.name }
-func (m *mockIdentityProvider) GetKind() string                        { return m.kind }
-func (m *mockIdentityProvider) GetDriver() string                      { return m.driver }
-func (m *mockIdentityProvider) GetConfig() map[string]interface{}      { return m.config }
-func (m *mockIdentityProvider) Configure() error                       { return nil }
-func (m *mockIdentityProvider) Configured() bool                       { return true }
+func (m *mockIdentityProvider) GetRealm() string                                   { return m.realm }
+func (m *mockIdentityProvider) GetName() string                                    { return m.name }
+func (m *mockIdentityProvider) GetKind() string                                    { return m.kind }
+func (m *mockIdentityProvider) GetDriver() string                                  { return m.driver }
+func (m *mockIdentityProvider) GetConfig() map[string]interface{}                  { return m.config }
+func (m *mockIdentityProvider) Configure() error                                   { return nil }
+func (m *mockIdentityProvider) Configured() bool                                   { return true }
 func (m *mockIdentityProvider) Request(_ operator.Type, _ *requests.Request) error { return nil }
-func (m *mockIdentityProvider) GetLoginIcon() *icons.LoginIcon         { return icons.NewLoginIcon("generic") }
-func (m *mockIdentityProvider) GetLogoutURL() string                   { return m.logoutURL }
-func (m *mockIdentityProvider) GetIdentityTokenCookieName() string     { return m.identityTokenCookieName }
+func (m *mockIdentityProvider) GetLoginIcon() *icons.LoginIcon                     { return icons.NewLoginIcon("generic") }
+func (m *mockIdentityProvider) GetLogoutURL() string                               { return m.logoutURL }
+func (m *mockIdentityProvider) GetIdentityTokenCookieName() string                 { return m.identityTokenCookieName }
 
 func TestHandleHTTPExternalLogout(t *testing.T) {
 	trustedConfig, err := redirects.NewRedirectURIMatchConfig("exact", "app.example.com", "exact", "/bye")
@@ -93,7 +95,14 @@ func TestHandleHTTPExternalLogout(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			f, _ := cookie.NewFactory(nil)
-			v := validator.NewTokenValidator()
+			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			v, err := validator.NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			provider := &mockIdentityProvider{
 				realm:                   "generic",
 				name:                    "generic",
@@ -131,7 +140,7 @@ func TestHandleHTTPExternalLogout(t *testing.T) {
 			}
 			rr := requests.NewRequest()
 
-			err := p.handleHTTPExternalLogout(context.Background(), rw, r, rr, "oauth2")
+			err = p.handleHTTPExternalLogout(context.Background(), rw, r, rr, "oauth2")
 			tests.EvalObjectsWithLog(t, "error", nil, err, []string{})
 			tests.EvalObjectsWithLog(t, "status_code", http.StatusFound, rw.statusCode, []string{})
 
@@ -220,7 +229,14 @@ func TestHandleHTTPExternalLogoutProviders(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			f, _ := cookie.NewFactory(nil)
-			v := validator.NewTokenValidator()
+			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			v, err := validator.NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			provider := &mockIdentityProvider{
 				realm:                   tc.realm,
 				name:                    tc.realm,
@@ -255,7 +271,7 @@ func TestHandleHTTPExternalLogoutProviders(t *testing.T) {
 			rr.Upstream.BaseURL = "https://auth.example.com"
 			rr.Upstream.BasePath = "/"
 
-			err := p.handleHTTPExternalLogout(context.Background(), rw, r, rr, "oauth2")
+			err = p.handleHTTPExternalLogout(context.Background(), rw, r, rr, "oauth2")
 			tests.EvalObjectsWithLog(t, "error", nil, err, []string{})
 			tests.EvalObjectsWithLog(t, "status_code", http.StatusFound, rw.statusCode, []string{})
 

@@ -16,11 +16,12 @@ package kms
 
 import (
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"os"
-	"testing"
 )
 
 func TestValidateCryptoKeyConfig(t *testing.T) {
@@ -163,7 +164,7 @@ func TestValidateCryptoKeyConfig(t *testing.T) {
 func TestParseCryptoKeyConfigs(t *testing.T) {
 	var testcases = []struct {
 		name      string
-		config    string
+		config    []string
 		env       map[string]string
 		want      map[string]interface{}
 		shouldErr bool
@@ -171,11 +172,11 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 	}{
 		{
 			name: "default shared key in default context for verify",
-			config: `
-			    crypto default token lifetime 2400
-                crypto key token name "foobar token"
-                crypto key verify foobar
-            `,
+			config: []string{
+				"crypto default token lifetime 2400",
+				"crypto key token name \"foobar token\"",
+				"crypto key verify foobar",
+			},
 			want: map[string]interface{}{
 				"config_count": 1,
 				"configs": []*CryptoKeyConfig{
@@ -195,11 +196,11 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "default shared key in default context for both sign and verify",
-			config: `
-                crypto key token name "foobar token"
-                crypto key token lifetime 1800
-                crypto key sign-verify foobar
-            `,
+			config: []string{
+				"crypto key token name \"foobar token\"",
+				"crypto key token lifetime 1800",
+				"crypto key sign-verify foobar",
+			},
 			want: map[string]interface{}{
 				"config_count": 1,
 				"configs": []*CryptoKeyConfig{
@@ -219,12 +220,12 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "multiple shared keys in default context",
-			config: `
-                crypto key token name "foobar token"
-                crypto key verify foobar
-                crypto key abc123 token name foobar_token
-                crypto key abc123 verify foobar
-            `,
+			config: []string{
+				"crypto key token name \"foobar token\"",
+				"crypto key verify foobar",
+				"crypto key abc123 token name foobar_token",
+				"crypto key abc123 verify foobar",
+			},
 			want: map[string]interface{}{
 				"config_count": 2,
 				"configs": []*CryptoKeyConfig{
@@ -256,10 +257,10 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "multiple shared keys in with implicit token name config",
-			config: `
-                crypto key verify foobar
-                crypto key abc123 verify foobar
-            `,
+			config: []string{
+				"crypto key verify foobar",
+				"crypto key abc123 verify foobar",
+			},
 			want: map[string]interface{}{
 				"config_count": 2,
 				"configs": []*CryptoKeyConfig{
@@ -291,12 +292,12 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "multiple shared keys in with explicit default token name config",
-			config: `
-                crypto default token name jwt_token
-                crypto key verify foobar
-                crypto key abc123 verify foobar
-                crypto key abc123 token name foobar_token
-            `,
+			config: []string{
+				"crypto default token name jwt_token",
+				"crypto key verify foobar",
+				"crypto key abc123 verify foobar",
+				"crypto key abc123 token name foobar_token",
+			},
 			want: map[string]interface{}{
 				"config_count": 2,
 				"configs": []*CryptoKeyConfig{
@@ -328,9 +329,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "single default shared key",
-			config: `
-                crypto key verify foobar
-            `,
+			config: []string{
+				"crypto key verify foobar",
+			},
 			want: map[string]interface{}{
 				"config_count": 1,
 				"configs": []*CryptoKeyConfig{
@@ -350,10 +351,10 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "multiple default shared keys",
-			config: `
-                crypto key sign foobar
-                crypto key sign barfoo
-            `,
+			config: []string{
+				"crypto key sign foobar",
+				"crypto key sign barfoo",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key sign barfoo`,
@@ -362,9 +363,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "load key from file path",
-			config: `
-                crypto key k9738a405e99 verify from file /path/to/file
-            `,
+			config: []string{
+				"crypto key k9738a405e99 verify from file /path/to/file",
+			},
 			want: map[string]interface{}{
 				"config_count": 1,
 				"configs": []*CryptoKeyConfig{
@@ -383,10 +384,10 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "load private-public key pair from separate file paths",
-			config: `
-                crypto key k9738a405e99 sign from file ./../../testdata/rskeys/test_2_pri.pem
-                crypto key k9738a405e99 verify from file ./../../testdata/rskeys/test_2_pub.pem
-            `,
+			config: []string{
+				"crypto key k9738a405e99 sign from file ./../../testdata/rskeys/test_2_pri.pem",
+				"crypto key k9738a405e99 verify from file ./../../testdata/rskeys/test_2_pub.pem",
+			},
 			want: map[string]interface{}{
 				"config_count": 2,
 				"configs": []*CryptoKeyConfig{
@@ -416,9 +417,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "load keys from directory path",
-			config: `
-                crypto key k9738a405e99 verify from directory /path/to/dir
-            `,
+			config: []string{
+				"crypto key k9738a405e99 verify from directory /path/to/dir",
+			},
 			want: map[string]interface{}{
 				"config_count": 1,
 				"configs": []*CryptoKeyConfig{
@@ -437,9 +438,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "shared secret embedded in environment variable",
-			config: `
-                crypto key cb315f43c868 verify from env JWT_SHARED_SECRET
-            `,
+			config: []string{
+				"crypto key cb315f43c868 verify from env JWT_SHARED_SECRET",
+			},
 			env: map[string]string{
 				"JWT_SHARED_SECRET": "foobar",
 			},
@@ -463,9 +464,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "empty env variable value",
-			config: `
-                crypto key cb315f43c868 verify from env JWT_SHARED_SECRET
-            `,
+			config: []string{
+				"crypto key cb315f43c868 verify from env JWT_SHARED_SECRET",
+			},
 			env: map[string]string{
 				"JWT_SHARED_SECRET": "     ",
 			},
@@ -477,9 +478,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "load key from the value in JWT_SECRET_KEY environment variable",
-			config: `
-                crypto key cb315f43c868 verify from env JWT_SECRET_KEY as key
-            `,
+			config: []string{
+				"crypto key cb315f43c868 verify from env JWT_SECRET_KEY as key",
+			},
 			env: map[string]string{
 				"JWT_SECRET_KEY": "----BEGIN RSA ...",
 			},
@@ -503,9 +504,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "load key from the file named in JWT_SECRET_FILE environment variable",
-			config: `
-                crypto key cb315f43c868 verify from env JWT_SECRET_FILE as file
-            `,
+			config: []string{
+				"crypto key cb315f43c868 verify from env JWT_SECRET_FILE as file",
+			},
 			env: map[string]string{
 				"JWT_SECRET_FILE": "/path/to/file",
 			},
@@ -529,9 +530,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "load keys from the files in the directory named in JWT_SECRET_DIR environment variable",
-			config: `
-                crypto key cb315f43c868 verify from env JWT_SECRET_DIR as directory
-            `,
+			config: []string{
+				"crypto key cb315f43c868 verify from env JWT_SECRET_DIR as directory",
+			},
 			env: map[string]string{
 				"JWT_SECRET_DIR": "/path/to/dir",
 			},
@@ -555,9 +556,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "config entry is too short",
-			config: `
-                crypto key
-            `,
+			config: []string{
+				"crypto key",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				"crypto key", "entry is too short",
@@ -565,9 +566,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "config entry without closing quote",
-			config: `
-                crypto key "foo
-            `,
+			config: []string{
+				"crypto key \"foo",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key "foo`,
@@ -576,9 +577,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "config entry with invalid default token setting",
-			config: `
-                crypto default token foo bar
-            `,
+			config: []string{
+				"crypto default token foo bar",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto default token foo bar`,
@@ -587,9 +588,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "config entry with too short default token setting",
-			config: `
-                crypto default token lifetime
-            `,
+			config: []string{
+				"crypto default token lifetime",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto default token lifetime`,
@@ -598,9 +599,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "config entry with invalid default token lifetime",
-			config: `
-                crypto default token lifetime abc123
-            `,
+			config: []string{
+				"crypto default token lifetime abc123",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto default token lifetime abc123`,
@@ -609,9 +610,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "config entry with unknown default setting",
-			config: `
-                crypto default foo bar foobar
-            `,
+			config: []string{
+				"crypto default foo bar foobar",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto default foo bar foobar`,
@@ -620,9 +621,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "invalid config entry",
-			config: `
-                crypto foo bar foo bar
-            `,
+			config: []string{
+				"crypto foo bar foo bar",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto foo bar foo bar`,
@@ -631,10 +632,10 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "bad key token syntax",
-			config: `
-			    crypto key 123 verify foobar
-                crypto key 123 token foo
-            `,
+			config: []string{
+				"crypto key 123 verify foobar",
+				"crypto key 123 token foo",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 token foo`,
@@ -643,10 +644,10 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "reserved keyword must not be last",
-			config: `
-                crypto key 123 verify foobar
-                crypto key 123 token
-            `,
+			config: []string{
+				"crypto key 123 verify foobar",
+				"crypto key 123 token",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 token`,
@@ -655,10 +656,10 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "key with invalid token lifetime",
-			config: `
-                crypto key 123 verify foobar
-                crypto key 123 token lifetime abc123
-            `,
+			config: []string{
+				"crypto key 123 verify foobar",
+				"crypto key 123 token lifetime abc123",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 token lifetime abc123`,
@@ -667,10 +668,10 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "key with unknown key token setting",
-			config: `
-                crypto key 123 verify foobar
-                crypto key 123 token foo bar
-            `,
+			config: []string{
+				"crypto key 123 verify foobar",
+				"crypto key 123 token foo bar",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 token foo bar`,
@@ -679,9 +680,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "key with usage with bad syntax",
-			config: `
-                crypto key 123 verify foo bar 
-            `,
+			config: []string{
+				"crypto key 123 verify foo bar",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 verify foo bar`,
@@ -690,9 +691,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "bad syntax",
-			config: `
-                crypto key 123 verify foo bar
-            `,
+			config: []string{
+				"crypto key 123 verify foo bar",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 verify foo bar`,
@@ -701,9 +702,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "invalid from config",
-			config: `
-                crypto key 123 verify from foo /path/to/file
-		    `,
+			config: []string{
+				"crypto key 123 verify from foo /path/to/file",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 verify from foo /path/to/file`,
@@ -712,9 +713,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "invalid from env",
-			config: `
-                crypto key 123 verify from env JWT_SECRET_FILE as foo
-            `,
+			config: []string{
+				"crypto key 123 verify from env JWT_SECRET_FILE as foo",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 verify from env JWT_SECRET_FILE as foo`,
@@ -723,9 +724,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "invalid from env as",
-			config: `
-                crypto key 123 verify from env JWT_SECRET_FILE foo bar
-            `,
+			config: []string{
+				"crypto key 123 verify from env JWT_SECRET_FILE foo bar",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 verify from env JWT_SECRET_FILE foo bar`,
@@ -734,9 +735,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "invalid from env as file and empty env var",
-			config: `
-                crypto key 123 verify from env JWT_SECRET_FILE as file
-            `,
+			config: []string{
+				"crypto key 123 verify from env JWT_SECRET_FILE as file",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 verify from env JWT_SECRET_FILE as file`,
@@ -745,9 +746,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "invalid from env as file and too long",
-			config: `
-                crypto key 123 verify from env JWT_SECRET_FILE as file foo
-            `,
+			config: []string{
+				"crypto key 123 verify from env JWT_SECRET_FILE as file foo",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 verify from env JWT_SECRET_FILE as file foo`,
@@ -756,9 +757,9 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "invalid key argument",
-			config: `
-                crypto key 123 foo foo foo foo foo
-            `,
+			config: []string{
+				"crypto key 123 foo foo foo foo foo",
+			},
 			shouldErr: true,
 			err: errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(
 				`crypto key 123 foo foo foo foo foo`,
@@ -767,27 +768,27 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "without key configs",
-			config: `
-                crypto default token name foo
-            `,
+			config: []string{
+				"crypto default token name foo",
+			},
 			shouldErr: true,
 			err:       errors.ErrCryptoKeyConfigNoConfigFound,
 		},
 		{
 			name: "with validate error",
-			config: `
-                crypto key 123 token name foo
-            `,
+			config: []string{
+				"crypto key 123 token name foo",
+			},
 			shouldErr: true,
 			err:       errors.ErrCryptoKeyConfigKeyInvalid.WithArgs(0, "key usage is not set"),
 		},
 		{
 			name: "load mix static and private keys",
-			config: `
-                crypto key token name usertoken
-                crypto key verify foobar
-                crypto key k9738a405e99 verify from file ./../../testdata/rskeys/test_2_pub.pem
-            `,
+			config: []string{
+				"crypto key token name usertoken",
+				"crypto key verify foobar",
+				"crypto key k9738a405e99 verify from file ./../../testdata/rskeys/test_2_pub.pem",
+			},
 			want: map[string]interface{}{
 				"config_count": 2,
 				"configs": []*CryptoKeyConfig{
@@ -818,11 +819,11 @@ func TestParseCryptoKeyConfigs(t *testing.T) {
 		},
 		{
 			name: "load mix static and private keys with default token name",
-			config: `
-				crypto default token name usertoken
-                crypto key verify foobar
-                crypto key k9738a405e99 verify from file ./../../testdata/rskeys/test_2_pub.pem
-            `,
+			config: []string{
+				"crypto default token name usertoken",
+				"crypto key verify foobar",
+				"crypto key k9738a405e99 verify from file ./../../testdata/rskeys/test_2_pub.pem",
+			},
 			want: map[string]interface{}{
 				"config_count": 2,
 				"configs": []*CryptoKeyConfig{

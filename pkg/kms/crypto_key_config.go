@@ -17,8 +17,8 @@ package kms
 import (
 	"encoding/csv"
 	"fmt"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 
 	"os"
 	"sort"
@@ -66,6 +66,8 @@ type CryptoKeyConfig struct {
 	Usage string `json:"usage,omitempty" xml:"usage,omitempty" yaml:"usage,omitempty"`
 	// TokenName is the token name associated with the key.
 	TokenName string `json:"token_name,omitempty" xml:"token_name,omitempty" yaml:"token_name,omitempty"`
+	// CookieNames is the cookie names associated with the key.
+	CookieNames []string `json:"cookie_names,omitempty" xml:"cookie_names,omitempty" yaml:"cookie_names,omitempty"`
 	// Source is either config or env.
 	Source string `json:"source,omitempty" xml:"source,omitempty" yaml:"source,omitempty"`
 	// Algorithm is either hmac, rsa, or ecdsa.
@@ -98,6 +100,11 @@ type CryptoKeyConfig struct {
 	parsed bool
 	// validated indicated whether the key config was validated.
 	validated bool
+}
+
+// SetCookieNames sets cookie names associated with the crypto key config.
+func (k *CryptoKeyConfig) SetCookieNames(cookieNames []string) {
+	k.CookieNames = cookieNames
 }
 
 // ToString returns string representation of a crypto key config.
@@ -187,49 +194,13 @@ func (k *CryptoKeyConfig) validate() error {
 	return nil
 }
 
-// ParseCryptoKeyStoreConfig parses crypto key store default configuration,
-// e.g. default token name and configuration.
-func ParseCryptoKeyStoreConfig(cfg string) (map[string]interface{}, error) {
-	m := make(map[string]interface{})
-	for _, line := range strings.Split(cfg, "\n") {
-		args, err := cfgutil.DecodeArgs(line)
-		if err != nil {
-			return nil, err
-		}
-		if len(args) < 4 {
-			return nil, errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(line, "too few arguments")
-		}
-		if args[0] != "default" {
-			return nil, errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(line, "must be prefixed with 'crypto default' keywords")
-		}
-		switch args[1] {
-		case "token":
-			switch args[2] {
-			case "name":
-				m["token_name"] = args[3]
-			case "lifetime":
-				lifetime, err := strconv.Atoi(args[3])
-				if err != nil {
-					return nil, errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(line, err)
-				}
-				m["token_lifetime"] = lifetime
-			default:
-				return nil, errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(line, "contains unsupported 'crypto default token' parameter: %s", args[2])
-			}
-		default:
-			return nil, errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(line, fmt.Sprintf("contains unsupported 'crypto default' keyword: %s", args[1]))
-		}
-	}
-	return m, nil
-}
-
 // ParseCryptoKeyConfigs parses crypto key configurations.
-func ParseCryptoKeyConfigs(cfg string) ([]*CryptoKeyConfig, error) {
+func ParseCryptoKeyConfigs(statements []string) ([]*CryptoKeyConfig, error) {
 	var cursor int
 	var keys []*CryptoKeyConfig
 	defaultConfig := make(map[string]interface{})
 	// m := make(map[string]*CryptoKeyConfig)
-	for _, s := range strings.Split(cfg, "\n") {
+	for _, s := range statements {
 		var key *CryptoKeyConfig
 		var keyUsage string
 		kid := defaultKeyID

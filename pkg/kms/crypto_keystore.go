@@ -35,59 +35,44 @@ var (
 // CryptoKeyStore constains keys assembled for a specific purpose, i.e. signing or
 // validation.
 type CryptoKeyStore struct {
+	config     *CryptoKeyStoreConfig
 	keys       []*CryptoKey
 	signKeys   []*CryptoKey
 	verifyKeys []*CryptoKey
 	logger     *zap.Logger
-	defaults   map[string]interface{}
 }
 
 // NewCryptoKeyStore returns a new instance of CryptoKeyStore
-func NewCryptoKeyStore() *CryptoKeyStore {
-	ks := &CryptoKeyStore{}
-	ks.defaults = make(map[string]interface{})
-	return ks
-}
-
-// SetLogger adds a logger to CryptoKeyStore.
-func (ks *CryptoKeyStore) SetLogger(logger *zap.Logger) {
-	ks.logger = logger
-}
-
-// AddDefaults adds default settings to CryptoKeyStore.
-func (ks *CryptoKeyStore) AddDefaults(m map[string]interface{}) error {
-	if m == nil {
-		return nil
+func NewCryptoKeyStore(cfg *CryptoKeyStoreConfig, logger *zap.Logger) (*CryptoKeyStore, error) {
+	ks := &CryptoKeyStore{
+		config: cfg,
+		logger: logger,
 	}
-	if ks.defaults == nil {
-		ks.defaults = make(map[string]interface{})
-	}
-	for k, v := range m {
-		switch k {
-		case "token_name":
-			ks.defaults[k] = v.(string)
-		case "token_lifetime":
-			switch val := v.(type) {
-			case int:
-				ks.defaults[k] = val
-			case float64:
-				ks.defaults[k] = int(val)
-			case float32:
-				ks.defaults[k] = int(val)
-			default:
-				ks.defaults[k] = v
-			}
-		default:
-			ks.defaults[k] = v
+	if len(cfg.RawKeyConfigs) > 0 {
+		cryptoKeyConfigs, err := ParseCryptoKeyConfigs(cfg.RawKeyConfigs)
+		if err != nil {
+			return nil, errors.ErrConfigDirectiveFail.WithArgs("crypto.key", cfg.RawKeyConfigs, err)
+		}
+		if err := ks.AddKeysWithConfigs(cryptoKeyConfigs); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := ks.AutoGenerate(); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+	return ks, nil
+}
+
+// GetConfig returns keystore config.
+func (ks *CryptoKeyStore) GetConfig() *CryptoKeyStoreConfig {
+	return ks.config
 }
 
 // AutoGenerate auto-generates public-private key pair capable of both
 // signing and verifying tokens.
-func (ks *CryptoKeyStore) AutoGenerate(tag, algo string) error {
-	cfg := &CryptoKeyConfig{
+func (ks *CryptoKeyStore) AutoGenerate() error {
+	keyCfg := &CryptoKeyConfig{
 		ID:            "0",
 		Usage:         "sign-verify",
 		TokenName:     "access_token",
@@ -96,20 +81,18 @@ func (ks *CryptoKeyStore) AutoGenerate(tag, algo string) error {
 		parsed:        true,
 	}
 
-	if ks.defaults != nil {
-		if _, exists := ks.defaults["token_name"]; exists {
-			cfg.TokenName = ks.defaults["token_name"].(string)
-		}
-		if _, exists := ks.defaults["token_lifetime"]; exists {
-			cfg.TokenLifetime = ks.defaults["token_lifetime"].(int)
-		}
+	if ks.config.TokenName != "" {
+		keyCfg.TokenName = ks.config.TokenName
+	}
+	if ks.config.TokenLifetime > 0 {
+		keyCfg.TokenLifetime = ks.config.TokenLifetime
 	}
 
 	if len(ks.keys) > 0 {
 		return errors.ErrCryptoKeyStoreAutoGenerateNotAvailable
 	}
 
-	key, err := generateKey(cfg, tag, algo)
+	key, err := generateKey(keyCfg, ks.config.AutoGenerateTag, ks.config.AutoGenerateAlgo)
 	if err != nil {
 		return err
 	}
@@ -207,7 +190,7 @@ func (ks *CryptoKeyStore) AddKey(k *CryptoKey) error {
 func (ks *CryptoKeyStore) ParseToken(ar *requests.AuthorizationRequest) (*user.User, error) {
 	for _, k := range ks.verifyKeys {
 		if _, exists := reservedTokenNames[ar.Token.Name]; !exists {
-			if (ar.Token.Name != k.Verify.Token.Name) && ar.Token.Source != "cookie" {
+			if ar.Token.Name != k.Verify.Token.Name {
 				continue
 			}
 		}
