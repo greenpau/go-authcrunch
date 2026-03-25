@@ -17,11 +17,12 @@ package oauth
 import (
 	"encoding/json"
 	"fmt"
-	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
+	"go.uber.org/zap"
 )
 
 func (b *IdentityProvider) fetchUserInfo(tokenData, userData map[string]interface{}) error {
@@ -113,7 +114,7 @@ func extractUserInfoRoles(m map[string]interface{}, rolesFieldName string) []str
 	entries := make(map[string]interface{})
 	var roles []string
 	for k, v := range m {
-		if !strings.HasSuffix(k, rolesFieldName) && !strings.HasSuffix(k, "groups") {
+		if !strings.HasSuffix(k, rolesFieldName) && !strings.HasSuffix(k, "groups") && !strings.HasSuffix(k, "group") && !strings.HasSuffix(k, "role") {
 			continue
 		}
 		switch values := v.(type) {

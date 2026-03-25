@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	jwtlib "github.com/golang-jwt/jwt/v4"
+	jwtlib "github.com/golang-jwt/jwt/v5"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -35,7 +35,7 @@ type TestUserClaims struct {
 	Organizations []string               `json:"org,omitempty" xml:"org" yaml:"org,omitempty"`
 	Address       string                 `json:"addr,omitempty" xml:"addr" yaml:"addr,omitempty"`
 	AppMetadata   map[string]interface{} `json:"app_metadata,omitempty" xml:"app_metadata" yaml:"app_metadata,omitempty"`
-	jwtlib.StandardClaims
+	jwtlib.RegisteredClaims
 }
 
 func TestKeystoreOperators(t *testing.T) {
@@ -62,10 +62,10 @@ func TestKeystoreOperators(t *testing.T) {
 			},
 			claims: &TestUserClaims{
 				Roles: []string{"admin", "editor", "viewer"},
-				StandardClaims: jwtlib.StandardClaims{
-					ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
-					IssuedAt:  time.Now().Add(10 * time.Minute * -1).Unix(),
-					NotBefore: time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+				RegisteredClaims: jwtlib.RegisteredClaims{
+					ExpiresAt: jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute)),
+					IssuedAt:  jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute * -1)),
+					NotBefore: jwtlib.NewNumericDate(time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC)),
 					Subject:   "smithj@outlook.com",
 				},
 			},
@@ -79,10 +79,10 @@ func TestKeystoreOperators(t *testing.T) {
 			},
 			claims: &TestUserClaims{
 				Groups: []string{"admin", "editor", "viewer"},
-				StandardClaims: jwtlib.StandardClaims{
-					ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
-					IssuedAt:  time.Now().Add(10 * time.Minute * -1).Unix(),
-					NotBefore: time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+				RegisteredClaims: jwtlib.RegisteredClaims{
+					ExpiresAt: jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute)),
+					IssuedAt:  jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute * -1)),
+					NotBefore: jwtlib.NewNumericDate(time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC)),
 					Subject:   "smithj@outlook.com",
 				},
 			},
@@ -97,10 +97,10 @@ func TestKeystoreOperators(t *testing.T) {
 			claims: &TestUserClaims{
 				Role:    "admin",
 				Address: "192.168.1.1",
-				StandardClaims: jwtlib.StandardClaims{
-					ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
-					IssuedAt:  time.Now().Add(10 * time.Minute * -1).Unix(),
-					NotBefore: time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+				RegisteredClaims: jwtlib.RegisteredClaims{
+					ExpiresAt: jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute)),
+					IssuedAt:  jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute * -1)),
+					NotBefore: jwtlib.NewNumericDate(time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC)),
 					Subject:   "smithj@outlook.com",
 				},
 			},
@@ -115,10 +115,10 @@ func TestKeystoreOperators(t *testing.T) {
 			claims: &TestUserClaims{
 				Group:   "admin",
 				Address: "192.168.1.1",
-				StandardClaims: jwtlib.StandardClaims{
-					ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
-					IssuedAt:  time.Now().Add(10 * time.Minute * -1).Unix(),
-					NotBefore: time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+				RegisteredClaims: jwtlib.RegisteredClaims{
+					ExpiresAt: jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute)),
+					IssuedAt:  jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute * -1)),
+					NotBefore: jwtlib.NewNumericDate(time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC)),
 					Subject:   "smithj@outlook.com",
 				},
 			},
@@ -132,10 +132,10 @@ func TestKeystoreOperators(t *testing.T) {
 			},
 			claims: &TestUserClaims{
 				Roles: []string{"admin", "editor", "viewer"},
-				StandardClaims: jwtlib.StandardClaims{
-					ExpiresAt: time.Now().Add(5 * time.Minute * -1).Unix(),
-					IssuedAt:  time.Now().Add(10 * time.Minute * -1).Unix(),
-					NotBefore: time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+				RegisteredClaims: jwtlib.RegisteredClaims{
+					ExpiresAt: jwtlib.NewNumericDate(time.Now().Add(5 * time.Minute * -1)),
+					IssuedAt:  jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute * -1)),
+					NotBefore: jwtlib.NewNumericDate(time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC)),
 					Subject:   "smithj@outlook.com",
 				},
 			},
@@ -158,10 +158,10 @@ func TestKeystoreOperators(t *testing.T) {
 						},
 					},
 				},
-				StandardClaims: jwtlib.StandardClaims{
-					ExpiresAt: time.Now().Add(20 * time.Minute).Unix(),
-					IssuedAt:  time.Now().Add(10 * time.Minute * -1).Unix(),
-					NotBefore: time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+				RegisteredClaims: jwtlib.RegisteredClaims{
+					ExpiresAt: jwtlib.NewNumericDate(time.Now().Add(20 * time.Minute)),
+					IssuedAt:  jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute * -1)),
+					NotBefore: jwtlib.NewNumericDate(time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC)),
 					Subject:   "smithj@outlook.com",
 				},
 			},
@@ -179,10 +179,10 @@ func TestKeystoreOperators(t *testing.T) {
 			claims: &TestUserClaims{
 				Group:   "admin",
 				Address: "192.168.1.1",
-				StandardClaims: jwtlib.StandardClaims{
-					ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
-					IssuedAt:  time.Now().Add(10 * time.Minute * -1).Unix(),
-					NotBefore: time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+				RegisteredClaims: jwtlib.RegisteredClaims{
+					ExpiresAt: jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute)),
+					IssuedAt:  jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute * -1)),
+					NotBefore: jwtlib.NewNumericDate(time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC)),
 					Subject:   "smithj@outlook.com",
 				},
 			},

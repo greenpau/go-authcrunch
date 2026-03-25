@@ -59,6 +59,8 @@ const (
 	ErrIdentityProviderOAuthNonceValidationFailed StandardError = "OAuth 2.0 %s nonce claim validation failed: %v"
 	ErrIdentityProviderOAuthEmailNotFound         StandardError = "OAuth 2.0 %s email claim not found"
 
+	ErrIdentityProviderOAuthClaimsParserClaimsNotFound StandardError = "no claims were found during OAuth 2.0 claims parser workflow"
+
 	ErrIdentityProviderOauthMetadataFetchFailed                 StandardError = "failed to fetch metadata for OAuth 2.0 authorization server: %s"
 	ErrIdentityProviderOauthGetAccessTokenFailed                StandardError = "failed obtaining OAuth 2.0 access token, error: %v"
 	ErrIdentityProviderAuthorizationServerResponseFieldNotFound StandardError = "authorization server response has no %q field"

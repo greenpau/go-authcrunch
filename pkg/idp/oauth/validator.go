@@ -18,193 +18,120 @@ import (
 	"fmt"
 	"strings"
 
-	jwtlib "github.com/golang-jwt/jwt/v4"
+	jwtlib "github.com/golang-jwt/jwt/v5"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/kms"
 )
 
-type tokenField struct {
-	name string   // key used in resulting claim map
-	path []string // path inside the JWT claims, supporting nested paths
-}
-
-var tokenFields = []tokenField{
-	{name: "sub", path: []string{"sub"}},
-	{name: "name", path: []string{"name"}},
-	{name: "email", path: []string{"email"}},
-	{name: "iat", path: []string{"iat"}},
-	{name: "exp", path: []string{"exp"}},
-	{name: "jti", path: []string{"jti"}},
-	{name: "iss", path: []string{"iss"}},
-	{name: "groups", path: []string{"groups"}},
-	{name: "picture", path: []string{"picture"}},
-	// Multiple potential paths we need to look for roles in the access token claims
-	{name: "roles", path: []string{"roles"}},
-	{name: "roles", path: []string{"realm_access", "roles"}}, // Keycloak
-	{name: "roles", path: []string{"app_metadata", "authorization", "roles"}},
-	{name: "given_name", path: []string{"given_name"}},
-	{name: "family_name", path: []string{"family_name"}},
-}
-
-func getNestedClaim(data map[string]interface{}, path []string) (interface{}, bool) {
-	var current interface{} = data
-
-	for _, p := range path {
-		m, ok := current.(map[string]interface{})
-		if !ok {
-			return nil, false
-		}
-
-		current, ok = m[p]
-		if !ok {
-			return nil, false
-		}
-	}
-
-	return current, true
-}
-
-func mergeClaims(a interface{}, b interface{}) interface{} {
-	aSlice, aOk := a.([]interface{})
-	bSlice, bOk := b.([]interface{})
-
-	if aOk && bOk {
-		return append(aSlice, bSlice...)
-	}
-
-	return b
-}
-
 func (b *IdentityProvider) validateAccessToken(state string, data map[string]interface{}) (map[string]interface{}, error) {
-	var tokenString string
-	if v, exists := data[b.config.IdentityTokenFieldName]; exists {
-		tokenString = v.(string)
-	} else {
-		return nil, errors.ErrIdentityProviderOAuthAccessTokenNotFound.WithArgs(b.config.IdentityTokenFieldName)
+	if data == nil {
+		return nil, errors.ErrIdentityProviderOAuthClaimsParserClaimsNotFound
 	}
 
-	token, err := jwtlib.Parse(tokenString, func(token *jwtlib.Token) (interface{}, error) {
-		switch {
-		case strings.HasPrefix(token.Method.Alg(), "RS"):
-			if _, validMethod := token.Method.(*jwtlib.SigningMethodRSA); !validMethod {
-				return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(b.config.IdentityTokenFieldName, token.Header["alg"])
-			}
-		case strings.HasPrefix(token.Method.Alg(), "ES"):
-			if _, validMethod := token.Method.(*jwtlib.SigningMethodECDSA); !validMethod {
-				return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(b.config.IdentityTokenFieldName, token.Header["alg"])
-			}
-		case strings.HasPrefix(token.Method.Alg(), "HS"):
-			return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(b.config.IdentityTokenFieldName, token.Method.Alg())
-		}
+	parsedData := make(map[string]interface{})
 
-		keyID, found := token.Header["kid"].(string)
-		if !found {
-			// If key id is not found in the header, then try the first available key.
-			for _, key := range b.keys {
-				return key.GetPublic(), nil
-			}
-			// return nil, errors.ErrIdentityProviderOAuthAccessTokenKeyIDNotFound.WithArgs(b.config.IdentityTokenName)
-		}
-		key, exists := b.keys[keyID]
-		if !exists {
-			if !b.disableKeyVerification {
-				if err := b.fetchKeysURL(); err != nil {
-					return nil, errors.ErrIdentityProviderOauthKeyFetchFailed.WithArgs(err)
-				}
-			}
-			key, exists = b.keys[keyID]
-			if !exists {
-				return nil, errors.ErrIdentityProviderOAuthAccessTokenKeyIDNotRegistered.WithArgs(b.config.IdentityTokenFieldName, keyID)
-			}
-		}
-		return key.GetPublic(), nil
-	})
-
-	if err != nil {
-		return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(b.config.IdentityTokenFieldName, err)
-	}
-
-	if !token.Valid {
-		return nil, errors.ErrIdentityProviderOAuthInvalidToken.WithArgs(b.config.IdentityTokenFieldName, tokenString)
-	}
-	claims := token.Claims.(jwtlib.MapClaims)
-	if _, exists := claims["nonce"]; !exists {
-		return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(b.config.IdentityTokenFieldName, "nonce not found")
-	}
-	if err := b.state.validateNonce(state, claims["nonce"].(string)); err != nil {
-		return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(b.config.IdentityTokenFieldName, err)
-	}
-
-	if !b.disableEmailClaimCheck {
-		if _, exists := claims["email"]; !exists {
-			return nil, errors.ErrIdentityProviderOAuthEmailNotFound.WithArgs(b.config.IdentityTokenFieldName)
-		}
-	}
-
-	m := make(map[string]interface{})
-
-	for _, field := range tokenFields {
-		value, ok := getNestedClaim(claims, field.path)
-		if !ok {
+	for tokenName, tokenStringRaw := range data {
+		if tokenName != "id_token" && tokenName != b.config.IdentityTokenFieldName && tokenName != "access_token" {
 			continue
 		}
 
-		if existing, exists := m[field.name]; exists {
-			m[field.name] = mergeClaims(existing, value)
-		} else {
-			m[field.name] = value
+		tokenString, ok := tokenStringRaw.(string)
+		if !ok {
+			return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(tokenName, fmt.Errorf("not a string"))
 		}
-	}
 
-	if _, exists := m["name"]; !exists {
-		if _, exists := m["given_name"]; exists {
-			if _, exists := m["family_name"]; exists {
-				m["name"] = fmt.Sprintf("%s %s", m["given_name"].(string), m["family_name"].(string))
-				delete(m, "given_name")
-				delete(m, "family_name")
+		if tokenName == "access_token" {
+			token, _, err := new(jwtlib.Parser).ParseUnverified(tokenString, jwtlib.MapClaims{})
+			if err != nil {
+				return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(tokenName, err)
 			}
+			if claims, ok := token.Claims.(jwtlib.MapClaims); ok {
+				if err := b.parseTokenClaims(tokenName, claims, data, parsedData); err != nil {
+					return nil, err
+				}
+			}
+			continue
 		}
-	}
 
-	switch b.config.Driver {
-	case "cognito":
-		if v, exists := data["id_token"]; exists {
-			if tp, err := kms.ParsePayloadFromToken(v.(string)); err == nil {
-				roles := []string{}
-				for k, val := range tp {
-					switch k {
-					case "custom:roles", "cognito:groups", "cognito:roles":
-						switch values := val.(type) {
-						case string:
-							if k == "custom:roles" {
-								for _, roleName := range strings.Split(values, "|") {
-									roles = append(roles, roleName)
-								}
-							} else {
-								roles = append(roles, values)
-							}
-						case []interface{}:
-							for _, value := range values {
-								switch roleName := value.(type) {
-								case string:
-									roles = append(roles, roleName)
-								}
-							}
-						}
-					case "custom:timezone":
-						m["timezone"] = val.(string)
-					case "cognito:username":
-						m["username"] = val.(string)
-					case "zoneinfo":
-						m["timezone"] = val.(string)
+		token, err := jwtlib.Parse(tokenString, func(token *jwtlib.Token) (interface{}, error) {
+			switch {
+			case strings.HasPrefix(token.Method.Alg(), "RS"):
+				if _, validMethod := token.Method.(*jwtlib.SigningMethodRSA); !validMethod {
+					return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(tokenName, token.Header["alg"])
+				}
+			case strings.HasPrefix(token.Method.Alg(), "ES"):
+				if _, validMethod := token.Method.(*jwtlib.SigningMethodECDSA); !validMethod {
+					return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(tokenName, token.Header["alg"])
+				}
+			case strings.HasPrefix(token.Method.Alg(), "HS"):
+				return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(tokenName, token.Method.Alg())
+			}
+
+			keyID, found := token.Header["kid"].(string)
+			if !found {
+				// If key id is not found in the header, then try the first available key.
+				for _, key := range b.keys {
+					return key.GetPublic(), nil
+				}
+				// return nil, errors.ErrIdentityProviderOAuthAccessTokenKeyIDNotFound.WithArgs(b.config.IdentityTokenName)
+			}
+			key, exists := b.keys[keyID]
+			if !exists {
+				if !b.disableKeyVerification {
+					if err := b.fetchKeysURL(); err != nil {
+						return nil, errors.ErrIdentityProviderOauthKeyFetchFailed.WithArgs(err)
 					}
 				}
-				if len(roles) > 0 {
-					m["roles"] = roles
+
+				key, exists = b.keys[keyID]
+				if !exists {
+					return nil, errors.ErrIdentityProviderOAuthAccessTokenKeyIDNotRegistered.WithArgs(tokenName, keyID)
 				}
+			}
+			return key.GetPublic(), nil
+		})
+
+		if err != nil {
+			return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(tokenName, err)
+		}
+
+		if !token.Valid {
+			return nil, errors.ErrIdentityProviderOAuthInvalidToken.WithArgs(tokenName, tokenString)
+		}
+
+		claims := token.Claims.(jwtlib.MapClaims)
+		if tokenName == b.config.IdentityTokenFieldName || tokenName == "id_token" {
+			if _, exists := claims["nonce"]; !exists {
+				return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, "nonce not found")
+			}
+			if err := b.state.validateNonce(state, claims["nonce"].(string)); err != nil {
+				return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, err)
+			}
+
+			if !b.disableEmailClaimCheck {
+				if _, exists := claims["email"]; !exists {
+					return nil, errors.ErrIdentityProviderOAuthEmailNotFound.WithArgs(tokenName)
+				}
+			}
+		}
+
+		if err := b.parseTokenClaims(tokenName, claims, data, parsedData); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(parsedData) == 0 {
+		return nil, errors.ErrIdentityProviderOAuthClaimsParserClaimsNotFound
+	}
+
+	if _, exists := parsedData["name"]; !exists {
+		if _, exists := parsedData["given_name"]; exists {
+			if _, exists := parsedData["family_name"]; exists {
+				parsedData["name"] = fmt.Sprintf("%s %s", parsedData["given_name"].(string), parsedData["family_name"].(string))
+				delete(parsedData, "given_name")
+				delete(parsedData, "family_name")
 			}
 		}
 	}
 
-	return m, nil
+	return parsedData, nil
 }
