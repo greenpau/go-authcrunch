@@ -30,4 +30,5 @@ type User struct {
 	Password                 string    `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
 	PasswordOverwriteEnabled bool      `json:"password_overwrite_enabled,omitempty" xml:"password_overwrite_enabled,omitempty" yaml:"password_overwrite_enabled,omitempty"`
 	APIKeys                  []*APIKey `json:"api_keys,omitempty" xml:"api_keys,omitempty" yaml:"api_keys,omitempty"`
+	AuthChallengeRules       []string  `json:"auth_challenge_rules,omitempty" xml:"auth_challenge_rules,omitempty" yaml:"auth_challenge_rules,omitempty"`
 }

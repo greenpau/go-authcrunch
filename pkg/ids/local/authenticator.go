@@ -133,6 +133,25 @@ func (sa *Authenticator) Configure(fp string, users []*User) error {
 					}
 				}
 			}
+
+			if len(user.AuthChallengeRules) > 0 {
+				sa.logger.Debug(
+					"updating auth challenge rules for statically-defined identity store user",
+					zap.String("user", user.Username),
+					zap.String("email", user.EmailAddress),
+					zap.Int("auth_challenge_rule_count", len(user.AuthChallengeRules)),
+				)
+				req := &requests.Request{
+					User: requests.User{
+						Username:   user.Username,
+						Email:      user.EmailAddress,
+						Challenges: user.AuthChallengeRules,
+					},
+				}
+				if err := sa.db.OverwriteUserAuthChallengeRules(req); err != nil {
+					return err
+				}
+			}
 		}
 	}
 

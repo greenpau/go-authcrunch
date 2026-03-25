@@ -125,6 +125,77 @@ func TestAuthenticate(t *testing.T) {
 	}
 }
 
+func TestConfigureWithAuthChallengeRules(t *testing.T) {
+	testcases := []struct {
+		name           string
+		users          []*User
+		wantChallenges []string
+		shouldErr      bool
+		err            error
+	}{
+		{
+			name: "user with auth challenge rules",
+			users: []*User{
+				{
+					Username:     "jsmith",
+					EmailAddress: "jsmith@localdomain.local",
+					Name:         "John Smith",
+					Password:     "My@Password123",
+					Roles:        []string{"authp/user"},
+					AuthChallengeRules: []string{
+						"u2f",
+						"password totp if u2f not available",
+						"password if u2f and totp not available",
+					},
+				},
+			},
+			wantChallenges: []string{"password"},
+		},
+		{
+			name: "user with invalid auth challenge rule",
+			users: []*User{
+				{
+					Username:           "baduser",
+					EmailAddress:       "baduser@localdomain.local",
+					Name:               "Bad User",
+					Password:           "My@Password123",
+					Roles:              []string{"authp/user"},
+					AuthChallengeRules: []string{"sms"},
+				},
+			},
+			shouldErr: true,
+			err:       errors.ErrUpdateUser.WithArgs(fmt.Errorf("unsupported challenge type: sms")),
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+			db, err := testutils.CreateEmptyTestDatabase("TestAuthChallengeRules")
+			if err != nil {
+				t.Fatalf("failed to create temp dir: %v", err)
+			}
+
+			b := NewAuthenticator()
+			b.logger = logutil.NewLogger()
+			err = b.Configure(db.GetPath(), tc.users)
+			if tests.EvalErrWithLog(t, err, "configure", tc.shouldErr, tc.err, msgs) {
+				return
+			}
+
+			req := &requests.Request{
+				User: requests.User{
+					Username: tc.users[0].Username,
+					Email:    tc.users[0].EmailAddress,
+				},
+			}
+			if err := b.IdentifyUser(req); err != nil {
+				t.Fatalf("identify user error: %v", err)
+			}
+			tests.EvalObjectsWithLog(t, "challenges", tc.wantChallenges, req.User.Challenges, msgs)
+		})
+	}
+}
+
 func TestNewAuthenticator(t *testing.T) {
 	testcases := []struct {
 		name         string
