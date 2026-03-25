@@ -27,22 +27,22 @@ import (
 )
 
 func (p *Portal) deleteAuthCookies(w http.ResponseWriter, r *http.Request) {
-	for tokenName := range p.validator.GetAuthCookies() {
-		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(addrutil.GetSourceHost(r), tokenName))
-	}
+	// for tokenName := range p.validator.GetAuthCookies() {
+	// 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(addrutil.GetSourceHost(r), tokenName))
+	// }
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteAccessTokenCookie(addrutil.GetSourceHost(r)))
 }
 
 func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, parsedUser *user.User) error {
 	p.disableClientCache(w)
 	p.injectRedirectURL(ctx, w, r, rr)
 	h := addrutil.GetSourceHost(r)
-	for tokenName := range p.validator.GetAuthCookies() {
-		w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, tokenName))
-	}
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie())
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.RefererCookieName))
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SessionIDCookieName))
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(p.cookie.IdentityTokenCookieName))
+
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteAccessTokenCookie(h))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie(rr.Upstream.BasePath))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteSessionIDCookie(h))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(p.cookie.IdentityTokenCookieName, rr.Upstream.BasePath))
 
 	if parsedUser != nil && parsedUser.Claims != nil {
 		p.logger.Debug(

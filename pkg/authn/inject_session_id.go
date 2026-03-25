@@ -33,5 +33,5 @@ func (p *Portal) injectSessionID(_ context.Context, w http.ResponseWriter, r *ht
 		}
 	}
 	rr.Upstream.SessionID = util.GetRandomStringFromRange(36, 46)
-	w.Header().Add("Set-Cookie", p.cookie.GetSessionCookie(addrutil.GetSourceHost(r), rr.Upstream.SessionID))
+	w.Header().Add("Set-Cookie", p.cookie.GetSessionIDCookie(addrutil.GetSourceHost(r), rr.Upstream.SessionID))
 }

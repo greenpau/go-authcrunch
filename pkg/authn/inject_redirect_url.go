@@ -22,7 +22,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/util"
-	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
 )
 
@@ -67,7 +66,7 @@ func (p *Portal) injectRedirectURL(_ context.Context, w http.ResponseWriter, r *
 				return
 			}
 
-			c := p.cookie.GetCookie(addrutil.GetSourceHost(r), p.cookie.RefererCookieName, util.StripQueryParam(redirectURL[0], "login_hint"))
+			c := p.cookie.GetRefererCookie(rr.Upstream.BaseURL, util.StripQueryParam(redirectURL[0], "login_hint"))
 			p.logger.Debug(
 				"redirect recorded",
 				zap.String("session_id", rr.Upstream.SessionID),

@@ -247,9 +247,7 @@ func (p *Portal) authorizeRequest(ctx context.Context, w http.ResponseWriter, r 
 		case "no token found":
 			return nil, nil
 		default:
-			for tokenName := range p.validator.GetAuthCookies() {
-				w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(addrutil.GetSourceHost(r), tokenName))
-			}
+			w.Header().Add("Set-Cookie", p.cookie.GetDeleteAccessTokenCookie(addrutil.GetSourceHost(r)))
 			if strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon") {
 				return nil, nil
 			}

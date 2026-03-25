@@ -34,8 +34,8 @@ func TestFactory(t *testing.T) {
 		{
 			name: "default config",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -52,8 +52,8 @@ func TestFactory(t *testing.T) {
 				},
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
 			},
@@ -70,8 +70,8 @@ func TestFactory(t *testing.T) {
 				},
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
 			},
@@ -80,8 +80,8 @@ func TestFactory(t *testing.T) {
 			name: "contoso.com cookie without domain config",
 			host: "contoso.com",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -99,8 +99,8 @@ func TestFactory(t *testing.T) {
 				SameSite: "strict",
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; SameSite=Strict; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Domain=contoso.com; Path=/; SameSite=Strict; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
 			},
@@ -133,8 +133,8 @@ func TestFactory(t *testing.T) {
 				},
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=contoso.com; Path=/mydir; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=contoso.com; Path=/mydir; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Domain=contoso.com; Path=/mydir; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Domain=contoso.com; Path=/mydir; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
 			},
@@ -157,8 +157,8 @@ func TestFactory(t *testing.T) {
 				},
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Max-Age=900; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Domain=contoso.com; Path=/; Max-Age=900; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
 			},
@@ -172,8 +172,8 @@ func TestFactory(t *testing.T) {
 				SameSite: "strict",
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -187,8 +187,8 @@ func TestFactory(t *testing.T) {
 				SameSite: "strict",
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -202,8 +202,8 @@ func TestFactory(t *testing.T) {
 				SameSite: "strict",
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -217,8 +217,8 @@ func TestFactory(t *testing.T) {
 				SameSite: "strict",
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Max-Age=900; SameSite=Strict; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -227,8 +227,8 @@ func TestFactory(t *testing.T) {
 			name: "psl co.uk subdomain without domain config",
 			host: "bar.co.uk",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -237,8 +237,8 @@ func TestFactory(t *testing.T) {
 			name: "psl co.uk direct without domain config",
 			host: "co.uk",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -247,8 +247,8 @@ func TestFactory(t *testing.T) {
 			name: "psl fly.dev subdomain without domain config",
 			host: "app.fly.dev",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -257,8 +257,8 @@ func TestFactory(t *testing.T) {
 			name: "psl github.io subdomain without domain config",
 			host: "myapp.github.io",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -267,8 +267,8 @@ func TestFactory(t *testing.T) {
 			name: "psl herokuapp.com subdomain without domain config",
 			host: "myapp.herokuapp.com",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -277,8 +277,8 @@ func TestFactory(t *testing.T) {
 			name: "psl deep subdomain without domain config",
 			host: "auth.app.fly.dev",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -295,8 +295,8 @@ func TestFactory(t *testing.T) {
 				},
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=bar.co.uk; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=bar.co.uk; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Domain=bar.co.uk; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Domain=bar.co.uk; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Domain=bar.co.uk; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=bar.co.uk; Path=/; Secure; HttpOnly;",
 			},
@@ -305,8 +305,8 @@ func TestFactory(t *testing.T) {
 			name: "default host-only cookie without domain config",
 			host: "auth.contoso.com",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -315,8 +315,8 @@ func TestFactory(t *testing.T) {
 			name: "default host-only with port without domain config",
 			host: "auth.contoso.com:8443",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -325,8 +325,8 @@ func TestFactory(t *testing.T) {
 			name: "default host-only two-level subdomain without domain config",
 			host: "bar.foo.contoso.com",
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -338,8 +338,8 @@ func TestFactory(t *testing.T) {
 				GuessDomainEnabled: true,
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Domain=contoso.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=contoso.com; Path=/; Secure; HttpOnly;",
 			},
@@ -351,8 +351,8 @@ func TestFactory(t *testing.T) {
 				GuessDomainEnabled: true,
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=app.fly.dev; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=app.fly.dev; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Domain=app.fly.dev; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Domain=app.fly.dev; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Domain=app.fly.dev; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=app.fly.dev; Path=/; Secure; HttpOnly;",
 			},
@@ -364,8 +364,8 @@ func TestFactory(t *testing.T) {
 				GuessDomainEnabled: true,
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -382,8 +382,8 @@ func TestFactory(t *testing.T) {
 				},
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Path=/; Secure; HttpOnly;",
 			},
@@ -400,8 +400,8 @@ func TestFactory(t *testing.T) {
 				},
 			},
 			want: map[string]interface{}{
-				"grant":          "access_token=foobar; Domain=example.com; Path=/; Secure; HttpOnly;",
-				"delete":         "access_token=delete; Domain=example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Domain=example.com; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Domain=example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_delete": "AUTHP_SESSION_ID=delete; Domain=example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=example.com; Path=/; Secure; HttpOnly;",
 			},
@@ -415,10 +415,10 @@ func TestFactory(t *testing.T) {
 				return
 			}
 			got := make(map[string]interface{})
-			got["grant"] = cf.GetCookie(tc.host, "access_token", "foobar")
-			got["delete"] = cf.GetDeleteCookie(tc.host, "access_token")
-			got["session_grant"] = cf.GetSessionCookie(tc.host, "foobar")
-			got["session_delete"] = cf.GetDeleteSessionCookie(tc.host)
+			got["grant"] = cf.GetAccessTokenCookie(tc.host, "foobar")
+			got["delete"] = cf.GetDeleteAccessTokenCookie(tc.host)
+			got["session_grant"] = cf.GetSessionIDCookie(tc.host, "foobar")
+			got["session_delete"] = cf.GetDeleteSessionIDCookie(tc.host)
 			tests.EvalObjectsWithLog(t, "cookie", tc.want, got, msgs)
 		})
 	}

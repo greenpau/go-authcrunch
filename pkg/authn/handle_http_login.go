@@ -146,7 +146,7 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 		usr.Authenticator.TempSessionID,
 	)
 
-	w.Header().Set("Set-Cookie", p.cookie.GetCookie(addrutil.GetSourceHost(r), p.cookie.SandboxIDCookieName, usr.Authenticator.TempSecret))
+	w.Header().Set("Set-Cookie", p.cookie.GetSandboxIDCookie(rr.Upstream.BaseURL, usr.Authenticator.TempSecret))
 	w.Header().Set("Location", redirectLocation)
 	w.WriteHeader(http.StatusSeeOther)
 	return nil
@@ -355,11 +355,13 @@ func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Authorization", "Bearer "+usr.Token)
 
-	if p.config.TokenGrantorOptions != nil && p.config.TokenGrantorOptions.AccessTokenCookieName != "" {
-		w.Header().Set("Set-Cookie", p.cookie.GetCookie(h, p.config.TokenGrantorOptions.AccessTokenCookieName, usr.Token))
-	} else {
-		w.Header().Set("Set-Cookie", p.cookie.GetCookie(h, usr.TokenName, usr.Token))
-	}
+	// if p.config.TokenGrantorOptions != nil && p.config.TokenGrantorOptions.AccessTokenCookieName != "" {
+	// 	w.Header().Set("Set-Cookie", p.cookie.GetAccessTokenCookie(h, p.config.TokenGrantorOptions.AccessTokenCookieName, usr.Token))
+	// } else {
+	// 	w.Header().Set("Set-Cookie", p.cookie.GetCookie(h, usr.TokenName, usr.Token))
+	// }
+
+	w.Header().Set("Set-Cookie", p.cookie.GetAccessTokenCookie(h, usr.Token))
 
 	// Add a cookie with identity token, if id_token is available.
 	if rr.Response.IdentityTokenCookie.Enabled {
@@ -370,7 +372,7 @@ func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.R
 	w.Header().Add("Set-Cookie", p.cookie.GetRefreshTokenCookie(rr.Upstream.BasePath, usr.Token))
 
 	// Delete sandbox cookie, if present.
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SandboxIDCookieName))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteSandboxIDCookie(rr.Upstream.BasePath))
 
 	// Determine whether redirect cookie is present and reditect to the page that
 	// forwarded a user to the authentication portal.
@@ -383,7 +385,7 @@ func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.R
 				zap.String("request_id", rr.ID),
 				zap.String("redirect_url", redirectLocation),
 			)
-			w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.RefererCookieName))
+			w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
 		}
 	}
 	if redirectLocation == "" {
