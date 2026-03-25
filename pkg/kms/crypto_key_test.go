@@ -68,8 +68,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 			},
 			keyPair: []int{0, 0},
 			want: map[string]interface{}{
-				"config_count": 1,
-				"key_count":    1,
+				"key_count": 1,
 				"keys": []string{
 					"0: sign   0: []uint8",
 					"0: verify 0: []uint8",
@@ -87,8 +86,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 			},
 			keyPair: []int{0, 0},
 			want: map[string]interface{}{
-				"config_count": 1,
-				"key_count":    1,
+				"key_count": 1,
 				"keys": []string{
 					"0: sign   cb315f43c868: []uint8",
 					"0: verify cb315f43c868: []uint8",
@@ -106,8 +104,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 			},
 			keyPair: []int{0, 0},
 			want: map[string]interface{}{
-				"config_count": 1,
-				"key_count":    1,
+				"key_count": 1,
 				"keys": []string{
 					"0: sign   cb315f43c868: *rsa.PrivateKey",
 					"0: verify cb315f43c868: *rsa.PublicKey",
@@ -146,8 +143,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 			},
 			keyPair: []int{0, 1},
 			want: map[string]interface{}{
-				"config_count": 2,
-				"key_count":    2,
+				"key_count": 2,
 				"keys": []string{
 					"0: sign   k9738a405e99: *rsa.PrivateKey",
 					"1: verify k9738a405e99: *rsa.PublicKey",
@@ -162,8 +158,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 			},
 			keyPair: []int{0, 0},
 			want: map[string]interface{}{
-				"config_count": 2,
-				"key_count":    2,
+				"key_count": 2,
 				"keys": []string{
 					"0: sign   k9738a405e99: *rsa.PrivateKey",
 					"0: verify k9738a405e99: *rsa.PublicKey",
@@ -179,8 +174,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 			},
 			keyPair: []int{0, 0},
 			want: map[string]interface{}{
-				"config_count": 1,
-				"key_count":    1,
+				"key_count": 1,
 				"keys": []string{
 					"0: sign   k9738a405e99: *rsa.PrivateKey",
 					"0: verify k9738a405e99: *rsa.PublicKey",
@@ -195,8 +189,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 			},
 			keyPair: []int{0, 1},
 			want: map[string]interface{}{
-				"config_count": 2,
-				"key_count":    2,
+				"key_count": 2,
 				"keys": []string{
 					"0: sign   k9738a405e99: *ecdsa.PrivateKey",
 					"1: verify k9738a405e99: *ecdsa.PublicKey",
@@ -210,8 +203,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 			},
 			keyPair: []int{0, 0},
 			want: map[string]interface{}{
-				"config_count": 1,
-				"key_count":    1,
+				"key_count": 1,
 				"keys": []string{
 					"0: sign   k9738a405e99: *ecdsa.PrivateKey",
 					"0: verify k9738a405e99: *ecdsa.PublicKey",
@@ -228,8 +220,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 			},
 			keyPair: []int{0, 0},
 			want: map[string]interface{}{
-				"config_count": 1,
-				"key_count":    1,
+				"key_count": 1,
 				"keys": []string{
 					"0: sign   cb315f43c868: *rsa.PrivateKey",
 					"0: verify cb315f43c868: *rsa.PublicKey",
@@ -242,8 +233,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 				"crypto key k9738a405e99 verify from directory ./../../testdata/rskeys",
 			},
 			want: map[string]interface{}{
-				"config_count": 1,
-				"key_count":    4,
+				"key_count": 4,
 				"keys": []string{
 					"0: sign   test_1_pri: *rsa.PrivateKey",
 					"0: verify test_1_pri: *rsa.PublicKey",
@@ -265,8 +255,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 				"JWT_SECRET_DIR": "./../../testdata/rskeys",
 			},
 			want: map[string]interface{}{
-				"config_count": 1,
-				"key_count":    4,
+				"key_count": 4,
 				"keys": []string{
 					"0: sign   test_1_pri: *rsa.PrivateKey",
 					"0: verify test_1_pri: *rsa.PublicKey",
@@ -305,8 +294,7 @@ func TestGetKeysFromConfig(t *testing.T) {
 				"crypto key k9738a405e99 verify from directory ./../../testdata/ecdsakeys",
 			},
 			want: map[string]interface{}{
-				"config_count": 1,
-				"key_count":    6,
+				"key_count": 6,
 				"keys": []string{
 					"0: sign   test_1_pri: *ecdsa.PrivateKey",
 					"0: verify test_1_pri: *ecdsa.PublicKey",
@@ -385,6 +373,8 @@ func TestGetKeysFromConfig(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			logger := logutil.NewLogger()
+			t.Logf("Test name: %s", tc.name)
 			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
 			msgs = append(msgs, fmt.Sprintf("config: %s", tc.config))
 
@@ -401,43 +391,38 @@ func TestGetKeysFromConfig(t *testing.T) {
 				defer os.Unsetenv(k)
 			}
 
-			configs, err := ParseCryptoKeyConfigs(tc.config)
+			ksCfg, err := NewCryptoKeyStoreConfig(tc.config)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if tc.log {
-				for _, c := range configs {
-					t.Logf("%s", c.ToString())
-				}
-			}
-
-			keys, err := GetKeysFromConfigs(configs)
-			if tests.EvalErrWithLog(t, err, "keys", tc.shouldErr, tc.err, msgs) {
+			ks, err := NewCryptoKeyStore(ksCfg, logger)
+			if tests.EvalErrWithLog(t, err, "NewCryptoKeyStore", tc.shouldErr, tc.err, msgs) {
 				return
 			}
 
+			keys := ks.GetKeys()
 			got := make(map[string]interface{})
-			got["config_count"] = len(configs)
 			got["key_count"] = len(keys)
+
+			tokenName := "authp_access_token"
 
 			var km []string
 			for i, k := range keys {
 				if k.Sign.Token.Capable {
 					km = append(km, fmt.Sprintf("%d: sign   %s: %T", i, k.Sign.Token.ID, k.Sign.Secret))
+					k.Sign.Token.CookieNames[tokenName] = true
+					k.Sign.Token.HeaderNames[tokenName] = true
+					k.Sign.Token.QueryParamNames[tokenName] = true
 				}
 				if k.Verify.Token.Capable {
 					km = append(km, fmt.Sprintf("%d: verify %s: %T", i, k.Verify.Token.ID, k.Verify.Secret))
+					k.Verify.Token.CookieNames[tokenName] = true
+					k.Verify.Token.HeaderNames[tokenName] = true
+					k.Verify.Token.QueryParamNames[tokenName] = true
 				}
 			}
 			got["keys"] = km
-
-			if tc.log {
-				t.Logf("crypto configs:\n%s", cmp.Diff(nil, configs))
-				for i, key := range keys {
-					t.Logf("crypto key %d:\n%s", i, cmp.Diff(nil, key))
-				}
-			}
 
 			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(CryptoKeyConfig{})); diff != "" {
 				tests.WriteLog(t, msgs)
@@ -448,34 +433,12 @@ func TestGetKeysFromConfig(t *testing.T) {
 				return
 			}
 
-			var privKey, pubKey *CryptoKey
-			for i, j := range tc.keyPair {
-				if j >= len(keys) {
-					break
-				}
-				if i == 0 {
-					privKey = keys[j]
-					continue
-				}
-				pubKey = keys[j]
-			}
-
-			ksCfg, err := NewCryptoKeyStoreConfig(tc.config)
-			if err != nil {
-				t.Fatal(err)
-			}
-			ks, err := NewCryptoKeyStore(ksCfg, logutil.NewLogger())
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if err := ks.AddKeys([]*CryptoKey{privKey, pubKey}); err != nil {
-				t.Fatal(err)
-			}
 			usr := newTestUser()
 			if tc.log {
 				t.Logf("%v", usr)
 			}
+
+			privKey := ks.GetSignKeys()[0]
 
 			if err := ks.SignToken(privKey.Sign.Token.Name, privKey.Sign.Token.DefaultMethod, usr); err != nil {
 				t.Fatal(err)
@@ -488,8 +451,9 @@ func TestGetKeysFromConfig(t *testing.T) {
 			ar := requests.NewAuthorizationRequest()
 			ar.ID = "TEST_REQUEST_ID"
 			ar.SessionID = "TEST_SESSION_ID"
-			ar.Token.Name = pubKey.Verify.Token.Name
+			ar.Token.Name = tokenName
 			ar.Token.Payload = usr.Token
+			ar.Token.Source = tokenSourceHeader
 			tokenUser, err := ks.ParseToken(ar)
 			if err != nil {
 				t.Fatal(err)

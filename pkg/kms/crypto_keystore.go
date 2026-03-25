@@ -25,11 +25,9 @@ import (
 )
 
 var (
-	reservedTokenNames = map[string]bool{
-		"access_token":     true,
-		"jwt_access_token": true,
-		"bearer":           true,
-	}
+	tokenSourceHeader = "header"
+	tokenSourceCookie = "cookie"
+	tokenSourceQuery  = "query"
 )
 
 // CryptoKeyStore constains keys assembled for a specific purpose, i.e. signing or
@@ -189,10 +187,24 @@ func (ks *CryptoKeyStore) AddKey(k *CryptoKey) error {
 // ParseToken parses JWT token and returns User instance.
 func (ks *CryptoKeyStore) ParseToken(ar *requests.AuthorizationRequest) (*user.User, error) {
 	for _, k := range ks.verifyKeys {
-		if _, exists := reservedTokenNames[ar.Token.Name]; !exists {
-			if ar.Token.Name != k.Verify.Token.Name {
+		if !k.Verify.Capable {
+			continue
+		}
+		switch ar.Token.Source {
+		case tokenSourceCookie:
+			if _, allowed := k.Verify.Token.CookieNames[ar.Token.Name]; !allowed {
 				continue
 			}
+		case tokenSourceHeader:
+			if _, allowed := k.Verify.Token.HeaderNames[ar.Token.Name]; !allowed {
+				continue
+			}
+		case tokenSourceQuery:
+			if _, allowed := k.Verify.Token.QueryParamNames[ar.Token.Name]; !allowed {
+				continue
+			}
+		default:
+			continue
 		}
 
 		parsedToken, err := jwtlib.Parse(ar.Token.Payload, k.ProvideKey)

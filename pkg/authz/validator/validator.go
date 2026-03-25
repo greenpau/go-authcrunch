@@ -84,10 +84,12 @@ type TokenValidator struct {
 	authProxy           authproxy.Authenticator
 	apiKeyHeaderName    string
 	authRealmHeaderName string
+	logger              *zap.Logger
 }
 
 // NewTokenValidator returns an instance of TokenValidator
 func NewTokenValidator(keystoreConfig *kms.CryptoKeyStoreConfig, logger *zap.Logger) (*TokenValidator, error) {
+
 	ks, err := kms.NewCryptoKeyStore(keystoreConfig, logger)
 	if err != nil {
 		return nil, err
@@ -98,12 +100,8 @@ func NewTokenValidator(keystoreConfig *kms.CryptoKeyStoreConfig, logger *zap.Log
 		authHeaders:     make(map[string]interface{}),
 		authCookies:     make(map[string]interface{}),
 		authQueryParams: make(map[string]interface{}),
+		logger:          logger,
 	}
-
-	// for _, name := range defaultAuthorizationTokenNames {
-	// 	v.authHeaders[name] = true
-	// 	v.authQueryParams[name] = true
-	// }
 
 	v.cache = cache.NewTokenCache(0)
 	v.tokenSources = defaultTokenSources
@@ -115,26 +113,26 @@ func (v *TokenValidator) GetAuthCookies() map[string]interface{} {
 	return v.authCookies
 }
 
-func (v *TokenValidator) setAllowedTokenNames(arr []string) error {
-	m := make(map[string]bool)
-	for _, s := range arr {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return errors.ErrEmptyTokenName
-		}
-		if _, exists := m[s]; exists {
-			return errors.ErrDuplicateTokenName.WithArgs(s)
-		}
-		m[s] = true
-	}
-	v.clearAuthSources()
-	for _, s := range arr {
-		v.authHeaders[s] = true
-		v.authCookies[s] = true
-		v.authQueryParams[s] = true
-	}
-	return nil
-}
+// func (v *TokenValidator) setAllowedTokenNames(arr []string) error {
+// 	m := make(map[string]bool)
+// 	for _, s := range arr {
+// 		s = strings.TrimSpace(s)
+// 		if s == "" {
+// 			return errors.ErrEmptyTokenName
+// 		}
+// 		if _, exists := m[s]; exists {
+// 			return errors.ErrDuplicateTokenName.WithArgs(s)
+// 		}
+// 		m[s] = true
+// 	}
+// 	v.clearAuthSources()
+// 	for _, s := range arr {
+// 		v.authHeaders[s] = true
+// 		v.authCookies[s] = true
+// 		v.authQueryParams[s] = true
+// 	}
+// 	return nil
+// }
 
 // SetSourcePriority sets the order in which various token sources are being
 // evaluated for the presence of keys. The default order is cookie, header,
@@ -321,10 +319,24 @@ func (v *TokenValidator) SetAuthRealmHeaderName(s string) {
 }
 
 // Configure adds access list and keys for the verification of tokens.
-func (v *TokenValidator) Configure(ctx context.Context, keys []*kms.CryptoKey, accessList *acl.AccessList, opts *options.TokenValidatorOptions) error {
-	if err := v.addKeys(ctx, keys); err != nil {
-		return err
+func (v *TokenValidator) Configure(ctx context.Context, accessList *acl.AccessList, opts *options.TokenValidatorOptions) error {
+	keys := []*kms.CryptoKey{}
+	for _, k := range v.keystore.GetKeys() {
+		if !k.Verify.Token.Capable {
+			continue
+		}
+		if k.Verify.Token.Name == "" {
+			continue
+		}
+		if k.Verify.Token.MaxLifetime == 0 {
+			continue
+		}
+		keys = append(keys, k)
 	}
+	if len(keys) == 0 {
+		return errors.ErrValidatorCryptoKeyStoreNoVerifyKeys
+	}
+
 	if err := v.addAccessList(ctx, accessList); err != nil {
 		return err
 	}
@@ -334,14 +346,28 @@ func (v *TokenValidator) Configure(ctx context.Context, keys []*kms.CryptoKey, a
 
 	v.opts = opts
 
+	v.clearAuthSources()
+
 	for _, cookieName := range opts.AuthorizationCookieNames {
 		v.authCookies[cookieName] = true
+		for _, k := range keys {
+			k.Verify.Token.CookieNames[cookieName] = true
+		}
 	}
 	for _, headerName := range opts.AuthorizationHeaderNames {
 		v.authHeaders[headerName] = true
+		for _, k := range keys {
+			k.Verify.Token.HeaderNames[headerName] = true
+			if v.opts.ValidateBearerHeader {
+				k.Verify.Token.HeaderNames[tokenSourceBearerHeader] = true
+			}
+		}
 	}
 	for _, queryParamName := range opts.AuthorizationQueryParamNames {
 		v.authQueryParams[queryParamName] = true
+		for _, k := range keys {
+			k.Verify.Token.QueryParamNames[queryParamName] = true
+		}
 	}
 
 	switch {
@@ -382,40 +408,6 @@ func (v *TokenValidator) addAccessList(_ context.Context, accessList *acl.Access
 	}
 
 	v.accessList = accessList
-	return nil
-}
-
-func (v *TokenValidator) addKeys(_ context.Context, keys []*kms.CryptoKey) error {
-	var tokenNames []string
-	tokenMap := make(map[string]bool)
-	if len(keys) == 0 {
-		return errors.ErrValidatorCryptoKeyStoreNoKeys
-	}
-	for _, k := range keys {
-		if !k.Verify.Token.Capable {
-			continue
-		}
-		if k.Verify.Token.Name == "" {
-			continue
-		}
-		if k.Verify.Token.MaxLifetime == 0 {
-			continue
-		}
-		v.keystore.AddKey(k)
-		tokenMap[k.Verify.Token.Name] = true
-	}
-	if len(tokenMap) == 0 {
-		return errors.ErrValidatorCryptoKeyStoreNoVerifyKeys
-	}
-
-	for k := range tokenMap {
-		tokenNames = append(tokenNames, k)
-	}
-
-	if err := v.setAllowedTokenNames(tokenNames); err != nil {
-		return err
-	}
-
 	return nil
 }
 

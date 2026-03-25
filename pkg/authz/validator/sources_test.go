@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,7 +27,6 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 )
@@ -34,12 +34,15 @@ import (
 func TestAuthorizationSources(t *testing.T) {
 	var testcases = []struct {
 		name                         string
-		allowedTokenNames            []string
+		allowedCookieNames           []string
+		allowedHeaderNames           []string
+		allowedQueryParamNames       []string
 		allowedTokenSources          []string
 		enableQueryViolations        bool
 		enableCookieViolations       bool
 		enableHeaderViolations       bool
 		enableBearerHeaderViolations bool
+		enableBearerHeader           bool
 		// The name of the token.
 		entries   []*testutils.InjectedTestToken
 		want      map[string]interface{}
@@ -49,21 +52,23 @@ func TestAuthorizationSources(t *testing.T) {
 		{
 			name: "default token sources and names with auth header claim injection",
 			entries: []*testutils.InjectedTestToken{
-				testutils.NewInjectedTestToken("access_token", tokenSourceHeader, `"name": "foo",`),
+				testutils.NewInjectedTestToken(testutils.TestAccessTokenHeaderName, tokenSourceHeader, `"name": "foo",`),
 			},
+			allowedHeaderNames: []string{testutils.TestAccessTokenHeaderName},
 			want: map[string]interface{}{
-				"token_name": "access_token",
+				"token_name": testutils.TestAccessTokenHeaderName,
 				"claim_name": "foo",
 			},
-			shouldErr: false,
 		},
 		{
 			name: "default token sources and names with cookie claim injection",
 			entries: []*testutils.InjectedTestToken{
-				testutils.NewInjectedTestToken("access_token", tokenSourceCookie, `"name": "foo",`),
+				testutils.NewInjectedTestToken(strings.ToUpper(testutils.TestAccessTokenHeaderName), tokenSourceCookie, `"name": "foo",`),
 			},
+			allowedCookieNames: []string{strings.ToUpper(testutils.TestAccessTokenHeaderName)},
+
 			want: map[string]interface{}{
-				"token_name": "access_token",
+				"token_name": strings.ToUpper(testutils.TestAccessTokenHeaderName),
 				"claim_name": "foo",
 			},
 			shouldErr: false,
@@ -73,49 +78,53 @@ func TestAuthorizationSources(t *testing.T) {
 			entries: []*testutils.InjectedTestToken{
 				testutils.NewInjectedTestToken("", tokenSourceQuery, `"name": "foo",`),
 			},
+			allowedQueryParamNames: []string{testutils.TestAccessTokenHeaderName},
 			want: map[string]interface{}{
-				"token_name": "access_token",
+				"token_name": testutils.TestAccessTokenHeaderName,
 				"claim_name": "foo",
 			},
-			shouldErr: false,
 		},
 		{
 			name: "default token source priorities, same token name, different entries injected in query parameter and auth header",
 			entries: []*testutils.InjectedTestToken{
-				testutils.NewInjectedTestToken("access_token", tokenSourceHeader, `"name": "foo",`),
-				testutils.NewInjectedTestToken("access_token", tokenSourceQuery, `"name": "bar",`),
+				testutils.NewInjectedTestToken(testutils.TestAccessTokenHeaderName, tokenSourceHeader, `"name": "foo",`),
+				testutils.NewInjectedTestToken(testutils.TestAccessTokenHeaderName, tokenSourceQuery, `"name": "bar",`),
 			},
+			allowedHeaderNames:     []string{testutils.TestAccessTokenHeaderName},
+			allowedQueryParamNames: []string{testutils.TestAccessTokenHeaderName},
 			want: map[string]interface{}{
-				"token_name": "access_token",
+				"token_name": testutils.TestAccessTokenHeaderName,
 				"claim_name": "foo",
 			},
-			shouldErr: false,
 		},
 		{
 			name:                "custom token source priorities, same token name, different entries injected in query parameter and auth header",
 			allowedTokenSources: []string{tokenSourceQuery, tokenSourceCookie, tokenSourceHeader},
 			entries: []*testutils.InjectedTestToken{
-				testutils.NewInjectedTestToken("access_token", tokenSourceHeader, `"name": "foo",`),
-				testutils.NewInjectedTestToken("access_token", tokenSourceQuery, `"name": "bar",`),
+				testutils.NewInjectedTestToken(testutils.TestAccessTokenHeaderName, tokenSourceHeader, `"name": "foo",`),
+				testutils.NewInjectedTestToken(testutils.TestAccessTokenHeaderName, tokenSourceQuery, `"name": "bar",`),
 			},
+			allowedHeaderNames:     []string{testutils.TestAccessTokenHeaderName},
+			allowedQueryParamNames: []string{testutils.TestAccessTokenHeaderName},
 			want: map[string]interface{}{
-				"token_name": "access_token",
+				"token_name": testutils.TestAccessTokenHeaderName,
 				"claim_name": "bar",
 			},
-			shouldErr: false,
 		},
 		{
-			name:              "default token source priorities, different token name, different entries injected in query parameter and auth header",
-			allowedTokenNames: []string{"jwt_access_token"},
+			name:                "bearer authorization header",
+			allowedTokenSources: []string{tokenSourceHeader, tokenSourceQuery, tokenSourceCookie},
 			entries: []*testutils.InjectedTestToken{
-				testutils.NewInjectedTestToken("", tokenSourceHeader, `"name": "foo",`),
-				testutils.NewInjectedTestToken("jwt_access_token", tokenSourceQuery, `"name": "bar",`),
+				testutils.NewInjectedTestToken(testutils.TestAccessTokenHeaderName, tokenSourceHeader, `"name": "foo",`),
 			},
+			enableBearerHeader:     true,
+			allowedCookieNames:     []string{strings.ToUpper(testutils.TestAccessTokenHeaderName)},
+			allowedHeaderNames:     []string{testutils.TestAccessTokenHeaderName},
+			allowedQueryParamNames: []string{testutils.TestAccessTokenHeaderName},
 			want: map[string]interface{}{
-				"token_name": "jwt_access_token",
-				"claim_name": "bar",
+				"token_name": "bearer",
+				"claim_name": "foo",
 			},
-			shouldErr: false,
 		},
 		{
 			name: "default token sources and names with custom token name injection",
@@ -126,44 +135,57 @@ func TestAuthorizationSources(t *testing.T) {
 			err:       errors.ErrNoTokenFound,
 		},
 		{
-			name:              "custom token names with standard token name injection",
-			allowedTokenNames: []string{"foobar_token"},
+			name: "custom token names with standard token name injection",
 			entries: []*testutils.InjectedTestToken{
-				testutils.NewInjectedTestToken("access_token", tokenSourceHeader, `"name": "foo",`),
+				testutils.NewInjectedTestToken(testutils.TestAccessTokenHeaderName, tokenSourceHeader, `"name": "foo",`),
 			},
-			shouldErr: true,
-			err:       errors.ErrNoTokenFound,
+			allowedHeaderNames: []string{"foobar_token"},
+			shouldErr:          true,
+			err:                errors.ErrNoTokenFound,
 		},
 		{
 			name:                "cookie token source with auth header token injection",
 			allowedTokenSources: []string{tokenSourceCookie},
 			entries: []*testutils.InjectedTestToken{
-				testutils.NewInjectedTestToken("access_token", tokenSourceHeader, `"name": "foo",`),
+				testutils.NewInjectedTestToken(testutils.TestAccessTokenHeaderName, tokenSourceHeader, `"name": "foo",`),
 			},
-			shouldErr: true,
-			err:       errors.ErrNoTokenFound,
+			allowedHeaderNames: []string{testutils.TestAccessTokenHeaderName},
+			shouldErr:          true,
+			err:                errors.ErrNoTokenFound,
 		},
 		{
-			name:                  "query paramater token source violations",
-			enableQueryViolations: true,
-			shouldErr:             true,
-			err:                   errors.ErrNoTokenFound,
+			name:                   "query parameter token source violations",
+			enableQueryViolations:  true,
+			allowedCookieNames:     []string{strings.ToUpper(testutils.TestAccessTokenHeaderName)},
+			allowedHeaderNames:     []string{testutils.TestAccessTokenHeaderName},
+			allowedQueryParamNames: []string{testutils.TestAccessTokenHeaderName},
+			shouldErr:              true,
+			err:                    errors.ErrNoTokenFound,
 		},
 		{
 			name:                   "cookie token source violations",
 			enableCookieViolations: true,
+			allowedCookieNames:     []string{"foobar"},
+			allowedHeaderNames:     []string{testutils.TestAccessTokenHeaderName},
+			allowedQueryParamNames: []string{testutils.TestAccessTokenHeaderName},
 			shouldErr:              true,
 			err:                    errors.ErrNoTokenFound,
 		},
 		{
 			name:                   "header token source violations",
 			enableHeaderViolations: true,
+			allowedCookieNames:     []string{strings.ToUpper(testutils.TestAccessTokenHeaderName)},
+			allowedHeaderNames:     []string{testutils.TestAccessTokenHeaderName},
+			allowedQueryParamNames: []string{testutils.TestAccessTokenHeaderName},
 			shouldErr:              true,
 			err:                    errors.ErrNoTokenFound,
 		},
 		{
 			name:                         "bearer header token source violations",
 			enableBearerHeaderViolations: true,
+			allowedCookieNames:           []string{strings.ToUpper(testutils.TestAccessTokenHeaderName)},
+			allowedHeaderNames:           []string{testutils.TestAccessTokenHeaderName},
+			allowedQueryParamNames:       []string{testutils.TestAccessTokenHeaderName},
 			shouldErr:                    true,
 			err:                          errors.ErrNoTokenFound,
 		},
@@ -171,6 +193,7 @@ func TestAuthorizationSources(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Logf("Test name: %s", tc.name)
 			ctx := context.Background()
 			ks, err := testutils.NewTestCryptoKeyStore()
 			if err != nil {
@@ -179,21 +202,32 @@ func TestAuthorizationSources(t *testing.T) {
 			keys := ks.GetKeys()
 			signingKey := keys[0]
 			opts := options.NewTokenValidatorOptions()
-			if tc.enableBearerHeaderViolations {
+			if tc.enableBearerHeaderViolations || tc.enableBearerHeader {
 				opts.ValidateBearerHeader = true
 			}
-			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+
+			opts.AuthorizationCookieNames = []string{strings.ToUpper(testutils.TestAccessTokenHeaderName)}
+			opts.AuthorizationHeaderNames = []string{strings.ToLower(testutils.TestAccessTokenHeaderName)}
+			opts.AuthorizationQueryParamNames = []string{strings.ToLower(testutils.TestAccessTokenHeaderName)}
+
+			if len(tc.allowedCookieNames) > 0 {
+				opts.AuthorizationCookieNames = tc.allowedCookieNames
 			}
-			validator, err := NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
+			if len(tc.allowedHeaderNames) > 0 {
+				opts.AuthorizationHeaderNames = tc.allowedHeaderNames
+			}
+			if len(tc.allowedQueryParamNames) > 0 {
+				opts.AuthorizationQueryParamNames = tc.allowedQueryParamNames
+			}
+
+			validator, err := NewTokenValidator(ks.GetConfig(), logutil.NewLogger())
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
 			accessList := testutils.NewTestGuestAccessList()
 
-			if err := validator.Configure(ctx, keys, accessList, opts); err != nil {
+			if err := validator.Configure(ctx, accessList, opts); err != nil {
 				t.Fatal(err)
 			}
 
@@ -203,19 +237,22 @@ func TestAuthorizationSources(t *testing.T) {
 				}
 			}
 
-			if len(tc.allowedTokenNames) > 0 {
-				if err := validator.setAllowedTokenNames(tc.allowedTokenNames); err != nil {
-					t.Fatal(err)
-				}
-			}
-
 			handler := func(_ http.ResponseWriter, r *http.Request) {
 				ctx := context.Background()
 				var msgs []string
 				msgs = append(msgs, fmt.Sprintf("test name: %s", tc.name))
-				if len(tc.allowedTokenNames) > 0 {
-					msgs = append(msgs, fmt.Sprintf("allowed token names: %s", tc.allowedTokenNames))
+				if len(tc.allowedCookieNames) > 0 {
+					msgs = append(msgs, fmt.Sprintf("allowed cookie names: %s", tc.allowedCookieNames))
 				}
+				if len(tc.allowedHeaderNames) > 0 {
+					msgs = append(msgs, fmt.Sprintf("allowed header names: %s", tc.allowedHeaderNames))
+				}
+				if len(tc.allowedQueryParamNames) > 0 {
+					msgs = append(msgs, fmt.Sprintf("allowed query parameter names: %s", tc.allowedQueryParamNames))
+				}
+
+				msgs = append(msgs, fmt.Sprintf("enable bearer header: %v", tc.enableBearerHeader))
+
 				for i, tkn := range tc.entries {
 					msgs = append(msgs, fmt.Sprintf("token %d, name: %s, location: %s", i, tkn.Name, tkn.Location))
 				}
@@ -234,7 +271,7 @@ func TestAuthorizationSources(t *testing.T) {
 
 			reqURI := "/protected/path"
 			if tc.enableQueryViolations {
-				reqURI += "?access_token=foobarfoo"
+				reqURI += fmt.Sprintf("?%s=foobarfoo", testutils.TestAccessTokenHeaderName)
 			}
 
 			req, err := http.NewRequest("GET", reqURI, nil)
@@ -249,7 +286,7 @@ func TestAuthorizationSources(t *testing.T) {
 					Expires: time.Now().Add(time.Minute * time.Duration(30)),
 				})
 				req.AddCookie(&http.Cookie{
-					Name:    "access_token",
+					Name:    testutils.TestAccessTokenHeaderName,
 					Value:   "foobar",
 					Expires: time.Now().Add(time.Minute * time.Duration(30)),
 				})
@@ -260,17 +297,23 @@ func TestAuthorizationSources(t *testing.T) {
 			}
 
 			if tc.enableHeaderViolations {
-				req.Header.Add("Authorization", "access_token")
+				req.Header.Add("Authorization", testutils.TestAccessTokenHeaderName)
 			}
 
 			for _, entry := range tc.entries {
 				tokenName := entry.Name
 				if tokenName == "" {
-					tokenName = "access_token"
+					tokenName = testutils.TestAccessTokenHeaderName
 				}
 				if err := signingKey.SignToken("HS512", entry.User); err != nil {
 					t.Fatal(err)
 				}
+
+				if tc.enableBearerHeader {
+					req.Header.Add("Authorization", "Bearer "+entry.User.Token)
+					break
+				}
+
 				switch entry.Location {
 				case tokenSourceCookie:
 					req.AddCookie(testutils.GetCookie(tokenName, entry.User.Token, 10))

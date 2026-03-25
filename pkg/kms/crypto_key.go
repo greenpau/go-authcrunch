@@ -45,39 +45,6 @@ type CryptoKey struct {
 	Verify *CryptoKeyOperator `json:"verify,omitempty" xml:"verify,omitempty" yaml:"verify,omitempty"`
 }
 
-// CryptoKeyTokenOperator represents CryptoKeyOperator token operator.
-type CryptoKeyTokenOperator struct {
-	ID               string                 `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
-	Name             string                 `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	MaxLifetime      int                    `json:"max_lifetime,omitempty" xml:"max_lifetime,omitempty" yaml:"max_lifetime,omitempty"`
-	Methods          map[string]interface{} `json:"methods,omitempty" xml:"methods,omitempty" yaml:"methods,omitempty"`
-	PreferredMethods []string               `json:"preferred_methods,omitempty" xml:"preferred_methods,omitempty" yaml:"preferred_methods,omitempty"`
-	DefaultMethod    string                 `json:"default_method,omitempty" xml:"default_method,omitempty" yaml:"default_method,omitempty"`
-	Capable          bool                   `json:"capable,omitempty" xml:"capable,omitempty" yaml:"capable,omitempty"`
-	injectKeyID      bool
-}
-
-// CryptoKeyOperator represents CryptoKey operator.
-type CryptoKeyOperator struct {
-	Token   *CryptoKeyTokenOperator `json:"token,omitempty" xml:"token,omitempty" yaml:"token,omitempty"`
-	Secret  interface{}             `json:"secret,omitempty" xml:"secret,omitempty" yaml:"secret,omitempty"`
-	Capable bool                    `json:"capable,omitempty" xml:"capable,omitempty" yaml:"capable,omitempty"`
-}
-
-// NewCryptoKeyTokenOperator returns an instance of CryptoKeyTokenOperator.
-func NewCryptoKeyTokenOperator() *CryptoKeyTokenOperator {
-	op := &CryptoKeyTokenOperator{}
-	op.Methods = make(map[string]interface{})
-	return op
-}
-
-// NewCryptoKeyOperator returns an instance of CryptoKeyOperator.
-func NewCryptoKeyOperator() *CryptoKeyOperator {
-	op := &CryptoKeyOperator{}
-	op.Token = NewCryptoKeyTokenOperator()
-	return op
-}
-
 func newCryptoKey() *CryptoKey {
 	k := &CryptoKey{}
 	k.Sign = NewCryptoKeyOperator()

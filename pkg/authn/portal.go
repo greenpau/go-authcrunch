@@ -235,6 +235,7 @@ func (p *Portal) configureEssentials() error {
 		"Configured cookie parameters",
 		zap.String("portal_name", p.config.Name),
 		zap.Any("cookie_config", p.config.CookieConfig),
+		zap.String("cookie_name_prefix", p.cookie.CookieNamePrefix),
 		zap.String("session_id_cookie_name", p.cookie.SessionIDCookieName),
 		zap.String("sandbox_id_cookie_name", p.cookie.SandboxIDCookieName),
 		zap.String("referer_cookie_name", p.cookie.RefererCookieName),
@@ -364,7 +365,7 @@ func (p *Portal) configureCryptoKeyStore() error {
 	}
 	p.validator = tokenValidator
 
-	if err := p.validator.Configure(ctx, p.keystore.GetVerifyKeys(), accessList, p.config.TokenValidatorOptions); err != nil {
+	if err := p.validator.Configure(ctx, accessList, p.config.TokenValidatorOptions); err != nil {
 		return errors.ErrCryptoKeyStoreConfig.WithArgs(p.config.Name, err)
 	}
 

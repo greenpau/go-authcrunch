@@ -249,15 +249,24 @@ func TestKeystoreOperators(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			keys := ks.GetKeys()
-
-			privKey := keys[0]
-			// pubKey := keys[0]
-			// if err := ks.SignToken(privKey.Sign.Token.Name, privKey.Sign.Token.DefaultMethod, usr); err != nil {
-			//   t.Fatal(err)
-			// }
+			privKey := ks.GetKeys()[0]
 			if tc.signTokenName == "" {
 				tc.signTokenName = privKey.Sign.Token.Name
+			}
+
+			tokenName := "authp_access_token"
+
+			for _, k := range ks.GetKeys() {
+				if k.Sign.Token.Capable {
+					k.Sign.Token.CookieNames[tokenName] = true
+					k.Sign.Token.HeaderNames[tokenName] = true
+					k.Sign.Token.QueryParamNames[tokenName] = true
+				}
+				if k.Verify.Token.Capable {
+					k.Verify.Token.CookieNames[tokenName] = true
+					k.Verify.Token.HeaderNames[tokenName] = true
+					k.Verify.Token.QueryParamNames[tokenName] = true
+				}
 			}
 
 			if tc.sign {
@@ -278,17 +287,18 @@ func TestKeystoreOperators(t *testing.T) {
 
 			msgs = append(msgs, fmt.Sprintf("signed token: %s", signedToken))
 
-			if tc.verifyTokenName == "" {
-				tc.verifyTokenName = privKey.Sign.Token.Name
-			}
-
 			ar := requests.NewAuthorizationRequest()
 			ar.ID = "TEST_REQUEST_ID"
 			ar.SessionID = "TEST_SESSION_ID"
-			ar.Token.Name = tc.verifyTokenName
+			if tc.verifyTokenName != "" {
+				ar.Token.Name = tc.verifyTokenName
+			} else {
+				ar.Token.Name = tokenName
+			}
 			ar.Token.Payload = signedToken
+			ar.Token.Source = tokenSourceHeader
 			usr, err := ks.ParseToken(ar)
-			if tests.EvalErrWithLog(t, err, "parse token", tc.shouldErr, tc.err, msgs) {
+			if tests.EvalErrWithLog(t, err, "ParseToken", tc.shouldErr, tc.err, msgs) {
 				return
 			}
 

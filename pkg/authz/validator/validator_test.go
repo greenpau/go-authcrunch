@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -809,16 +810,6 @@ func TestAuthorize(t *testing.T) {
 			err:                errors.ErrAccessListNoRules,
 		},
 		{
-			name:               "no verify keys",
-			claims:             viewer,
-			config:             defaultAllowACL,
-			method:             "GET",
-			path:               "/app/page3/allowed",
-			validateMethodPath: true,
-			shouldErr:          true,
-			err:                errors.ErrValidatorCryptoKeyStoreNoKeys,
-		},
-		{
 			name:                  "token without ip address",
 			claims:                viewer,
 			config:                defaultAllowACL,
@@ -971,11 +962,7 @@ func TestAuthorize(t *testing.T) {
 			keys := ks.GetKeys()
 			signingKey := keys[0]
 
-			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			validator, err := NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
+			validator, err := NewTokenValidator(ks.GetConfig(), logutil.NewLogger())
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -994,6 +981,9 @@ func TestAuthorize(t *testing.T) {
 				if tc.validateMethodPath {
 					opts.ValidateMethodPath = true
 				}
+				opts.AuthorizationCookieNames = []string{strings.ToUpper(testutils.TestAccessTokenHeaderName)}
+				opts.AuthorizationHeaderNames = []string{testutils.TestAccessTokenHeaderName}
+				opts.AuthorizationQueryParamNames = []string{testutils.TestAccessTokenHeaderName}
 			}
 
 			if len(tc.config) > 0 {
@@ -1006,11 +996,7 @@ func TestAuthorize(t *testing.T) {
 				}
 			}
 
-			if tc.name == "no verify keys" {
-				keys = []*kms.CryptoKey{}
-			}
-
-			if err := validator.Configure(ctx, keys, accessList, opts); err != nil {
+			if err := validator.Configure(ctx, accessList, opts); err != nil {
 				if tests.EvalErr(t, err, tc.config, tc.shouldErr, tc.err) {
 					return
 				}
@@ -1037,9 +1023,9 @@ func TestAuthorize(t *testing.T) {
 			}
 
 			if tc.enableBearer {
-				tc.want["token_name"] = "bearer"
+				tc.want["token_name"] = tokenSourceBearerHeader
 			} else {
-				tc.want["token_name"] = "access_token"
+				tc.want["token_name"] = testutils.TestAccessTokenHeaderName
 			}
 
 			handler := func(_ http.ResponseWriter, r *http.Request) {
@@ -1092,7 +1078,7 @@ func TestAuthorize(t *testing.T) {
 			if tc.enableBearer {
 				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 			} else {
-				req.Header.Set("Authorization", fmt.Sprintf("access_token=%s", token))
+				req.Header.Set("Authorization", fmt.Sprintf("%s=%s", testutils.TestAccessTokenHeaderName, token))
 			}
 
 			if tc.sourceAddress != "" {
@@ -1102,175 +1088,6 @@ func TestAuthorize(t *testing.T) {
 			w := httptest.NewRecorder()
 			handler(w, req)
 			w.Result()
-		})
-	}
-}
-
-func TestAddKeys(t *testing.T) {
-	testcases := []struct {
-		name                 string
-		keys                 []*kms.CryptoKey
-		verifyFound          bool
-		verifyNotCapable     bool
-		verifyNoTokenName    bool
-		verifyNoMaxLifetime  bool
-		verifyEmptyTokenName bool
-		shouldErr            bool
-		err                  error
-	}{
-		{
-			name:      "no keys",
-			shouldErr: true,
-			err:       errors.ErrValidatorCryptoKeyStoreNoKeys,
-		},
-		{
-			name: "add keys",
-			keys: []*kms.CryptoKey{
-				{},
-			},
-			verifyFound: true,
-		},
-		{
-			name: "add non verify key",
-			keys: []*kms.CryptoKey{
-				{},
-			},
-			verifyFound:      true,
-			verifyNotCapable: true,
-			shouldErr:        true,
-			err:              errors.ErrValidatorCryptoKeyStoreNoVerifyKeys,
-		},
-		{
-			name: "add key without token name",
-			keys: []*kms.CryptoKey{
-				{},
-			},
-			verifyFound:       true,
-			verifyNoTokenName: true,
-			shouldErr:         true,
-			err:               errors.ErrValidatorCryptoKeyStoreNoVerifyKeys,
-		},
-		{
-			name: "add key without token lifetime",
-			keys: []*kms.CryptoKey{
-				{},
-			},
-			verifyFound:         true,
-			verifyNoMaxLifetime: true,
-			shouldErr:           true,
-			err:                 errors.ErrValidatorCryptoKeyStoreNoVerifyKeys,
-		},
-		{
-			name: "add key with empty token name with spaces",
-			keys: []*kms.CryptoKey{
-				{},
-			},
-			verifyFound:          true,
-			verifyEmptyTokenName: true,
-			shouldErr:            true,
-			err:                  errors.ErrEmptyTokenName,
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			var err error
-			ctx := context.Background()
-			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			validator, err := NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			for _, k := range tc.keys {
-				if tc.verifyFound {
-					k.Verify = kms.NewCryptoKeyOperator()
-					k.Verify.Token.Capable = true
-					k.Verify.Token.Name = "access_token"
-					k.Verify.Token.MaxLifetime = 900
-				}
-				if tc.verifyNotCapable {
-					k.Verify.Token.Capable = false
-				}
-				if tc.verifyNoTokenName {
-					k.Verify.Token.Name = ""
-				}
-				if tc.verifyNoMaxLifetime {
-					k.Verify.Token.MaxLifetime = 0
-				}
-				if tc.verifyEmptyTokenName {
-					k.Verify.Token.Name = "    "
-				}
-			}
-			err = validator.addKeys(ctx, tc.keys)
-			if tests.EvalErr(t, err, "keys", tc.shouldErr, tc.err) {
-				return
-			}
-		})
-	}
-}
-
-func TestSetAllowedTokenNames(t *testing.T) {
-	testcases := []struct {
-		name       string
-		tokenNames []string
-		want       map[string]interface{}
-		shouldErr  bool
-		err        error
-	}{
-		{
-			name:       "token names slice with duplicate values",
-			tokenNames: []string{"foo", "foo"},
-			shouldErr:  true,
-			err:        errors.ErrDuplicateTokenName.WithArgs("foo"),
-		},
-		{
-			name:       "token names slice with empty values",
-			tokenNames: []string{"foo", ""},
-			shouldErr:  true,
-			err:        errors.ErrEmptyTokenName,
-		},
-		{
-			name:       "valid token names",
-			tokenNames: []string{"foo", "bar"},
-			want: map[string]interface{}{
-				"header": map[string]interface{}{
-					"foo": true,
-					"bar": true,
-				},
-				"cookie": map[string]interface{}{
-					"foo": true,
-					"bar": true,
-				},
-				"query": map[string]interface{}{
-					"foo": true,
-					"bar": true,
-				},
-			},
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			cryptoKeyStoreConfig, err := kms.NewCryptoKeyStoreConfig(nil)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			validator, err := NewTokenValidator(cryptoKeyStoreConfig, logutil.NewLogger())
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			err = validator.setAllowedTokenNames(tc.tokenNames)
-			if tests.EvalErr(t, err, "token names", tc.shouldErr, tc.err) {
-				return
-			}
-			got := make(map[string]interface{})
-			got["header"] = validator.authHeaders
-			got["cookie"] = validator.GetAuthCookies()
-			got["query"] = validator.authHeaders
-			tests.EvalObjects(t, "token names", tc.want, got)
 		})
 	}
 }

@@ -42,6 +42,8 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 	providerIdentityTokenCookieName := provider.GetIdentityTokenCookieName()
 	if providerIdentityTokenCookieName != "" {
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(providerIdentityTokenCookieName))
+	} else {
+		w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(p.cookie.IdentityTokenCookieName))
 	}
 
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie())

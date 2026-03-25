@@ -96,6 +96,7 @@ func TestHandleHTTPExternalLogout(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Logf("Test name: %s", tc.name)
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
 			f, _ := cookie.NewFactory(nil)
 
 			cryptoKeyStore, err := testutils.NewTestCryptoKeyStore()
@@ -112,7 +113,7 @@ func TestHandleHTTPExternalLogout(t *testing.T) {
 
 			tokenValidatorOptions := testutils.NewTestTokenValidatorOptions("AUTHP_ACCESS_TOKEN")
 
-			if err := v.Configure(context.TODO(), cryptoKeyStore.GetVerifyKeys(), accessList, tokenValidatorOptions); err != nil {
+			if err := v.Configure(context.TODO(), accessList, tokenValidatorOptions); err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -154,16 +155,17 @@ func TestHandleHTTPExternalLogout(t *testing.T) {
 			rr := requests.NewRequest()
 
 			err = p.handleHTTPExternalLogout(context.Background(), rw, r, rr, "oauth2")
-			tests.EvalObjectsWithLog(t, "error", nil, err, []string{})
-			tests.EvalObjectsWithLog(t, "status_code", http.StatusFound, rw.statusCode, []string{})
+			tests.EvalObjectsWithLog(t, "error", nil, err, msgs)
+			tests.EvalObjectsWithLog(t, "status_code", http.StatusFound, rw.statusCode, msgs)
 
 			location := rw.Header().Get("Location")
-			tests.EvalObjectsWithLog(t, "location", true, strings.HasSuffix(location, tc.wantLocation), []string{})
+			tests.EvalObjectsWithLog(t, "location", true, strings.HasSuffix(location, tc.wantLocation), msgs)
 
 			setCookies := rw.Header().Values("Set-Cookie")
-			var hasAccessToken, hasReferer, hasSessionID bool
-			for _, c := range setCookies {
-				if strings.HasPrefix(c, "access_token=delete") {
+			var hasAccessToken, hasReferer, hasSessionID, hasRefreshToken, hasIDToken bool
+			for i, c := range setCookies {
+				msgs = append(msgs, fmt.Sprintf("cookie %d: %s", i, c))
+				if strings.HasPrefix(c, "AUTHP_ACCESS_TOKEN=delete") {
 					hasAccessToken = true
 				}
 				if strings.HasPrefix(c, "AUTHP_REDIRECT_URL=delete") {
@@ -172,10 +174,19 @@ func TestHandleHTTPExternalLogout(t *testing.T) {
 				if strings.HasPrefix(c, "AUTHP_SESSION_ID=delete") {
 					hasSessionID = true
 				}
+				if strings.HasPrefix(c, "AUTHP_REFRESH_TOKEN=delete") {
+					hasRefreshToken = true
+				}
+				if strings.HasPrefix(c, "generic_id_token=delete") {
+					hasIDToken = true
+				}
 			}
-			tests.EvalObjectsWithLog(t, "access_token cookie deleted", true, hasAccessToken, []string{})
-			tests.EvalObjectsWithLog(t, "referer cookie deleted", true, hasReferer, []string{})
-			tests.EvalObjectsWithLog(t, "session_id cookie deleted", true, hasSessionID, []string{})
+
+			tests.EvalObjectsWithLog(t, "access_token cookie deleted", true, hasAccessToken, msgs)
+			tests.EvalObjectsWithLog(t, "referer cookie deleted", true, hasReferer, msgs)
+			tests.EvalObjectsWithLog(t, "session_id cookie deleted", true, hasSessionID, msgs)
+			tests.EvalObjectsWithLog(t, "refresh_token cookie deleted", true, hasRefreshToken, msgs)
+			tests.EvalObjectsWithLog(t, "id_token cookie deleted", true, hasIDToken, msgs)
 		})
 	}
 }

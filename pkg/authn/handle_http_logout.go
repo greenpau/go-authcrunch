@@ -42,6 +42,7 @@ func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r 
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie())
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.RefererCookieName))
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteCookie(h, p.cookie.SessionIDCookieName))
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(p.cookie.IdentityTokenCookieName))
 
 	if parsedUser != nil && parsedUser.Claims != nil {
 		p.logger.Debug(

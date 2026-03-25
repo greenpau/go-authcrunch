@@ -86,7 +86,7 @@ func (p *Portal) handleIssueTokens(ctx context.Context, r *http.Request, rr *req
 	authResponse := &apiauth.AuthResponse{
 		Authenticated:   true,
 		AccessToken:     usr.Token,
-		AccessTokenName: usr.TokenName,
+		AccessTokenName: p.config.TokenGrantorOptions.AccessTokenCookieName,
 	}
 
 	return authResponse, nil

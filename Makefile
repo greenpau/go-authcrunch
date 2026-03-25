@@ -57,11 +57,12 @@ run-tests:
 	@echo "$@: complete"
 
 
-#QUICK_TEST_DIR="./pkg/kms/..."
-# QUICK_TEST_DIR="./pkg/authz/validator"
-QUICK_TEST_DIR="./pkg/authn/cookie"
+QUICK_TEST_DIR="./pkg/authn/..."
+# QUICK_TEST_DIR="./pkg/kms/..."
+#QUICK_TEST_DIR="./pkg/authz/validator"
+#QUICK_TEST_DIR="./pkg/authn/cookie"
 QUICK_TEST_PATTERN_RUN="-run"
-QUICK_TEST_PATTERN="TestFactory"
+QUICK_TEST_PATTERN="TestHandleHTTPExternalLogout"
 .PHONY: run-quick-tests
 run-quick-tests:
 	@echo "$@: started"

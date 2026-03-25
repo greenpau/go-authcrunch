@@ -25,9 +25,10 @@ import (
 )
 
 const (
-	tokenSourceHeader = "header"
-	tokenSourceCookie = "cookie"
-	tokenSourceQuery  = "query"
+	tokenSourceBearerHeader = "bearer"
+	tokenSourceHeader       = "header"
+	tokenSourceCookie       = "cookie"
+	tokenSourceQuery        = "query"
 )
 
 var (
@@ -103,7 +104,7 @@ func (v *TokenValidator) parseAuthHeader(_ context.Context, r *http.Request, ar 
 				continue
 			}
 			ar.Token.Found = true
-			ar.Token.Name = "bearer"
+			ar.Token.Name = tokenSourceBearerHeader
 			ar.Token.Payload = strings.TrimSpace(kv[1])
 			ar.Token.Source = tokenSourceHeader
 			return

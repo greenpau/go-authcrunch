@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
@@ -28,6 +29,9 @@ import (
 	"net/http"
 	"time"
 )
+
+// TestAccessTokenHeaderName default access token header name.
+const TestAccessTokenHeaderName = "authp_access_token"
 
 // InjectedTestToken is an instance of injected token.
 type InjectedTestToken struct {
@@ -235,12 +239,10 @@ func NewTestTokenValidatorOptions(cookieName string) *options.TokenValidatorOpti
 		cookieName,
 	}
 	opts.AuthorizationHeaderNames = []string{
-		"access_token",
-		"jwt_access_token",
+		strings.ToLower(cookieName),
 	}
 	opts.AuthorizationQueryParamNames = []string{
-		"access_token",
-		"jwt_access_token",
+		strings.ToLower(cookieName),
 	}
 	return opts
 }

@@ -16,7 +16,6 @@ package errors
 
 // Token Validator Errors
 const (
-	ErrValidatorCryptoKeyStoreNoKeys       StandardError = "token validator: no keys found when adding to keystore"
 	ErrValidatorCryptoKeyStoreNoVerifyKeys StandardError = "token validator: no verification keys found when adding to keystore"
 	ErrValidatorInvalidToken               StandardError = "token validator: invalid token: %v"
 	ErrInvalidSourcePriority               StandardError = "token validator: invalid token source priority"

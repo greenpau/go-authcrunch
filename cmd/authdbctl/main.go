@@ -107,7 +107,7 @@ func init() {
 	sh.Flags = append(sh.Flags, &cli.StringFlag{
 		Name:    "access-token-name",
 		Usage:   "Sets the `NAME` of the access token key in the Authorization header",
-		Value:   "access_token",
+		Value:   "authp_access_token",
 		EnvVars: []string{"AUTHDBCTL_TOKEN_NAME"},
 	})
 	sh.Flags = append(sh.Flags, &cli.DurationFlag{

@@ -123,14 +123,6 @@ func (g *Gatekeeper) configure() error {
 		g.opts.ValidateSourceAddress = true
 	}
 
-	if len(g.config.AccessTokenCookieNames) > 0 {
-		g.opts.AuthorizationCookieNames = g.config.AccessTokenCookieNames
-	} else {
-		g.opts.AuthorizationCookieNames = []string{
-			"access_token",
-			"jwt_access_token",
-		}
-	}
 	g.opts.AuthorizationHeaderNames = []string{
 		"access_token",
 		"jwt_access_token",
@@ -138,6 +130,19 @@ func (g *Gatekeeper) configure() error {
 	g.opts.AuthorizationQueryParamNames = []string{
 		"access_token",
 		"jwt_access_token",
+	}
+
+	if len(g.config.AccessTokenCookieNames) > 0 {
+		g.opts.AuthorizationCookieNames = g.config.AccessTokenCookieNames
+		for _, accessTokenCookieName := range g.config.AccessTokenCookieNames {
+			g.opts.AuthorizationHeaderNames = append(g.opts.AuthorizationHeaderNames, strings.ToLower(accessTokenCookieName))
+			g.opts.AuthorizationQueryParamNames = append(g.opts.AuthorizationQueryParamNames, strings.ToLower(accessTokenCookieName))
+		}
+	} else {
+		g.opts.AuthorizationCookieNames = []string{
+			"access_token",
+			"jwt_access_token",
+		}
 	}
 
 	// Load access list.
@@ -151,7 +156,7 @@ func (g *Gatekeeper) configure() error {
 	}
 
 	// Configure token validator with keys and access list.
-	if err := g.tokenValidator.Configure(ctx, ks.GetVerifyKeys(), accessList, g.opts); err != nil {
+	if err := g.tokenValidator.Configure(ctx, accessList, g.opts); err != nil {
 		return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
 	}
 

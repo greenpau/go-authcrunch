@@ -87,6 +87,9 @@ func (wr *wrapper) authenticate() error {
 		if authResponse.Authenticated {
 			wr.config.tokenAcquired = true
 			wr.config.accessToken = authResponse.AccessToken
+			if authResponse.AccessTokenName != "" {
+				wr.config.accessTokenName = strings.ToLower(authResponse.AccessTokenName)
+			}
 			if authResponse.RefreshToken != "" {
 				wr.config.refreshToken = authResponse.RefreshToken
 			}

@@ -153,7 +153,7 @@ func (wr *wrapper) configure(c *cli.Context) error {
 	}
 
 	if cfg.CookieName == "" {
-		cfg.CookieName = "access_token"
+		cfg.CookieName = "AUTHP_ACCESS_TOKEN"
 	}
 
 	if cfg.accessTokenName == "" {
