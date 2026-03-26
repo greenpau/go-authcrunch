@@ -96,6 +96,7 @@ func (v *TokenValidator) parseAuthHeader(_ context.Context, r *http.Request, ar 
 	if hdr == "" {
 		return
 	}
+
 	entries := strings.Split(hdr, ",")
 	for _, entry := range entries {
 		if v.opts.ValidateBearerHeader && strings.HasPrefix(entry, "Bearer") {
@@ -105,10 +106,11 @@ func (v *TokenValidator) parseAuthHeader(_ context.Context, r *http.Request, ar 
 			if len(kv) != 2 {
 				continue
 			}
+
 			ar.Token.Found = true
 			ar.Token.Name = tokenSourceBearerHeader
 			ar.Token.Payload = strings.TrimSpace(kv[1])
-			ar.Token.Source = tokenSourceHeader
+			ar.Token.Source = tokenSourceBearerHeader
 			return
 		}
 		kv := strings.SplitN(entry, "=", 2)
