@@ -16,9 +16,10 @@ package authproxy
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"testing"
 )
 
 func TestParseConfig(t *testing.T) {
@@ -36,43 +37,14 @@ func TestParseConfig(t *testing.T) {
 				"api key auth portal default realm bar",
 			},
 			want: map[string]interface{}{
-				"config": &Config{
-					PortalName: "default",
-					BasicAuth: BasicAuthConfig{
-						Enabled: true,
-						Realms: map[string]interface{}{
-							"foo": true,
-						},
+				"realms": map[string]any{
+					"foo": map[string]any{
+						"basic_auth_enabled": true,
+						"portal_name":        "default",
 					},
-					APIKeyAuth: APIKeyAuthConfig{
-						Enabled: true,
-						Realms: map[string]interface{}{
-							"bar": true,
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "basic and api key auth with default realm",
-			config: []string{
-				"basic auth portal default",
-				"api key auth portal default",
-			},
-			want: map[string]interface{}{
-				"config": &Config{
-					PortalName: "default",
-					BasicAuth: BasicAuthConfig{
-						Enabled: true,
-						Realms: map[string]interface{}{
-							"local": true,
-						},
-					},
-					APIKeyAuth: APIKeyAuthConfig{
-						Enabled: true,
-						Realms: map[string]interface{}{
-							"local": true,
-						},
+					"bar": map[string]any{
+						"api_key_auth_enabled": true,
+						"portal_name":          "default",
 					},
 				},
 			},
@@ -84,22 +56,50 @@ func TestParseConfig(t *testing.T) {
 				"api key auth realm foo portal bar",
 			},
 			want: map[string]interface{}{
-				"config": &Config{
-					PortalName: "bar",
-					BasicAuth: BasicAuthConfig{
-						Enabled: true,
-						Realms: map[string]interface{}{
-							"foo": true,
-						},
-					},
-					APIKeyAuth: APIKeyAuthConfig{
-						Enabled: true,
-						Realms: map[string]interface{}{
-							"foo": true,
-						},
+				"realms": map[string]any{
+					"foo": map[string]any{
+						"api_key_auth_enabled": true,
+						"basic_auth_enabled":   true,
+						"portal_name":          "bar",
 					},
 				},
 			},
+		},
+		{
+			name: "basic and api key auth with foo realm in remote portal",
+			config: []string{
+				"basic auth realm foo portal https://localhost:10002/auth",
+				"api key auth realm foo portal https://localhost:10002/auth",
+			},
+			want: map[string]interface{}{
+				"realms": map[string]any{
+					"foo": map[string]any{
+						"api_key_auth_enabled": true,
+						"basic_auth_enabled":   true,
+						"is_remote":            true,
+						"remote_addr":          "https://localhost:10002/auth",
+					},
+				},
+			},
+		},
+		{
+			name: "same realm attached to two different remote portal",
+			config: []string{
+				"basic auth realm foo portal https://localhost:10003/auth",
+				"api key auth realm foo portal https://localhost:30001/auth",
+			},
+
+			shouldErr: true,
+			err:       errors.ErrAuthProxyConfigInvalid.WithArgs("api key auth realm foo portal https://localhost:30001/auth"),
+		},
+		{
+			name: "insecure remote portal",
+			config: []string{
+				"api key auth realm foo portal http://localhost:30001/auth",
+			},
+
+			shouldErr: true,
+			err:       errors.ErrAuthProxyConfigInvalid.WithArgs("api key auth realm foo portal http://localhost:30001/auth"),
 		},
 		{
 			name: "invalid config",
@@ -134,13 +134,20 @@ func TestParseConfig(t *testing.T) {
 			err:       fmt.Errorf(`parse error on line 1, column 30: extraneous or missing " in quoted-field`),
 		},
 		{
-			name: "malformed config with multiple portals",
+			name: "portal id is not in config",
 			config: []string{
-				"basic auth realm local portal foo",
-				"api key auth realm local portal bar",
+				"basic auth realm foo",
 			},
 			shouldErr: true,
-			err:       errors.ErrAuthProxyConfigInvalid.WithArgs("multiple portals"),
+			err:       errors.ErrAuthProxyConfigInvalid.WithArgs("basic auth realm foo"),
+		},
+		{
+			name: "realm name is not in config",
+			config: []string{
+				"basic auth portal foo",
+			},
+			shouldErr: true,
+			err:       errors.ErrAuthProxyConfigInvalid.WithArgs("basic auth portal foo"),
 		},
 	}
 	for _, tc := range testcases {
@@ -151,9 +158,114 @@ func TestParseConfig(t *testing.T) {
 			if tests.EvalErrWithLog(t, err, nil, tc.shouldErr, tc.err, msgs) {
 				return
 			}
-			got := make(map[string]interface{})
-			got["config"] = config
+			// got := make(map[string]interface{})
+			got, err := tests.UnpackDict(config)
+			// got["config"] = tests.UnpackDict(config)
+			if tests.EvalErrWithLog(t, err, nil, false, nil, msgs) {
+				return
+			}
+
 			tests.EvalObjectsWithLog(t, "config", tc.want, got, msgs)
 		})
 	}
+}
+
+func TestConfigMethods(t *testing.T) {
+	type mockAuthenticator struct{ Authenticator }
+	auth := &mockAuthenticator{}
+
+	rawConfig := []string{
+		"basic auth realm foo portal bar",
+		"api key auth realm baz portal bar",
+		"basic auth realm remote portal https://localhost:10002/auth",
+	}
+
+	cfg, err := ParseConfig(rawConfig)
+	if err != nil {
+		t.Fatalf("failed to parse base config: %v", err)
+	}
+
+	t.Run("test has realm", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			realm string
+			want  bool
+		}{
+			{"existing realm", "foo", true},
+			{"existing remote realm", "remote", true},
+			{"non-existent realm", "nonexistent", false},
+			{"empty realm", "", false},
+		}
+		for _, tc := range tests {
+			if got := cfg.HasRealm(tc.realm); got != tc.want {
+				t.Errorf("%s: HasRealm(%q) = %v, want %v", tc.name, tc.realm, got, tc.want)
+			}
+		}
+	})
+
+	t.Run("test has portal", func(t *testing.T) {
+		tests := []struct {
+			name   string
+			portal string
+			want   bool
+		}{
+			{"existing local portal", "bar", true},
+			{"non-existent portal", "missing", false},
+			{"empty portal string", "", false},
+		}
+		for _, tc := range tests {
+			if got := cfg.HasPortal(tc.portal); got != tc.want {
+				t.Errorf("%s: HasPortal(%q) = %v, want %v", tc.name, tc.portal, got, tc.want)
+			}
+		}
+	})
+
+	t.Run("test authenticator workflow", func(t *testing.T) {
+		if err := cfg.AddAuthenticator("bar", auth); err != nil {
+			t.Errorf("AddAuthenticator failed: %v", err)
+		}
+
+		gotAuth, err := cfg.GetAuthenticator("foo")
+		if err != nil || gotAuth != auth {
+			t.Errorf("GetAuthenticator(foo) failed: got %v, err %v", gotAuth, err)
+		}
+
+		gotAuthBaz, err := cfg.GetAuthenticator("baz")
+		if err != nil || gotAuthBaz != auth {
+			t.Errorf("GetAuthenticator(baz) failed: got %v, err %v", gotAuthBaz, err)
+		}
+
+		if err := cfg.AddAuthenticator("nonexistent", auth); err == nil {
+			t.Error("AddAuthenticator should have failed with missing portal")
+		}
+
+		if err := cfg.AddAuthenticator("", auth); err == nil {
+			t.Error("AddAuthenticator should have failed with empty portal name")
+		}
+
+		if _, err := cfg.GetAuthenticator("ghost"); err == nil {
+			t.Error("GetAuthenticator should have failed with missing realm")
+		}
+	})
+
+	t.Run("test has auth kind", func(t *testing.T) {
+		tests := []struct {
+			realm    string
+			hasBasic bool
+			hasAPI   bool
+		}{
+			{"foo", true, false},
+			{"baz", false, true},
+			{"remote", true, false},
+			{"missing", false, false},
+		}
+		for _, tc := range tests {
+			if got := cfg.HasBasicAuth(tc.realm); got != tc.hasBasic {
+				t.Errorf("realm %s: HasBasicAuth = %v, want %v", tc.realm, got, tc.hasBasic)
+			}
+			if got := cfg.HasAPIKeyAuth(tc.realm); got != tc.hasAPI {
+				t.Errorf("realm %s: HasAPIKeyAuth = %v, want %v", tc.realm, got, tc.hasAPI)
+			}
+		}
+	})
 }

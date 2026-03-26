@@ -15,40 +15,116 @@
 package authproxy
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	"strings"
 )
 
-// BasicAuthConfig is a config for basic authentication.
-type BasicAuthConfig struct {
-	Enabled bool                   `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
-	Realms  map[string]interface{} `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
-}
-
-// APIKeyAuthConfig is a config for API key-based authentication.
-type APIKeyAuthConfig struct {
-	Enabled bool                   `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
-	Realms  map[string]interface{} `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
+// RealmAuthProxyConfig is auth proxy config for a realm.
+type RealmAuthProxyConfig struct {
+	PortalName        string `json:"portal_name,omitempty" xml:"portal_name,omitempty" yaml:"portal_name,omitempty"`
+	BasicAuthEnabled  bool   `json:"basic_auth_enabled,omitempty" xml:"basic_auth_enabled,omitempty" yaml:"basic_auth_enabled,omitempty"`
+	APIKeyAuthEnabled bool   `json:"api_key_auth_enabled,omitempty" xml:"api_key_auth_enabled,omitempty" yaml:"api_key_auth_enabled,omitempty"`
+	IsRemote          bool   `json:"is_remote,omitempty" xml:"is_remote,omitempty" yaml:"is_remote,omitempty"`
+	RemoteAddr        string `json:"remote_addr,omitempty" xml:"remote_addr,omitempty" yaml:"remote_addr,omitempty"`
+	authenticator     Authenticator
 }
 
 // Config is a config for an identity provider.
 type Config struct {
-	PortalName string           `json:"portal_name,omitempty" xml:"portal_name,omitempty" yaml:"portal_name,omitempty"`
-	BasicAuth  BasicAuthConfig  `json:"basic_auth,omitempty" xml:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`
-	APIKeyAuth APIKeyAuthConfig `json:"api_key_auth,omitempty" xml:"api_key_auth,omitempty" yaml:"api_key_auth,omitempty"`
+	Realms map[string]*RealmAuthProxyConfig `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
+}
+
+// NewConfig returns an instance of Config.
+func NewConfig() *Config {
+	return &Config{
+		Realms: make(map[string]*RealmAuthProxyConfig),
+	}
+}
+
+// HasRealm returns true if realm is supported.
+func (cfg *Config) HasRealm(realmName string) bool {
+	_, found := cfg.Realms[realmName]
+	return found
+}
+
+// HasPortal returns true if there is realm with the provided portal name.
+func (cfg *Config) HasPortal(portalName string) bool {
+	if portalName == "" {
+		return false
+	}
+	for _, realmCfg := range cfg.Realms {
+		if realmCfg.PortalName == portalName {
+			return true
+		}
+	}
+	return false
+}
+
+// AddAuthenticator adds Authenticator associated with the realm.
+func (cfg *Config) AddAuthenticator(portalName string, authenticator Authenticator) error {
+	if portalName == "" {
+		return fmt.Errorf("portal name is empty")
+	}
+
+	found := false
+	for _, realmCfg := range cfg.Realms {
+		if realmCfg.PortalName == portalName {
+			realmCfg.authenticator = authenticator
+			found = true
+		}
+	}
+	if !found {
+		return fmt.Errorf("portal name %q was not found in auth proxy config", portalName)
+	}
+	return nil
+}
+
+// GetAuthenticator returns Authenticator associated with the realm.
+func (cfg *Config) GetAuthenticator(realmName string) (Authenticator, error) {
+	realmCfg, found := cfg.Realms[realmName]
+	if !found {
+		return nil, fmt.Errorf("realm config not found")
+	}
+	return realmCfg.authenticator, nil
+}
+
+// HasBasicAuth returns true if basic auth is enabled.
+func (cfg *Config) HasBasicAuth(realmName string) bool {
+	realmCfg, found := cfg.Realms[realmName]
+	if !found {
+		return false
+	}
+	return realmCfg.BasicAuthEnabled
+}
+
+// HasAPIKeyAuth returns true of API key auth is enabled.
+func (cfg *Config) HasAPIKeyAuth(realmName string) bool {
+	realmCfg, found := cfg.Realms[realmName]
+	if !found {
+		return false
+	}
+	return realmCfg.APIKeyAuthEnabled
+}
+
+// NewRealmAuthProxyConfig returns an instance of RealmAuthProxyConfig.
+func NewRealmAuthProxyConfig() *RealmAuthProxyConfig {
+	return &RealmAuthProxyConfig{}
 }
 
 // ParseConfig parses configuration into an identity provider config
 func ParseConfig(lines []string) (*Config, error) {
-	m := make(map[string]*Config)
+	cfg := NewConfig()
+
 	if len(lines) == 0 {
 		return nil, errors.ErrAuthProxyConfigInvalid.WithArgs("empty config")
 	}
+
 	for _, encodedLine := range lines {
-		var portalName string
-		realmName := "local"
-		var cfg *Config
+		var portalID, realmName string
+
 		arr, err := cfgutil.DecodeArgs(encodedLine)
 		if err != nil {
 			return nil, err
@@ -72,7 +148,7 @@ func ParseConfig(lines []string) (*Config, error) {
 				k := arr[0]
 				switch k {
 				case "portal":
-					portalName = arr[1]
+					portalID = arr[1]
 					arr = arr[2:]
 				case "realm":
 					realmName = arr[1]
@@ -83,41 +159,40 @@ func ParseConfig(lines []string) (*Config, error) {
 			}
 		}
 
-		if portalName == "" {
+		if portalID == "" {
 			return nil, errors.ErrAuthProxyConfigInvalid.WithArgs(encodedLine)
 		}
 
-		if _, exists := m[portalName]; exists {
-			cfg = m[portalName]
-		} else {
-			cfg = &Config{
-				PortalName: portalName,
+		if realmName == "" {
+			return nil, errors.ErrAuthProxyConfigInvalid.WithArgs(encodedLine)
+		}
+
+		realmCfg, exists := cfg.Realms[realmName]
+		if !exists {
+			realmCfg = NewRealmAuthProxyConfig()
+			cfg.Realms[realmName] = realmCfg
+		}
+
+		switch {
+		case strings.HasPrefix(portalID, "https://"):
+			realmCfg.IsRemote = true
+			if realmCfg.RemoteAddr != "" && portalID != realmCfg.RemoteAddr {
+				return nil, errors.ErrAuthProxyConfigInvalid.WithArgs(encodedLine)
 			}
-			m[portalName] = cfg
+			realmCfg.RemoteAddr = portalID
+		case strings.HasPrefix(portalID, "http://"):
+			return nil, errors.ErrAuthProxyConfigInvalid.WithArgs(encodedLine)
+		default:
+			realmCfg.IsRemote = false
+			realmCfg.PortalName = portalID
 		}
 
 		switch {
 		case strings.HasPrefix(encodedLine, "basic auth"):
-			cfg.BasicAuth.Enabled = true
-			if cfg.BasicAuth.Realms == nil {
-				cfg.BasicAuth.Realms = make(map[string]interface{})
-			}
-			cfg.BasicAuth.Realms[realmName] = true
+			realmCfg.BasicAuthEnabled = true
 		case strings.HasPrefix(encodedLine, "api key auth"):
-			cfg.APIKeyAuth.Enabled = true
-			if cfg.APIKeyAuth.Realms == nil {
-				cfg.APIKeyAuth.Realms = make(map[string]interface{})
-			}
-			cfg.APIKeyAuth.Realms[realmName] = true
+			realmCfg.APIKeyAuthEnabled = true
 		}
 	}
-
-	if len(m) > 1 {
-		return nil, errors.ErrAuthProxyConfigInvalid.WithArgs("multiple portals")
-	}
-	var providers []*Config
-	for _, provider := range m {
-		providers = append(providers, provider)
-	}
-	return providers[0], nil
+	return cfg, nil
 }

@@ -77,11 +77,7 @@ type TokenValidator struct {
 	guardian            guardian
 	tokenSources        []string
 	opts                *options.TokenValidatorOptions
-	basicAuthEnabled    bool
-	apiKeyAuthEnabled   bool
-	customAuthEnabled   bool
 	authProxyConfig     *authproxy.Config
-	authProxy           authproxy.Authenticator
 	apiKeyHeaderName    string
 	authRealmHeaderName string
 	logger              *zap.Logger
@@ -421,27 +417,25 @@ func (v *TokenValidator) RegisterAuthProxy(cfg *authproxy.Config, authenticators
 	if cfg == nil {
 		return errors.ErrValidatorAuthProxy
 	}
-	if cfg.PortalName == "" {
-		return errors.ErrValidatorAuthProxyPortalName
-	}
 
-	if cfg.BasicAuth.Enabled {
-		v.basicAuthEnabled = true
-		v.customAuthEnabled = true
-	}
-	if cfg.APIKeyAuth.Enabled {
-		v.apiKeyAuthEnabled = true
-		v.customAuthEnabled = true
-	}
 	v.authProxyConfig = cfg
 
+	foundProxyAssociatedWithPortal := false
 	for _, authenticator := range authenticators {
-		if authenticator.GetName() != cfg.PortalName {
+		if !cfg.HasPortal(authenticator.GetName()) {
 			continue
 		}
-		v.authProxy = authenticator
-		return nil
+		if err := v.authProxyConfig.AddAuthenticator(authenticator.GetName(), authenticator); err != nil {
+			return err
+		}
+		v.logger.Debug("associated portal with auth proxy config",
+			zap.String("portal_name", authenticator.GetName()),
+			zap.Any("auth_proxy_config", v.authProxyConfig),
+		)
+		foundProxyAssociatedWithPortal = true
 	}
-
-	return errors.ErrValidatorAuthProxyNotFound.WithArgs(cfg.PortalName)
+	if !foundProxyAssociatedWithPortal {
+		return errors.ErrValidatorAuthProxiesNotFound
+	}
+	return nil
 }

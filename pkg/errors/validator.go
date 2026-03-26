@@ -27,5 +27,5 @@ const (
 	ErrTokenValidatorOptionsNotFound       StandardError = "token validator: options not found"
 	ErrValidatorAuthProxy                  StandardError = "token validator: auth proxy config is nil"
 	ErrValidatorAuthProxyPortalName        StandardError = "token validator: auth proxy config has empty portal name"
-	ErrValidatorAuthProxyNotFound          StandardError = "token validator: auth proxy %q not found"
+	ErrValidatorAuthProxiesNotFound        StandardError = "token validator: auth proxies not found"
 )

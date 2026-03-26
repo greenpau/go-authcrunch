@@ -28,12 +28,16 @@ import (
 // parseCustomAuthHeader authorizes HTTP requests based on the presence and the
 // content of HTTP Authorization or X-API-Key headers.
 func (v *TokenValidator) parseCustomAuthHeader(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
-	if v.basicAuthEnabled {
+	if v.authProxyConfig == nil {
+		return nil
+	}
+
+	if v.authProxyConfig.HasBasicAuth(r.Header.Get(v.authRealmHeaderName)) {
 		if err := v.parseCustomBasicAuthHeader(ctx, r, ar); err != nil {
 			return err
 		}
 	}
-	if !ar.Token.Found && v.apiKeyAuthEnabled {
+	if !ar.Token.Found && v.authProxyConfig.HasAPIKeyAuth(r.Header.Get(v.authRealmHeaderName)) {
 		return v.parseCustomAPIKeyAuthHeader(ctx, r, ar)
 	}
 	return nil
@@ -64,11 +68,13 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 	}
 
 	if ar.Token.Found {
-		if tokenRealm != "" {
-			// Check if the realm is registered.
-			if _, exists := v.authProxyConfig.BasicAuth.Realms[tokenRealm]; !exists {
-				return errors.ErrBasicAuthFailed
-			}
+
+		// Check if the realm is registered.
+		if !v.authProxyConfig.HasRealm(tokenRealm) {
+			return errors.ErrBasicAuthFailedRealmNotFound
+		}
+		if !v.authProxyConfig.HasBasicAuth(tokenRealm) {
+			return errors.ErrBasicAuthFailedRealmNoBasicAuth
 		}
 
 		apr := &authproxy.Request{
@@ -77,7 +83,11 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 			Secret:  tokenSecret,
 		}
 
-		if err := v.authProxy.BasicAuth(apr); err != nil {
+		authProxy, err := v.authProxyConfig.GetAuthenticator(tokenRealm)
+		if err != nil {
+			return err
+		}
+		if err := authProxy.BasicAuth(apr); err != nil {
 			return err
 		}
 
@@ -102,11 +112,11 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 
 	tokenRealm := r.Header.Get(v.authRealmHeaderName)
 
-	if tokenRealm != "" {
-		// Check if the realm is registered.
-		if _, exists := v.authProxyConfig.APIKeyAuth.Realms[tokenRealm]; !exists {
-			return errors.ErrAPIKeyAuthFailed
-		}
+	if !v.authProxyConfig.HasRealm(tokenRealm) {
+		return errors.ErrAPIKeyAuthFailedRealmNotFound
+	}
+	if !v.authProxyConfig.HasAPIKeyAuth(tokenRealm) {
+		return errors.ErrAPIKeyAuthFailedRealmNoAPIKeyAuth
 	}
 
 	apr := &authproxy.Request{
@@ -115,7 +125,11 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 		Secret:  tokenSecret,
 	}
 
-	if err := v.authProxy.APIKeyAuth(apr); err != nil {
+	authProxy, err := v.authProxyConfig.GetAuthenticator(tokenRealm)
+	if err != nil {
+		return err
+	}
+	if err := authProxy.APIKeyAuth(apr); err != nil {
 		return err
 	}
 	ar.Token.Name = apr.Response.Name

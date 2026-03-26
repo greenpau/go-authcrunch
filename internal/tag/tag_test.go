@@ -499,8 +499,8 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test authproxy.BasicAuthConfig struct",
-			entry: &authproxy.BasicAuthConfig{},
+			name:  "test authproxy.Config struct",
+			entry: &authproxy.Config{},
 			opts:  &Options{},
 		},
 		{
@@ -797,8 +797,8 @@ func TestTagCompliance(t *testing.T) {
 			},
 		},
 		{
-			name:  "test authproxy.APIKeyAuthConfig struct",
-			entry: &authproxy.APIKeyAuthConfig{},
+			name:  "test authproxy.RealmAuthProxyConfig struct",
+			entry: &authproxy.RealmAuthProxyConfig{},
 			opts:  &Options{},
 		},
 		{

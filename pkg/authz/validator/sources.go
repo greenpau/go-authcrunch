@@ -164,7 +164,7 @@ func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *req
 		}
 	}
 
-	if !ar.Token.Found && v.customAuthEnabled {
+	if !ar.Token.Found && v.authProxyConfig != nil {
 		// Search for credentials (basic, api key, etc.) in HTTP headers.
 		if err := v.parseCustomAuthHeader(ctx, r, ar); err != nil {
 			return nil, err

@@ -29,7 +29,7 @@ import (
 // APIKeyAuth performs API key authentication.
 func (p *Portal) APIKeyAuth(r *authproxy.Request) error {
 	if r.Realm == "" {
-		r.Realm = "local"
+		return errors.ErrAPIKeyAuthFailedRealmNotSet
 	}
 
 	rr := requests.NewRequest()
