@@ -42,11 +42,13 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 		if tokenName == "access_token" {
 			token, _, err := new(jwtlib.Parser).ParseUnverified(tokenString, jwtlib.MapClaims{})
 			if err != nil {
-				return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(tokenName, err)
+				// return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(tokenName, err)
+				continue
 			}
 			if claims, ok := token.Claims.(jwtlib.MapClaims); ok {
 				if err := b.parseTokenClaims(tokenName, claims, data, parsedData); err != nil {
-					return nil, err
+					// return nil, err
+					continue
 				}
 			}
 			continue
