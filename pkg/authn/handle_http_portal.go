@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
@@ -67,6 +68,10 @@ func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWrit
 				zap.String("redirect_url", redirectURL.String()),
 			)
 			w.Header().Set("Location", redirectURL.String())
+			cookie.Value = ""
+			cookie.MaxAge = -1
+			cookie.Expires = time.Unix(0, 0)
+			http.SetCookie(w, cookie)
 			w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
 			w.WriteHeader(http.StatusSeeOther)
 			return nil

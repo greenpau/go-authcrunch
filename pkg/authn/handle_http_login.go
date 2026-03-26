@@ -385,6 +385,10 @@ func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.R
 				zap.String("request_id", rr.ID),
 				zap.String("redirect_url", redirectLocation),
 			)
+			cookie.Value = ""
+			cookie.MaxAge = -1
+			cookie.Expires = time.Unix(0, 0)
+			http.SetCookie(w, cookie)
 			w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
 		}
 	}
