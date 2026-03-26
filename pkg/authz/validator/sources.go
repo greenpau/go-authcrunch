@@ -29,6 +29,8 @@ const (
 	tokenSourceHeader       = "header"
 	tokenSourceCookie       = "cookie"
 	tokenSourceQuery        = "query"
+	tokenSourceAPIAuth      = "apiauth"
+	tokenSourceBasicAuth    = "basicauth"
 )
 
 var (

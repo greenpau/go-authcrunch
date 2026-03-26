@@ -16,7 +16,11 @@ package errors
 
 // Auth Proxy Errors
 const (
-	ErrAuthProxyConfigInvalid StandardError = "invalid authproxy config: %v"
-	ErrBasicAuthFailed        StandardError = "basic authentication via authproxy failed"
-	ErrAPIKeyAuthFailed       StandardError = "api key authentication via authproxy failed"
+	ErrAuthProxyConfigInvalid         StandardError = "invalid authproxy config: %v"
+	ErrBasicAuthFailed                StandardError = "basic authentication via authproxy failed"
+	ErrBasicAuthFailedRealmNotSet     StandardError = "basic authentication via authproxy failed: realm not set"
+	ErrBasicAuthFailedDecodeSecret    StandardError = "basic authentication via authproxy failed: failed decoding username and password"
+	ErrBasicAuthFailedBackendNotFound StandardError = "basic authentication via authproxy failed: realm backend not found"
+
+	ErrAPIKeyAuthFailed StandardError = "api key authentication via authproxy failed"
 )

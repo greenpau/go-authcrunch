@@ -24,10 +24,13 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	tokenSourceHeader = "header"
-	tokenSourceCookie = "cookie"
-	tokenSourceQuery  = "query"
+const (
+	tokenSourceHeader       = "header"
+	tokenSourceCookie       = "cookie"
+	tokenSourceQuery        = "query"
+	tokenSourceBearerHeader = "bearer"
+	tokenSourceAPIAuth      = "apiauth"
+	tokenSourceBasicAuth    = "basicauth"
 )
 
 // CryptoKeyStore constains keys assembled for a specific purpose, i.e. signing or
@@ -203,6 +206,9 @@ func (ks *CryptoKeyStore) ParseToken(ar *requests.AuthorizationRequest) (*user.U
 			if _, allowed := k.Verify.Token.QueryParamNames[ar.Token.Name]; !allowed {
 				continue
 			}
+		case tokenSourceBasicAuth:
+		case tokenSourceAPIAuth:
+		case tokenSourceBearerHeader:
 		default:
 			continue
 		}

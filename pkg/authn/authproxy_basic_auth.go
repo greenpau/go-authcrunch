@@ -31,7 +31,7 @@ import (
 // BasicAuth performs API key authentication.
 func (p *Portal) BasicAuth(r *authproxy.Request) error {
 	if r.Realm == "" {
-		r.Realm = "local"
+		return errors.ErrBasicAuthFailedRealmNotSet
 	}
 
 	rr := requests.NewRequest()
@@ -48,7 +48,7 @@ func (p *Portal) BasicAuth(r *authproxy.Request) error {
 			zap.String("realm", r.Realm),
 			zap.Error(err),
 		)
-		return errors.ErrBasicAuthFailed
+		return errors.ErrBasicAuthFailedDecodeSecret
 	}
 
 	creds := strings.SplitN(string(arr), ":", 2)
@@ -63,7 +63,7 @@ func (p *Portal) BasicAuth(r *authproxy.Request) error {
 			zap.String("custom_auth", "basicauth"),
 			zap.String("realm", r.Realm),
 		)
-		return errors.ErrBasicAuthFailed
+		return errors.ErrBasicAuthFailedBackendNotFound
 	}
 
 	/*

@@ -83,6 +83,7 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 
 		ar.Token.Name = apr.Response.Name
 		ar.Token.Payload = apr.Response.Payload
+		ar.Token.Source = tokenSourceBasicAuth
 	}
 
 	return nil
@@ -119,5 +120,6 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 	}
 	ar.Token.Name = apr.Response.Name
 	ar.Token.Payload = apr.Response.Payload
+	ar.Token.Source = tokenSourceAPIAuth
 	return nil
 }
