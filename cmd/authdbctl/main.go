@@ -223,6 +223,7 @@ func init() {
 				},
 			},
 		},
+		systemSubcmd,
 	}
 }
 

@@ -53,6 +53,8 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 	switch {
 	case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/api/refresh_token"):
 		return p.handleAPIRefreshToken(ctx, w, r, rr, usr)
+	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/system"):
+		return p.handleAPISystem(ctx, w, r, rr, usr)
 	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/realms"):
 		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
 			p.logger.Debug(

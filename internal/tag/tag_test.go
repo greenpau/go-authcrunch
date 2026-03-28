@@ -54,6 +54,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
+	"github.com/greenpau/go-authcrunch/pkg/system"
 	"github.com/greenpau/go-authcrunch/pkg/tagging"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -795,6 +796,11 @@ func TestTagCompliance(t *testing.T) {
 					"dn": true,
 				},
 			},
+		},
+		{
+			name:  "test system.Encryptor struct",
+			entry: &system.Encryptor{},
+			opts:  &Options{},
 		},
 		{
 			name:  "test authproxy.RealmAuthProxyConfig struct",
