@@ -36,7 +36,7 @@ func reload(c *cli.Context) error {
 		"realm": "` + c.String("realm") + `"
 	}`)
 
-	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, reqData)
+	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, nil, reqData)
 	if err != nil {
 		return fmt.Errorf("failed fetching database info: %w", err)
 	}

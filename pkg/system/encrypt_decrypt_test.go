@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/greenpau/go-authcrunch/internal/tests"
 )
 
 func TestEncryptorRoundTrip(t *testing.T) {
@@ -31,31 +31,40 @@ func TestEncryptorRoundTrip(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	type payload struct {
-		ID      int    `json:"id"`
-		Message string `json:"message"`
-	}
-
 	var testcases = []struct {
 		name      string
-		input     interface{}
+		input     Message
+		want      map[string]any
 		shouldErr bool
+		err       error
 	}{
 		{
 			name: "encrypt and decrypt simple struct",
-			input: payload{
-				ID:      101,
-				Message: "foo",
+			input: &BasicAuthRequestMessage{
+				Kind:     BasicAuthRequestKindKeyword,
+				Username: "foo",
+				Password: "bar",
+				Realm:    "local",
 			},
-			shouldErr: false,
+			want: map[string]any{
+				"kind":     "basic_auth_request",
+				"username": "foo",
+				"password": "bar",
+				"realm":    "local",
+			},
 		},
 		{
 			name: "encrypt and decrypt map",
-			input: map[string]string{
-				"foo": "bar",
-				"baz": "qux",
+			input: &APIKeyAuthRequestMessage{
+				Kind:   APIKeyAuthRequestKindKeyword,
+				APIKey: "bar",
+				Realm:  "local",
 			},
-			shouldErr: false,
+			want: map[string]any{
+				"kind":    "api_key_auth_request",
+				"api_key": "bar",
+				"realm":   "local",
+			},
 		},
 	}
 
@@ -83,31 +92,15 @@ func TestEncryptorRoundTrip(t *testing.T) {
 			}
 			msgs = append(msgs, fmt.Sprintf("generated token: %s", token))
 
-			var got interface{}
-
-			if _, ok := tc.input.(payload); ok {
-				var p payload
-				err = enc.DecryptMessage(token, &p)
-				got = p
-			} else {
-				var m map[string]string
-				err = enc.DecryptMessage(token, &m)
-				got = m
-			}
-
-			if err != nil {
-				if !tc.shouldErr {
-					t.Fatalf("unexpected decryption error: %v", err)
-				}
+			msg, err := enc.DecryptMessage(token)
+			if tests.EvalErrWithLog(t, err, "DecryptMessage", tc.shouldErr, tc.err, msgs) {
 				return
 			}
-
-			if diff := cmp.Diff(tc.input, got); diff != "" {
-				for _, m := range msgs {
-					t.Log(m)
-				}
-				t.Fatalf("round-trip mismatch (-want +got):\n%s", diff)
+			got, err := msg.AsMap()
+			if tests.EvalErrWithLog(t, err, "DecryptMessage", false, nil, msgs) {
+				return
 			}
+			tests.EvalObjectsWithLog(t, "DecryptMessage", tc.want, got, msgs)
 		})
 	}
 }

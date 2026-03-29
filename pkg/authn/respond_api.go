@@ -28,13 +28,12 @@ import (
 func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
 	p.disableClientCache(w)
 	p.injectSessionID(ctx, w, r, rr)
-	w.Header().Set("Content-Type", "application/json")
 
 	p.logger.Debug(
 		"Received API request",
 		zap.String("session_id", rr.Upstream.SessionID),
 		zap.String("request_id", rr.ID),
-		zap.String("url__base_path", rr.Upstream.BasePath),
+		zap.String("url_base_path", rr.Upstream.BasePath),
 		zap.String("src_ip", addrutil.GetSourceAddress(r)),
 		zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
 	)

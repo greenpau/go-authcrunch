@@ -28,8 +28,8 @@ import (
 // EncryptMessage handles message encryption with PASETO v4.local construction.
 // It marshals the input data to JSON, generates a random 24-byte nonce,
 // and encrypts the payload using XChaCha20-Poly1305.
-func (e *Encryptor) EncryptMessage(data interface{}) (string, error) {
-	payload, err := json.Marshal(data)
+func (e *Encryptor) EncryptMessage(msg Message) (string, error) {
+	payload, err := json.Marshal(msg)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal data: %w", err)
 	}
@@ -49,44 +49,58 @@ func (e *Encryptor) EncryptMessage(data interface{}) (string, error) {
 
 	tokenBody := append(nonce, ciphertext...)
 	encodedBody := base64.RawURLEncoding.EncodeToString(tokenBody)
-	encodedFooter := base64.RawURLEncoding.EncodeToString([]byte(e.keyID))
+
+	footer := EncryptedMessageFooter{
+		KeyID: e.keyID,
+	}
+	footerRaw, err := json.Marshal(footer)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal footer: %w", err)
+	}
+
+	encodedFooter := base64.RawURLEncoding.EncodeToString(footerRaw)
+
 	return "v4.local." + encodedBody + "." + encodedFooter, nil
 }
 
 // DecryptMessage handles message decryption for a PASETO v4.local token.
 // It validates the header, decodes the body, extracts the nonce, and decrypts the payload.
-func (e *Encryptor) DecryptMessage(token string, data interface{}) error {
+func (e *Encryptor) DecryptMessage(token string) (Message, error) {
 	header := "v4.local."
 	if !strings.HasPrefix(token, header) {
-		return fmt.Errorf("invalid token header: expected %s", header)
+		return nil, fmt.Errorf("invalid token header: expected %s", header)
 	}
 
 	parts := strings.Split(token, ".")
 	// Expecting 4 parts: [v4, local, body, footer]
 	if len(parts) != 4 {
-		return fmt.Errorf("invalid token format: expected 4 segments, got %d", len(parts))
+		return nil, fmt.Errorf("invalid token format: expected 4 segments, got %d", len(parts))
 	}
 
 	encodedBody := parts[2]
 	encodedFooter := parts[3]
 
-	footerBytes, err := base64.RawURLEncoding.DecodeString(encodedFooter)
+	footerRaw, err := base64.RawURLEncoding.DecodeString(encodedFooter)
 	if err != nil {
-		return fmt.Errorf("failed to decode footer: %w", err)
+		return nil, fmt.Errorf("failed to decode footer: %w", err)
 	}
 
-	keyID := string(footerBytes)
-	if keyID != e.keyID {
-		return fmt.Errorf("key id mismatch: expected %s, got %s", e.keyID, keyID)
+	var footer EncryptedMessageFooter
+	if err := json.Unmarshal(footerRaw, &footer); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal footer JSON: %w", err)
+	}
+
+	if footer.KeyID != e.keyID {
+		return nil, fmt.Errorf("key id mismatch: expected %s, got %s", e.keyID, footer.KeyID)
 	}
 
 	tokenBody, err := base64.RawURLEncoding.DecodeString(encodedBody)
 	if err != nil {
-		return fmt.Errorf("failed to decode base64: %w", err)
+		return nil, fmt.Errorf("failed to decode base64: %w", err)
 	}
 
 	if len(tokenBody) < 40 {
-		return fmt.Errorf("token body too short")
+		return nil, fmt.Errorf("token body too short")
 	}
 
 	nonce := tokenBody[:24]
@@ -94,17 +108,18 @@ func (e *Encryptor) DecryptMessage(token string, data interface{}) error {
 
 	aead, err := chacha20poly1305.NewX(e.key)
 	if err != nil {
-		return fmt.Errorf("failed to create cipher: %w", err)
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}
 
 	plaintext, err := aead.Open(nil, nonce, ciphertext, []byte(header))
 	if err != nil {
-		return fmt.Errorf("failed to decrypt or authenticate: %w", err)
+		return nil, fmt.Errorf("failed to decrypt or authenticate: %w", err)
 	}
 
-	if err := json.Unmarshal(plaintext, data); err != nil {
-		return fmt.Errorf("failed to unmarshal plaintext: %w", err)
+	msg, err := ParseMessage(plaintext)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse decrypted message: %w", err)
 	}
 
-	return nil
+	return msg, nil
 }

@@ -47,6 +47,8 @@ func handleAPIProfileResponse(w http.ResponseWriter, rr *requests.Request, code 
 }
 
 func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, parsedUser *user.User) error {
+	w.Header().Set("Content-Type", "application/json")
+
 	resp := make(map[string]interface{})
 	resp["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)
 

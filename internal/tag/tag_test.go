@@ -687,6 +687,36 @@ func TestTagCompliance(t *testing.T) {
 			},
 		},
 		{
+			name:  "test system.BasicAuthRequestMessage struct",
+			entry: &system.BasicAuthRequestMessage{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test system.APIKeyAuthRequestMessage struct",
+			entry: &system.APIKeyAuthRequestMessage{},
+			opts:  &Options{},
+		},
+		{
+			name:  "test system.AuthResponseMessage struct",
+			entry: &system.AuthResponseMessage{},
+			opts: &Options{
+				AllowFieldMismatch: true,
+				AllowedFields: map[string]interface{}{
+					"authenticated": true,
+				},
+			},
+		},
+		{
+			name:  "test system.EncryptedMessageFooter struct",
+			entry: &system.EncryptedMessageFooter{},
+			opts: &Options{
+				AllowFieldMismatch: true,
+				AllowedFields: map[string]interface{}{
+					"kid": true,
+				},
+			},
+		},
+		{
 			name:  "test kms.CryptoKeyConfig struct",
 			entry: &kms.CryptoKeyConfig{},
 			opts: &Options{

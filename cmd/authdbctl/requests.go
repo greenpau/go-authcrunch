@@ -32,18 +32,32 @@ type userRequest struct {
 	User      map[string]any `json:"user"`
 }
 
-func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, body []byte) (string, error) {
+type requestOpts struct {
+	disableAccessToken bool
+	maxAttempts        int
+}
+
+func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, opts *requestOpts, body []byte) (string, error) {
 	var respBody string
 	var resp *http.Response
 	var err error
 
-	if wr.config.accessToken == "" {
-		if authErr := wr.authenticate(); authErr != nil {
-			return "", fmt.Errorf("authentication failed: %v", authErr)
+	if opts == nil {
+		opts = &requestOpts{}
+	}
+
+	if !opts.disableAccessToken {
+		if wr.config.accessToken == "" {
+			if authErr := wr.authenticate(); authErr != nil {
+				return "", fmt.Errorf("authentication failed: %v", authErr)
+			}
 		}
 	}
 
 	maxAttempts := c.Int("retries")
+	if opts.maxAttempts > 0 {
+		maxAttempts = opts.maxAttempts
+	}
 	if maxAttempts < 1 {
 		maxAttempts = 1
 	}
@@ -51,7 +65,9 @@ func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, body [
 	for i := 1; i <= maxAttempts; i++ {
 		req, _ := http.NewRequest(method, url, bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-		req.Header.Set("Authorization", wr.config.accessTokenName+"="+wr.config.accessToken)
+		if !opts.disableAccessToken {
+			req.Header.Set("Authorization", wr.config.accessTokenName+"="+wr.config.accessToken)
+		}
 
 		respBody, resp, err = wr.browser.Do(req)
 

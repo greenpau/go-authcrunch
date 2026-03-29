@@ -42,6 +42,8 @@ func newAccessDeniedResponse(msg string) *AccessDeniedResponse {
 }
 
 func (p *Portal) handleJSONErrorWithLog(ctx context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request, code int, msg string) error {
+	w.Header().Set("Content-Type", "application/json")
+
 	p.logger.Warn(
 		"Access denied",
 		zap.String("session_id", rr.Upstream.SessionID),
@@ -60,6 +62,7 @@ func (p *Portal) handleJSONErrorWithLog(ctx context.Context, w http.ResponseWrit
 }
 
 func (p *Portal) handleJSONError(_ context.Context, w http.ResponseWriter, code int, msg string) error {
+	w.Header().Set("Content-Type", "application/json")
 	resp := newAccessDeniedResponse(msg)
 	respBytes, _ := json.Marshal(resp)
 	w.WriteHeader(code)

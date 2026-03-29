@@ -16,7 +16,9 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/system"
 	"github.com/urfave/cli/v2"
@@ -54,18 +56,18 @@ func systemSendMessage(c *cli.Context) error {
 		return err
 	}
 
-	messageFile := c.Path("input-message-file")
-	keyFile := c.Path("encryption-key")
+	messageFilePath := c.Path("input-message-file")
+	keyFilePath := c.Path("encryption-key")
 	keyID := c.Path("key-id")
 
-	messageData, err := os.ReadFile(messageFile)
+	messageData, err := os.ReadFile(messageFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to read input message file %q: %w", messageFile, err)
+		return fmt.Errorf("failed to read input message file %q: %w", messageFilePath, err)
 	}
 
-	keyData, err := os.ReadFile(keyFile)
+	keyData, err := os.ReadFile(keyFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to read encryption key file %q: %w", keyFile, err)
+		return fmt.Errorf("failed to read encryption key file %q: %w", keyFilePath, err)
 	}
 
 	if keyID == "" {
@@ -75,36 +77,66 @@ func systemSendMessage(c *cli.Context) error {
 	endpointURL := wr.config.BaseURL + "/api/system"
 	wr.logger.Debug("sending message to authentication portal",
 		zap.String("endpoint_url", endpointURL),
-		zap.String("input_message_file_path", messageFile),
+		zap.String("input_message_file_path", messageFilePath),
 		zap.Int("input_message_file_len", len(messageData)),
-		zap.String("encryption_key_file_path", keyFile),
+		zap.String("encryption_key_file_path", keyFilePath),
 		zap.Int("encryption_key_file_len", len(keyData)),
 	)
 
-	encryptor, err := system.NewEncryptorFromKey(keyID, keyFile)
+	encryptor, err := system.NewEncryptorFromKey(keyID, keyFilePath)
 	if err != nil {
 		return nil
 	}
 
-	if _, err := encryptor.EncryptMessage("foo"); err != nil {
+	reqMsg, err := system.ParseMessage(messageData)
+	if err != nil {
 		return err
 	}
 
-	// var reqData = []byte(`{
-	//     "realm": "` + c.String("realm") + `",
-	//     "query": "all"
-	// }`)
+	if err := reqMsg.Validate(); err != nil {
+		return fmt.Errorf("failed to validate input message: %v", err)
+	}
 
-	// respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, reqData)
-	// if err != nil {
-	// 	return fmt.Errorf("failed fetching database %q realm info: %w", c.String("realm"), err)
-	// }
+	reqData, err := encryptor.EncryptMessage(reqMsg)
+	if err != nil {
+		return err
+	}
+
+	opts := &requestOpts{
+		disableAccessToken: true,
+		maxAttempts:        1,
+	}
+
+	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, opts, []byte(reqData))
+	if err != nil {
+		return fmt.Errorf("failed sending system message: %w", err)
+	}
+
+	if !strings.HasPrefix(respBody, "v4.local.") {
+		return fmt.Errorf("unexpected system message response: %s", respBody)
+	}
+
+	respMsg, err := encryptor.DecryptMessage(respBody)
+	if err != nil {
+		return err
+	}
+
+	respMsgMap, err := respMsg.AsMap()
+	if err != nil {
+		return fmt.Errorf("failed to marshal system message response: %s: %v", respBody, err)
+	}
+
+	wr.logger.Debug("received response message from authentication portal",
+		zap.String("endpoint_url", endpointURL),
+		zap.Any("response", respMsgMap),
+	)
 
 	// var data map[string]any
-	// if err := json.Unmarshal([]byte(respBody), &data); err != nil {
-	// 	return fmt.Errorf("failed to parse JSON response: %v", err)
-	// }
+	respData, err := respMsg.ToJSON()
+	if err != nil {
+		return fmt.Errorf("failed to parse JSON response: %v", err)
+	}
 
-	// fmt.Fprintf(os.Stdout, "%s\n", respBody)
+	fmt.Fprintf(os.Stdout, "%s\n", respData)
 	return nil
 }

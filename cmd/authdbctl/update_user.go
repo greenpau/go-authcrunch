@@ -128,7 +128,7 @@ func updateUser(c *cli.Context) error {
 		return fmt.Errorf("failed to marshal update user request: %v", err)
 	}
 
-	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, reqData)
+	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, nil, reqData)
 	if err != nil {
 		return fmt.Errorf("failed updating %q user to %q realm: %w", c.String("username"), c.String("realm"), err)
 	}

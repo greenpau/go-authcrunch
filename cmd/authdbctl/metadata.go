@@ -32,7 +32,7 @@ func metadata(c *cli.Context) error {
 	endpointURL := wr.config.BaseURL + "/api/server/metadata"
 	wr.logger.Debug("fetching metadata", zap.String("endpoint_url", endpointURL))
 
-	respBody, err := wr.doRequestWithRetry(c, http.MethodGet, endpointURL, nil)
+	respBody, err := wr.doRequestWithRetry(c, http.MethodGet, endpointURL, nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed fetching database info: %w", err)
 	}

@@ -18,9 +18,10 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"net/http"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 func (p *Portal) handleHTTPBasicLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
@@ -33,7 +34,7 @@ func (p *Portal) handleHTTPBasicLogin(ctx context.Context, w http.ResponseWriter
 	if i < 0 {
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 	}
-	realm := strings.TrimPrefix(r.URL.Path[i:], pathPrefix)
+	realmName := strings.TrimPrefix(r.URL.Path[i:], pathPrefix)
 	credentials, err := parseBasicAuthHeader(r)
 	w.Header().Set("Content-Type", "text/plain")
 	if err != nil {
@@ -42,22 +43,33 @@ func (p *Portal) handleHTTPBasicLogin(ctx context.Context, w http.ResponseWriter
 		return nil
 	}
 	if credentials == nil {
-		w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic realm=\"%s\"", realm))
+		w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic realm=\"%s\"", realmName))
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("Authorization Required"))
 		return nil
 	}
+
 	if v, exists := credentials["realm"]; exists {
-		realm = v
-	} else {
-		credentials["realm"] = realm
+		realmName = v
 	}
-	if realm == "" {
+
+	if realmName == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(http.StatusText(http.StatusBadRequest)))
 		return nil
 	}
-	if err := p.authenticateLoginRequest(ctx, w, r, rr, credentials); err != nil {
+
+	var username, password string
+	var usernameFound, passwordFound bool
+
+	username, usernameFound = credentials["username"]
+	password, passwordFound = credentials["password"]
+
+	if !usernameFound || !passwordFound || username == "" || password == "" {
+		return fmt.Errorf("invalid or missing credentials")
+	}
+
+	if err := p.authenticateBasicAuthRequest(ctx, w, r, rr, realmName, username, password); err != nil {
 		return p.handleJSONErrorWithLog(ctx, w, r, rr, rr.Response.Code, err.Error())
 	}
 	if err := p.authorizeLoginRequest(ctx, w, r, rr); err != nil {

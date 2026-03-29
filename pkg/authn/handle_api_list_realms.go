@@ -37,6 +37,8 @@ type realmEntry struct {
 }
 
 func (p *Portal) handleAPIListRealms(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, _ *user.User) error {
+	w.Header().Set("Content-Type", "application/json")
+
 	reqQuery := &realmQuery{}
 	if r.Body != nil {
 		defer r.Body.Close()

@@ -207,37 +207,6 @@ func (p *Portal) identifyUserRequest(rr *requests.Request, identity map[string]s
 	return backend.Request(operator.IdentifyUser, rr)
 }
 
-func (p *Portal) authenticateLoginRequest(_ context.Context, _ http.ResponseWriter, _ *http.Request, rr *requests.Request, credentials map[string]string) error {
-	rr.User.Username = credentials["username"]
-	rr.User.Password = credentials["password"]
-	backend := p.getIdentityStoreByRealm(credentials["realm"])
-	if backend == nil {
-		rr.Response.Code = http.StatusBadRequest
-		return fmt.Errorf("no matching realm found")
-	}
-	rr.Upstream.Method = backend.GetKind()
-	rr.Upstream.Realm = backend.GetRealm()
-	rr.Flags.Enabled = true
-
-	if err := backend.Request(operator.IdentifyUser, rr); err != nil {
-		rr.Response.Code = http.StatusUnauthorized
-		return err
-	}
-
-	if len(rr.User.Challenges) != 1 {
-		return fmt.Errorf("detected too many auth challenges")
-	}
-	if rr.User.Challenges[0] != "password" {
-		return fmt.Errorf("detected unsupported auth challenges")
-	}
-	if err := backend.Request(operator.Authenticate, rr); err != nil {
-		rr.Response.Code = http.StatusUnauthorized
-		return err
-	}
-	rr.Response.Code = http.StatusOK
-	return nil
-}
-
 func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
 	backend := p.getAuthenticatorByRealm(rr.Upstream.Realm)
 	if backend == nil {

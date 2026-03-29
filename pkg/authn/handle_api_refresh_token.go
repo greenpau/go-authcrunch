@@ -25,6 +25,7 @@ import (
 )
 
 func (p *Portal) handleAPIRefreshToken(_ context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request, _ *user.User) error {
+	w.Header().Set("Content-Type", "application/json")
 	rr.Response.Code = http.StatusOK
 	resp := make(map[string]interface{})
 	resp["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)

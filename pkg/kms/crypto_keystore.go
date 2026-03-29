@@ -296,3 +296,18 @@ func (ks *CryptoKeyStore) GetTokenLifetime(tokenName, signMethod interface{}) in
 	}
 	return 900
 }
+
+// GetSystemKeyByID returns system CryptoKey by ID.
+func (ks *CryptoKeyStore) GetSystemKeyByID(keyID string) *CryptoKey {
+	for _, key := range ks.keys {
+		ki := key.GetKeyInfo()
+		if ki.Usage != "system" {
+			continue
+		}
+		if ki.ID != keyID {
+			continue
+		}
+		return key
+	}
+	return nil
+}

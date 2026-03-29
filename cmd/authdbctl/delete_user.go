@@ -76,7 +76,7 @@ func deleteUser(c *cli.Context) error {
 		return fmt.Errorf("failed to marshal delete user request: %v", err)
 	}
 
-	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, reqData)
+	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, nil, reqData)
 	if err != nil {
 		return fmt.Errorf("failed deleting %q user to %q realm: %w", c.String("username"), c.String("realm"), err)
 	}
