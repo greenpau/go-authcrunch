@@ -672,6 +672,21 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
+			name:  "test kms.CryptoKeyInfo struct",
+			entry: &kms.CryptoKeyInfo{},
+			opts: &Options{
+				AllowFieldMismatch: true,
+				AllowedFields: map[string]interface{}{
+					"token_sign_method": true,
+					"token_eval_expr":   true,
+					"parsed":            true,
+					"validated":         true,
+					"sign_capable":      true,
+					"verify_capable":    true,
+				},
+			},
+		},
+		{
 			name:  "test kms.CryptoKeyConfig struct",
 			entry: &kms.CryptoKeyConfig{},
 			opts: &Options{

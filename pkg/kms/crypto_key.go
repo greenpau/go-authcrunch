@@ -35,6 +35,7 @@ import (
 	jwtlib "github.com/golang-jwt/jwt/v5"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/shared"
+	"github.com/greenpau/go-authcrunch/pkg/system"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
@@ -73,6 +74,10 @@ func GetKeysFromConfig(cfg *CryptoKeyConfig) ([]*CryptoKey, error) {
 		switch {
 		case cfg.Algorithm == "hmac":
 			// Discovered shared key
+			k := newCryptoKey()
+			k.Config = cfg
+			keys = append(keys, k)
+		case cfg.Algorithm == "XChaCha20-Poly1305":
 			k := newCryptoKey()
 			k.Config = cfg
 			keys = append(keys, k)
@@ -147,6 +152,15 @@ func GetKeysFromConfig(cfg *CryptoKeyConfig) ([]*CryptoKey, error) {
 			k.Verify.Capable = true
 			k.Sign.Secret = []byte(k.Config.Secret)
 			k.Verify.Secret = []byte(k.Config.Secret)
+		case "XChaCha20-Poly1305":
+			k.Sign.Capable = true
+			k.Verify.Capable = true
+			secretKey, err := system.ParseKeyFromString(k.Config.Secret)
+			if err != nil {
+				return nil, fmt.Errorf("failed to extract key for algorithm %s: %v", k.Config.Algorithm, err)
+			}
+			k.Sign.Secret = secretKey
+			k.Verify.Secret = secretKey
 		case "rsa", "ecdsa":
 		default:
 			return nil, fmt.Errorf("unsupported config algorithm %s", k.Config.Algorithm)
@@ -632,4 +646,26 @@ func generateKey(cfg *CryptoKeyConfig, tag, algo string) (*CryptoKey, error) {
 	}
 
 	return key, nil
+}
+
+// GetKeyInfo returns CryptoKeyInfo.
+func (k *CryptoKey) GetKeyInfo() *CryptoKeyInfo {
+	ki := &CryptoKeyInfo{
+		Seq:                 k.Config.Seq,
+		ID:                  k.Config.ID,
+		Usage:               k.Config.Usage,
+		TokenName:           k.Config.TokenName,
+		CookieNames:         k.Config.CookieNames,
+		Source:              k.Config.Source,
+		Algorithm:           k.Config.Algorithm,
+		TokenLifetime:       k.Config.TokenLifetime,
+		PreferredSignMethod: k.Config.PreferredSignMethod,
+		EvalExpr:            k.Config.EvalExpr,
+		Parsed:              k.Config.parsed,
+		Validated:           k.Config.validated,
+		SignCapable:         (k.Sign != nil) && k.Sign.Capable,
+		VerifyCapable:       (k.Verify != nil) && k.Verify.Capable,
+	}
+
+	return ki
 }

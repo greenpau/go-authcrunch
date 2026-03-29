@@ -192,6 +192,7 @@ func (g *Gatekeeper) configure() error {
 		zap.String("forbidden_path", g.config.ForbiddenURL),
 		zap.String("session_id_cookie_name", g.sessionIDCookieName),
 		zap.Any("auth_cookies", g.tokenValidator.GetAuthCookies()),
+		zap.Any("crypto_key_store_keys", ks.GetKeysInfo()),
 	)
 	return nil
 }

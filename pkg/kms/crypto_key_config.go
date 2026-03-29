@@ -40,6 +40,7 @@ var (
 		"verify":      true,
 		"sign-verify": true,
 		"auto":        true,
+		"system":      true,
 		"and":         true,
 		"token":       true,
 		"lifetime":    true,
@@ -52,6 +53,7 @@ var (
 		"verify":      true,
 		"sign-verify": true,
 		"auto":        true,
+		"system":      true,
 	}
 )
 
@@ -162,7 +164,7 @@ func (k *CryptoKeyConfig) loadEnvVar() error {
 
 func (k *CryptoKeyConfig) validate() error {
 	switch k.Usage {
-	case "verify", "sign", "sign-verify", "auto":
+	case "verify", "sign", "sign-verify", "auto", "system":
 	case "":
 		return fmt.Errorf("key usage is not set")
 	default:
@@ -186,7 +188,11 @@ func (k *CryptoKeyConfig) validate() error {
 	}
 
 	switch k.Algorithm {
-	case "hmac", "rsa", "ecdsa", "":
+	case "hmac":
+	case "rsa":
+	case "ecdsa":
+	case "XChaCha20-Poly1305":
+	case "":
 	default:
 		return fmt.Errorf("key algorithm %q is invalid", k.Algorithm)
 	}
@@ -295,6 +301,7 @@ func ParseCryptoKeyConfigs(statements []string) ([]*CryptoKeyConfig, error) {
 			cursor = len(keys) - 1
 		case curKey.Usage != "" && keyUsage != "":
 			if (curKey.Usage == "verify" && keyUsage == "sign") || (curKey.Usage == "sign" && keyUsage == "verify") ||
+				(curKey.Usage == "system" && keyUsage == "system") ||
 				(curKey.Usage == "auto" && keyUsage == "auto") || (curKey.Usage == "sign-verify" && keyUsage == "sign-verify") {
 				nk := &CryptoKeyConfig{}
 				nk.Seq = len(keys)
@@ -344,18 +351,26 @@ func ParseCryptoKeyConfigs(statements []string) ([]*CryptoKeyConfig, error) {
 					return nil, errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(line, "unknown key token setting")
 				}
 				i += 2
-			case "verify", "sign", "sign-verify", "auto":
+			case "verify", "sign", "sign-verify", "auto", "system":
 				if key.Usage != "" {
 					return nil, errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(line, "duplicate key id")
 				}
 				key.Usage = args[i]
+				if key.Usage == "system" {
+					key.Algorithm = "XChaCha20-Poly1305"
+				}
 				if args[i+1] != "from" {
 					if remainder > 1 {
 						return nil, errors.ErrCryptoKeyConfigEntryInvalid.WithArgs(line, "bad syntax")
 					}
 					key.Secret = args[i+1]
 					key.Source = "config"
-					key.Algorithm = "hmac"
+
+					if key.Usage == "system" {
+						key.Algorithm = "XChaCha20-Poly1305"
+					} else {
+						key.Algorithm = "hmac"
+					}
 					i++
 					break
 				}

@@ -48,6 +48,16 @@ func NewEncryptorFromKey(keyID, filePath string) (*Encryptor, error) {
 
 	hexString := strings.TrimSpace(string(content))
 
+	key, err := ParseKeyFromString(hexString)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewEncryptor(keyID, key)
+}
+
+// ParseKeyFromString parses shared secret from hex encoded string.
+func ParseKeyFromString(hexString string) ([]byte, error) {
 	key, err := hex.DecodeString(hexString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode hex key: %w", err)
@@ -57,5 +67,5 @@ func NewEncryptorFromKey(keyID, filePath string) (*Encryptor, error) {
 		return nil, fmt.Errorf("invalid key size: expected 32 bytes, got %d", len(key))
 	}
 
-	return NewEncryptor(keyID, key)
+	return key, nil
 }

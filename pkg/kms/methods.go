@@ -21,21 +21,23 @@ import (
 var (
 	// signingMethods are supported JWT token signing methods.
 	signingMethods = map[string]string{
-		"HS256": "hmac",
-		"HS384": "hmac",
-		"HS512": "hmac",
-		"RS256": "rsa",
-		"RS384": "rsa",
-		"RS512": "rsa",
-		"ES256": "ecdsa",
-		"ES384": "ecdsa",
-		"ES512": "ecdsa",
+		"HS256":    "hmac",
+		"HS384":    "hmac",
+		"HS512":    "hmac",
+		"RS256":    "rsa",
+		"RS384":    "rsa",
+		"RS512":    "rsa",
+		"ES256":    "ecdsa",
+		"ES384":    "ecdsa",
+		"ES512":    "ecdsa",
+		"v4.local": "XChaCha20-Poly1305",
 	}
 
 	algoMethodMap = map[string][]string{
-		"hmac":  {"HS512", "HS384", "HS256"},
-		"rsa":   {"RS512", "RS384", "RS256"},
-		"ecdsa": {"ES512", "ES384", "ES256"},
+		"hmac":               {"HS512", "HS384", "HS256"},
+		"rsa":                {"RS512", "RS384", "RS256"},
+		"ecdsa":              {"ES512", "ES384", "ES256"},
+		"XChaCha20-Poly1305": {"v4.local"},
 	}
 )
 

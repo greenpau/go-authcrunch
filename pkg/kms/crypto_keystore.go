@@ -70,6 +70,15 @@ func (ks *CryptoKeyStore) GetConfig() *CryptoKeyStoreConfig {
 	return ks.config
 }
 
+// GetKeysInfo returns information about the keys in the store.
+func (ks *CryptoKeyStore) GetKeysInfo() []*CryptoKeyInfo {
+	keys := []*CryptoKeyInfo{}
+	for _, key := range ks.keys {
+		keys = append(keys, key.GetKeyInfo())
+	}
+	return keys
+}
+
 // AutoGenerate auto-generates public-private key pair capable of both
 // signing and verifying tokens.
 func (ks *CryptoKeyStore) AutoGenerate() error {
@@ -193,6 +202,9 @@ func (ks *CryptoKeyStore) ParseToken(ar *requests.AuthorizationRequest) (*user.U
 		if !k.Verify.Capable {
 			continue
 		}
+		if k.Config.Usage == "system" {
+			continue
+		}
 		switch ar.Token.Source {
 		case tokenSourceCookie:
 			if _, allowed := k.Verify.Token.CookieNames[ar.Token.Name]; !allowed {
@@ -257,6 +269,10 @@ func (ks *CryptoKeyStore) SignToken(tokenName, signMethod interface{}, usr *user
 				continue
 			}
 		}
+		if k.Config.Usage == "system" {
+			continue
+		}
+
 		response, err := k.sign(signMethod, usr.AsMap())
 		if err != nil {
 			return err
