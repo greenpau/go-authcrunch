@@ -22,6 +22,9 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
+
+	"go.uber.org/zap"
 )
 
 const (
@@ -175,16 +178,35 @@ func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *req
 		return nil, errors.ErrNoTokenFound
 	}
 
-	// Perform cache lookup for the previously obtained credentials.
-	usr = v.cache.Get(ar.Token.Payload)
-	if usr == nil {
-		// The user is not in the cache.
-		if ar.Token.IsPlainPayload {
-			usr, err = v.parseUserFromAuthProxyResponse(ar)
+	if ar.Token.IsPlainPayload {
+		usr = v.cache.Get(ar.Token.CacheKey)
+		if usr == nil {
+			v.logger.Debug("cache miss for plaintext credentials",
+				zap.String("session_id", ar.SessionID),
+				zap.String("request_id", ar.ID),
+				zap.String("src_ip", addrutil.GetSourceAddress(r)),
+				zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+				zap.String("credentials_source", ar.Token.Source),
+			)
+			usr, err = user.NewUser(ar.Token.Payload)
 			if err != nil {
 				return nil, err
 			}
+		}
+	} else {
+		if ar.Token.Source == tokenSourceBasicAuth || ar.Token.Source == tokenSourceAPIAuth {
+			usr = v.cache.Get(ar.Token.CacheKey)
 		} else {
+			usr = v.cache.Get(ar.Token.Payload)
+		}
+		if usr == nil {
+			v.logger.Debug("cache miss for JWT credentials",
+				zap.String("session_id", ar.SessionID),
+				zap.String("request_id", ar.ID),
+				zap.String("src_ip", addrutil.GetSourceAddress(r)),
+				zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+				zap.String("credentials_source", ar.Token.Source),
+			)
 			usr, err = v.keystore.ParseToken(ar)
 			if err != nil {
 				return nil, err
@@ -208,8 +230,14 @@ func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *req
 		}
 		return usr, err
 	}
+
 	usr.TokenSource = ar.Token.Source
 	usr.TokenName = ar.Token.Name
-	usr.Token = ar.Token.Payload
+
+	if ar.Token.IsPlainPayload || ar.Token.Source == tokenSourceBasicAuth || ar.Token.Source == tokenSourceAPIAuth {
+		usr.Token = ar.Token.CacheKey
+	} else {
+		usr.Token = ar.Token.Payload
+	}
 	return usr, nil
 }

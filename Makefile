@@ -18,7 +18,7 @@ info:
 	@echo "Build on $(BUILD_DATE) by $(BUILD_USER)"
 
 .PHONY: build
-build: templates
+build: templates mod-tidy
 	@mkdir -p bin/
 	@rm -rf ./bin/*
 	@versioned -sync ./pkg/identity/database.go
@@ -150,20 +150,42 @@ upgrade:
 	@go mod tidy
 	@echo "$@: complete"
 
-.PHONY: release
-release:
-	@echo "Making release"
+
+.PHONY: mod-tidy
+mod-tidy:
+	@echo "DEBUG: started $@"
 	@go mod tidy;
 	@go mod verify;
+	@echo "DEBUG: completed $@"
+
+.PHONY: release-git-check
+release-git-check: mod-tidy
+	@echo "DEBUG: started $@"
 	@if [ $(GIT_BRANCH) != "main" ]; then echo "cannot release to non-main branch $(GIT_BRANCH)" && false; fi
 	@git diff-index --quiet HEAD -- || ( echo "git directory is dirty, commit changes first" && false )
+	@echo "DEBUG: completed $@"
+
+.PHONY: release-update-version
+release-update-version:
+	@echo "DEBUG: started $@"
 	@versioned -patch
-	@echo "Patched version"
-	@git add VERSION
-	@versioned -sync ./cmd/authdbctl/main.go
-	@versioned -sync ./pkg/identity/database.go
-	@git add cmd/authdbctl/main.go ./pkg/identity/database.go
+	@versioned -prerelease -sync ./cmd/authdbctl/main.go
+	@versioned -prerelease -sync ./pkg/identity/database.go
+	@git add VERSION ./cmd/authdbctl/main.go ./pkg/identity/database.go
+
+.PHONY: release-git-commit
+release-git-commit:
+	@echo "DEBUG: started $@"
 	@git commit -m "released v`cat VERSION | head -1`"
 	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
 	@git push
 	@git push --tags
+	@echo "If necessary, run the following commands:"
+	@echo "  git push --delete origin v$(APP_VERSION)"
+	@echo "  git tag --delete v$(APP_VERSION)"
+	@echo "  go mod edit -retract v$(APP_VERSION)"
+	@echo "DEBUG: completed $@"
+
+.PHONY: release
+release: release-git-check release-update-version release-git-commit
+	@echo "DEBUG: completed $@"

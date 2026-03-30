@@ -16,6 +16,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -82,6 +83,31 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 			Secret:  tokenSecret,
 		}
 
+		remoteCacheKey := fmt.Sprintf("remote|%s|%s|%s", apr.Address, apr.Realm, apr.Secret)
+		if v.cache.Get(remoteCacheKey) != nil {
+			// This is the use case where remote authenticator was able to
+			// successfully authenticate user based on provided credentials
+			// before.
+			ar.Token.CacheKey = remoteCacheKey
+			ar.Token.Source = tokenSourceBasicAuth
+			ar.Token.IsPlainPayload = true
+			ar.Token.Found = true
+			return nil
+		}
+
+		localCacheKey := fmt.Sprintf("local|%s|%s|%s", apr.Address, apr.Realm, apr.Secret)
+		if usr := v.cache.Get(localCacheKey); usr != nil {
+			// This is the use case where local authenticator was able to
+			// successfully authenticate user based on provided credentials
+			// before.
+			ar.Token.CacheKey = localCacheKey
+			ar.Token.Source = tokenSourceBasicAuth
+			ar.Token.IsPlainPayload = false
+			ar.Token.Payload = usr.Token
+			ar.Token.Found = true
+			return nil
+		}
+
 		authProxy, err := v.authProxyConfig.GetAuthenticator(tokenRealm)
 		if err != nil {
 			return err
@@ -94,8 +120,12 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 		ar.Token.Payload = apr.Response.Payload
 		ar.Token.Source = tokenSourceBasicAuth
 		ar.Token.IsPlainPayload = apr.Response.IsPlainPayload
-
-		// TODO: add caching here
+		if apr.Response.IsPlainPayload {
+			ar.Token.CacheKey = remoteCacheKey
+		} else {
+			ar.Token.CacheKey = localCacheKey
+		}
+		ar.Token.Found = true
 	}
 
 	return nil
@@ -127,6 +157,31 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 		Secret:  tokenSecret,
 	}
 
+	remoteCacheKey := fmt.Sprintf("remote|%s|%s|%s", apr.Address, apr.Realm, apr.Secret)
+	if v.cache.Get(remoteCacheKey) != nil {
+		// This is the use case where remote authenticator was able to
+		// successfully authenticate user based on provided credentials
+		// before.
+		ar.Token.CacheKey = remoteCacheKey
+		ar.Token.Source = tokenSourceAPIAuth
+		ar.Token.IsPlainPayload = true
+		ar.Token.Found = true
+		return nil
+	}
+
+	localCacheKey := fmt.Sprintf("local|%s|%s|%s", apr.Address, apr.Realm, apr.Secret)
+	if usr := v.cache.Get(localCacheKey); usr != nil {
+		// This is the use case where local authenticator was able to
+		// successfully authenticate user based on provided credentials
+		// before.
+		ar.Token.CacheKey = localCacheKey
+		ar.Token.Source = tokenSourceAPIAuth
+		ar.Token.IsPlainPayload = false
+		ar.Token.Payload = usr.Token
+		ar.Token.Found = true
+		return nil
+	}
+
 	authProxy, err := v.authProxyConfig.GetAuthenticator(tokenRealm)
 	if err != nil {
 		return err
@@ -137,5 +192,13 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 	ar.Token.Name = apr.Response.Name
 	ar.Token.Payload = apr.Response.Payload
 	ar.Token.Source = tokenSourceAPIAuth
+	ar.Token.IsPlainPayload = apr.Response.IsPlainPayload
+	if apr.Response.IsPlainPayload {
+		ar.Token.CacheKey = remoteCacheKey
+	} else {
+		ar.Token.CacheKey = localCacheKey
+	}
+	ar.Token.Found = true
+
 	return nil
 }

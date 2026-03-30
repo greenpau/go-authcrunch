@@ -127,7 +127,48 @@ func (r *RemoteAuthenticator) BasicAuth(apr *Request) error {
 
 // APIKeyAuth performs API key authentication with the RemoteAuthenticator.
 func (r *RemoteAuthenticator) APIKeyAuth(apr *Request) error {
-	return fmt.Errorf("not implemented")
+	messageData := &system.APIKeyAuthRequestMessage{
+		Kind:    system.APIKeyAuthRequestKindKeyword,
+		APIKey:  apr.Secret,
+		Realm:   r.realmName,
+		Address: apr.Address,
+	}
+
+	reqMsg, err := system.ParseMessage(messageData)
+	if err != nil {
+		return err
+	}
+
+	if err := reqMsg.Validate(); err != nil {
+		return fmt.Errorf("failed to validate api key auth message: %v", err)
+	}
+
+	reqData, err := r.encryptor.EncryptMessage(reqMsg)
+	if err != nil {
+		return err
+	}
+
+	respMsgRaw, err := r.doRequest(reqData)
+	if err != nil {
+		return err
+	}
+
+	switch respMsg := respMsgRaw.(type) {
+	case *system.AuthResponseMessage:
+		if respMsg.Authenticated {
+			payload, err := json.Marshal(respMsg.UserData)
+			if err != nil {
+				return fmt.Errorf("failed serializing user data: %v", err)
+			}
+			apr.Response.Payload = string(payload)
+			apr.Response.IsPlainPayload = true
+			return nil
+		}
+	default:
+		return fmt.Errorf("received unsupported message type in response to api key auth request: %T", respMsg)
+	}
+
+	return fmt.Errorf("not authenticated")
 }
 
 func (r *RemoteAuthenticator) buildRemoteURL() string {

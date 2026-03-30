@@ -15,10 +15,11 @@
 package cache
 
 import (
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/user"
 	"sync"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
 // TokenCache contains cached tokens
@@ -70,10 +71,18 @@ func (c *TokenCache) Add(usr *user.User) error {
 	if usr.Token == "" {
 		return errors.ErrCacheEmptyToken
 	}
+	if usr.Claims == nil {
+		return errors.ErrCacheNilUser
+	}
+	if usr.Claims.ExpiresAt == 0 {
+		// If not expiration time provided, then expire within 5 minutes.
+		usr.Claims.ExpiresAt = time.Now().Add(5 * time.Minute).Unix()
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	usr.Cached = true
 	c.Entries[usr.Token] = usr
+
 	return nil
 }
 

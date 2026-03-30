@@ -40,6 +40,7 @@ type AuthorizationToken struct {
 	Name           string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	Source         string `json:"source,omitempty" xml:"source,omitempty" yaml:"source,omitempty"`
 	IsPlainPayload bool   `json:"is_plain_payload,omitempty" xml:"is_plain_payload,omitempty" yaml:"is_plain_payload,omitempty"`
+	CacheKey       string `json:"cache_key,omitempty" xml:"cache_key,omitempty" yaml:"cache_key,omitempty"`
 }
 
 // RedirectResponse holds the redirect parameters associated with the
