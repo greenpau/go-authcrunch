@@ -63,13 +63,13 @@ func (f *Factory) GetAccessTokenCookie(h, v string) string {
 }
 
 // GetIdentityTokenCookie returns raw identity token cookie string from key-value input.
-func (f *Factory) GetIdentityTokenCookie(baseURL, k, v string) string {
+func (f *Factory) GetIdentityTokenCookie(basePath string, k, v string) string {
 	var sb strings.Builder
 	sb.WriteString(k + "=" + v + ";")
-	if !strings.HasSuffix(baseURL, "/") {
-		baseURL = baseURL + "/"
+	if !strings.HasSuffix(basePath, "/") {
+		basePath = basePath + "/"
 	}
-	sb.WriteString(" Path=" + baseURL + "whoami;")
+	sb.WriteString(" Path=" + basePath + "whoami;")
 	if f.config.Lifetime != 0 {
 		sb.WriteString(fmt.Sprintf(" Max-Age=%d;", f.config.Lifetime))
 	}
@@ -81,11 +81,11 @@ func (f *Factory) GetIdentityTokenCookie(baseURL, k, v string) string {
 }
 
 // GetRefererCookie returns raw identity token cookie string from key-value input.
-func (f *Factory) GetRefererCookie(baseURL, v string) string {
+func (f *Factory) GetRefererCookie(basePath string, v string) string {
 	var sb strings.Builder
 	sb.WriteString(f.RefererCookieName + "=" + v + ";")
-	baseURL = strings.TrimSuffix(baseURL, "/")
-	sb.WriteString(" Path=" + baseURL + ";")
+	basePath = strings.TrimSuffix(basePath, "/")
+	sb.WriteString(" Path=" + basePath + ";")
 	if f.config.Lifetime != 0 {
 		sb.WriteString(fmt.Sprintf(" Max-Age=%d;", f.config.Lifetime))
 	}
@@ -97,13 +97,13 @@ func (f *Factory) GetRefererCookie(baseURL, v string) string {
 }
 
 // GetRefreshTokenCookie returns raw refresh token cookie string from key-value input.
-func (f *Factory) GetRefreshTokenCookie(baseURL, v string) string {
+func (f *Factory) GetRefreshTokenCookie(basePath string, v string) string {
 	var sb strings.Builder
 	sb.WriteString(f.RefreshTokenCookieName + "=" + v + ";")
-	if !strings.HasSuffix(baseURL, "/") {
-		baseURL = baseURL + "/"
+	if !strings.HasSuffix(basePath, "/") {
+		basePath = basePath + "/"
 	}
-	sb.WriteString(" Path=" + baseURL + "api/refresh_token;")
+	sb.WriteString(" Path=" + basePath + "api/refresh_token;")
 	if f.config.Lifetime != 0 {
 		sb.WriteString(fmt.Sprintf(" Max-Age=%d;", f.config.Lifetime))
 	}
@@ -115,11 +115,11 @@ func (f *Factory) GetRefreshTokenCookie(baseURL, v string) string {
 }
 
 // GetSandboxIDCookie returns raw identity token cookie string from key-value input.
-func (f *Factory) GetSandboxIDCookie(baseURL, v string) string {
+func (f *Factory) GetSandboxIDCookie(basePath string, v string) string {
 	var sb strings.Builder
 	sb.WriteString(f.SandboxIDCookieName + "=" + v + ";")
-	baseURL = strings.TrimSuffix(baseURL, "/")
-	sb.WriteString(" Path=" + baseURL + ";")
+	basePath = strings.TrimSuffix(basePath, "/")
+	sb.WriteString(" Path=" + basePath + ";")
 	if f.config.Lifetime != 0 {
 		sb.WriteString(fmt.Sprintf(" Max-Age=%d;", f.config.Lifetime))
 	}

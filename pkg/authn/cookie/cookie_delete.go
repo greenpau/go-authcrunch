@@ -58,49 +58,49 @@ func (f *Factory) GetDeleteSessionIDCookie(h string) string {
 }
 
 // GetDeleteIdentityTokenCookie returns raw identity token cookie with attributes for delete action.
-func (f *Factory) GetDeleteIdentityTokenCookie(s, baseURL string) string {
+func (f *Factory) GetDeleteIdentityTokenCookie(s, basePath string) string {
 	var sb strings.Builder
 	sb.WriteString(s)
 	sb.WriteString("=delete;")
-	if !strings.HasSuffix(baseURL, "/") {
-		baseURL = baseURL + "/"
+	if !strings.HasSuffix(basePath, "/") {
+		basePath = basePath + "/"
 	}
-	sb.WriteString(" Path=" + baseURL + "whoami;")
+	sb.WriteString(" Path=" + basePath + "whoami;")
 	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
 	return sb.String()
 }
 
 // GetDeleteRefreshTokenCookie returns raw refresh token cookie with attributes for delete action.
-func (f *Factory) GetDeleteRefreshTokenCookie(baseURL string) string {
+func (f *Factory) GetDeleteRefreshTokenCookie(basePath string) string {
 	var sb strings.Builder
 	sb.WriteString(f.RefreshTokenCookieName)
 	sb.WriteString("=delete;")
-	if !strings.HasSuffix(baseURL, "/") {
-		baseURL = baseURL + "/"
+	if !strings.HasSuffix(basePath, "/") {
+		basePath = basePath + "/"
 	}
-	sb.WriteString(" Path=" + baseURL + "api/refresh_token;")
+	sb.WriteString(" Path=" + basePath + "api/refresh_token;")
 	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
 	return sb.String()
 }
 
 // GetDeleteSandboxIDCookie returns raw sandbox ID cookie with attributes for delete action.
-func (f *Factory) GetDeleteSandboxIDCookie(baseURL string) string {
+func (f *Factory) GetDeleteSandboxIDCookie(basePath string) string {
 	var sb strings.Builder
 	sb.WriteString(f.SandboxIDCookieName)
 	sb.WriteString("=delete;")
-	baseURL = strings.TrimSuffix(baseURL, "/")
-	sb.WriteString(" Path=" + baseURL + ";")
+	basePath = strings.TrimSuffix(basePath, "/")
+	sb.WriteString(" Path=" + basePath + ";")
 	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
 	return sb.String()
 }
 
 // GetDeleteRefererCookie returns raw sandbox ID cookie with attributes for delete action.
-func (f *Factory) GetDeleteRefererCookie(baseURL string) string {
+func (f *Factory) GetDeleteRefererCookie(basePath string) string {
 	var sb strings.Builder
 	sb.WriteString(f.RefererCookieName)
 	sb.WriteString("=delete;")
-	baseURL = strings.TrimSuffix(baseURL, "/")
-	sb.WriteString(" Path=" + baseURL + ";")
+	basePath = strings.TrimSuffix(basePath, "/")
+	sb.WriteString(" Path=" + basePath + ";")
 	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
 	return sb.String()
 }

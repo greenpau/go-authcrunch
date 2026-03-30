@@ -66,7 +66,7 @@ func (p *Portal) injectRedirectURL(_ context.Context, w http.ResponseWriter, r *
 				return
 			}
 
-			c := p.cookie.GetRefererCookie(rr.Upstream.BaseURL, util.StripQueryParam(redirectURL[0], "login_hint"))
+			c := p.cookie.GetRefererCookie(rr.Upstream.BasePath, util.StripQueryParam(redirectURL[0], "login_hint"))
 			p.logger.Debug(
 				"redirect recorded",
 				zap.String("session_id", rr.Upstream.SessionID),

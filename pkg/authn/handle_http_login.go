@@ -146,7 +146,7 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 		usr.Authenticator.TempSessionID,
 	)
 
-	w.Header().Set("Set-Cookie", p.cookie.GetSandboxIDCookie(rr.Upstream.BaseURL, usr.Authenticator.TempSecret))
+	w.Header().Set("Set-Cookie", p.cookie.GetSandboxIDCookie(rr.Upstream.BasePath, usr.Authenticator.TempSecret))
 	w.Header().Set("Location", redirectLocation)
 	w.WriteHeader(http.StatusSeeOther)
 	return nil
