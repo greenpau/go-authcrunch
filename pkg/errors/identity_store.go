@@ -42,5 +42,5 @@ const (
 	ErrIdentityStoreConfigureInvalidBaseURL    StandardError = "identity store config %q has invalid base auth url %q: %v"
 
 	// Authentication Errors.
-	ErrIdentityStoreLocalAuthFailed StandardError = "local backed authentication failed: %v"
+	ErrIdentityStoreLocalAuthFailed StandardError = "local backend authentication failed: %v"
 )

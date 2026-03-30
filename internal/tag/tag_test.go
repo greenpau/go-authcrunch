@@ -717,6 +717,11 @@ func TestTagCompliance(t *testing.T) {
 			},
 		},
 		{
+			name:  "test authproxy.RemoteAuthenticator struct",
+			entry: &authproxy.RemoteAuthenticator{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test kms.CryptoKeyConfig struct",
 			entry: &kms.CryptoKeyConfig{},
 			opts: &Options{

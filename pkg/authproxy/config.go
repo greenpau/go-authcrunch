@@ -22,16 +22,6 @@ import (
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-// RealmAuthProxyConfig is auth proxy config for a realm.
-type RealmAuthProxyConfig struct {
-	PortalName        string `json:"portal_name,omitempty" xml:"portal_name,omitempty" yaml:"portal_name,omitempty"`
-	BasicAuthEnabled  bool   `json:"basic_auth_enabled,omitempty" xml:"basic_auth_enabled,omitempty" yaml:"basic_auth_enabled,omitempty"`
-	APIKeyAuthEnabled bool   `json:"api_key_auth_enabled,omitempty" xml:"api_key_auth_enabled,omitempty" yaml:"api_key_auth_enabled,omitempty"`
-	IsRemote          bool   `json:"is_remote,omitempty" xml:"is_remote,omitempty" yaml:"is_remote,omitempty"`
-	RemoteAddr        string `json:"remote_addr,omitempty" xml:"remote_addr,omitempty" yaml:"remote_addr,omitempty"`
-	authenticator     Authenticator
-}
-
 // Config is a config for an identity provider.
 type Config struct {
 	Realms map[string]*RealmAuthProxyConfig `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
@@ -73,9 +63,11 @@ func (cfg *Config) AddAuthenticator(portalName string, authenticator Authenticat
 	for _, realmCfg := range cfg.Realms {
 		if realmCfg.PortalName == portalName {
 			realmCfg.authenticator = authenticator
+			realmCfg.hasAuthenticator = true
 			found = true
 		}
 	}
+
 	if !found {
 		return fmt.Errorf("portal name %q was not found in auth proxy config", portalName)
 	}
@@ -107,11 +99,6 @@ func (cfg *Config) HasAPIKeyAuth(realmName string) bool {
 		return false
 	}
 	return realmCfg.APIKeyAuthEnabled
-}
-
-// NewRealmAuthProxyConfig returns an instance of RealmAuthProxyConfig.
-func NewRealmAuthProxyConfig() *RealmAuthProxyConfig {
-	return &RealmAuthProxyConfig{}
 }
 
 // ParseConfig parses configuration into an identity provider config

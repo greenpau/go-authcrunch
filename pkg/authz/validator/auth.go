@@ -68,7 +68,6 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 	}
 
 	if ar.Token.Found {
-
 		// Check if the realm is registered.
 		if !v.authProxyConfig.HasRealm(tokenRealm) {
 			return errors.ErrBasicAuthFailedRealmNotFound
@@ -94,6 +93,9 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 		ar.Token.Name = apr.Response.Name
 		ar.Token.Payload = apr.Response.Payload
 		ar.Token.Source = tokenSourceBasicAuth
+		ar.Token.IsPlainPayload = apr.Response.IsPlainPayload
+
+		// TODO: add caching here
 	}
 
 	return nil

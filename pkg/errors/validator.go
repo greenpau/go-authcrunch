@@ -25,7 +25,8 @@ const (
 	ErrEmptyTokenName                      StandardError = "token validator: a token name is empty"
 	ErrDuplicateTokenName                  StandardError = "token validator: duplicate allowed token name: %s"
 	ErrTokenValidatorOptionsNotFound       StandardError = "token validator: options not found"
-	ErrValidatorAuthProxy                  StandardError = "token validator: auth proxy config is nil"
+	ErrValidatorAuthProxyConfigNil         StandardError = "token validator: auth proxy config is nil"
 	ErrValidatorAuthProxyPortalName        StandardError = "token validator: auth proxy config has empty portal name"
 	ErrValidatorAuthProxiesNotFound        StandardError = "token validator: auth proxies not found"
+	ErrValidatorRealmAuthProxyNotFound     StandardError = "token validator: auth proxy for %q realm not found"
 )

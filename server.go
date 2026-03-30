@@ -183,6 +183,12 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		if err := gatekeeper.AddAuthenticators(authenticators); err != nil {
 			return nil, err
 		}
+		if err := gatekeeper.AddRemoteAuthenticators(); err != nil {
+			return nil, err
+		}
+		if err := gatekeeper.HasAuthProxies(); err != nil {
+			return nil, err
+		}
 	}
 
 	for _, portal := range srv.portals {

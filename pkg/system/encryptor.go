@@ -33,6 +33,9 @@ func NewEncryptor(keyID string, key []byte) (*Encryptor, error) {
 	if keyID == "" {
 		return nil, fmt.Errorf("key id is empty")
 	}
+	if len(key) != 32 {
+		return nil, fmt.Errorf("invalid key size: expected 32 bytes, got %d", len(key))
+	}
 	return &Encryptor{
 		keyID: keyID,
 		key:   key,
@@ -68,4 +71,9 @@ func ParseKeyFromString(hexString string) ([]byte, error) {
 	}
 
 	return key, nil
+}
+
+// GetKeyID returns key ID associated with the Encryptor.
+func (enc *Encryptor) GetKeyID() string {
+	return enc.keyID
 }

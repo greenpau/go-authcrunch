@@ -16,8 +16,9 @@ package authproxy
 
 // Response is a response from identity store.
 type Response struct {
-	Name    string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	Payload string `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
+	Name           string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Payload        string `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
+	IsPlainPayload bool   `json:"is_plain_payload,omitempty" xml:"is_plain_payload,omitempty" yaml:"is_plain_payload,omitempty"`
 }
 
 // Request is a request to an identity store via Authenticator.

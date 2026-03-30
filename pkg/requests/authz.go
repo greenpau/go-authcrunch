@@ -35,10 +35,11 @@ type AuthorizationResponse struct {
 
 // AuthorizationToken holds the token found in an authorization request.
 type AuthorizationToken struct {
-	Found   bool   `json:"found,omitempty" xml:"found,omitempty" yaml:"found,omitempty"`
-	Payload string `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
-	Name    string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	Source  string `json:"source,omitempty" xml:"source,omitempty" yaml:"source,omitempty"`
+	Found          bool   `json:"found,omitempty" xml:"found,omitempty" yaml:"found,omitempty"`
+	Payload        string `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
+	Name           string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Source         string `json:"source,omitempty" xml:"source,omitempty" yaml:"source,omitempty"`
+	IsPlainPayload bool   `json:"is_plain_payload,omitempty" xml:"is_plain_payload,omitempty" yaml:"is_plain_payload,omitempty"`
 }
 
 // RedirectResponse holds the redirect parameters associated with the

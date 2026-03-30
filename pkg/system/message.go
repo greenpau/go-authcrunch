@@ -35,6 +35,10 @@ func ParseMessage(data interface{}) (Message, error) {
 		b = []byte(v)
 	case []byte:
 		b = v
+	case *BasicAuthRequestMessage:
+		return v, nil
+	case *APIKeyAuthRequestMessage:
+		return v, nil
 	default:
 		return nil, fmt.Errorf("unsupported data type: %T", data)
 	}

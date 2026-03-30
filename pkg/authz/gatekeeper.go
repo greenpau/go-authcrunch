@@ -192,6 +192,7 @@ func (g *Gatekeeper) configure() error {
 		zap.String("forbidden_path", g.config.ForbiddenURL),
 		zap.String("session_id_cookie_name", g.sessionIDCookieName),
 		zap.Any("auth_cookies", g.tokenValidator.GetAuthCookies()),
+		zap.Any("auth_proxy_config", g.tokenValidator.GetAuthProxyConfig()),
 		zap.Any("crypto_key_store_keys", ks.GetKeysInfo()),
 	)
 	return nil
@@ -205,5 +206,37 @@ func (g *Gatekeeper) AddAuthenticators(authenticators []authproxy.Authenticator)
 			return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
 		}
 	}
+	return nil
+}
+
+// AddRemoteAuthenticators adds remote authproxy.Authenticator instances to Gatekeeper.
+func (g *Gatekeeper) AddRemoteAuthenticators() error {
+	if g.config.AuthProxyConfig != nil {
+		authenticators, err := g.tokenValidator.RegisterRemoteAuthProxies(g.config.AuthProxyConfig)
+		if err != nil {
+			return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
+		}
+		g.authenticators = append(g.authenticators, authenticators...)
+	}
+	return nil
+}
+
+// HasAuthProxies returns error if there is AuthProxyConfig but no authenticators.
+func (g *Gatekeeper) HasAuthProxies() error {
+	if g.tokenValidator == nil {
+		return nil
+	}
+
+	cfg := g.tokenValidator.GetAuthProxyConfig()
+	if cfg == nil {
+		return nil
+	}
+
+	for realmName, realmCfg := range cfg.Realms {
+		if !realmCfg.HasAuthenticator() {
+			return errors.ErrValidatorRealmAuthProxyNotFound.WithArgs(realmName)
+		}
+	}
+
 	return nil
 }

@@ -69,3 +69,8 @@ func (b *Browser) Do(req *http.Request) (string, *http.Response, error) {
 
 	return string(respBody), resp, nil
 }
+
+// SetTimeout sets timeout on HTTP requests.
+func (b *Browser) SetTimeout(duration time.Duration) {
+	b.client.Timeout = duration
+}

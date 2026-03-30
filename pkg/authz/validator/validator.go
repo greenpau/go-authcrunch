@@ -16,6 +16,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -109,26 +110,10 @@ func (v *TokenValidator) GetAuthCookies() map[string]interface{} {
 	return v.authCookies
 }
 
-// func (v *TokenValidator) setAllowedTokenNames(arr []string) error {
-// 	m := make(map[string]bool)
-// 	for _, s := range arr {
-// 		s = strings.TrimSpace(s)
-// 		if s == "" {
-// 			return errors.ErrEmptyTokenName
-// 		}
-// 		if _, exists := m[s]; exists {
-// 			return errors.ErrDuplicateTokenName.WithArgs(s)
-// 		}
-// 		m[s] = true
-// 	}
-// 	v.clearAuthSources()
-// 	for _, s := range arr {
-// 		v.authHeaders[s] = true
-// 		v.authCookies[s] = true
-// 		v.authQueryParams[s] = true
-// 	}
-// 	return nil
-// }
+// GetAuthProxyConfig returns auth proxy config.
+func (v *TokenValidator) GetAuthProxyConfig() *authproxy.Config {
+	return v.authProxyConfig
+}
 
 // SetSourcePriority sets the order in which various token sources are being
 // evaluated for the presence of keys. The default order is cookie, header,
@@ -415,12 +400,11 @@ func (v *TokenValidator) CacheUser(usr *user.User) error {
 // RegisterAuthProxy registers authproxy.Authenticator  with TokenValidator.
 func (v *TokenValidator) RegisterAuthProxy(cfg *authproxy.Config, authenticators []authproxy.Authenticator) error {
 	if cfg == nil {
-		return errors.ErrValidatorAuthProxy
+		return errors.ErrValidatorAuthProxyConfigNil
 	}
 
 	v.authProxyConfig = cfg
 
-	foundProxyAssociatedWithPortal := false
 	for _, authenticator := range authenticators {
 		if !cfg.HasPortal(authenticator.GetName()) {
 			continue
@@ -430,12 +414,51 @@ func (v *TokenValidator) RegisterAuthProxy(cfg *authproxy.Config, authenticators
 		}
 		v.logger.Debug("associated portal with auth proxy config",
 			zap.String("portal_name", authenticator.GetName()),
-			zap.Any("auth_proxy_config", v.authProxyConfig),
+			zap.Any("auth_proxy_config", v.GetAuthProxyConfig()),
 		)
-		foundProxyAssociatedWithPortal = true
-	}
-	if !foundProxyAssociatedWithPortal {
-		return errors.ErrValidatorAuthProxiesNotFound
 	}
 	return nil
+}
+
+// RegisterRemoteAuthProxies registers remote authproxy.Authenticator instances with TokenValidator.
+func (v *TokenValidator) RegisterRemoteAuthProxies(cfg *authproxy.Config) ([]authproxy.Authenticator, error) {
+	authenticators := []authproxy.Authenticator{}
+
+	if cfg == nil {
+		return authenticators, nil
+	}
+
+	v.authProxyConfig = cfg
+
+	for realmName, realmCfg := range cfg.Realms {
+		if realmCfg.HasAuthenticator() {
+			continue
+		}
+		if realmCfg.PortalName != "" {
+			continue
+		}
+
+		// for _, keystore.Get
+		var cryptoKey *kms.CryptoKey
+		for _, key := range v.keystore.GetKeys() {
+			ki := key.GetKeyInfo()
+			if ki.Usage == "system" {
+				cryptoKey = key
+				break
+			}
+		}
+
+		if cryptoKey == nil {
+			return nil, fmt.Errorf("failed to find system crypto key for remote authenticator for %q realm", realmName)
+		}
+
+		remoteAuthenticator, err := authproxy.NewRemoteAuthenticator(realmName, cryptoKey, realmCfg, v.logger)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create remote authenticator for %q realm: %v", realmName, err)
+		}
+		realmCfg.AddAuthenticator(remoteAuthenticator)
+		authenticators = append(authenticators, remoteAuthenticator)
+	}
+
+	return authenticators, nil
 }
