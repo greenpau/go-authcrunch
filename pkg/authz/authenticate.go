@@ -119,7 +119,7 @@ func (g *Gatekeeper) handleUnauthorizedUser(w http.ResponseWriter, r *http.Reque
 		return g.handleAuthorizeWithBadRequest(w, r, ar)
 	}
 
-	g.expireAuthCookies(w, r)
+	// g.expireAuthCookies(w, r)
 
 	if !g.config.AuthRedirectDisabled {
 		return g.handleAuthorizeWithRedirect(w, r, ar)
@@ -128,25 +128,25 @@ func (g *Gatekeeper) handleUnauthorizedUser(w http.ResponseWriter, r *http.Reque
 	return err
 }
 
-// expireAuthCookies sends cookie delete in HTTP response.
-func (g *Gatekeeper) expireAuthCookies(w http.ResponseWriter, r *http.Request) {
-	cookies := g.tokenValidator.GetAuthCookies()
-	if cookies == nil {
-		return
-	}
+// // expireAuthCookies sends cookie delete in HTTP response.
+// func (g *Gatekeeper) expireAuthCookies(w http.ResponseWriter, r *http.Request) {
+// 	cookies := g.tokenValidator.GetAuthCookies()
+// 	if cookies == nil {
+// 		return
+// 	}
 
-	for _, cookie := range r.Cookies() {
-		if _, exists := cookies[cookie.Name]; !exists {
-			continue
-		}
-		w.Header().Add("Set-Cookie", cookie.Name+"=delete; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT")
-	}
-}
+// 	for _, cookie := range r.Cookies() {
+// 		if _, exists := cookies[cookie.Name]; !exists {
+// 			continue
+// 		}
+// 		w.Header().Add("Set-Cookie", cookie.Name+"=delete; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT")
+// 	}
+// }
 
 // handleAuthorizeWithAuthFailed handles failed authorization requests based on
 // basic authentication and API keys.
-func (g *Gatekeeper) handleAuthorizeWithAuthFailed(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
-	g.expireAuthCookies(w, r)
+func (g *Gatekeeper) handleAuthorizeWithAuthFailed(w http.ResponseWriter, _ *http.Request, ar *requests.AuthorizationRequest) error {
+	// g.expireAuthCookies(w, r)
 	w.WriteHeader(401)
 	w.Write([]byte(`401 Unauthorized`))
 	return ar.Response.Error
@@ -154,8 +154,8 @@ func (g *Gatekeeper) handleAuthorizeWithAuthFailed(w http.ResponseWriter, r *htt
 
 // handleAuthorizeWithBadRequest handles failed authorization requests where
 // user data was insufficient to establish a user.
-func (g *Gatekeeper) handleAuthorizeWithBadRequest(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
-	g.expireAuthCookies(w, r)
+func (g *Gatekeeper) handleAuthorizeWithBadRequest(w http.ResponseWriter, _ *http.Request, ar *requests.AuthorizationRequest) error {
+	// g.expireAuthCookies(w, r)
 	w.WriteHeader(400)
 	w.Write([]byte(`400 Bad Request`))
 	return ar.Response.Error
