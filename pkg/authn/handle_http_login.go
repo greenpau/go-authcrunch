@@ -26,6 +26,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -343,23 +344,32 @@ func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.R
 	// Delete sandbox cookie, if present.
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteSandboxIDCookie(rr.Upstream.BasePath))
 
-	// Determine whether redirect cookie is present and reditect to the page that
+	// Determine whether redirect cookie is present and redirect to the page that
 	// forwarded a user to the authentication portal.
 	if cookie, err := r.Cookie(p.cookie.RefererCookieName); err == nil {
 		if redirectURL, err := url.Parse(cookie.Value); err == nil {
-			redirectLocation = redirectURL.String()
-			p.logger.Debug(
-				"Detected cookie-based redirect",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.String("redirect_url", redirectLocation),
-			)
-			cookie.Value = ""
-			cookie.MaxAge = -1
-			cookie.Expires = time.Unix(0, 0)
-			http.SetCookie(w, cookie)
-			w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
+			if len(p.config.TrustedLoginRedirectURIConfigs) > 0 && redirects.Match(redirectURL, p.config.TrustedLoginRedirectURIConfigs) {
+				redirectLocation = redirectURL.String()
+				p.logger.Debug(
+					"Detected cookie-based redirect",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("redirect_url", redirectLocation),
+				)
+			} else {
+				p.logger.Warn(
+					"Redirect cookie value is not trusted, ignoring",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("redirect_url", redirectURL.String()),
+				)
+			}
 		}
+		cookie.Value = ""
+		cookie.MaxAge = -1
+		cookie.Expires = time.Unix(0, 0)
+		http.SetCookie(w, cookie)
+		w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
 	}
 	if redirectLocation == "" {
 		// Redirect authenticated user to portal page when no redirect cookie found.

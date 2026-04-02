@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -61,21 +62,34 @@ func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWrit
 	if cookie, err := r.Cookie(p.cookie.RefererCookieName); err == nil {
 		redirectURL, err := url.Parse(cookie.Value)
 		if err == nil {
-			p.logger.Debug(
-				"Cookie-based redirect",
+			if len(p.config.TrustedLoginRedirectURIConfigs) > 0 && redirects.Match(redirectURL, p.config.TrustedLoginRedirectURIConfigs) {
+				p.logger.Debug(
+					"Cookie-based redirect",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.String("redirect_url", redirectURL.String()),
+				)
+				w.Header().Set("Location", redirectURL.String())
+				cookie.Value = ""
+				cookie.MaxAge = -1
+				cookie.Expires = time.Unix(0, 0)
+				http.SetCookie(w, cookie)
+				w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
+				w.WriteHeader(http.StatusSeeOther)
+				return nil
+			}
+			p.logger.Warn(
+				"Redirect cookie value is not trusted, ignoring",
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
 				zap.String("redirect_url", redirectURL.String()),
 			)
-			w.Header().Set("Location", redirectURL.String())
-			cookie.Value = ""
-			cookie.MaxAge = -1
-			cookie.Expires = time.Unix(0, 0)
-			http.SetCookie(w, cookie)
-			w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
-			w.WriteHeader(http.StatusSeeOther)
-			return nil
 		}
+		cookie.Value = ""
+		cookie.MaxAge = -1
+		cookie.Expires = time.Unix(0, 0)
+		http.SetCookie(w, cookie)
+		w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
 	}
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
