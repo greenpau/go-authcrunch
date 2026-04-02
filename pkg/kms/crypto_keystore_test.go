@@ -311,6 +311,63 @@ func TestKeystoreOperators(t *testing.T) {
 	}
 }
 
+func TestDefaultTokenLifetimePropagation(t *testing.T) {
+	var testcases = []struct {
+		name         string
+		config       []string
+		wantLifetime int
+	}{
+		{
+			name: "explicit key inherits default lifetime",
+			config: []string{
+				"crypto default token lifetime 2592000",
+				"crypto key sign-verify foobar",
+			},
+			wantLifetime: 2592000,
+		},
+		{
+			name: "explicit key uses own lifetime over default",
+			config: []string{
+				"crypto default token lifetime 2592000",
+				"crypto key token lifetime 3600",
+				"crypto key sign-verify foobar",
+			},
+			wantLifetime: 3600,
+		},
+		{
+			name: "explicit key lifetime of 900 preserved over default",
+			config: []string{
+				"crypto default token lifetime 2592000",
+				"crypto key token lifetime 900",
+				"crypto key sign-verify foobar",
+			},
+			wantLifetime: 900,
+		},
+		{
+			name: "no default falls back to 900",
+			config: []string{
+				"crypto key sign-verify foobar",
+			},
+			wantLifetime: 900,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+			ksCfg, err := NewCryptoKeyStoreConfig(tc.config)
+			if err != nil {
+				t.Fatalf("unexpected NewCryptoKeyStoreConfig error: %v", err)
+			}
+			ks, err := NewCryptoKeyStore(ksCfg, logutil.NewLogger())
+			if err != nil {
+				t.Fatalf("unexpected NewCryptoKeyStore error: %v", err)
+			}
+			got := ks.GetTokenLifetime(nil, nil)
+			tests.EvalObjectsWithLog(t, "token_lifetime", tc.wantLifetime, got, msgs)
+		})
+	}
+}
+
 func TestCryptoKeyStoreAutoGenerate(t *testing.T) {
 	var testcases = []struct {
 		name      string
