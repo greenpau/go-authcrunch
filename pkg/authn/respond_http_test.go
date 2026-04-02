@@ -22,10 +22,14 @@ import (
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/user"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
 )
 
@@ -215,6 +219,107 @@ func TestRefererSchemeValidation(t *testing.T) {
 			rb := string(rw.body)
 
 			tests.EvalObjectsWithLog(t, "go_back_url", true, strings.Contains(rb, tc.want), []string{})
+		})
+	}
+}
+
+func buildGrantAccessPortal(trustedConfigs []*redirects.RedirectURIMatchConfig) (*Portal, error) {
+	f, err := cookie.NewFactory(nil)
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := kms.NewCryptoKeyStoreConfig(nil)
+	if err != nil {
+		return nil, err
+	}
+	ks, err := kms.NewCryptoKeyStore(cfg, logutil.NewLogger())
+	if err != nil {
+		return nil, err
+	}
+	sessions := cache.NewSessionCache()
+	sessions.Run()
+	return &Portal{
+		config: &PortalConfig{
+			Name:                           "testPortal",
+			TrustedLoginRedirectURIConfigs: trustedConfigs,
+		},
+		logger:   zap.L(),
+		cookie:   f,
+		keystore: ks,
+		sessions: sessions,
+	}, nil
+}
+
+func TestGrantAccessRedirectCookieValidation(t *testing.T) {
+	trustedConfig, err := redirects.NewRedirectURIMatchConfig("exact", "app.example.com", "prefix", "/")
+	if err != nil {
+		t.Fatalf("failed to build redirect config: %v", err)
+	}
+
+	var testcases = []struct {
+		name           string
+		cookieValue    string
+		trustedConfigs []*redirects.RedirectURIMatchConfig
+		wantLocation   string
+	}{
+		{
+			name:           "trusted redirect cookie honored",
+			cookieValue:    "https://app.example.com/dashboard",
+			trustedConfigs: []*redirects.RedirectURIMatchConfig{trustedConfig},
+			wantLocation:   "https://app.example.com/dashboard",
+		},
+		{
+			name:           "untrusted redirect cookie rejected",
+			cookieValue:    "https://evil.example.com/steal",
+			trustedConfigs: []*redirects.RedirectURIMatchConfig{trustedConfig},
+			wantLocation:   "/portal",
+		},
+		{
+			name:           "no trust configs rejects cookie",
+			cookieValue:    "https://app.example.com/dashboard",
+			trustedConfigs: nil,
+			wantLocation:   "/portal",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := buildGrantAccessPortal(tc.trustedConfigs)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			rw := buildCustomResponseWriter()
+			r := &http.Request{
+				URL:    &url.URL{Scheme: "https", Host: "auth.example.com", Path: "/login"},
+				Method: "POST",
+				Host:   "auth.example.com",
+				Header: http.Header{},
+			}
+			r.AddCookie(&http.Cookie{Name: p.cookie.RefererCookieName, Value: tc.cookieValue})
+			rr := requests.NewRequest()
+			rr.Upstream.SessionID = "test-session"
+			rr.Upstream.BasePath = "/"
+			rr.Upstream.BaseURL = "https://auth.example.com"
+
+			usr, err := user.NewUser(map[string]interface{}{
+				"sub":   "testuser",
+				"roles": []string{"user"},
+				"exp":   float64(9999999999),
+				"iat":   float64(1000000000),
+				"nbf":   float64(1000000000),
+			})
+			if err != nil {
+				t.Fatalf("failed to create user: %v", err)
+			}
+
+			p.grantAccess(context.Background(), rw, r, rr, usr)
+
+			location := rw.Header().Get("Location")
+			if strings.HasPrefix(tc.wantLocation, "https://") {
+				tests.EvalObjectsWithLog(t, "location", tc.wantLocation, location, []string{})
+			} else {
+				tests.EvalObjectsWithLog(t, "location", true, strings.HasSuffix(location, tc.wantLocation), []string{})
+			}
 		})
 	}
 }
