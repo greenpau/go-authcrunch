@@ -147,6 +147,56 @@ func TestFactory(t *testing.T) {
 				"roles": []string(nil),
 			},
 		},
+		{
+			name: "require auth challenges when user has mfa",
+			user: map[string]interface{}{
+				"email":      "greenpau@outlook.com",
+				"roles":      []string{"authp/user"},
+				"challenges": []string{"password", "mfa"},
+			},
+			keys: []string{
+				"challenges",
+			},
+			configs: []*Config{
+				{
+					Matchers: []string{
+						"match challenges mfa",
+					},
+					Actions: []string{
+						"require auth challenges password u2f",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"challenges": []string{
+					"auth challenges password u2f",
+				},
+			},
+		},
+		{
+			name: "no challenge override when challenges lack mfa",
+			user: map[string]interface{}{
+				"email":      "greenpau@outlook.com",
+				"roles":      []string{"authp/user"},
+				"challenges": []string{"password", "totp"},
+			},
+			keys: []string{
+				"challenges",
+			},
+			configs: []*Config{
+				{
+					Matchers: []string{
+						"match challenges mfa",
+					},
+					Actions: []string{
+						"require auth challenges password u2f",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"challenges": []string{"password", "totp"},
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
