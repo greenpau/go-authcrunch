@@ -16,6 +16,7 @@ package oauth
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -92,6 +93,64 @@ func TestManageStateManagerExpiry(t *testing.T) {
 
 			if sm.exists(state) != tc.shouldExist {
 				t.Errorf("state exists = %v, want %v", sm.exists(state), tc.shouldExist)
+			}
+		})
+	}
+}
+
+func TestValidateNonce(t *testing.T) {
+	testcases := []struct {
+		name      string
+		nonce     string
+		input     string
+		shouldErr bool
+		err       error
+	}{
+		{
+			name:  "valid nonce matches",
+			nonce: "abc123",
+			input: "abc123",
+		},
+		{
+			name:      "invalid nonce rejected with same length",
+			nonce:     "abc123",
+			input:     "xyz789",
+			shouldErr: true,
+			err:       fmt.Errorf("nonce mismatch for state test-state"),
+		},
+		{
+			name:      "missing state rejected",
+			nonce:     "",
+			input:     "any",
+			shouldErr: true,
+			err:       fmt.Errorf("no nonce found for test-state"),
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			sm := newStateManager()
+			state := "test-state"
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+			if tc.nonce != "" {
+				if err := sm.add(state, tc.nonce); err != nil {
+					t.Fatalf("unexpected error from add: %v", err)
+				}
+			}
+
+			err := sm.validateNonce(state, tc.input)
+			if tests.EvalErrWithLog(t, err, "validateNonce", tc.shouldErr, tc.err, msgs) {
+				return
+			}
+
+			// Verify nonce values are not leaked in error messages.
+			if tc.shouldErr && tc.nonce != "" {
+				if strings.Contains(err.Error(), tc.nonce) {
+					t.Error("error message should not contain expected nonce value")
+				}
+				if strings.Contains(err.Error(), tc.input) {
+					t.Error("error message should not contain received nonce value")
+				}
 			}
 		})
 	}

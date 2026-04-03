@@ -15,6 +15,7 @@
 package oauth
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"sync"
 	"time"
@@ -77,8 +78,8 @@ func (sm *stateManager) validateNonce(state, nonce string) error {
 	if !exists {
 		return fmt.Errorf("no nonce found for %s", state)
 	}
-	if v != nonce {
-		return fmt.Errorf("nonce mismatch %s (expected) vs. %s (received)", v, nonce)
+	if subtle.ConstantTimeCompare([]byte(v), []byte(nonce)) != 1 {
+		return fmt.Errorf("nonce mismatch for state %s", state)
 	}
 	return nil
 }
