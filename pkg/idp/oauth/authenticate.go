@@ -240,7 +240,9 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	authorizationURL.RawQuery = params.Encode()
 	r.Response.RedirectURL = authorizationURL.String()
 
-	b.state.add(state, nonce)
+	if err := b.state.add(state, nonce); err != nil {
+		return errors.ErrIdentityProviderOauthAuthorizationStateLimitReached
+	}
 	b.logger.Debug(
 		"redirecting to OAuth 2.0 endpoint",
 		zap.String("request_id", r.ID),
