@@ -15,8 +15,11 @@
 package oauth
 
 import (
+	"fmt"
 	"testing"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
 )
 
 func TestManageStateManagerExpiry(t *testing.T) {
@@ -97,7 +100,9 @@ func TestManageStateManagerExpiry(t *testing.T) {
 func TestStateManagerDel(t *testing.T) {
 	sm := newStateManager()
 	state := "test-state"
-	sm.add(state, "test-nonce")
+	if err := sm.add(state, "test-nonce"); err != nil {
+		t.Fatalf("unexpected error from add: %v", err)
+	}
 	sm.addCode(state, "test-code")
 
 	if !sm.exists(state) {
@@ -117,4 +122,75 @@ func TestStateManagerDel(t *testing.T) {
 		t.Error("code should be deleted")
 	}
 	sm.mux.Unlock()
+}
+
+func TestStateManagerCapacity(t *testing.T) {
+	testcases := []struct {
+		name      string
+		maxStates int
+		fillCount int
+		shouldErr bool
+		err       error
+	}{
+		{
+			name:      "add below capacity succeeds",
+			maxStates: 5,
+			fillCount: 4,
+		},
+		{
+			name:      "add at capacity rejected",
+			maxStates: 5,
+			fillCount: 5,
+			shouldErr: true,
+			err:       fmt.Errorf("OAuth state manager at capacity (5)"),
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			sm := newStateManager()
+			sm.maxStates = tc.maxStates
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+
+			for i := 0; i < tc.fillCount; i++ {
+				if err := sm.add(fmt.Sprintf("state-%d", i), fmt.Sprintf("nonce-%d", i)); err != nil {
+					t.Fatalf("unexpected error filling state %d: %v", i, err)
+				}
+			}
+
+			err := sm.add("one-more", "one-more-nonce")
+			if tests.EvalErrWithLog(t, err, "add", tc.shouldErr, tc.err, msgs) {
+				return
+			}
+		})
+	}
+}
+
+func TestStateManagerDefaultCapacity(t *testing.T) {
+	sm := newStateManager()
+	if sm.maxStates != defaultMaxStates {
+		t.Fatalf("expected default maxStates %d, got %d", defaultMaxStates, sm.maxStates)
+	}
+}
+
+func TestStateManagerCapacityAfterDel(t *testing.T) {
+	sm := newStateManager()
+	sm.maxStates = 2
+
+	if err := sm.add("state-0", "nonce-0"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if err := sm.add("state-1", "nonce-1"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if err := sm.add("state-2", "nonce-2"); err == nil {
+		t.Fatal("expected error at capacity, got nil")
+	}
+
+	sm.del("state-0")
+
+	if err := sm.add("state-2", "nonce-2"); err != nil {
+		t.Fatalf("expected add to succeed after del, got: %v", err)
+	}
 }

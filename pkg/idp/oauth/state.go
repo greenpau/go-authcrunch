@@ -20,28 +20,36 @@ import (
 	"time"
 )
 
+const defaultMaxStates = 10000
+
 type stateManager struct {
-	mux    sync.Mutex
-	nonces map[string]string
-	states map[string]time.Time
-	codes  map[string]string
-	status map[string]interface{}
+	mux       sync.Mutex
+	maxStates int
+	nonces    map[string]string
+	states    map[string]time.Time
+	codes     map[string]string
+	status    map[string]interface{}
 }
 
 func newStateManager() *stateManager {
 	return &stateManager{
-		nonces: make(map[string]string),
-		states: make(map[string]time.Time),
-		codes:  make(map[string]string),
-		status: make(map[string]interface{}),
+		maxStates: defaultMaxStates,
+		nonces:    make(map[string]string),
+		states:    make(map[string]time.Time),
+		codes:     make(map[string]string),
+		status:    make(map[string]interface{}),
 	}
 }
 
-func (sm *stateManager) add(state, nonce string) {
+func (sm *stateManager) add(state, nonce string) error {
 	sm.mux.Lock()
 	defer sm.mux.Unlock()
+	if len(sm.states) >= sm.maxStates {
+		return fmt.Errorf("OAuth state manager at capacity (%d)", sm.maxStates)
+	}
 	sm.nonces[state] = nonce
 	sm.states[state] = time.Now()
+	return nil
 }
 
 func (sm *stateManager) del(state string) {
