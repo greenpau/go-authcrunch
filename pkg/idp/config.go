@@ -73,6 +73,7 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			"response_type_disabled",
 			"scope_disabled",
 			"nonce_disabled",
+			"pkce_disabled",
 			// Enabled features.
 			"accept_header_enabled",
 			"js_callback_enabled",

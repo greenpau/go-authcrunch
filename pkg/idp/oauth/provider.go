@@ -97,6 +97,18 @@ func NewIdentityProvider(cfg *Config, logger *zap.Logger) (*IdentityProvider, er
 		return nil, err
 	}
 
+	if jsonCfgData, err := json.Marshal(cfg); err == nil {
+		var cfgDataMap map[string]any
+		if err := json.Unmarshal(jsonCfgData, &cfgDataMap); err == nil {
+			for key := range cfgDataMap {
+				if strings.Contains(strings.ToLower(key), "secret") {
+					delete(cfgDataMap, key)
+				}
+			}
+			logger.Debug("validated identity provider config", zap.Any("idp_config", cfgDataMap))
+		}
+	}
+
 	go manageStateManager(b.state)
 
 	return b, nil
