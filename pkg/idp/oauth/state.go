@@ -30,6 +30,7 @@ type stateManager struct {
 	states    map[string]time.Time
 	codes     map[string]string
 	status    map[string]interface{}
+	verifiers map[string]string
 }
 
 func newStateManager() *stateManager {
@@ -39,6 +40,7 @@ func newStateManager() *stateManager {
 		states:    make(map[string]time.Time),
 		codes:     make(map[string]string),
 		status:    make(map[string]interface{}),
+		verifiers: make(map[string]string),
 	}
 }
 
@@ -60,6 +62,20 @@ func (sm *stateManager) del(state string) {
 	delete(sm.states, state)
 	delete(sm.codes, state)
 	delete(sm.status, state)
+	delete(sm.verifiers, state)
+}
+
+func (sm *stateManager) addVerifier(state, verifier string) {
+	sm.mux.Lock()
+	defer sm.mux.Unlock()
+	sm.verifiers[state] = verifier
+}
+
+func (sm *stateManager) getVerifier(state string) (string, bool) {
+	sm.mux.Lock()
+	defer sm.mux.Unlock()
+	v, exists := sm.verifiers[state]
+	return v, exists
 }
 
 func (sm *stateManager) exists(state string) bool {
@@ -114,6 +130,7 @@ func manageStateManager(sm *stateManager) {
 				delete(sm.states, state)
 				delete(sm.codes, state)
 				delete(sm.status, state)
+				delete(sm.verifiers, state)
 			}
 		}
 		sm.mux.Unlock()

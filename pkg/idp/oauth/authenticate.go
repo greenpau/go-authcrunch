@@ -15,6 +15,9 @@
 package oauth
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -99,13 +102,17 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 			)
 
 			reqRedirectURI := reqPath + "/authorization-code-callback"
+			var codeVerifier string
+			if !b.disablePKCE {
+				codeVerifier, _ = b.state.getVerifier(reqParamsState)
+			}
 			var accessToken map[string]interface{}
 			var err error
 			switch b.config.Driver {
 			case "facebook":
 				accessToken, err = b.fetchFacebookAccessToken(reqRedirectURI, reqParamsState, reqParamsCode)
 			default:
-				accessToken, err = b.fetchAccessToken(reqRedirectURI, reqParamsState, reqParamsCode)
+				accessToken, err = b.fetchAccessToken(reqRedirectURI, reqParamsState, reqParamsCode, codeVerifier)
 			}
 			if err != nil {
 				b.logger.Debug(
@@ -237,11 +244,27 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 
 	params.Set("client_id", b.config.ClientID)
 
+	var codeVerifier string
+	if !b.disablePKCE {
+		verifierBytes := make([]byte, 32)
+		if _, err := rand.Read(verifierBytes); err != nil {
+			return errors.ErrIdentityProviderConfig.WithArgs("failed to generate PKCE verifier")
+		}
+		codeVerifier = base64.RawURLEncoding.EncodeToString(verifierBytes)
+		h := sha256.Sum256([]byte(codeVerifier))
+		codeChallenge := base64.RawURLEncoding.EncodeToString(h[:])
+		params.Set("code_challenge", codeChallenge)
+		params.Set("code_challenge_method", "S256")
+	}
+
 	authorizationURL.RawQuery = params.Encode()
 	r.Response.RedirectURL = authorizationURL.String()
 
 	if err := b.state.add(state, nonce); err != nil {
 		return errors.ErrIdentityProviderOauthAuthorizationStateLimitReached
+	}
+	if codeVerifier != "" {
+		b.state.addVerifier(state, codeVerifier)
 	}
 	b.logger.Debug(
 		"redirecting to OAuth 2.0 endpoint",
@@ -251,7 +274,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	return nil
 }
 
-func (b *IdentityProvider) fetchAccessToken(redirectURI, state, code string) (map[string]interface{}, error) {
+func (b *IdentityProvider) fetchAccessToken(redirectURI, state, code, codeVerifier string) (map[string]interface{}, error) {
 	params := url.Values{}
 	params.Set("client_id", b.config.ClientID)
 	params.Set("client_secret", b.config.ClientSecret)
@@ -261,6 +284,9 @@ func (b *IdentityProvider) fetchAccessToken(redirectURI, state, code string) (ma
 	params.Set("state", state)
 	params.Set("code", code)
 	params.Set("redirect_uri", redirectURI)
+	if codeVerifier != "" {
+		params.Set("code_verifier", codeVerifier)
+	}
 
 	cli := &http.Client{
 		Timeout: time.Second * 10,

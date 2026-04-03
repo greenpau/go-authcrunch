@@ -64,6 +64,7 @@ type IdentityProvider struct {
 	disableResponseType    bool
 	disableNonce           bool
 	disableScope           bool
+	disablePKCE            bool
 	enableAcceptHeader     bool
 	enableBodyDecoder      bool
 	requiredTokenFields    map[string]interface{}
@@ -168,6 +169,9 @@ func (b *IdentityProvider) Configure() error {
 	if b.config.ScopeDisabled {
 		b.disableScope = true
 	}
+	if b.config.PKCEDisabled {
+		b.disablePKCE = true
+	}
 
 	if b.config.AcceptHeaderEnabled {
 		b.enableAcceptHeader = true
@@ -202,19 +206,23 @@ func (b *IdentityProvider) Configure() error {
 		b.disablePassGrantType = true
 		b.disableResponseType = true
 		b.disableNonce = true
+		b.disablePKCE = true
 		b.enableAcceptHeader = true
 	case "facebook":
 		b.disableKeyVerification = true
 		b.disablePassGrantType = true
 		b.disableResponseType = true
 		b.disableNonce = true
+		b.disablePKCE = true
 		b.enableAcceptHeader = true
 	case "discord":
 		b.disableKeyVerification = true
 		b.disableNonce = true
+		b.disablePKCE = true
 		b.enableAcceptHeader = true
 	case "linkedin":
 		b.disableNonce = true
+		b.disablePKCE = true
 	case "nextcloud":
 		b.disableKeyVerification = true
 	}

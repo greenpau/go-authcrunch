@@ -253,3 +253,36 @@ func TestStateManagerCapacityAfterDel(t *testing.T) {
 		t.Fatalf("expected add to succeed after del, got: %v", err)
 	}
 }
+
+func TestStateManagerVerifier(t *testing.T) {
+	sm := newStateManager()
+	state := "test-state"
+
+	if _, ok := sm.getVerifier(state); ok {
+		t.Fatal("expected no verifier for unknown state")
+	}
+
+	sm.addVerifier(state, "test-verifier")
+	v, ok := sm.getVerifier(state)
+	if !ok {
+		t.Fatal("expected verifier to exist")
+	}
+	if v != "test-verifier" {
+		t.Fatalf("expected verifier %q, got %q", "test-verifier", v)
+	}
+}
+
+func TestStateManagerVerifierCleanup(t *testing.T) {
+	sm := newStateManager()
+	state := "test-state"
+	if err := sm.add(state, "test-nonce"); err != nil {
+		t.Fatalf("unexpected error from add: %v", err)
+	}
+	sm.addVerifier(state, "test-verifier")
+
+	sm.del(state)
+
+	if _, ok := sm.getVerifier(state); ok {
+		t.Error("verifier should be deleted after del")
+	}
+}
