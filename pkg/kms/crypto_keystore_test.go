@@ -350,6 +350,13 @@ func TestDefaultTokenLifetimePropagation(t *testing.T) {
 			},
 			wantLifetime: 900,
 		},
+		{
+			name: "only default lifetime without explicit key auto-generates",
+			config: []string{
+				"crypto default token lifetime 3600",
+			},
+			wantLifetime: 3600,
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

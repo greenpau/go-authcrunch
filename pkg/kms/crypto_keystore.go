@@ -15,6 +15,7 @@
 package kms
 
 import (
+	"fmt"
 	"strings"
 
 	jwtlib "github.com/golang-jwt/jwt/v5"
@@ -50,7 +51,14 @@ func NewCryptoKeyStore(cfg *CryptoKeyStoreConfig, logger *zap.Logger) (*CryptoKe
 		logger: logger,
 	}
 	if len(cfg.RawKeyConfigs) > 0 {
-		cryptoKeyConfigs, err := ParseCryptoKeyConfigs(cfg.RawKeyConfigs)
+		keyConfigs := cfg.RawKeyConfigs
+		if cfg.TokenLifetime > 0 {
+			keyConfigs = append([]string{fmt.Sprintf("crypto default token lifetime %d", cfg.TokenLifetime)}, keyConfigs...)
+		}
+		if cfg.TokenName != "" {
+			keyConfigs = append([]string{fmt.Sprintf("crypto default token name %s", cfg.TokenName)}, keyConfigs...)
+		}
+		cryptoKeyConfigs, err := ParseCryptoKeyConfigs(keyConfigs)
 		if err != nil {
 			return nil, errors.ErrConfigDirectiveFail.WithArgs("crypto.key", cfg.RawKeyConfigs, err)
 		}

@@ -41,8 +41,6 @@ func TestNewCryptoKeyStoreConfig(t *testing.T) {
 				TokenName:     "AUTHP_ACCESS_TOKEN",
 				TokenLifetime: 3600,
 				RawKeyConfigs: []string{
-					"crypto default token lifetime 3600",
-					"crypto default token name AUTHP_ACCESS_TOKEN",
 					"crypto key sign-verify foobar",
 				},
 				AutoGenerateTag:  "default",
