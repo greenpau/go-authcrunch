@@ -61,14 +61,12 @@ func NewCryptoKeyStoreConfig(statements []string) (*CryptoKeyStoreConfig, error)
 				switch args[3] {
 				case "name":
 					cfg.TokenName = args[4]
-					cryptoKeyConfigs = append(cryptoKeyConfigs, statement)
 				case "lifetime":
 					lifetime, err := strconv.Atoi(args[4])
 					if err != nil {
 						return nil, errors.ErrCryptoKeyStoreConfigEntryInvalid.WithArgs(statement, err)
 					}
 					cfg.TokenLifetime = lifetime
-					cryptoKeyConfigs = append(cryptoKeyConfigs, statement)
 				default:
 					return nil, errors.ErrCryptoKeyStoreConfigEntryInvalid.WithArgs(statement, fmt.Sprintf("contains unsupported 'crypto default token' parameter: %s", args[3]))
 				}
