@@ -46,6 +46,15 @@ func NewFactory(c *Config) (*Factory, error) {
 		f.config = c
 	}
 	if f.config.Domains != nil {
+		// Strip leading dots from domain values (RFC 6265 Section 5.2.3).
+		for k, v := range f.config.Domains {
+			v.Domain = strings.TrimPrefix(v.Domain, ".")
+			if trimmedKey := strings.TrimPrefix(k, "."); trimmedKey != k {
+				delete(f.config.Domains, k)
+				f.config.Domains[trimmedKey] = v
+			}
+		}
+
 		domains := []string{}
 		domainList := []*DomainConfig{}
 		for _, v := range f.config.Domains {
