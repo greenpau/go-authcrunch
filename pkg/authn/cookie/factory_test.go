@@ -406,6 +406,42 @@ func TestFactory(t *testing.T) {
 				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=example.com; Path=/; Secure; HttpOnly;",
 			},
 		},
+		{
+			name: "leading dot domain config suffix match",
+			host: "admin.example.com",
+			config: &Config{
+				Domains: map[string]*DomainConfig{
+					".example.com": {
+						Seq:    0,
+						Domain: ".example.com",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Domain=example.com; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Domain=example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Domain=example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=example.com; Path=/; Secure; HttpOnly;",
+			},
+		},
+		{
+			name: "leading dot domain config exact host match",
+			host: "example.com",
+			config: &Config{
+				Domains: map[string]*DomainConfig{
+					".example.com": {
+						Seq:    0,
+						Domain: ".example.com",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"grant":          "AUTHP_ACCESS_TOKEN=foobar; Domain=example.com; Path=/; Secure; HttpOnly;",
+				"delete":         "AUTHP_ACCESS_TOKEN=delete; Domain=example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_delete": "AUTHP_SESSION_ID=delete; Domain=example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;",
+				"session_grant":  "AUTHP_SESSION_ID=foobar; Domain=example.com; Path=/; Secure; HttpOnly;",
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
