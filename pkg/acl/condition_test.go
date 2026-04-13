@@ -2738,6 +2738,38 @@ func TestNewAclRuleCondition(t *testing.T) {
 			condition: `reserved match roles anonymous`,
 			shouldErr: true,
 			err:       errors.ErrACLRuleConditionSyntaxMatchNotFound.WithArgs("reserved match roles anonymous"),
+		}, {
+			name:      "exact match a string condition against challenges field",
+			condition: `exact match challenges mfa`,
+			want: map[string]interface{}{
+				"condition_type":          "*acl.ruleStrCondExactMatchListStrInput",
+				"field_name":              "challenges",
+				"regex_enabled":           false,
+				"match_strategy":          "fieldMatchExact",
+				"always_true":             false,
+				"default_match_strategy":  "fieldMatchUnknown",
+				"reserved_match_strategy": "fieldMatchReserved",
+				"default_data_type":       "dataTypeUnknown",
+				"expr_data_type":          "dataTypeStr",
+				"input_data_type":         "dataTypeListStr",
+				"values":                  []string{`mfa`},
+			},
+		}, {
+			name:      "exact match a string condition against challenge alias",
+			condition: `exact match challenge mfa`,
+			want: map[string]interface{}{
+				"condition_type":          "*acl.ruleStrCondExactMatchListStrInput",
+				"field_name":              "challenges",
+				"regex_enabled":           false,
+				"match_strategy":          "fieldMatchExact",
+				"always_true":             false,
+				"default_match_strategy":  "fieldMatchUnknown",
+				"reserved_match_strategy": "fieldMatchReserved",
+				"default_data_type":       "dataTypeUnknown",
+				"expr_data_type":          "dataTypeStr",
+				"input_data_type":         "dataTypeListStr",
+				"values":                  []string{`mfa`},
+			},
 		},
 	}
 	for _, tc := range testcases {
