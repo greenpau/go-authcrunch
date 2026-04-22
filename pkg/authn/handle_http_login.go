@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/authchal"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
@@ -175,6 +176,19 @@ func (p *Portal) injectUserChallenges(usr *user.User, data map[string]interface{
 		}
 	}
 
+	// Drop generic mfa if a specific MFA keyword is present, otherwise
+	// both dispatch as separate checkpoints.
+	if hasSpecificMFAChallenge(entries) {
+		dedup := make([]string, 0, len(entries))
+		for _, e := range entries {
+			if e == authchal.MfaKeyword {
+				continue
+			}
+			dedup = append(dedup, e)
+		}
+		entries = dedup
+	}
+
 	checkpoints, err := user.NewCheckpoints(entries)
 	if err != nil {
 		return err
@@ -184,6 +198,18 @@ func (p *Portal) injectUserChallenges(usr *user.User, data map[string]interface{
 	}
 	usr.Checkpoints = checkpoints
 	return nil
+}
+
+// hasSpecificMFAChallenge reports whether the list contains a specific MFA
+// keyword that supersedes the generic mfa. Extend when adding new MFA keywords.
+func hasSpecificMFAChallenge(entries []string) bool {
+	for _, e := range entries {
+		switch e {
+		case authchal.TotpKeyword, authchal.U2fKeyword, authchal.EmailKeyword:
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Portal) identifyUserRequest(rr *requests.Request, identity map[string]string) error {
