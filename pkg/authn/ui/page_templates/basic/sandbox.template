@@ -543,6 +543,12 @@
     {{ if eq .Data.view "mfa_app_register" }}
     <!-- App Authentication Registration Scripts -->
     <script src="{{ pathjoin .ActionEndpoint "/assets/js/sandbox_mfa_add_app.js" }}"></script>
+    <script>
+    document.querySelector('.mfa-add-app-form')?.addEventListener('submit', () => {
+      const el = document.querySelector('input[name="label"]');
+      if (el && !el.value.trim()) el.value = 'Auth';
+    });
+    </script>
     {{ end }}
     {{ if or (eq .Data.view "mfa_u2f_register") (eq .Data.view "mfa_u2f_auth") }}
     <!-- U2F Authentication Scripts -->
