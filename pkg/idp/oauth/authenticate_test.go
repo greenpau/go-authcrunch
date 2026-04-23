@@ -75,16 +75,40 @@ func TestAuthenticate(t *testing.T) {
 					"response_type=code&scope=identify&state=52fdfc07-2182-454f-963f-5f0f9a621d72",
 			},
 		},
-		// Verify request-time prompt is forwarded to the authorization redirect.
 		{
-			name: "discord provider forwards request prompt",
+			name: "discord provider forwards request prompt none",
 			config: &Config{
 				Name:             "discord",
 				Realm:            "discord",
 				Driver:           "discord",
 				ClientID:         "foo",
 				ClientSecret:     "bar",
-				AuthorizationURL: "https://discordapp.com/other/authorize?prompt=none",
+				AuthorizationURL: "https://discordapp.com/other/authorize",
+			},
+			logger: logutil.NewLogger(),
+			request: requests.Request{
+				Upstream: requests.Upstream{
+					BaseURL:  "https://hostname",
+					BasePath: "/route",
+					Request:  must(http.NewRequest(http.MethodGet, "/foo?bar=baz&prompt=none", nil)),
+				},
+			},
+			want: requests.Response{
+				Code: 302,
+				RedirectURL: "https://discordapp.com/other/authorize?client_id=foo&prompt=none&" +
+					"redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
+					"response_type=code&scope=identify&state=9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+			},
+		},
+		{
+			name: "discord provider forwards request prompt consent",
+			config: &Config{
+				Name:             "discord",
+				Realm:            "discord",
+				Driver:           "discord",
+				ClientID:         "foo",
+				ClientSecret:     "bar",
+				AuthorizationURL: "https://discordapp.com/other/authorize",
 			},
 			logger: logutil.NewLogger(),
 			request: requests.Request{
@@ -96,9 +120,59 @@ func TestAuthenticate(t *testing.T) {
 			},
 			want: requests.Response{
 				Code: 302,
-				RedirectURL: "https://discordapp.com/other/authorize?client_id=foo&prompt=consent&" +
+				RedirectURL: "https://discordapp.com/other/authorize?client_id=foo&" +
+					"prompt=consent&redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
+					"response_type=code&scope=identify&state=81855ad8-681d-4d86-91e9-1e00167939cb",
+			},
+		},
+		{
+			name: "discord provider forwards request prompt select_account",
+			config: &Config{
+				Name:             "discord",
+				Realm:            "discord",
+				Driver:           "discord",
+				ClientID:         "foo",
+				ClientSecret:     "bar",
+				AuthorizationURL: "https://discordapp.com/other/authorize",
+			},
+			logger: logutil.NewLogger(),
+			request: requests.Request{
+				Upstream: requests.Upstream{
+					BaseURL:  "https://hostname",
+					BasePath: "/route",
+					Request:  must(http.NewRequest(http.MethodGet, "/foo?bar=baz&prompt=select_account", nil)),
+				},
+			},
+			want: requests.Response{
+				Code: 302,
+				RedirectURL: "https://discordapp.com/other/authorize?client_id=foo&" +
+					"prompt=select_account&redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
+					"response_type=code&scope=identify&state=6694d2c4-22ac-4208-a007-2939487f6999",
+			},
+		},
+		{
+			name: "discord provider drops invalid request prompt",
+			config: &Config{
+				Name:             "discord",
+				Realm:            "discord",
+				Driver:           "discord",
+				ClientID:         "foo",
+				ClientSecret:     "bar",
+				AuthorizationURL: "https://discordapp.com/other/authorize",
+			},
+			logger: logutil.NewLogger(),
+			request: requests.Request{
+				Upstream: requests.Upstream{
+					BaseURL:  "https://hostname",
+					BasePath: "/route",
+					Request:  must(http.NewRequest(http.MethodGet, "/foo?bar=baz&prompt=bogus", nil)),
+				},
+			},
+			want: requests.Response{
+				Code: 302,
+				RedirectURL: "https://discordapp.com/other/authorize?client_id=foo&" +
 					"redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
-					"response_type=code&scope=identify&state=9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+					"response_type=code&scope=identify&state=eb9d18a4-4784-445d-87f3-c67cf22746e9",
 			},
 		},
 		{

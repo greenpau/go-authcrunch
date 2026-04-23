@@ -246,7 +246,16 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		params.Set("login_hint", reqParamsLoginHint)
 	}
 	if promptExists {
-		params.Set("prompt", reqParamsPrompt)
+		if prompt, ok := normalizeOAuthPromptValue(reqParamsPrompt); ok {
+			params.Set("prompt", prompt)
+		} else {
+			b.logger.Warn(
+				"ignoring unsupported OAuth 2.0 prompt value",
+				zap.String("session_id", r.Upstream.SessionID),
+				zap.String("request_id", r.ID),
+				zap.String("prompt", strings.TrimSpace(reqParamsPrompt)),
+			)
+		}
 	}
 
 	params.Set("client_id", b.config.ClientID)
@@ -279,6 +288,17 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		zap.String("redirect_url", r.Response.RedirectURL),
 	)
 	return nil
+}
+
+// See https://developers.google.com/identity/protocols/oauth2/web-server for supported prompt values.
+func normalizeOAuthPromptValue(prompt string) (string, bool) {
+	prompt = strings.TrimSpace(prompt)
+	switch prompt {
+	case "none", "consent", "select_account":
+		return prompt, true
+	default:
+		return "", false
+	}
 }
 
 func (b *IdentityProvider) fetchAccessToken(redirectURI, state, code, codeVerifier string) (map[string]interface{}, error) {
