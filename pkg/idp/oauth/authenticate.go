@@ -40,8 +40,8 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	reqPath := r.Upstream.BaseURL + path.Join(r.Upstream.BasePath, r.Upstream.Method, r.Upstream.Realm)
 	r.Response.Code = http.StatusBadRequest
 
-	var accessTokenExists, idTokenExists, codeExists, stateExists, errorExists, loginHintExists, additionalScopesExists bool
-	var reqParamsAccessToken, reqParamsIDToken, reqParamsState, reqParamsCode, reqParamsError, reqParamsLoginHint, additionalScopes string
+	var accessTokenExists, idTokenExists, codeExists, stateExists, errorExists, loginHintExists, additionalScopesExists, promptExists bool
+	var reqParamsAccessToken, reqParamsIDToken, reqParamsState, reqParamsCode, reqParamsError, reqParamsLoginHint, reqParamsPrompt, additionalScopes string
 	reqParams := r.Upstream.Request.URL.Query()
 	if _, exists := reqParams["access_token"]; exists {
 		accessTokenExists = true
@@ -66,6 +66,10 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	if _, exists := reqParams["login_hint"]; exists {
 		loginHintExists = true
 		reqParamsLoginHint = reqParams["login_hint"][0]
+	}
+	if _, exists := reqParams["prompt"]; exists {
+		promptExists = true
+		reqParamsPrompt = reqParams["prompt"][0]
 	}
 	if _, exists := reqParams["additional_scopes"]; exists {
 		additionalScopesExists = true
@@ -240,6 +244,9 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	}
 	if loginHintExists {
 		params.Set("login_hint", reqParamsLoginHint)
+	}
+	if promptExists {
+		params.Set("prompt", reqParamsPrompt)
 	}
 
 	params.Set("client_id", b.config.ClientID)

@@ -75,6 +75,32 @@ func TestAuthenticate(t *testing.T) {
 					"response_type=code&scope=identify&state=52fdfc07-2182-454f-963f-5f0f9a621d72",
 			},
 		},
+		// Verify request-time prompt is forwarded to the authorization redirect.
+		{
+			name: "discord provider forwards request prompt",
+			config: &Config{
+				Name:             "discord",
+				Realm:            "discord",
+				Driver:           "discord",
+				ClientID:         "foo",
+				ClientSecret:     "bar",
+				AuthorizationURL: "https://discordapp.com/other/authorize?prompt=none",
+			},
+			logger: logutil.NewLogger(),
+			request: requests.Request{
+				Upstream: requests.Upstream{
+					BaseURL:  "https://hostname",
+					BasePath: "/route",
+					Request:  must(http.NewRequest(http.MethodGet, "/foo?bar=baz&prompt=consent", nil)),
+				},
+			},
+			want: requests.Response{
+				Code: 302,
+				RedirectURL: "https://discordapp.com/other/authorize?client_id=foo&prompt=consent&" +
+					"redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
+					"response_type=code&scope=identify&state=9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+			},
+		},
 		{
 			name: "discord provider with overridden and invalid urls",
 			config: &Config{
