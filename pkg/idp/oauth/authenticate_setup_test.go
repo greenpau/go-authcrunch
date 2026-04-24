@@ -73,7 +73,7 @@ func mustParseRedirectQuery(t *testing.T, redirectURL string) url.Values {
 	return parsedURL.Query()
 }
 
-func TestParseOAuthAuthenticateRequestParamsEmptyQueryIsNotOAuthResponse(t *testing.T) {
+func TestEmptyQueryIsNotOAuthResponse(t *testing.T) {
 	params := parseOAuthAuthenticateRequestParams(url.Values{})
 
 	if params.isOAuthResponse() {
@@ -81,7 +81,7 @@ func TestParseOAuthAuthenticateRequestParamsEmptyQueryIsNotOAuthResponse(t *test
 	}
 }
 
-func TestGetOAuthAuthenticateRequestParamHandlesExistingKeyWithNoValues(t *testing.T) {
+func TestRequestParamExistsWithoutValue(t *testing.T) {
 	values := url.Values{
 		"prompt": []string{},
 	}
@@ -96,7 +96,7 @@ func TestGetOAuthAuthenticateRequestParamHandlesExistingKeyWithNoValues(t *testi
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsParsesCodeAndState(t *testing.T) {
+func TestCodeAndStateAreParsed(t *testing.T) {
 	values := url.Values{}
 	values.Set("code", "code-1")
 	values.Set("state", "state-1")
@@ -114,7 +114,7 @@ func TestParseOAuthAuthenticateRequestParamsParsesCodeAndState(t *testing.T) {
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsParsesErrorDescription(t *testing.T) {
+func TestAuthorizationErrorIsParsed(t *testing.T) {
 	values := url.Values{}
 	values.Set("error", "access_denied")
 	values.Set("error_description", "denied by provider")
@@ -129,7 +129,7 @@ func TestParseOAuthAuthenticateRequestParamsParsesErrorDescription(t *testing.T)
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsParsesAccessAndIDTokens(t *testing.T) {
+func TestTokensAreParsed(t *testing.T) {
 	values := url.Values{}
 	values.Set("access_token", "access-token-1")
 	values.Set("id_token", "id-token-1")
@@ -144,7 +144,7 @@ func TestParseOAuthAuthenticateRequestParamsParsesAccessAndIDTokens(t *testing.T
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsParsesLoginHintAndAdditionalScopes(t *testing.T) {
+func TestLoginHintAndScopesAreParsed(t *testing.T) {
 	values := url.Values{}
 	values.Set("login_hint", "user@example.com")
 	values.Set("additional_scopes", "email profile")
@@ -159,70 +159,100 @@ func TestParseOAuthAuthenticateRequestParamsParsesLoginHintAndAdditionalScopes(t
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsParsesPromptNone(t *testing.T) {
-	values := url.Values{}
-	values.Set("prompt", "none")
+func TestValidGooglePrompts(t *testing.T) {
+	testcases := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{
+			name: "trims prompt",
+			raw:  "  consent  ",
+			want: "consent",
+		},
+		{
+			name: "allows consent and select_account",
+			raw:  "consent select_account",
+			want: "consent select_account",
+		},
+		{
+			name: "preserves request order",
+			raw:  "select_account consent",
+			want: "select_account consent",
+		},
+		{
+			name: "collapses whitespace",
+			raw:  "consent\t select_account\n",
+			want: "consent select_account",
+		},
+		{
+			name: "allows none by itself",
+			raw:  "none",
+			want: "none",
+		},
+	}
 
-	params := parseOAuthAuthenticateRequestParams(values)
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			prompt, ok := normalizeOAuthPromptValue(tc.raw)
 
-	if !params.promptExists || params.promptRaw != "none" {
-		t.Fatalf("expected prompt %q, got %q", "none", params.promptRaw)
+			if !ok || prompt != tc.want {
+				t.Fatalf("expected valid prompt %q, got %q", tc.want, prompt)
+			}
+		})
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsParsesPromptConsent(t *testing.T) {
-	values := url.Values{}
-	values.Set("prompt", "consent")
+func TestInvalidGooglePrompts(t *testing.T) {
+	testcases := []struct {
+		name string
+		raw  string
+	}{
+		{
+			name: "empty prompt",
+			raw:  "",
+		},
+		{
+			name: "unknown prompt",
+			raw:  "bogus",
+		},
+		{
+			name: "unknown prompt mixed with valid prompt",
+			raw:  "consent bogus",
+		},
+		{
+			name: "none mixed with consent",
+			raw:  "none consent",
+		},
+		{
+			name: "none mixed with select_account",
+			raw:  "select_account none",
+		},
+		{
+			name: "duplicate consent",
+			raw:  "consent consent",
+		},
+		{
+			name: "duplicate select_account",
+			raw:  "select_account select_account",
+		},
+	}
 
-	params := parseOAuthAuthenticateRequestParams(values)
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			prompt, ok := normalizeOAuthPromptValue(tc.raw)
 
-	if !params.promptExists || params.promptRaw != "consent" {
-		t.Fatalf("expected prompt %q, got %q", "consent", params.promptRaw)
+			if ok {
+				t.Fatalf("expected prompt %q to be invalid", tc.raw)
+			}
+			if prompt != "" {
+				t.Fatalf("expected normalized prompt to be empty, got %q", prompt)
+			}
+		})
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsParsesPromptSelectAccount(t *testing.T) {
-	values := url.Values{}
-	values.Set("prompt", "select_account")
-
-	params := parseOAuthAuthenticateRequestParams(values)
-
-	if !params.promptExists || params.promptRaw != "select_account" {
-		t.Fatalf("expected prompt %q, got %q", "select_account", params.promptRaw)
-	}
-}
-
-func TestNormalizeOAuthPromptValueTrimsPrompt(t *testing.T) {
-	values := url.Values{}
-	values.Set("prompt", "  consent  ")
-
-	params := parseOAuthAuthenticateRequestParams(values)
-	prompt, ok := normalizeOAuthPromptValue(params.promptRaw)
-
-	if !ok || prompt != "consent" {
-		t.Fatalf("expected valid prompt %q, got %q", "consent", prompt)
-	}
-}
-
-func TestNormalizeOAuthPromptValueRejectsInvalidPrompt(t *testing.T) {
-	values := url.Values{}
-	values.Set("prompt", "bogus")
-
-	params := parseOAuthAuthenticateRequestParams(values)
-	prompt, ok := normalizeOAuthPromptValue(params.promptRaw)
-
-	if !params.promptExists {
-		t.Fatal("expected prompt to exist")
-	}
-	if ok {
-		t.Fatal("expected prompt to be invalid")
-	}
-	if prompt != "" {
-		t.Fatalf("expected normalized prompt to be empty, got %q", prompt)
-	}
-}
-
-func TestPrepareAuthorizationRedirectURLPreservesConfiguredQueryParams(t *testing.T) {
+func TestConfiguredQueryParamsArePreserved(t *testing.T) {
 	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.authorizationURL = "https://domain/oauth/authorize?access_type=offline&prompt=none"
 
@@ -237,7 +267,7 @@ func TestPrepareAuthorizationRedirectURLPreservesConfiguredQueryParams(t *testin
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLRequestPromptOverridesConfiguredPrompt(t *testing.T) {
+func TestGooglePromptOverridesConfiguredPrompt(t *testing.T) {
 	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.authorizationURL = "https://domain/oauth/authorize?prompt=none"
 	values := url.Values{}
@@ -251,7 +281,21 @@ func TestPrepareAuthorizationRedirectURLRequestPromptOverridesConfiguredPrompt(t
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLIgnoresRequestPromptForNonGoogleDriver(t *testing.T) {
+func TestGoogleMultiPromptOverridesConfiguredPrompt(t *testing.T) {
+	provider := newGoogleAuthorizationSetupTestProvider()
+	provider.authorizationURL = "https://domain/oauth/authorize?prompt=none"
+	values := url.Values{}
+	values.Set("prompt", "consent select_account")
+
+	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, provider, parseOAuthAuthenticateRequestParams(values))
+	query := mustParseRedirectQuery(t, redirect)
+
+	if query.Get("prompt") != "consent select_account" {
+		t.Fatalf("expected prompt %q, got %q", "consent select_account", query.Get("prompt"))
+	}
+}
+
+func TestNonGooglePromptIsIgnored(t *testing.T) {
 	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.config.Driver = "discord"
 	values := url.Values{}
@@ -265,7 +309,7 @@ func TestPrepareAuthorizationRedirectURLIgnoresRequestPromptForNonGoogleDriver(t
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLOmitsInvalidRequestPrompt(t *testing.T) {
+func TestInvalidGooglePromptIsOmitted(t *testing.T) {
 	values := url.Values{}
 	values.Set("prompt", "bogus")
 
@@ -277,7 +321,7 @@ func TestPrepareAuthorizationRedirectURLOmitsInvalidRequestPrompt(t *testing.T) 
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLInvalidRequestPromptDoesNotOverrideConfiguredPrompt(t *testing.T) {
+func TestInvalidGooglePromptKeepsConfiguredPrompt(t *testing.T) {
 	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.authorizationURL = "https://domain/oauth/authorize?prompt=none"
 	values := url.Values{}
@@ -291,7 +335,7 @@ func TestPrepareAuthorizationRedirectURLInvalidRequestPromptDoesNotOverrideConfi
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLForwardsLoginHint(t *testing.T) {
+func TestLoginHintIsForwarded(t *testing.T) {
 	values := url.Values{}
 	values.Set("login_hint", "user@example.com")
 
@@ -303,7 +347,7 @@ func TestPrepareAuthorizationRedirectURLForwardsLoginHint(t *testing.T) {
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLAppendsAdditionalScopes(t *testing.T) {
+func TestAdditionalScopesAreAppended(t *testing.T) {
 	values := url.Values{}
 	values.Set("additional_scopes", "email profile")
 
@@ -315,7 +359,7 @@ func TestPrepareAuthorizationRedirectURLAppendsAdditionalScopes(t *testing.T) {
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLUsesAuthorizationCodeCallback(t *testing.T) {
+func TestAuthorizationCodeCallbackIsUsed(t *testing.T) {
 	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newGoogleAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(url.Values{}))
 	query := mustParseRedirectQuery(t, redirect)
 
@@ -325,7 +369,7 @@ func TestPrepareAuthorizationRedirectURLUsesAuthorizationCodeCallback(t *testing
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLUsesJSCallbackWhenEnabled(t *testing.T) {
+func TestJSCallbackIsUsed(t *testing.T) {
 	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.config.JsCallbackEnabled = true
 
@@ -338,7 +382,7 @@ func TestPrepareAuthorizationRedirectURLUsesJSCallbackWhenEnabled(t *testing.T) 
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLOmitsScopeWhenDisabled(t *testing.T) {
+func TestScopeCanBeDisabled(t *testing.T) {
 	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.disableScope = true
 
@@ -350,7 +394,7 @@ func TestPrepareAuthorizationRedirectURLOmitsScopeWhenDisabled(t *testing.T) {
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLOmitsResponseTypeWhenDisabled(t *testing.T) {
+func TestResponseTypeCanBeDisabled(t *testing.T) {
 	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.disableResponseType = true
 
@@ -362,7 +406,7 @@ func TestPrepareAuthorizationRedirectURLOmitsResponseTypeWhenDisabled(t *testing
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLOmitsNonceWhenDisabled(t *testing.T) {
+func TestNonceCanBeDisabled(t *testing.T) {
 	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.disableNonce = true
 
@@ -374,7 +418,7 @@ func TestPrepareAuthorizationRedirectURLOmitsNonceWhenDisabled(t *testing.T) {
 	}
 }
 
-func TestFinalizeAuthorizationRedirectURLAddsPKCEChallenge(t *testing.T) {
+func TestPKCEChallengeIsAdded(t *testing.T) {
 	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newGoogleAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(url.Values{}))
 	query := mustParseRedirectQuery(t, redirect)
 
@@ -386,7 +430,7 @@ func TestFinalizeAuthorizationRedirectURLAddsPKCEChallenge(t *testing.T) {
 	}
 }
 
-func TestFinalizeAuthorizationRedirectURLOmitsPKCEWhenDisabled(t *testing.T) {
+func TestPKCECanBeDisabled(t *testing.T) {
 	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.disablePKCE = true
 
@@ -401,7 +445,7 @@ func TestFinalizeAuthorizationRedirectURLOmitsPKCEWhenDisabled(t *testing.T) {
 	}
 }
 
-func TestPrepareAuthorizationRedirectURLReturnsConfigErrorBeforePKCESetup(t *testing.T) {
+func TestInvalidAuthorizationURLFailsBeforePKCE(t *testing.T) {
 	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.authorizationURL = "https://domain/oauth/authorize?prompt=none" + string(byte(1))
 

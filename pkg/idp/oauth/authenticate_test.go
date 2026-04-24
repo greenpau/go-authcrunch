@@ -217,6 +217,64 @@ func TestAuthenticate(t *testing.T) {
 			},
 		},
 		{
+			name: "google provider forwards request prompt consent and select account",
+			config: &Config{
+				Name:                    "google",
+				Realm:                   "google",
+				Driver:                  "google",
+				ClientID:                "foo.apps.googleusercontent.com",
+				ClientSecret:            "bar",
+				Scopes:                  []string{"identify"},
+				AuthorizationURL:        "https://accounts.google.com/o/oauth2/v2/auth",
+				KeyVerificationDisabled: true,
+				NonceDisabled:           true,
+				PKCEDisabled:            true,
+			},
+			logger: logutil.NewLogger(),
+			request: requests.Request{
+				Upstream: requests.Upstream{
+					BaseURL:  "https://hostname",
+					BasePath: "/route",
+					Request:  must(http.NewRequest(http.MethodGet, "/foo?bar=baz&prompt=consent+select_account", nil)),
+				},
+			},
+			want: requests.Response{
+				Code: 302,
+				RedirectURL: "https://accounts.google.com/o/oauth2/v2/auth?client_id=foo.apps.googleusercontent.com&" +
+					"prompt=consent+select_account&redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
+					"response_type=code&scope=identify&state=5fb90bad-b37c-4821-b6d9-5526a41a9504",
+			},
+		},
+		{
+			name: "google provider forwards request prompt select account and consent",
+			config: &Config{
+				Name:                    "google",
+				Realm:                   "google",
+				Driver:                  "google",
+				ClientID:                "foo.apps.googleusercontent.com",
+				ClientSecret:            "bar",
+				Scopes:                  []string{"identify"},
+				AuthorizationURL:        "https://accounts.google.com/o/oauth2/v2/auth",
+				KeyVerificationDisabled: true,
+				NonceDisabled:           true,
+				PKCEDisabled:            true,
+			},
+			logger: logutil.NewLogger(),
+			request: requests.Request{
+				Upstream: requests.Upstream{
+					BaseURL:  "https://hostname",
+					BasePath: "/route",
+					Request:  must(http.NewRequest(http.MethodGet, "/foo?bar=baz&prompt=select_account+consent", nil)),
+				},
+			},
+			want: requests.Response{
+				Code: 302,
+				RedirectURL: "https://accounts.google.com/o/oauth2/v2/auth?client_id=foo.apps.googleusercontent.com&" +
+					"prompt=select_account+consent&redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
+					"response_type=code&scope=identify&state=680b4e7c-8b76-4a1b-9d49-d4955c848621",
+			},
+		},
+		{
 			name: "discord provider with overridden and invalid urls",
 			config: &Config{
 				Name:             "discord",

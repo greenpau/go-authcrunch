@@ -16,6 +16,7 @@ package oauth
 
 import (
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -173,13 +174,19 @@ func (b *IdentityProvider) finalizeAuthorizationRedirectURL(prepared *preparedAu
 	return prepared.authorizationURL.String()
 }
 
+var validOAuthPromptValues = []string{
+	"none",
+	"consent",
+	"select_account",
+	"consent select_account",
+	"select_account consent",
+}
+
 // See https://developers.google.com/identity/protocols/oauth2/web-server for supported prompt values.
 func normalizeOAuthPromptValue(prompt string) (string, bool) {
-	prompt = strings.TrimSpace(prompt)
-	switch prompt {
-	case "none", "consent", "select_account":
+	prompt = strings.Join(strings.Fields(prompt), " ")
+	if slices.Contains(validOAuthPromptValues, prompt) {
 		return prompt, true
-	default:
-		return "", false
 	}
+	return "", false
 }
