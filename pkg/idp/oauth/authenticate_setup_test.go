@@ -31,7 +31,7 @@ const (
 	authorizationSetupTestRequest = "request-1"
 )
 
-func newAuthorizationSetupTestProvider() *IdentityProvider {
+func newGoogleAuthorizationSetupTestProvider() *IdentityProvider {
 	return &IdentityProvider{
 		config: &Config{
 			ClientID:     "foo",
@@ -223,7 +223,7 @@ func TestNormalizeOAuthPromptValueRejectsInvalidPrompt(t *testing.T) {
 }
 
 func TestPrepareAuthorizationRedirectURLPreservesConfiguredQueryParams(t *testing.T) {
-	provider := newAuthorizationSetupTestProvider()
+	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.authorizationURL = "https://domain/oauth/authorize?access_type=offline&prompt=none"
 
 	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, provider, parseOAuthAuthenticateRequestParams(url.Values{}))
@@ -238,7 +238,7 @@ func TestPrepareAuthorizationRedirectURLPreservesConfiguredQueryParams(t *testin
 }
 
 func TestPrepareAuthorizationRedirectURLRequestPromptOverridesConfiguredPrompt(t *testing.T) {
-	provider := newAuthorizationSetupTestProvider()
+	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.authorizationURL = "https://domain/oauth/authorize?prompt=none"
 	values := url.Values{}
 	values.Set("prompt", "consent")
@@ -252,7 +252,7 @@ func TestPrepareAuthorizationRedirectURLRequestPromptOverridesConfiguredPrompt(t
 }
 
 func TestPrepareAuthorizationRedirectURLIgnoresRequestPromptForNonGoogleDriver(t *testing.T) {
-	provider := newAuthorizationSetupTestProvider()
+	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.config.Driver = "discord"
 	values := url.Values{}
 	values.Set("prompt", "consent")
@@ -269,7 +269,7 @@ func TestPrepareAuthorizationRedirectURLOmitsInvalidRequestPrompt(t *testing.T) 
 	values := url.Values{}
 	values.Set("prompt", "bogus")
 
-	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(values))
+	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newGoogleAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(values))
 	query := mustParseRedirectQuery(t, redirect)
 
 	if _, exists := query["prompt"]; exists {
@@ -278,7 +278,7 @@ func TestPrepareAuthorizationRedirectURLOmitsInvalidRequestPrompt(t *testing.T) 
 }
 
 func TestPrepareAuthorizationRedirectURLInvalidRequestPromptDoesNotOverrideConfiguredPrompt(t *testing.T) {
-	provider := newAuthorizationSetupTestProvider()
+	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.authorizationURL = "https://domain/oauth/authorize?prompt=none"
 	values := url.Values{}
 	values.Set("prompt", "bogus")
@@ -295,7 +295,7 @@ func TestPrepareAuthorizationRedirectURLForwardsLoginHint(t *testing.T) {
 	values := url.Values{}
 	values.Set("login_hint", "user@example.com")
 
-	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(values))
+	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newGoogleAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(values))
 	query := mustParseRedirectQuery(t, redirect)
 
 	if query.Get("login_hint") != "user@example.com" {
@@ -307,7 +307,7 @@ func TestPrepareAuthorizationRedirectURLAppendsAdditionalScopes(t *testing.T) {
 	values := url.Values{}
 	values.Set("additional_scopes", "email profile")
 
-	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(values))
+	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newGoogleAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(values))
 	query := mustParseRedirectQuery(t, redirect)
 
 	if query.Get("scope") != "identify email profile" {
@@ -316,7 +316,7 @@ func TestPrepareAuthorizationRedirectURLAppendsAdditionalScopes(t *testing.T) {
 }
 
 func TestPrepareAuthorizationRedirectURLUsesAuthorizationCodeCallback(t *testing.T) {
-	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(url.Values{}))
+	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newGoogleAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(url.Values{}))
 	query := mustParseRedirectQuery(t, redirect)
 
 	expected := authorizationSetupTestReqPath + "/authorization-code-callback"
@@ -326,7 +326,7 @@ func TestPrepareAuthorizationRedirectURLUsesAuthorizationCodeCallback(t *testing
 }
 
 func TestPrepareAuthorizationRedirectURLUsesJSCallbackWhenEnabled(t *testing.T) {
-	provider := newAuthorizationSetupTestProvider()
+	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.config.JsCallbackEnabled = true
 
 	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, provider, parseOAuthAuthenticateRequestParams(url.Values{}))
@@ -339,7 +339,7 @@ func TestPrepareAuthorizationRedirectURLUsesJSCallbackWhenEnabled(t *testing.T) 
 }
 
 func TestPrepareAuthorizationRedirectURLOmitsScopeWhenDisabled(t *testing.T) {
-	provider := newAuthorizationSetupTestProvider()
+	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.disableScope = true
 
 	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, provider, parseOAuthAuthenticateRequestParams(url.Values{}))
@@ -351,7 +351,7 @@ func TestPrepareAuthorizationRedirectURLOmitsScopeWhenDisabled(t *testing.T) {
 }
 
 func TestPrepareAuthorizationRedirectURLOmitsResponseTypeWhenDisabled(t *testing.T) {
-	provider := newAuthorizationSetupTestProvider()
+	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.disableResponseType = true
 
 	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, provider, parseOAuthAuthenticateRequestParams(url.Values{}))
@@ -363,7 +363,7 @@ func TestPrepareAuthorizationRedirectURLOmitsResponseTypeWhenDisabled(t *testing
 }
 
 func TestPrepareAuthorizationRedirectURLOmitsNonceWhenDisabled(t *testing.T) {
-	provider := newAuthorizationSetupTestProvider()
+	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.disableNonce = true
 
 	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, provider, parseOAuthAuthenticateRequestParams(url.Values{}))
@@ -375,7 +375,7 @@ func TestPrepareAuthorizationRedirectURLOmitsNonceWhenDisabled(t *testing.T) {
 }
 
 func TestFinalizeAuthorizationRedirectURLAddsPKCEChallenge(t *testing.T) {
-	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(url.Values{}))
+	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, newGoogleAuthorizationSetupTestProvider(), parseOAuthAuthenticateRequestParams(url.Values{}))
 	query := mustParseRedirectQuery(t, redirect)
 
 	if query.Get("code_challenge") != authorizationSetupTestPKCE {
@@ -387,7 +387,7 @@ func TestFinalizeAuthorizationRedirectURLAddsPKCEChallenge(t *testing.T) {
 }
 
 func TestFinalizeAuthorizationRedirectURLOmitsPKCEWhenDisabled(t *testing.T) {
-	provider := newAuthorizationSetupTestProvider()
+	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.disablePKCE = true
 
 	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, provider, parseOAuthAuthenticateRequestParams(url.Values{}))
@@ -402,7 +402,7 @@ func TestFinalizeAuthorizationRedirectURLOmitsPKCEWhenDisabled(t *testing.T) {
 }
 
 func TestPrepareAuthorizationRedirectURLReturnsConfigErrorBeforePKCESetup(t *testing.T) {
-	provider := newAuthorizationSetupTestProvider()
+	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.authorizationURL = "https://domain/oauth/authorize?prompt=none" + string(byte(1))
 
 	_, err := provider.prepareAuthorizationRedirectURL(
