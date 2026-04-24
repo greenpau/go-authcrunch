@@ -76,7 +76,7 @@ func TestAuthenticate(t *testing.T) {
 			},
 		},
 		{
-			name: "discord provider forwards request prompt none",
+			name: "discord provider ignores request prompt none",
 			config: &Config{
 				Name:             "discord",
 				Realm:            "discord",
@@ -95,20 +95,53 @@ func TestAuthenticate(t *testing.T) {
 			},
 			want: requests.Response{
 				Code: 302,
-				RedirectURL: "https://discordapp.com/other/authorize?client_id=foo&prompt=none&" +
+				RedirectURL: "https://discordapp.com/other/authorize?client_id=foo&" +
 					"redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
 					"response_type=code&scope=identify&state=9566c74d-1003-4c4d-bbbb-0407d1e2c649",
 			},
 		},
 		{
-			name: "discord provider forwards request prompt consent",
+			name: "google provider forwards request prompt none",
 			config: &Config{
-				Name:             "discord",
-				Realm:            "discord",
-				Driver:           "discord",
-				ClientID:         "foo",
-				ClientSecret:     "bar",
-				AuthorizationURL: "https://discordapp.com/other/authorize",
+				Name:                    "google",
+				Realm:                   "google",
+				Driver:                  "google",
+				ClientID:                "foo.apps.googleusercontent.com",
+				ClientSecret:            "bar",
+				Scopes:                  []string{"identify"},
+				AuthorizationURL:        "https://accounts.google.com/o/oauth2/v2/auth",
+				KeyVerificationDisabled: true,
+				NonceDisabled:           true,
+				PKCEDisabled:            true,
+			},
+			logger: logutil.NewLogger(),
+			request: requests.Request{
+				Upstream: requests.Upstream{
+					BaseURL:  "https://hostname",
+					BasePath: "/route",
+					Request:  must(http.NewRequest(http.MethodGet, "/foo?bar=baz&prompt=none", nil)),
+				},
+			},
+			want: requests.Response{
+				Code: 302,
+				RedirectURL: "https://accounts.google.com/o/oauth2/v2/auth?client_id=foo.apps.googleusercontent.com&" +
+					"prompt=none&redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
+					"response_type=code&scope=identify&state=81855ad8-681d-4d86-91e9-1e00167939cb",
+			},
+		},
+		{
+			name: "google provider forwards request prompt consent",
+			config: &Config{
+				Name:                    "google",
+				Realm:                   "google",
+				Driver:                  "google",
+				ClientID:                "foo.apps.googleusercontent.com",
+				ClientSecret:            "bar",
+				Scopes:                  []string{"identify"},
+				AuthorizationURL:        "https://accounts.google.com/o/oauth2/v2/auth",
+				KeyVerificationDisabled: true,
+				NonceDisabled:           true,
+				PKCEDisabled:            true,
 			},
 			logger: logutil.NewLogger(),
 			request: requests.Request{
@@ -120,20 +153,24 @@ func TestAuthenticate(t *testing.T) {
 			},
 			want: requests.Response{
 				Code: 302,
-				RedirectURL: "https://discordapp.com/other/authorize?client_id=foo&" +
+				RedirectURL: "https://accounts.google.com/o/oauth2/v2/auth?client_id=foo.apps.googleusercontent.com&" +
 					"prompt=consent&redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
-					"response_type=code&scope=identify&state=81855ad8-681d-4d86-91e9-1e00167939cb",
+					"response_type=code&scope=identify&state=6694d2c4-22ac-4208-a007-2939487f6999",
 			},
 		},
 		{
-			name: "discord provider forwards request prompt select_account",
+			name: "google provider forwards request prompt select_account",
 			config: &Config{
-				Name:             "discord",
-				Realm:            "discord",
-				Driver:           "discord",
-				ClientID:         "foo",
-				ClientSecret:     "bar",
-				AuthorizationURL: "https://discordapp.com/other/authorize",
+				Name:                    "google",
+				Realm:                   "google",
+				Driver:                  "google",
+				ClientID:                "foo.apps.googleusercontent.com",
+				ClientSecret:            "bar",
+				Scopes:                  []string{"identify"},
+				AuthorizationURL:        "https://accounts.google.com/o/oauth2/v2/auth",
+				KeyVerificationDisabled: true,
+				NonceDisabled:           true,
+				PKCEDisabled:            true,
 			},
 			logger: logutil.NewLogger(),
 			request: requests.Request{
@@ -145,20 +182,24 @@ func TestAuthenticate(t *testing.T) {
 			},
 			want: requests.Response{
 				Code: 302,
-				RedirectURL: "https://discordapp.com/other/authorize?client_id=foo&" +
+				RedirectURL: "https://accounts.google.com/o/oauth2/v2/auth?client_id=foo.apps.googleusercontent.com&" +
 					"prompt=select_account&redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
-					"response_type=code&scope=identify&state=6694d2c4-22ac-4208-a007-2939487f6999",
+					"response_type=code&scope=identify&state=eb9d18a4-4784-445d-87f3-c67cf22746e9",
 			},
 		},
 		{
-			name: "discord provider drops invalid request prompt",
+			name: "google provider drops invalid request prompt",
 			config: &Config{
-				Name:             "discord",
-				Realm:            "discord",
-				Driver:           "discord",
-				ClientID:         "foo",
-				ClientSecret:     "bar",
-				AuthorizationURL: "https://discordapp.com/other/authorize",
+				Name:                    "google",
+				Realm:                   "google",
+				Driver:                  "google",
+				ClientID:                "foo.apps.googleusercontent.com",
+				ClientSecret:            "bar",
+				Scopes:                  []string{"identify"},
+				AuthorizationURL:        "https://accounts.google.com/o/oauth2/v2/auth",
+				KeyVerificationDisabled: true,
+				NonceDisabled:           true,
+				PKCEDisabled:            true,
 			},
 			logger: logutil.NewLogger(),
 			request: requests.Request{
@@ -170,9 +211,9 @@ func TestAuthenticate(t *testing.T) {
 			},
 			want: requests.Response{
 				Code: 302,
-				RedirectURL: "https://discordapp.com/other/authorize?client_id=foo&" +
+				RedirectURL: "https://accounts.google.com/o/oauth2/v2/auth?client_id=foo.apps.googleusercontent.com&" +
 					"redirect_uri=https%3A%2F%2Fhostname%2Froute%2Fauthorization-code-callback&" +
-					"response_type=code&scope=identify&state=eb9d18a4-4784-445d-87f3-c67cf22746e9",
+					"response_type=code&scope=identify&state=95af5a25-3679-41ba-a2ff-6cd471c483f1",
 			},
 		},
 		{

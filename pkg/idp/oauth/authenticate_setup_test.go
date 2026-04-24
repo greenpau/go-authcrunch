@@ -35,6 +35,7 @@ func newAuthorizationSetupTestProvider() *IdentityProvider {
 	return &IdentityProvider{
 		config: &Config{
 			ClientID:     "foo",
+			Driver:       "google",
 			Scopes:       []string{"identify"},
 			ResponseType: []string{"code"},
 		},
@@ -245,6 +246,20 @@ func TestPrepareAuthorizationRedirectURLRequestPromptOverridesConfiguredPrompt(t
 
 	if query.Get("prompt") != "consent" {
 		t.Fatalf("expected prompt %q, got %q", "consent", query.Get("prompt"))
+	}
+}
+
+func TestPrepareAuthorizationRedirectURLIgnoresRequestPromptForNonGoogleDriver(t *testing.T) {
+	provider := newAuthorizationSetupTestProvider()
+	provider.config.Driver = "discord"
+	values := url.Values{}
+	values.Set("prompt", "consent")
+
+	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, provider, parseOAuthAuthenticateRequestParams(values))
+	query := mustParseRedirectQuery(t, redirect)
+
+	if _, exists := query["prompt"]; exists {
+		t.Fatalf("expected prompt to be omitted, got %q", query.Get("prompt"))
 	}
 }
 

@@ -148,7 +148,7 @@ func (b *IdentityProvider) prepareAuthorizationRedirectURL(reqPath string, reqPa
 		params.Set("login_hint", reqParams.loginHint)
 	}
 
-	if reqParams.promptExists {
+	if b.config.Driver == "google" && reqParams.promptExists {
 		if reqParams.promptValid {
 			params.Set("prompt", reqParams.prompt)
 		} else {
