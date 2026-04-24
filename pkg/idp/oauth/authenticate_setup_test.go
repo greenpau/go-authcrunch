@@ -159,64 +159,66 @@ func TestParseOAuthAuthenticateRequestParamsParsesLoginHintAndAdditionalScopes(t
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsAllowsPromptNone(t *testing.T) {
+func TestParseOAuthAuthenticateRequestParamsParsesPromptNone(t *testing.T) {
 	values := url.Values{}
 	values.Set("prompt", "none")
 
 	params := parseOAuthAuthenticateRequestParams(values)
 
-	if !params.promptExists || !params.promptValid || params.prompt != "none" {
-		t.Fatalf("expected valid prompt %q, got %q", "none", params.prompt)
+	if !params.promptExists || params.promptRaw != "none" {
+		t.Fatalf("expected prompt %q, got %q", "none", params.promptRaw)
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsAllowsPromptConsent(t *testing.T) {
+func TestParseOAuthAuthenticateRequestParamsParsesPromptConsent(t *testing.T) {
 	values := url.Values{}
 	values.Set("prompt", "consent")
 
 	params := parseOAuthAuthenticateRequestParams(values)
 
-	if !params.promptExists || !params.promptValid || params.prompt != "consent" {
-		t.Fatalf("expected valid prompt %q, got %q", "consent", params.prompt)
+	if !params.promptExists || params.promptRaw != "consent" {
+		t.Fatalf("expected prompt %q, got %q", "consent", params.promptRaw)
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsAllowsPromptSelectAccount(t *testing.T) {
+func TestParseOAuthAuthenticateRequestParamsParsesPromptSelectAccount(t *testing.T) {
 	values := url.Values{}
 	values.Set("prompt", "select_account")
 
 	params := parseOAuthAuthenticateRequestParams(values)
 
-	if !params.promptExists || !params.promptValid || params.prompt != "select_account" {
-		t.Fatalf("expected valid prompt %q, got %q", "select_account", params.prompt)
+	if !params.promptExists || params.promptRaw != "select_account" {
+		t.Fatalf("expected prompt %q, got %q", "select_account", params.promptRaw)
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsTrimsPrompt(t *testing.T) {
+func TestNormalizeOAuthPromptValueTrimsPrompt(t *testing.T) {
 	values := url.Values{}
 	values.Set("prompt", "  consent  ")
 
 	params := parseOAuthAuthenticateRequestParams(values)
+	prompt, ok := normalizeOAuthPromptValue(params.promptRaw)
 
-	if !params.promptExists || !params.promptValid || params.prompt != "consent" {
-		t.Fatalf("expected valid prompt %q, got %q", "consent", params.prompt)
+	if !ok || prompt != "consent" {
+		t.Fatalf("expected valid prompt %q, got %q", "consent", prompt)
 	}
 }
 
-func TestParseOAuthAuthenticateRequestParamsRejectsInvalidPrompt(t *testing.T) {
+func TestNormalizeOAuthPromptValueRejectsInvalidPrompt(t *testing.T) {
 	values := url.Values{}
 	values.Set("prompt", "bogus")
 
 	params := parseOAuthAuthenticateRequestParams(values)
+	prompt, ok := normalizeOAuthPromptValue(params.promptRaw)
 
 	if !params.promptExists {
 		t.Fatal("expected prompt to exist")
 	}
-	if params.promptValid {
+	if ok {
 		t.Fatal("expected prompt to be invalid")
 	}
-	if params.prompt != "" {
-		t.Fatalf("expected normalized prompt to be empty, got %q", params.prompt)
+	if prompt != "" {
+		t.Fatalf("expected normalized prompt to be empty, got %q", prompt)
 	}
 }
 

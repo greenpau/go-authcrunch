@@ -41,10 +41,8 @@ type oauthAuthenticateRequestParams struct {
 	loginHintExists        bool
 	additionalScopes       string
 	additionalScopesExists bool
-	prompt                 string
 	promptRaw              string
 	promptExists           bool
-	promptValid            bool
 }
 
 type preparedAuthorizationRedirectURL struct {
@@ -92,10 +90,6 @@ func parseOAuthAuthenticateRequestParams(values url.Values) oauthAuthenticateReq
 	if v, exists := getOAuthAuthenticateRequestParam(values, "prompt"); exists {
 		params.promptExists = true
 		params.promptRaw = v
-		if prompt, ok := normalizeOAuthPromptValue(v); ok {
-			params.prompt = prompt
-			params.promptValid = true
-		}
 	}
 
 	return params
@@ -149,8 +143,8 @@ func (b *IdentityProvider) prepareAuthorizationRedirectURL(reqPath string, reqPa
 	}
 
 	if b.config.Driver == "google" && reqParams.promptExists {
-		if reqParams.promptValid {
-			params.Set("prompt", reqParams.prompt)
+		if prompt, ok := normalizeOAuthPromptValue(reqParams.promptRaw); ok {
+			params.Set("prompt", prompt)
 		} else {
 			b.logger.Warn(
 				"ignoring unsupported OAuth 2.0 prompt value",
