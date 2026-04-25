@@ -40,56 +40,26 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	reqPath := r.Upstream.BaseURL + path.Join(r.Upstream.BasePath, r.Upstream.Method, r.Upstream.Realm)
 	r.Response.Code = http.StatusBadRequest
 
-	var accessTokenExists, idTokenExists, codeExists, stateExists, errorExists, loginHintExists, additionalScopesExists bool
-	var reqParamsAccessToken, reqParamsIDToken, reqParamsState, reqParamsCode, reqParamsError, reqParamsLoginHint, additionalScopes string
-	reqParams := r.Upstream.Request.URL.Query()
-	if _, exists := reqParams["access_token"]; exists {
-		accessTokenExists = true
-		reqParamsAccessToken = reqParams["access_token"][0]
-	}
-	if _, exists := reqParams["id_token"]; exists {
-		idTokenExists = true
-		reqParamsIDToken = reqParams["id_token"][0]
-	}
-	if _, exists := reqParams["code"]; exists {
-		codeExists = true
-		reqParamsCode = reqParams["code"][0]
-	}
-	if _, exists := reqParams["state"]; exists {
-		stateExists = true
-		reqParamsState = reqParams["state"][0]
-	}
-	if _, exists := reqParams["error"]; exists {
-		errorExists = true
-		reqParamsError = reqParams["error"][0]
-	}
-	if _, exists := reqParams["login_hint"]; exists {
-		loginHintExists = true
-		reqParamsLoginHint = reqParams["login_hint"][0]
-	}
-	if _, exists := reqParams["additional_scopes"]; exists {
-		additionalScopesExists = true
-		additionalScopes = reqParams["additional_scopes"][0]
-	}
+	reqParams := parseOAuthAuthenticateRequestParams(r.Upstream.Request.URL.Query())
 
-	if stateExists || errorExists || codeExists || accessTokenExists {
+	if reqParams.isOAuthResponse() {
 		b.logger.Debug(
 			"received OAuth 2.0 response",
 			zap.String("session_id", r.Upstream.SessionID),
 			zap.String("request_id", r.ID),
-			zap.Any("params", reqParams),
+			zap.Any("params", reqParams.values),
 		)
-		if errorExists {
-			if v, exists := reqParams["error_description"]; exists {
-				return errors.ErrIdentityProviderOauthAuthorizationFailedDetailed.WithArgs(reqParamsError, v[0])
+		if reqParams.errorExists {
+			if reqParams.errorDescriptionExists {
+				return errors.ErrIdentityProviderOauthAuthorizationFailedDetailed.WithArgs(reqParams.authError, reqParams.errorDescription)
 			}
-			return errors.ErrIdentityProviderOauthAuthorizationFailed.WithArgs(reqParamsError)
+			return errors.ErrIdentityProviderOauthAuthorizationFailed.WithArgs(reqParams.authError)
 		}
 		switch {
-		case codeExists && stateExists:
+		case reqParams.codeExists && reqParams.stateExists:
 			// Received Authorization Code
-			if b.state.exists(reqParamsState) {
-				b.state.addCode(reqParamsState, reqParamsCode)
+			if b.state.exists(reqParams.state) {
+				b.state.addCode(reqParams.state, reqParams.code)
 			} else {
 				return errors.ErrIdentityProviderOauthAuthorizationStateNotFound
 			}
@@ -97,22 +67,22 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 				"received OAuth 2.0 code and state from the authorization server",
 				zap.String("session_id", r.Upstream.SessionID),
 				zap.String("request_id", r.ID),
-				zap.String("state", reqParamsState),
-				zap.String("code", reqParamsCode),
+				zap.String("state", reqParams.state),
+				zap.String("code", reqParams.code),
 			)
 
 			reqRedirectURI := reqPath + "/authorization-code-callback"
 			var codeVerifier string
 			if !b.disablePKCE {
-				codeVerifier, _ = b.state.getVerifier(reqParamsState)
+				codeVerifier, _ = b.state.getVerifier(reqParams.state)
 			}
 			var accessToken map[string]interface{}
 			var err error
 			switch b.config.Driver {
 			case "facebook":
-				accessToken, err = b.fetchFacebookAccessToken(reqRedirectURI, reqParamsState, reqParamsCode)
+				accessToken, err = b.fetchFacebookAccessToken(reqRedirectURI, reqParams.state, reqParams.code)
 			default:
-				accessToken, err = b.fetchAccessToken(reqRedirectURI, reqParamsState, reqParamsCode, codeVerifier)
+				accessToken, err = b.fetchAccessToken(reqRedirectURI, reqParams.state, reqParams.code, codeVerifier)
 			}
 			if err != nil {
 				b.logger.Debug(
@@ -138,7 +108,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 					return errors.ErrIdentityProviderOauthFetchClaimsFailed.WithArgs(err)
 				}
 			default:
-				m, err = b.validateAccessToken(reqParamsState, accessToken)
+				m, err = b.validateAccessToken(reqParams.state, accessToken)
 				if err != nil {
 					return errors.ErrIdentityProviderOauthValidateAccessTokenFailed.WithArgs(err)
 				}
@@ -177,14 +147,14 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 				zap.String("request_id", r.ID),
 				zap.Any("claims", m),
 			)
-			b.state.del(reqParamsState)
+			b.state.del(reqParams.state)
 			return nil
-		case idTokenExists && accessTokenExists:
+		case reqParams.idTokenExists && reqParams.accessTokenExists:
 			accessToken := map[string]interface{}{
-				"access_token": reqParamsAccessToken,
-				"id_token":     reqParamsIDToken,
+				"access_token": reqParams.accessToken,
+				"id_token":     reqParams.idToken,
 			}
-			m, err := b.validateAccessToken(reqParamsState, accessToken)
+			m, err := b.validateAccessToken(reqParams.state, accessToken)
 			if err != nil {
 				return errors.ErrIdentityProviderOauthValidateAccessTokenFailed.WithArgs(err)
 			}
@@ -195,7 +165,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 			if b.config.IdentityTokenCookieEnabled {
 				r.Response.IdentityTokenCookie.Enabled = true
 				r.Response.IdentityTokenCookie.Name = b.config.IdentityTokenCookieName
-				r.Response.IdentityTokenCookie.Payload = reqParamsIDToken
+				r.Response.IdentityTokenCookie.Payload = reqParams.idToken
 			}
 
 			b.logger.Debug(
@@ -210,41 +180,13 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	r.Response.Code = http.StatusFound
 	state := uuid.New().String()
 	nonce := util.GetRandomString(32)
-	authorizationURL, err := url.Parse(b.authorizationURL)
+	preparedRedirect, err := b.prepareAuthorizationRedirectURL(reqPath, reqParams, state, nonce, r.Upstream.SessionID, r.ID)
 	if err != nil {
-		return errors.ErrIdentityProviderConfig.WithArgs("could not parse authorization url")
+		return err
 	}
-	params := authorizationURL.Query()
-	// CSRF Protection
-	params.Set("state", state)
-	if !b.disableNonce {
-		// Server Side-Replay Protection
-		params.Set("nonce", nonce)
-	}
-	if !b.disableScope {
-		scopes := b.config.Scopes
-		if additionalScopesExists {
-			scopes = append(scopes, strings.Split(additionalScopes, " ")...)
-		}
-		params.Set("scope", strings.Join(scopes, " "))
-	}
-
-	if b.config.JsCallbackEnabled {
-		params.Set("redirect_uri", reqPath+"/authorization-code-js-callback")
-	} else {
-		params.Set("redirect_uri", reqPath+"/authorization-code-callback")
-	}
-
-	if !b.disableResponseType {
-		params.Set("response_type", strings.Join(b.config.ResponseType, " "))
-	}
-	if loginHintExists {
-		params.Set("login_hint", reqParamsLoginHint)
-	}
-
-	params.Set("client_id", b.config.ClientID)
 
 	var codeVerifier string
+	var codeChallenge string
 	if !b.disablePKCE {
 		verifierBytes := make([]byte, 32)
 		if _, err := rand.Read(verifierBytes); err != nil {
@@ -252,13 +194,10 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		}
 		codeVerifier = base64.RawURLEncoding.EncodeToString(verifierBytes)
 		h := sha256.Sum256([]byte(codeVerifier))
-		codeChallenge := base64.RawURLEncoding.EncodeToString(h[:])
-		params.Set("code_challenge", codeChallenge)
-		params.Set("code_challenge_method", "S256")
+		codeChallenge = base64.RawURLEncoding.EncodeToString(h[:])
 	}
 
-	authorizationURL.RawQuery = params.Encode()
-	r.Response.RedirectURL = authorizationURL.String()
+	r.Response.RedirectURL = b.finalizeAuthorizationRedirectURL(preparedRedirect, codeChallenge)
 
 	if err := b.state.add(state, nonce); err != nil {
 		return errors.ErrIdentityProviderOauthAuthorizationStateLimitReached
