@@ -301,7 +301,7 @@
                     </div>
                     <input id="comment" name="comment" type="text"
                            class="app-inp-txt validate"
-                           value="{{ .Data.mfa_comment }}" pattern="[A-Za-z0-9 -]{4,25}" maxlength="50"
+                           value="{{ .Data.mfa_comment }}" pattern="[A-Za-z0-9 \-]{4,25}" maxlength="50"
                            title="Comment should contain 4-50 characters and consists of A-Z, a-z, 0-9, space, and dash characters."
                            autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
                            required />
@@ -355,7 +355,7 @@
                     add new entry and click the "Get QR" link.
                   </p>
                   <div id="mfa-get-qr-code" class="text-center">
-                    <a class="text-secondary-500 hover:text-primary-500" href="#qr-code-mode" onclick="getQRCode()">Get QR Code</a>
+                    <a class="text-secondary-500 hover:text-primary-500" href="#qr-code-mode" onclick="return getQRCode()">Get QR Code</a>
                   </div>
                 </div>
               </div>
@@ -430,7 +430,7 @@
                   </div>
                   <input id="comment" name="comment" type="text"
                          class="app-inp-txt validate"
-                         pattern="[A-Za-z0-9 -]{4,25}" maxlength="25"
+                         pattern="[A-Za-z0-9 \-]{4,25}" maxlength="25"
                          title="A comment should contain 4-25 characters and consists of A-Z, a-z, 0-9, space, and dash characters."
                          autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off" />
                 </div>
