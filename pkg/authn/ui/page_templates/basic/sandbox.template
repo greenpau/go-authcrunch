@@ -539,12 +539,6 @@
 
     {{ if eq .Data.ui_options.custom_js_required "yes" }}
     <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
-    <script>
-    document.querySelector('.mfa-add-app-form')?.addEventListener('submit', () => {
-      const el = document.querySelector('input[name="label"]');
-      if (el && !el.value.trim()) el.value = 'Auth';
-    });
-    </script>
     {{ end }}
     {{ if eq .Data.view "mfa_app_register" }}
     <!-- App Authentication Registration Scripts -->

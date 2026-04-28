@@ -118,6 +118,17 @@ function updateQRCode() {
 }
 
 function getQRCode() {
+  const form = document.querySelector('.mfa-add-app-form');
+
+  const label = document.getElementById('label');
+  if (label && !label.value.trim()) {
+    label.value = 'Auth';
+  }
+
+  if (form && !form.reportValidity()) {
+    return;
+  }
+
   updateQRCode();
   hideElementByID("token-params");
   showElementByID("mfa-qr-code");
