@@ -502,6 +502,9 @@ func (p *Portal) transformUser(_ context.Context, rr *requests.Request, m map[st
 	if rr.Upstream.Realm != "" {
 		m["realm"] = rr.Upstream.Realm
 	}
+	if len(rr.User.Challenges) > 0 {
+		m["challenges"] = rr.User.Challenges
+	}
 	if err := p.transformer.Transform(m); err != nil {
 		p.logger.Warn(
 			"user transformation failed",
