@@ -355,7 +355,7 @@
                     add new entry and click the "Get QR" link.
                   </p>
                   <div id="mfa-get-qr-code" class="text-center">
-                    <a class="text-secondary-500 hover:text-primary-500" href="#qr-code-mode" onclick="getQRCode()">Get QR Code</a>
+                    <a class="text-secondary-500 hover:text-primary-500" href="#qr-code-mode" onclick="return getQRCode()">Get QR Code</a>
                   </div>
                 </div>
               </div>

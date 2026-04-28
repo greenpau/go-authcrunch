@@ -121,18 +121,28 @@ function getQRCode() {
   const label = document.getElementById('label');
 
   if (label && !label.value.trim()) {
-    label.value = 'Auth';
+    label.value = 'AUTHP';
   }
 
   if (label && !label.reportValidity()) {
-    return;
+    return false;
+  }
+
+  const comment = document.getElementById('comment');
+
+  if (comment && !comment.value.trim()) {
+    comment.value = 'My Authentication App';
+  }
+
+  if (comment && comment.value && !comment.reportValidity()) {
+    return false;
   }
 
   updateQRCode();
   hideElementByID("token-params");
   showElementByID("mfa-qr-code");
 
-  return;
+  return false;
 }
 
 function updatePasscode(s, digits) {
