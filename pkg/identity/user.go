@@ -163,7 +163,7 @@ func (user *User) AddPassword(s string, keepVersions int) error {
 
 	// Check if the existing password is the same as the one provided.
 	if len(user.Passwords) > 0 {
-		if user.Passwords[0].Hash == password.Hash {
+		if user.Passwords[0].Match(s) {
 			return nil
 		}
 	}
