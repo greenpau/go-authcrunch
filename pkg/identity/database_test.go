@@ -1301,3 +1301,53 @@ func TestDatabasePolicy(t *testing.T) {
 		})
 	}
 }
+
+// TestIdentifyUserAuthMethods pins AuthMethods population across the three
+// IdentifyUser branches: real-user-success, user-not-found, disabled-user.
+// All three must set AuthMethods to keep the transformer's auth challenges
+// gate from returning a 500 instead of letting auth fail downstream at
+// password verification.
+func TestIdentifyUserAuthMethods(t *testing.T) {
+	db, err := createTestDatabase("TestIdentifyUserAuthMethods")
+	if err != nil {
+		t.Fatalf("createTestDatabase: %v", err)
+	}
+
+	disabledUser, err := db.getUser(testUser2)
+	if err != nil {
+		t.Fatalf("getUser: %v", err)
+	}
+	disabledUser.Disabled = true
+
+	testcases := []struct {
+		name     string
+		username string
+		want     []string
+	}{
+		{
+			name:     "real user has password method",
+			username: testUser1,
+			want:     []string{"password"},
+		},
+		{
+			name:     "non-existent user falls to nobody persona",
+			username: "no-such-user",
+			want:     []string{"password"},
+		},
+		{
+			name:     "disabled user falls to nobody persona",
+			username: testUser2,
+			want:     []string{"password"},
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := &requests.Request{User: requests.User{Username: tc.username}}
+			if err := db.IdentifyUser(req); err != nil {
+				t.Fatalf("IdentifyUser: %v", err)
+			}
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+			tests.EvalObjectsWithLog(t, "auth methods", tc.want, req.User.AuthMethods, msgs)
+		})
+	}
+}

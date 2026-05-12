@@ -49,7 +49,7 @@ func (p *Portal) createSandboxUser(ctx context.Context, _ http.ResponseWriter, r
 	combineGroupRoles(m)
 
 	// Perform user claim transformation if necessary.
-	if err := p.transformUser(ctx, rr, m); err != nil {
+	if err := p.transformUser(ctx, rr, m, rr.User.AuthMethods); err != nil {
 		return nil, err
 	}
 
