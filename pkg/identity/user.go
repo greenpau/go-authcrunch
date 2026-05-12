@@ -596,6 +596,26 @@ func (user *User) GetMetadata() *UserMetadata {
 	return m
 }
 
+// GetRegisteredAuthMethods returns the user's enabled MFA token types plus
+// password, without the mfa-collapse applied by GetChallenges.
+func (user *User) GetRegisteredAuthMethods() []string {
+	methods := []string{authchal.PasswordKeyword}
+	seen := map[string]bool{}
+	for _, token := range user.MfaTokens {
+		if token.Disabled {
+			continue
+		}
+		switch token.Type {
+		case authchal.TotpKeyword, authchal.U2fKeyword, authchal.EmailKeyword:
+			if !seen[token.Type] {
+				methods = append(methods, token.Type)
+				seen[token.Type] = true
+			}
+		}
+	}
+	return methods
+}
+
 // GetChallenges returns a list of challenges that should be
 // satisfied prior to successfully authenticating a user.
 func (user *User) GetChallenges() ([]string, error) {

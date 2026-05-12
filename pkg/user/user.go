@@ -113,6 +113,7 @@ type Claims struct {
 	Origin        string                 `json:"origin,omitempty" xml:"origin,omitempty" yaml:"origin,omitempty"`
 	Scopes        []string               `json:"scopes,omitempty" xml:"scopes,omitempty" yaml:"scopes,omitempty"`
 	Organizations []string               `json:"org,omitempty" xml:"org,omitempty" yaml:"org,omitempty"`
+	Amr           []string               `json:"amr,omitempty" xml:"amr,omitempty" yaml:"amr,omitempty"`
 	AccessList    *AccessListClaim       `json:"acl,omitempty" xml:"acl,omitempty" yaml:"acl,omitempty"`
 	Address       string                 `json:"addr,omitempty" xml:"addr,omitempty" yaml:"addr,omitempty"`
 	PictureURL    string                 `json:"picture,omitempty" xml:"picture,omitempty" yaml:"picture,omitempty"`
@@ -238,6 +239,16 @@ func (u *User) SetIssuedAtClaim(i int64) {
 func (u *User) SetNotBeforeClaim(i int64) {
 	u.Claims.NotBefore = i
 	u.mkv["nbf"] = i
+}
+
+// SetAmrClaim sets Amr claim.
+func (u *User) SetAmrClaim(amr []string) {
+	u.Claims.Amr = amr
+	if len(amr) > 0 {
+		u.mkv["amr"] = amr
+	} else {
+		delete(u.mkv, "amr")
+	}
 }
 
 // SetRolesClaim sets Roles claim
@@ -648,6 +659,28 @@ func (c *Claims) unpackScopes(v interface{}, mkv, tkv map[string]interface{}) er
 	return nil
 }
 
+func (c *Claims) unpackAmr(k string, v interface{}, mkv map[string]interface{}) error {
+	switch amrs := v.(type) {
+	case []interface{}:
+		for _, m := range amrs {
+			switch s := m.(type) {
+			case string:
+				c.Amr = append(c.Amr, s)
+			default:
+				return errors.ErrInvalidAmr.WithArgs(m)
+			}
+		}
+	case []string:
+		c.Amr = append(c.Amr, amrs...)
+	default:
+		return errors.ErrInvalidAmrType.WithArgs(v)
+	}
+	if len(c.Amr) > 0 {
+		mkv[k] = c.Amr
+	}
+	return nil
+}
+
 func (c *Claims) unpackOrg(k string, v interface{}, mkv, tkv map[string]interface{}) error {
 	switch orgs := v.(type) {
 	case []interface{}:
@@ -891,6 +924,10 @@ func NewUser(data interface{}) (*User, error) {
 			}
 		case "roles", "role", "groups", "group":
 			if err := c.unpackRoles(v); err != nil {
+				return nil, err
+			}
+		case "amr":
+			if err := c.unpackAmr(k, v, mkv); err != nil {
 				return nil, err
 			}
 		case "scopes", "scope":

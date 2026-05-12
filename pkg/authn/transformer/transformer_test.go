@@ -325,6 +325,278 @@ func TestTransformData(t *testing.T) {
 	}
 }
 
+func TestFactoryAuthChallenges(t *testing.T) {
+	// Rules from greenpau/caddy-security#470 example chain, exercised across
+	// user populations below.
+	issue470Rules := []string{
+		"require auth challenges u2f",
+		"require auth challenges password totp if u2f not available",
+		"require auth challenges password if u2f and totp not available",
+	}
+	testcases := []struct {
+		name            string
+		configs         []*Config
+		user            map[string]interface{}
+		userAuthMethods []string
+		want            map[string]interface{}
+		shouldErr       bool
+	}{
+		{
+			name: "conditional rule matches when condition absent",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: []string{"password", "totp"},
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions:  []string{"require auth challenges password totp if u2f not available"},
+				},
+			},
+			want: map[string]interface{}{
+				"challenges": []string{"password", "totp"},
+			},
+		},
+		{
+			name: "conditional rule skipped when condition present then unconditional matches",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: []string{"password", "u2f"},
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions: []string{
+						"require auth challenges password totp if u2f not available",
+						"require auth challenges u2f",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"challenges": []string{"u2f"},
+			},
+		},
+		{
+			name: "rule gate excludes unreachable challenge then later rule matches",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: []string{"password"},
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions: []string{
+						"require auth challenges totp if u2f not available",
+						"require auth challenges password if u2f and totp not available",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"challenges": []string{"password"},
+			},
+		},
+		{
+			name: "all rules fail returns error",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: []string{"password", "u2f"},
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions: []string{
+						"require auth challenges totp if u2f not available",
+						"require auth challenges password if u2f and totp not available",
+					},
+				},
+			},
+			shouldErr: true,
+		},
+		{
+			name: "auth challenges coexists with require mfa",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: []string{"password", "totp"},
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions: []string{
+						"require mfa",
+						"require auth challenges totp if u2f not available",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"challenges": []string{"mfa", "totp"},
+			},
+		},
+		{
+			name: "malformed auth challenges rule returns error",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: nil,
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions:  []string{"require auth challenges u2f if"},
+				},
+			},
+			shouldErr: true,
+		},
+		{
+			name: "#470 example: u2f user wins rule 1",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: []string{"password", "u2f"},
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions:  issue470Rules,
+				},
+			},
+			want: map[string]interface{}{
+				"challenges": []string{"u2f"},
+			},
+		},
+		{
+			name: "#470 example: totp user wins rule 2",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: []string{"password", "totp"},
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions:  issue470Rules,
+				},
+			},
+			want: map[string]interface{}{
+				"challenges": []string{"password", "totp"},
+			},
+		},
+		{
+			name: "#470 example: password-only user wins rule 3",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: []string{"password"},
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions:  issue470Rules,
+				},
+			},
+			want: map[string]interface{}{
+				"challenges": []string{"password"},
+			},
+		},
+		{
+			name: "federated user with nil AuthMethods and MFA rule errors",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: nil,
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions:  []string{"require auth challenges totp if u2f not available"},
+				},
+			},
+			shouldErr: true,
+		},
+		{
+			name: "federated user with nil AuthMethods and password-only rule passes",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: nil,
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions:  []string{"require auth challenges password"},
+				},
+			},
+			want: map[string]interface{}{
+				"challenges": []string{"password"},
+			},
+		},
+		{
+			name: "#470 example: multi-MFA user (u2f+totp) wins rule 1",
+			user: map[string]interface{}{
+				"email": "user@example.com",
+			},
+			userAuthMethods: []string{"password", "u2f", "totp"},
+			configs: []*Config{
+				{
+					Matchers: []string{"exact match email user@example.com"},
+					Actions:  issue470Rules,
+				},
+			},
+			want: map[string]interface{}{
+				"challenges": []string{"u2f"},
+			},
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+			tr, err := NewFactory(tc.configs)
+			if err != nil {
+				if tc.shouldErr {
+					return
+				}
+				t.Fatalf("NewFactory: %v", err)
+			}
+			if tc.userAuthMethods != nil {
+				tc.user["auth_methods"] = tc.userAuthMethods
+			}
+			err = tr.Transform(tc.user)
+			if tc.shouldErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got := map[string]interface{}{}
+			if v, exists := tc.user["challenges"]; exists {
+				got["challenges"] = v
+			}
+			tests.EvalObjectsWithLog(t, "challenges", tc.want, got, msgs)
+		})
+	}
+}
+
+func BenchmarkFactoryTransform_AuthChallenges(b *testing.B) {
+	configs := []*Config{
+		{
+			Matchers: []string{"exact match email user@example.com"},
+			Actions: []string{
+				"require auth challenges u2f",
+				"require auth challenges password totp if u2f not available",
+				"require auth challenges password if u2f and totp not available",
+			},
+		},
+	}
+	tr, err := NewFactory(configs)
+	if err != nil {
+		b.Fatalf("NewFactory: %v", err)
+	}
+	authMethods := []string{"password", "u2f", "totp"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m := map[string]interface{}{"email": "user@example.com", "auth_methods": authMethods}
+		if err := tr.Transform(m); err != nil {
+			b.Fatalf("Transform: %v", err)
+		}
+	}
+}
+
 func deepCopy(src map[string]interface{}) map[string]interface{} {
 	if src == nil {
 		return nil

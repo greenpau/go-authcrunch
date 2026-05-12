@@ -321,6 +321,9 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 		zap.Any("backend", usr.Authenticator),
 		zap.Any("user", m),
 	)
+	if rr.Upstream.Method == "local" || rr.Upstream.Method == "ldap" {
+		usr.SetAmrClaim(user.ToAuthMethodReferences([]string{"password"}))
+	}
 	p.grantAccess(ctx, w, r, rr, usr)
 	return nil
 }
@@ -502,6 +505,7 @@ func (p *Portal) transformUser(_ context.Context, rr *requests.Request, m map[st
 	if rr.Upstream.Realm != "" {
 		m["realm"] = rr.Upstream.Realm
 	}
+	m["auth_methods"] = rr.User.AuthMethods
 	if err := p.transformer.Transform(m); err != nil {
 		p.logger.Warn(
 			"user transformation failed",
