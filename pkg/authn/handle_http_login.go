@@ -275,7 +275,7 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 	m["addr"] = addrutil.GetSourceAddress(r)
 
 	// Perform user claim transformation if necessary.
-	if err := p.transformUser(ctx, rr, m, rr.User.AuthMethods); err != nil {
+	if err := p.transformUser(ctx, rr, m); err != nil {
 		return err
 	}
 	injectPortalRoles(m, p.config)
@@ -498,14 +498,15 @@ func injectPortalRoles(m map[string]interface{}, cfg *PortalConfig) {
 	m["roles"] = updatedRoles
 }
 
-func (p *Portal) transformUser(_ context.Context, rr *requests.Request, m map[string]interface{}, userAuthMethods []string) error {
+func (p *Portal) transformUser(_ context.Context, rr *requests.Request, m map[string]interface{}) error {
 	if p.transformer == nil {
 		return nil
 	}
 	if rr.Upstream.Realm != "" {
 		m["realm"] = rr.Upstream.Realm
 	}
-	if err := p.transformer.Transform(m, userAuthMethods); err != nil {
+	m["auth_methods"] = rr.User.AuthMethods
+	if err := p.transformer.Transform(m); err != nil {
 		p.logger.Warn(
 			"user transformation failed",
 			zap.String("session_id", rr.Upstream.SessionID),

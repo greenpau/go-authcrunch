@@ -64,7 +64,7 @@ func (p *Portal) handleAPIExtractUserIdentity(ctx context.Context, rr *requests.
 	m["origin"] = rr.Upstream.Realm
 	m["realm"] = rr.Upstream.Realm
 
-	if err := p.transformUser(ctx, rr, m, rr.User.AuthMethods); err != nil {
+	if err := p.transformUser(ctx, rr, m); err != nil {
 		return err
 	}
 

@@ -157,7 +157,7 @@ func TestFactory(t *testing.T) {
 					return
 				}
 			}
-			if err := tr.Transform(tc.user, nil); err != nil {
+			if err := tr.Transform(tc.user); err != nil {
 				if tests.EvalErrWithLog(t, err, "transformer", tc.shouldErr, tc.err, msgs) {
 					return
 				}
@@ -550,7 +550,10 @@ func TestFactoryAuthChallenges(t *testing.T) {
 				}
 				t.Fatalf("NewFactory: %v", err)
 			}
-			err = tr.Transform(tc.user, tc.userAuthMethods)
+			if tc.userAuthMethods != nil {
+				tc.user["auth_methods"] = tc.userAuthMethods
+			}
+			err = tr.Transform(tc.user)
 			if tc.shouldErr {
 				if err == nil {
 					t.Fatalf("expected error, got nil")
@@ -587,8 +590,8 @@ func BenchmarkFactoryTransform_AuthChallenges(b *testing.B) {
 	authMethods := []string{"password", "u2f", "totp"}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		m := map[string]interface{}{"email": "user@example.com"}
-		if err := tr.Transform(m, authMethods); err != nil {
+		m := map[string]interface{}{"email": "user@example.com", "auth_methods": authMethods}
+		if err := tr.Transform(m); err != nil {
 			b.Fatalf("Transform: %v", err)
 		}
 	}

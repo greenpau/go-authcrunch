@@ -137,15 +137,18 @@ func NewFactory(cfgs []*Config) (*Factory, error) {
 	return f, nil
 }
 
-// Transform performs user data transformation. userAuthMethods is consulted
-// only by `require auth challenges` rules; pass nil if not applicable.
-func (f *Factory) Transform(m map[string]interface{}, userAuthMethods []string) error {
+// Transform performs user data transformation. For `require auth challenges`
+// rules, the caller must set m["auth_methods"] to []string; the key is
+// consumed and removed.
+func (f *Factory) Transform(m map[string]interface{}) error {
 	var challenges, frontendLinks []string
 	var seenAuthChallenges, matchedAuthChallenges bool
 	if _, exists := m["mail"]; exists {
 		m["email"] = m["mail"].(string)
 		delete(m, "mail")
 	}
+	userAuthMethods, _ := m["auth_methods"].([]string)
+	delete(m, "auth_methods")
 	for _, transform := range f.transforms {
 		if matched := transform.matcher.Allow(context.Background(), m); !matched {
 			continue

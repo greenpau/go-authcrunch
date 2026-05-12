@@ -64,7 +64,7 @@ func (p *Portal) handleIssueTokens(ctx context.Context, r *http.Request, rr *req
 	m["iss"] = util.GetIssuerURL(r)
 	m["addr"] = addrutil.GetSourceAddress(r)
 
-	if err := p.transformUser(ctx, rr, m, rr.User.AuthMethods); err != nil {
+	if err := p.transformUser(ctx, rr, m); err != nil {
 		return nil, err
 	}
 

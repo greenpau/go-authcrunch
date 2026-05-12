@@ -144,7 +144,7 @@ func (p *Portal) BasicAuth(r *authproxy.Request) error {
 	m["addr"] = r.Address
 
 	// Perform user claim transformation if necessary.
-	if err := p.transformUser(context.Background(), rr, m, rr.User.AuthMethods); err != nil {
+	if err := p.transformUser(context.Background(), rr, m); err != nil {
 		return err
 	}
 
