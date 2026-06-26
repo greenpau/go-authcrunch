@@ -75,27 +75,27 @@ func (b *Config) Validate() error {
 
 // Match matches HTTP URL to the bypass configuration.
 func Match(r *http.Request, cfgs []*Config) bool {
-	cleanedPath := path.Clean(r.URL.Path)
+	sanitizedPath := path.Clean(r.URL.Path)
 	for _, cfg := range cfgs {
 		switch cfg.match {
 		case bypassMatchExact:
-			if cfg.URI == cleanedPath {
+			if cfg.URI == sanitizedPath {
 				return true
 			}
 		case bypassMatchPartial:
-			if strings.Contains(cleanedPath, cfg.URI) {
+			if strings.Contains(sanitizedPath, cfg.URI) {
 				return true
 			}
 		case bypassMatchPrefix:
-			if strings.HasPrefix(cleanedPath, cfg.URI) {
+			if strings.HasPrefix(sanitizedPath, cfg.URI) {
 				return true
 			}
 		case bypassMatchSuffix:
-			if strings.HasSuffix(cleanedPath, cfg.URI) {
+			if strings.HasSuffix(sanitizedPath, cfg.URI) {
 				return true
 			}
 		case bypassMatchRegex:
-			if cfg.regex.MatchString(cleanedPath) {
+			if cfg.regex.MatchString(sanitizedPath) {
 				return true
 			}
 		}
