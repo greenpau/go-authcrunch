@@ -17,6 +17,7 @@ package bypass
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -74,26 +75,27 @@ func (b *Config) Validate() error {
 
 // Match matches HTTP URL to the bypass configuration.
 func Match(r *http.Request, cfgs []*Config) bool {
+	sanitizedPath := path.Clean(r.URL.Path)
 	for _, cfg := range cfgs {
 		switch cfg.match {
 		case bypassMatchExact:
-			if cfg.URI == r.URL.Path {
+			if cfg.URI == sanitizedPath {
 				return true
 			}
 		case bypassMatchPartial:
-			if strings.Contains(r.URL.Path, cfg.URI) {
+			if strings.Contains(sanitizedPath, cfg.URI) {
 				return true
 			}
 		case bypassMatchPrefix:
-			if strings.HasPrefix(r.URL.Path, cfg.URI) {
+			if strings.HasPrefix(sanitizedPath, cfg.URI) {
 				return true
 			}
 		case bypassMatchSuffix:
-			if strings.HasSuffix(r.URL.Path, cfg.URI) {
+			if strings.HasSuffix(sanitizedPath, cfg.URI) {
 				return true
 			}
 		case bypassMatchRegex:
-			if cfg.regex.MatchString(r.URL.Path) {
+			if cfg.regex.MatchString(sanitizedPath) {
 				return true
 			}
 		}
