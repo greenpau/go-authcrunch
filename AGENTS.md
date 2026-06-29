@@ -28,8 +28,13 @@ Use the repo-local `scripts-and-automation` skill when choosing, running, or
 documenting Makefile targets, repository scripts, build/test/report workflows,
 generated artifacts, dependency automation, or release/version procedures.
 
+## Testing and CI
+
+Use the repo-local `testing-and-ci` skill when choosing or running tests, adding
+or updating test coverage, interpreting CI failures, reproducing GitHub Actions
+locally, or documenting validation for this repository.
+
 ## Source Code Management
 
 Use the repo-local `source-code-management` skill for commit message rules and
 for the workflow used when asked to create a commit message for a change.
-
