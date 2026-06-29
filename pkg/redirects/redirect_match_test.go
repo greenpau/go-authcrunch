@@ -16,7 +16,7 @@ package redirects
 
 import (
 	"fmt"
-
+	"net/url"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
@@ -170,6 +170,73 @@ func TestMatch(t *testing.T) {
 			if tests.EvalErrWithLog(t, err, "Match", tc.shouldErr, tc.err, msgs) {
 				return
 			}
+
+			tests.EvalObjectsWithLog(t, "Output", tc.want, got, msgs)
+		})
+	}
+}
+
+func TestMatchRequiresPathAndDomainFromSameConfig(t *testing.T) {
+	cfgs := []*RedirectURIMatchConfig{}
+	for _, config := range [][]string{
+		{"exact", "app.example.com", "exact", "/dashboard"},
+		{"exact", "docs.example.com", "exact", "/docs"},
+	} {
+		c, err := NewRedirectURIMatchConfig(config[0], config[1], config[2], config[3])
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfgs = append(cfgs, c)
+	}
+
+	testcases := []struct {
+		name  string
+		input string
+		want  map[string]interface{}
+	}{
+		{
+			name:  "cross rule domain and path mismatch",
+			input: "https://docs.example.com/dashboard",
+			want: map[string]interface{}{
+				"match":  false,
+				"domain": "docs.example.com",
+				"path":   "/dashboard",
+			},
+		},
+		{
+			name:  "first rule exact domain and path match",
+			input: "https://app.example.com/dashboard",
+			want: map[string]interface{}{
+				"match":  true,
+				"domain": "app.example.com",
+				"path":   "/dashboard",
+			},
+		},
+		{
+			name:  "second rule exact domain and path match",
+			input: "https://docs.example.com/docs",
+			want: map[string]interface{}{
+				"match":  true,
+				"domain": "docs.example.com",
+				"path":   "/docs",
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := make(map[string]interface{})
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+			msgs = append(msgs, fmt.Sprintf("input:\n%s", tc.input))
+
+			redirURI, err := url.Parse(tc.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got["match"] = Match(redirURI, cfgs)
+			got["domain"] = redirURI.Host
+			got["path"] = redirURI.Path
 
 			tests.EvalObjectsWithLog(t, "Output", tc.want, got, msgs)
 		})

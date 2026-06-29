@@ -19,67 +19,47 @@ import (
 	"strings"
 )
 
-// Match matches HTTP URL to the bypass configuration.
+// Match matches HTTP URL to the redirect URI match configuration.
 func Match(u *url.URL, cfgs []*RedirectURIMatchConfig) bool {
-	pathMatched := false
-	domainMatched := false
+	for _, cfg := range cfgs {
+		if cfg == nil {
+			continue
+		}
+		if matchRedirectURIPath(u.Path, cfg) && matchRedirectURIDomain(u.Host, cfg) {
+			return true
+		}
+	}
+	return false
+}
 
-	for _, cfg := range cfgs {
-		switch cfg.pathMatch {
-		case matchExact:
-			if cfg.Path == u.Path {
-				pathMatched = true
-			}
-		case matchPartial:
-			if strings.Contains(u.Path, cfg.Path) {
-				pathMatched = true
-			}
-		case matchPrefix:
-			if strings.HasPrefix(u.Path, cfg.Path) {
-				pathMatched = true
-			}
-		case matchSuffix:
-			if strings.HasSuffix(u.Path, cfg.Path) {
-				pathMatched = true
-			}
-		case matchRegex:
-			if cfg.pathRegex.MatchString(u.Path) {
-				pathMatched = true
-			}
-		}
-		if pathMatched {
-			break
-		}
+func matchRedirectURIPath(requestPath string, cfg *RedirectURIMatchConfig) bool {
+	switch cfg.pathMatch {
+	case matchExact:
+		return cfg.Path == requestPath
+	case matchPartial:
+		return strings.Contains(requestPath, cfg.Path)
+	case matchPrefix:
+		return strings.HasPrefix(requestPath, cfg.Path)
+	case matchSuffix:
+		return strings.HasSuffix(requestPath, cfg.Path)
+	case matchRegex:
+		return cfg.pathRegex.MatchString(requestPath)
 	}
-	if !pathMatched {
-		return false
+	return false
+}
+
+func matchRedirectURIDomain(requestHost string, cfg *RedirectURIMatchConfig) bool {
+	switch cfg.domainMatch {
+	case matchExact:
+		return cfg.Domain == requestHost
+	case matchPartial:
+		return strings.Contains(requestHost, cfg.Domain)
+	case matchPrefix:
+		return strings.HasPrefix(requestHost, cfg.Domain)
+	case matchSuffix:
+		return strings.HasSuffix(requestHost, cfg.Domain)
+	case matchRegex:
+		return cfg.domainRegex.MatchString(requestHost)
 	}
-	for _, cfg := range cfgs {
-		switch cfg.domainMatch {
-		case matchExact:
-			if cfg.Domain == u.Host {
-				domainMatched = true
-			}
-		case matchPartial:
-			if strings.Contains(u.Host, cfg.Domain) {
-				domainMatched = true
-			}
-		case matchPrefix:
-			if strings.HasPrefix(u.Host, cfg.Domain) {
-				domainMatched = true
-			}
-		case matchSuffix:
-			if strings.HasSuffix(u.Host, cfg.Domain) {
-				domainMatched = true
-			}
-		case matchRegex:
-			if cfg.domainRegex.MatchString(u.Host) {
-				domainMatched = true
-			}
-		}
-		if domainMatched {
-			break
-		}
-	}
-	return domainMatched
+	return false
 }
