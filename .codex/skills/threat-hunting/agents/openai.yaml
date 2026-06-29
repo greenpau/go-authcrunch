@@ -1,0 +1,4 @@
+interface:
+  display_name: "Threat Hunting"
+  short_description: "Deep auth threat hunting workflow"
+  default_prompt: "Use $threat-hunting to audit an AuthCrunch security boundary."

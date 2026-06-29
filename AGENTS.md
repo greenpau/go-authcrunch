@@ -42,6 +42,15 @@ Use the repo-local `testing-and-ci` skill when choosing or running tests, adding
 or updating test coverage, interpreting CI failures, reproducing GitHub Actions
 locally, or documenting validation for this repository.
 
+## Threat Hunting
+
+Use the repo-local `threat-hunting` skill when auditing the repository for
+security issues, triaging vulnerability reports, threat-modeling authentication
+or authorization flows, reviewing bypass/ACL/path matching, redirects, token
+sources, cookies, sessions, provider trust boundaries, input parsing,
+concurrency, secret logging, dependency vulnerabilities, or documenting security
+findings and remediation plans.
+
 ## Source Code Management
 
 Use the repo-local `source-code-management` skill for commit message rules and
