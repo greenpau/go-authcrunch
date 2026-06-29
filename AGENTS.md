@@ -22,7 +22,14 @@ data models under `pkg/identity`, user registration under `pkg/registry`,
 messaging providers under `pkg/messaging`, i18n helpers under `pkg/translate`,
 and test fixtures under `testdata`.
 
+## Scripts and Automation
+
+Use the repo-local `scripts-and-automation` skill when choosing, running, or
+documenting Makefile targets, repository scripts, build/test/report workflows,
+generated artifacts, dependency automation, or release/version procedures.
+
 ## Source Code Management
 
 Use the repo-local `source-code-management` skill for commit message rules and
 for the workflow used when asked to create a commit message for a change.
+

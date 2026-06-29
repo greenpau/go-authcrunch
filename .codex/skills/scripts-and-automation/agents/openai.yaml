@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scripts and Automation"
+  short_description: "go-authcrunch automation commands"
+  default_prompt: "Use $scripts-and-automation to choose the correct go-authcrunch automation command."
