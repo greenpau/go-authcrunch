@@ -88,6 +88,14 @@ func TestTokenCache(t *testing.T) {
 			if tc.emptyUser {
 				usr = nil
 			}
+			if usr != nil {
+				switch {
+				case tc.delay < 0:
+					usr.Claims.ExpiresAt = time.Now().Add(time.Duration(tc.delay) * time.Second).Unix()
+				case tc.deletedByManager:
+					usr.Claims.ExpiresAt = time.Now().Add(time.Duration(-1000) * time.Second).Unix()
+				}
+			}
 			err = c.Add(usr)
 			d.Add(usr)
 			if tc.delay == 0 && !tc.deletedByManager {
@@ -96,12 +104,10 @@ func TestTokenCache(t *testing.T) {
 				}
 			}
 
-			if tc.deletedByManager {
-				usr.Claims.ExpiresAt = time.Now().Add(time.Duration(-1000) * time.Second).Unix()
-			}
-
 			if tc.emptyCacheEntries {
+				c.mu.Lock()
 				c.Entries = nil
+				c.mu.Unlock()
 			}
 
 			time.Sleep(time.Millisecond * time.Duration(200))
@@ -112,7 +118,6 @@ func TestTokenCache(t *testing.T) {
 
 			switch {
 			case tc.delay < 0:
-				usr.Claims.ExpiresAt = time.Now().Add(time.Duration(tc.delay) * time.Second).Unix()
 				if c.Get(usr.Token) == nil {
 					err = fmt.Errorf("token expired")
 				}
@@ -134,5 +139,83 @@ func TestTokenCache(t *testing.T) {
 				return
 			}
 		})
+	}
+}
+
+func TestTokenCacheAddStoresIsolatedUser(t *testing.T) {
+	c := NewTokenCache(0)
+	usr := testutils.NewTestUser()
+	ks, err := testutils.NewTestCryptoKeyStore()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if err := ks.SignToken("access_token", "HS512", usr); err != nil {
+		t.Fatalf("unexpected signing error: %v", err)
+	}
+
+	usr.BuildRequestIdentity("sub")
+	usr.SetRequestHeaders(map[string]string{
+		"X-Token-User-Email": usr.Claims.Email,
+	})
+
+	if err := c.Add(usr); err != nil {
+		t.Fatalf("Add returned error: %v", err)
+	}
+
+	usr.Claims.ExpiresAt = time.Now().Add(-time.Minute).Unix()
+	usr.Claims.Roles[0] = "admin"
+	usr.GetRequestHeaders()["X-Token-User-Email"] = "mutated@example.com"
+	usr.GetRequestIdentity()["id"] = "mutated@example.com"
+
+	got := c.Get(usr.Token)
+	if got == nil {
+		t.Fatal("expected cached user to survive caller-owned mutation")
+	}
+	if got.Claims.ExpiresAt == usr.Claims.ExpiresAt {
+		t.Fatal("expected cached user claims to be isolated from caller claims")
+	}
+	if got.Claims.Roles[0] == "admin" {
+		t.Fatal("expected cached user roles to be isolated from caller roles")
+	}
+	if got.GetRequestHeaders()["X-Token-User-Email"] == "mutated@example.com" {
+		t.Fatal("expected cached request headers to be isolated from caller headers")
+	}
+	if got.GetRequestIdentity()["id"] == "mutated@example.com" {
+		t.Fatal("expected cached request identity to be isolated from caller identity")
+	}
+}
+
+func TestTokenCacheGetReturnsIsolatedUser(t *testing.T) {
+	c := NewTokenCache(0)
+	usr := testutils.NewTestUser()
+	ks, err := testutils.NewTestCryptoKeyStore()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if err := ks.SignToken("access_token", "HS512", usr); err != nil {
+		t.Fatalf("unexpected signing error: %v", err)
+	}
+	usr.BuildRequestIdentity("sub")
+
+	if err := c.Add(usr); err != nil {
+		t.Fatalf("Add returned error: %v", err)
+	}
+
+	got := c.Get(usr.Token)
+	if got == nil {
+		t.Fatal("expected cached user")
+	}
+	got.Claims.ExpiresAt = time.Now().Add(-time.Minute).Unix()
+	got.GetRequestIdentity()["id"] = "mutated@example.com"
+
+	got = c.Get(usr.Token)
+	if got == nil {
+		t.Fatal("expected cached user to survive returned-user mutation")
+	}
+	if got.Claims.ExpiresAt < time.Now().Unix() {
+		t.Fatal("expected returned user claims to be isolated from cache")
+	}
+	if got.GetRequestIdentity()["id"] == "mutated@example.com" {
+		t.Fatal("expected returned user identity to be isolated from cache")
 	}
 }

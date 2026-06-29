@@ -73,6 +73,107 @@ func (u *User) Dump() string {
 	return string(b)
 }
 
+// Clone returns a deep copy of User.
+func (u *User) Clone() *User {
+	if u == nil {
+		return nil
+	}
+
+	clone := *u
+
+	if u.Claims != nil {
+		claims := *u.Claims
+		claims.Audience = cloneStringSlice(u.Claims.Audience)
+		claims.Roles = cloneStringSlice(u.Claims.Roles)
+		claims.Scopes = cloneStringSlice(u.Claims.Scopes)
+		claims.Organizations = cloneStringSlice(u.Claims.Organizations)
+		claims.Metadata = cloneInterfaceMap(u.Claims.Metadata)
+		claims.custom = cloneInterfaceMap(u.Claims.custom)
+		if u.Claims.AccessList != nil {
+			accessList := *u.Claims.AccessList
+			accessList.Paths = cloneInterfaceMap(u.Claims.AccessList.Paths)
+			claims.AccessList = &accessList
+		}
+		clone.Claims = &claims
+	}
+
+	if u.Checkpoints != nil {
+		clone.Checkpoints = make([]*Checkpoint, 0, len(u.Checkpoints))
+		for _, checkpoint := range u.Checkpoints {
+			if checkpoint == nil {
+				clone.Checkpoints = append(clone.Checkpoints, nil)
+				continue
+			}
+			checkpointClone := *checkpoint
+			clone.Checkpoints = append(clone.Checkpoints, &checkpointClone)
+		}
+	}
+
+	clone.FrontendLinks = cloneStringSlice(u.FrontendLinks)
+	clone.requestHeaders = cloneStringMap(u.requestHeaders)
+	clone.requestIdentity = cloneInterfaceMap(u.requestIdentity)
+	clone.mkv = cloneInterfaceMap(u.mkv)
+	clone.tkv = cloneInterfaceMap(u.tkv)
+	clone.rkv = cloneInterfaceMap(u.rkv)
+
+	return &clone
+}
+
+func cloneStringSlice(src []string) []string {
+	if src == nil {
+		return nil
+	}
+	dst := make([]string, len(src))
+	copy(dst, src)
+	return dst
+}
+
+func cloneStringMap(src map[string]string) map[string]string {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]string, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
+func cloneInterfaceMap(src map[string]interface{}) map[string]interface{} {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]interface{}, len(src))
+	for k, v := range src {
+		dst[k] = cloneInterfaceValue(v)
+	}
+	return dst
+}
+
+func cloneInterfaceSlice(src []interface{}) []interface{} {
+	if src == nil {
+		return nil
+	}
+	dst := make([]interface{}, len(src))
+	for i, v := range src {
+		dst[i] = cloneInterfaceValue(v)
+	}
+	return dst
+}
+
+func cloneInterfaceValue(src interface{}) interface{} {
+	switch v := src.(type) {
+	case map[string]interface{}:
+		return cloneInterfaceMap(v)
+	case []interface{}:
+		return cloneInterfaceSlice(v)
+	case []string:
+		return cloneStringSlice(v)
+	default:
+		return v
+	}
+}
+
 // Checkpoint represents additional checks that a user needs to pass. Once
 // a user passes the checks, the Authorized is set to true. The checks
 // could be the acceptance of the terms of use, multi-factor authentication,

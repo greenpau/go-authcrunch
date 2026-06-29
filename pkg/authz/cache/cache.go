@@ -47,13 +47,11 @@ func manageTokenCache(i int, cache *TokenCache) {
 		// if cache == nil {
 		//	break
 		// }
-		cache.mu.RLock()
+		cache.mu.Lock()
 		if cache.Entries == nil {
-			cache.mu.RUnlock()
+			cache.mu.Unlock()
 			continue
 		}
-		cache.mu.RUnlock()
-		cache.mu.Lock()
 		for k, usr := range cache.Entries {
 			if err := usr.Claims.Valid(); err != nil {
 				delete(cache.Entries, k)
@@ -78,10 +76,16 @@ func (c *TokenCache) Add(usr *user.User) error {
 		// If not expiration time provided, then expire within 5 minutes.
 		usr.Claims.ExpiresAt = time.Now().Add(5 * time.Minute).Unix()
 	}
+	usr.Cached = true
+	cachedUsr := usr.Clone()
+	cachedUsr.Cached = true
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	usr.Cached = true
-	c.Entries[usr.Token] = usr
+	if c.Entries == nil {
+		c.Entries = make(map[string]*user.User)
+	}
+	c.Entries[usr.Token] = cachedUsr
 
 	return nil
 }
@@ -100,13 +104,16 @@ func (c *TokenCache) Delete(token string) error {
 func (c *TokenCache) Get(token string) *user.User {
 	c.mu.RLock()
 	usr, exists := c.Entries[token]
-	c.mu.RUnlock()
 	if !exists {
+		c.mu.RUnlock()
 		return nil
 	}
 	if usr.Claims.ExpiresAt < time.Now().Unix() {
+		c.mu.RUnlock()
 		c.Delete(token)
 		return nil
 	}
-	return usr
+	cachedUsr := usr.Clone()
+	c.mu.RUnlock()
+	return cachedUsr
 }
