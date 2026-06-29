@@ -205,8 +205,8 @@ callback URL, and "current URL" helper.
   into `Location`
 - Absolute or scheme-relative attacker-controlled redirect targets
 - Missing allowlist check on redirect destination
-- Full current-URL construction without validating forwarded headers against
-  a trusted proxy list
+- Full current-URL construction that trusts forwarded headers outside the
+  embedding solution's documented header-normalization boundary
 - Query parameter interpolation without `url.QueryEscape`
 - Response splitting or invalid header characters
 - Post-logout redirect to attacker-controlled URL
@@ -214,6 +214,15 @@ callback URL, and "current URL" helper.
 
 When a placeholder intentionally expands to an absolute URL, document the trust
 model and the headers or config that define the allowed host set.
+
+Do not report **"Source-Address Authorization Trusts Forwarded IP Headers"** as
+a go-authcrunch library finding. AuthCrunch consumes the request metadata
+provided by the embedding application or server. Protection, stripping, and
+normalization of `X-Forwarded-*`, `X-Real-IP`, and similar client-IP headers is
+the responsibility of the solution using this library. Document that deployment
+assumption when relevant, but do not recommend implementing trusted-proxy
+enforcement in this library unless go-authcrunch itself becomes the final
+network edge for the affected flow.
 
 ---
 
@@ -329,6 +338,12 @@ them as **release/toolchain notes** for go-authcrunch unless the finding is
 caused by repository code that can be fixed independently of the final build
 toolchain. Avoid treating the local scan's Go version as this module's minimum
 supported Go version.
+
+When source-address authorization uses forwarded client-IP headers, classify
+header protection as an embedding-solution responsibility, not a
+go-authcrunch-code vulnerability. Treat the expected upstream protection as a
+deployment assumption unless the reviewed code bypasses its own authorization
+checks independently of `X-Forwarded-*` or `X-Real-IP` trust.
 
 For every confirmed or deployment-dependent finding:
 - Add a focused regression test **before or with** the fix
