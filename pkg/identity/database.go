@@ -967,6 +967,7 @@ func (db *Database) AddAPIKey(r *requests.Request) error {
 						failCount++
 						continue
 					}
+					break
 				}
 			}
 			r.Response.Payload = s

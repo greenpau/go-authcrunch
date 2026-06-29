@@ -183,6 +183,55 @@ func TestNewDatabase(t *testing.T) {
 	}
 }
 
+func TestDatabaseAddPrefixedPlaintextAPIKey(t *testing.T) {
+	db, err := createTestDatabase("TestDatabaseAddPrefixedPlaintextAPIKey")
+	if err != nil {
+		t.Fatalf("failed to create test database: %v", err)
+	}
+
+	const apiKeyPayload = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzAB"
+	req := requests.NewRequest()
+	req.User.Username = testUser1
+	req.User.Email = testEmail1
+	req.Key.Usage = "api"
+	req.Key.Comment = "prefixed-api-key"
+	req.Key.Payload = apiKeyPayload
+	req.Key.Prefix = apiKeyPayload[:24]
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- db.AddAPIKey(req)
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("AddAPIKey() error = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("AddAPIKey() timed out for prefixed plaintext API key")
+	}
+
+	if req.Response.Payload != apiKeyPayload {
+		t.Fatalf("Response.Payload = %q, want original API key payload", req.Response.Payload)
+	}
+	if req.Key.Payload == apiKeyPayload {
+		t.Fatal("Key.Payload was not replaced with hashed API key payload")
+	}
+
+	lookupReq := requests.NewRequest()
+	lookupReq.Key.Payload = apiKeyPayload
+	if err := db.LookupAPIKey(lookupReq); err != nil {
+		t.Fatalf("LookupAPIKey() error = %v", err)
+	}
+	if lookupReq.User.Username != testUser1 {
+		t.Fatalf("lookup username = %q, want %q", lookupReq.User.Username, testUser1)
+	}
+	if lookupReq.User.Email != testEmail1 {
+		t.Fatalf("lookup email = %q, want %q", lookupReq.User.Email, testEmail1)
+	}
+}
+
 func TestDatabaseAuthentication(t *testing.T) {
 	db, err := createTestDatabase("TestDatabaseAuthentication")
 	if err != nil {
