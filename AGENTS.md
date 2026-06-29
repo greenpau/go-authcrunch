@@ -28,6 +28,14 @@ Use the repo-local `scripts-and-automation` skill when choosing, running, or
 documenting Makefile targets, repository scripts, build/test/report workflows,
 generated artifacts, dependency automation, or release/version procedures.
 
+## Coding Directives
+
+Use the repo-local `coding-directives` skill when creating, modifying, or
+reviewing repository code; choosing package boundaries, config and validation
+patterns, constructors, errors, logging, serialization tags, security handling,
+or test structure; or deciding how a new feature should fit existing
+AuthCrunch packages.
+
 ## Testing and CI
 
 Use the repo-local `testing-and-ci` skill when choosing or running tests, adding

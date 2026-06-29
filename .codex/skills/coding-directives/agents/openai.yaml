@@ -1,0 +1,4 @@
+interface:
+  display_name: "Coding Directives"
+  short_description: "go-authcrunch repository code rules"
+  default_prompt: "Use $coding-directives to apply go-authcrunch coding rules while editing code."
