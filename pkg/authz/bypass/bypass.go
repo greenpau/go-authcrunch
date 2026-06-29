@@ -17,6 +17,7 @@ package bypass
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -38,6 +39,7 @@ type Config struct {
 	URI       string `json:"uri,omitempty" xml:"uri,omitempty" yaml:"uri,omitempty"`
 	match     bypassMatchStrategy
 	regex     *regexp.Regexp
+	cleanURI  string
 }
 
 // Validate validates Config
@@ -62,6 +64,7 @@ func (b *Config) Validate() error {
 	if b.URI == "" {
 		return fmt.Errorf("undefined bypass uri")
 	}
+	b.cleanURI = cleanURIPath(b.URI)
 	if b.regex == nil {
 		r, err := regexp.Compile(b.URI)
 		if err != nil {
@@ -72,28 +75,41 @@ func (b *Config) Validate() error {
 	return nil
 }
 
+func cleanURIPath(s string) string {
+	cleaned := path.Clean(s)
+	if strings.HasSuffix(s, "/") && cleaned != "/" {
+		cleaned += "/"
+	}
+	return cleaned
+}
+
 // Match matches HTTP URL to the bypass configuration.
 func Match(r *http.Request, cfgs []*Config) bool {
+	reqPath := cleanURIPath(r.URL.Path)
 	for _, cfg := range cfgs {
+		cfgURI := cfg.cleanURI
+		if cfgURI == "" {
+			cfgURI = cleanURIPath(cfg.URI)
+		}
 		switch cfg.match {
 		case bypassMatchExact:
-			if cfg.URI == r.URL.Path {
+			if cfgURI == reqPath {
 				return true
 			}
 		case bypassMatchPartial:
-			if strings.Contains(r.URL.Path, cfg.URI) {
+			if strings.Contains(reqPath, cfgURI) {
 				return true
 			}
 		case bypassMatchPrefix:
-			if strings.HasPrefix(r.URL.Path, cfg.URI) {
+			if strings.HasPrefix(reqPath, cfgURI) {
 				return true
 			}
 		case bypassMatchSuffix:
-			if strings.HasSuffix(r.URL.Path, cfg.URI) {
+			if strings.HasSuffix(reqPath, cfgURI) {
 				return true
 			}
 		case bypassMatchRegex:
-			if cfg.regex.MatchString(r.URL.Path) {
+			if cfg.regex.MatchString(reqPath) {
 				return true
 			}
 		}

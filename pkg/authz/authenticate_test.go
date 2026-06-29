@@ -169,6 +169,57 @@ func TestAuthenticate(t *testing.T) {
 	}
 }
 
+func TestForbiddenURLURIPlaceholderUsesLocalRequestURI(t *testing.T) {
+	testcases := []struct {
+		name         string
+		target       string
+		forbiddenURL string
+		wantLocation string
+	}{
+		{
+			name:         "absolute request target becomes origin form",
+			target:       "http://evil.example/admin?x=1",
+			forbiddenURL: "{uri}",
+			wantLocation: "/admin?x=1",
+		},
+		{
+			name:         "scheme relative path is made local",
+			target:       "https://app.example//evil.example/admin?x=1",
+			forbiddenURL: "{uri}",
+			wantLocation: "/.//evil.example/admin?x=1",
+		},
+		{
+			name:         "http request uri placeholder uses local URI",
+			target:       "https://app.example/private?next=http://evil.example",
+			forbiddenURL: "/forbidden?return={http.request.uri}",
+			wantLocation: "/forbidden?return=/private?next=http://evil.example",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := &Gatekeeper{
+				config: &PolicyConfig{
+					ForbiddenURL: tc.forbiddenURL,
+				},
+			}
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", tc.target, nil)
+			ar := requests.NewAuthorizationRequest()
+
+			if err := g.handleAuthorizeWithForbidden(w, r, ar); err != nil {
+				t.Fatalf("handleAuthorizeWithForbidden() error = %v", err)
+			}
+			if w.Code != http.StatusSeeOther {
+				t.Fatalf("status code = %d, want %d", w.Code, http.StatusSeeOther)
+			}
+			if got := w.Header().Get("Location"); got != tc.wantLocation {
+				t.Fatalf("Location = %q, want %q", got, tc.wantLocation)
+			}
+		})
+	}
+}
+
 func buildClient(t *testing.T, ts *httptest.Server, req *testRequest) http.Client {
 	cert, err := x509.ParseCertificate(ts.TLS.Certificates[0].Certificate[0])
 	if err != nil {

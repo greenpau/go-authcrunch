@@ -175,7 +175,7 @@ func (g *Gatekeeper) handleAuthorizeWithForbidden(w http.ResponseWriter, r *http
 		for _, placeholder := range placeholders {
 			switch placeholder {
 			case "uri", "http.request.uri":
-				redirectLocation = strings.ReplaceAll(redirectLocation, "{"+placeholder+"}", r.URL.String())
+				redirectLocation = strings.ReplaceAll(redirectLocation, "{"+placeholder+"}", getRequestURI(r))
 			case "url":
 				redirectLocation = strings.ReplaceAll(redirectLocation, "{"+placeholder+"}", util.GetCurrentURL(r))
 			}
@@ -187,6 +187,26 @@ func (g *Gatekeeper) handleAuthorizeWithForbidden(w http.ResponseWriter, r *http
 	w.WriteHeader(303)
 	w.Write([]byte(`Forbidden`))
 	return ar.Response.Error
+}
+
+func getRequestURI(r *http.Request) string {
+	u := url.URL{
+		Path:       r.URL.Path,
+		RawPath:    r.URL.RawPath,
+		RawQuery:   r.URL.RawQuery,
+		ForceQuery: r.URL.ForceQuery,
+	}
+	s := u.RequestURI()
+	if s == "" {
+		return "/"
+	}
+	if !strings.HasPrefix(s, "/") {
+		s = "/" + s
+	}
+	if strings.HasPrefix(s, "//") {
+		s = "/." + s
+	}
+	return s
 }
 
 func (g *Gatekeeper) handleAuthorizeWithRedirect(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
