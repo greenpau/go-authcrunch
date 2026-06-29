@@ -176,7 +176,7 @@ release-update-version:
 .PHONY: release-git-commit
 release-git-commit:
 	@echo "DEBUG: started $@"
-	@git commit -m "released v`cat VERSION | head -1`"
+	@git commit -m "ops: released v`cat VERSION | head -1`"
 	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
 	@git push
 	@git push --tags
