@@ -35,6 +35,7 @@ type Config struct {
 	ClientSecret string `json:"client_secret,omitempty" xml:"client_secret,omitempty" yaml:"client_secret,omitempty"`
 	ServerID     string `json:"server_id,omitempty" xml:"server_id,omitempty" yaml:"server_id,omitempty"`
 	ServerName   string `json:"server_name,omitempty" xml:"server_name,omitempty" yaml:"server_name,omitempty"`
+	Issuer       string `json:"issuer,omitempty" xml:"issuer,omitempty" yaml:"issuer,omitempty"`
 	AppSecret    string `json:"app_secret,omitempty" xml:"app_secret,omitempty" yaml:"app_secret,omitempty"`
 	TenantID     string `json:"tenant_id,omitempty" xml:"tenant_id,omitempty" yaml:"tenant_id,omitempty"`
 
@@ -94,6 +95,8 @@ type Config struct {
 	TokenURL         string `json:"token_url,omitempty" xml:"token_url,omitempty" yaml:"token_url,omitempty"`
 
 	RequiredTokenFields []string `json:"required_token_fields,omitempty" xml:"required_token_fields,omitempty" yaml:"required_token_fields,omitempty"`
+
+	AccessTokenAudience string `json:"access_token_audience,omitempty" xml:"access_token_audience,omitempty" yaml:"access_token_audience,omitempty"`
 
 	TLSInsecureSkipVerify bool `json:"tls_insecure_skip_verify,omitempty" xml:"tls_insecure_skip_verify,omitempty" yaml:"tls_insecure_skip_verify,omitempty"`
 

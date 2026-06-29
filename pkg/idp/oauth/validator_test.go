@@ -18,10 +18,17 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	jwtlib "github.com/golang-jwt/jwt/v5"
+)
+
+const (
+	oauthValidatorTestAccessAudience = "https://api.example.com"
+	oauthValidatorTestClientID       = "authcrunch-client"
+	oauthValidatorTestIssuer         = "https://issuer.example.com"
 )
 
 func TestValidateAccessTokenMergesVerifiedAccessTokenClaims(t *testing.T) {
@@ -32,15 +39,19 @@ func TestValidateAccessTokenMergesVerifiedAccessTokenClaims(t *testing.T) {
 	}
 
 	idToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud":   oauthValidatorTestClientID,
 		"email": "user@example.com",
 		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
 		"name":  "Valid User",
 		"nonce": nonce,
 		"roles": []string{"viewer"},
 		"sub":   "subject-user",
 	})
 	accessToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud": oauthValidatorTestClientID,
 		"exp": time.Now().Add(time.Hour).Unix(),
+		"iss": oauthValidatorTestIssuer,
 		"realm_access": map[string]interface{}{
 			"roles": []string{"editor"},
 		},
@@ -76,15 +87,19 @@ func TestValidateAccessTokenRejectsUnsignedAccessTokenClaims(t *testing.T) {
 	}
 
 	idToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud":   oauthValidatorTestClientID,
 		"email": "user@example.com",
 		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
 		"name":  "Valid User",
 		"nonce": nonce,
 		"roles": []string{"viewer"},
 		"sub":   "subject-user",
 	})
 	accessToken := unsignedOAuthValidatorTestToken(t, jwtlib.MapClaims{
+		"aud":   oauthValidatorTestClientID,
 		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
 		"roles": []string{"admin"},
 	})
 
@@ -104,8 +119,10 @@ func TestValidateAccessTokenIgnoresOpaqueAccessTokenClaims(t *testing.T) {
 	}
 
 	idToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud":   oauthValidatorTestClientID,
 		"email": "user@example.com",
 		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
 		"name":  "Valid User",
 		"nonce": nonce,
 		"roles": []string{"viewer"},
@@ -136,8 +153,10 @@ func TestValidateAccessTokenAcceptsSignedAccessTokenWhenConfiguredAsIdentityToke
 	}
 
 	accessToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud":   oauthValidatorTestClientID,
 		"email": "user@example.com",
 		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
 		"name":  "Valid User",
 		"nonce": nonce,
 		"roles": []string{"viewer"},
@@ -166,8 +185,10 @@ func TestValidateAccessTokenRejectsUnsignedAccessTokenWhenConfiguredAsIdentityTo
 	}
 
 	accessToken := unsignedOAuthValidatorTestToken(t, jwtlib.MapClaims{
+		"aud":   oauthValidatorTestClientID,
 		"email": "attacker@example.com",
 		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
 		"name":  "Attacker",
 		"nonce": nonce,
 		"roles": []string{"admin"},
@@ -176,6 +197,194 @@ func TestValidateAccessTokenRejectsUnsignedAccessTokenWhenConfiguredAsIdentityTo
 
 	if got, err := provider.validateAccessToken(state, map[string]interface{}{"access_token": accessToken}); err == nil {
 		t.Fatalf("expected unsigned access_token validation error, got claims: %#v", got)
+	}
+}
+
+func TestValidateAccessTokenRejectsWrongIDTokenIssuer(t *testing.T) {
+	provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
+	state, nonce := "state-6", "nonce-6"
+	if err := provider.state.add(state, nonce); err != nil {
+		t.Fatalf("failed adding state: %v", err)
+	}
+
+	idToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud":   oauthValidatorTestClientID,
+		"email": "user@example.com",
+		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   "https://other-issuer.example.com",
+		"name":  "Valid User",
+		"nonce": nonce,
+		"sub":   "subject-user",
+	})
+
+	if got, err := provider.validateAccessToken(state, map[string]interface{}{"id_token": idToken}); err == nil {
+		t.Fatalf("expected issuer validation error, got claims: %#v", got)
+	} else if !strings.Contains(err.Error(), "issuer claim validation failed") {
+		t.Fatalf("expected issuer validation error, got: %v", err)
+	}
+}
+
+func TestValidateAccessTokenRejectsWrongIDTokenAudience(t *testing.T) {
+	provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
+	state, nonce := "state-7", "nonce-7"
+	if err := provider.state.add(state, nonce); err != nil {
+		t.Fatalf("failed adding state: %v", err)
+	}
+
+	idToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud":   "other-client",
+		"email": "user@example.com",
+		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
+		"name":  "Valid User",
+		"nonce": nonce,
+		"sub":   "subject-user",
+	})
+
+	if got, err := provider.validateAccessToken(state, map[string]interface{}{"id_token": idToken}); err == nil {
+		t.Fatalf("expected audience validation error, got claims: %#v", got)
+	} else if !strings.Contains(err.Error(), "audience claim validation failed") {
+		t.Fatalf("expected audience validation error, got: %v", err)
+	}
+}
+
+func TestValidateAccessTokenRejectsWrongIDTokenAuthorizedParty(t *testing.T) {
+	provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
+	state, nonce := "state-8", "nonce-8"
+	if err := provider.state.add(state, nonce); err != nil {
+		t.Fatalf("failed adding state: %v", err)
+	}
+
+	idToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud":   []string{oauthValidatorTestClientID, "other-client"},
+		"azp":   "other-client",
+		"email": "user@example.com",
+		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
+		"name":  "Valid User",
+		"nonce": nonce,
+		"sub":   "subject-user",
+	})
+
+	if got, err := provider.validateAccessToken(state, map[string]interface{}{"id_token": idToken}); err == nil {
+		t.Fatalf("expected authorized party validation error, got claims: %#v", got)
+	} else if !strings.Contains(err.Error(), "authorized party claim validation failed") {
+		t.Fatalf("expected authorized party validation error, got: %v", err)
+	}
+}
+
+func TestValidateAccessTokenMergesAccessTokenClaimsWithResourceAudienceAndAzp(t *testing.T) {
+	provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
+	state, nonce := "state-9", "nonce-9"
+	if err := provider.state.add(state, nonce); err != nil {
+		t.Fatalf("failed adding state: %v", err)
+	}
+
+	idToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud":   oauthValidatorTestClientID,
+		"email": "user@example.com",
+		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
+		"name":  "Valid User",
+		"nonce": nonce,
+		"roles": []string{"viewer"},
+		"sub":   "subject-user",
+	})
+	accessToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud": oauthValidatorTestAccessAudience,
+		"azp": oauthValidatorTestClientID,
+		"exp": time.Now().Add(time.Hour).Unix(),
+		"iss": oauthValidatorTestIssuer,
+		"realm_access": map[string]interface{}{
+			"roles": []string{"editor"},
+		},
+	})
+
+	got, err := provider.validateAccessToken(state, map[string]interface{}{
+		"access_token": accessToken,
+		"id_token":     idToken,
+	})
+	if err != nil {
+		t.Fatalf("unexpected validateAccessToken error: %v", err)
+	}
+	if !reflect.DeepEqual(got["roles"], []string{"viewer", "editor"}) {
+		t.Fatalf("expected merged roles from id_token and access_token, got %#v", got["roles"])
+	}
+}
+
+func TestValidateAccessTokenRejectsAccessTokenClaimsWithWrongAzp(t *testing.T) {
+	provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
+	state, nonce := "state-10", "nonce-10"
+	if err := provider.state.add(state, nonce); err != nil {
+		t.Fatalf("failed adding state: %v", err)
+	}
+
+	idToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud":   oauthValidatorTestClientID,
+		"email": "user@example.com",
+		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
+		"name":  "Valid User",
+		"nonce": nonce,
+		"roles": []string{"viewer"},
+		"sub":   "subject-user",
+	})
+	accessToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud": oauthValidatorTestAccessAudience,
+		"azp": "other-client",
+		"exp": time.Now().Add(time.Hour).Unix(),
+		"iss": oauthValidatorTestIssuer,
+		"realm_access": map[string]interface{}{
+			"roles": []string{"admin"},
+		},
+	})
+
+	if got, err := provider.validateAccessToken(state, map[string]interface{}{
+		"access_token": accessToken,
+		"id_token":     idToken,
+	}); err == nil {
+		t.Fatalf("expected access_token azp validation error, got claims: %#v", got)
+	} else if !strings.Contains(err.Error(), "authorized party claim validation failed") {
+		t.Fatalf("expected authorized party validation error, got: %v", err)
+	}
+}
+
+func TestValidateAccessTokenMergesAccessTokenClaimsWithConfiguredAudience(t *testing.T) {
+	provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
+	provider.config.AccessTokenAudience = oauthValidatorTestAccessAudience
+	state, nonce := "state-11", "nonce-11"
+	if err := provider.state.add(state, nonce); err != nil {
+		t.Fatalf("failed adding state: %v", err)
+	}
+
+	idToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud":   oauthValidatorTestClientID,
+		"email": "user@example.com",
+		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
+		"name":  "Valid User",
+		"nonce": nonce,
+		"roles": []string{"viewer"},
+		"sub":   "subject-user",
+	})
+	accessToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud": oauthValidatorTestAccessAudience,
+		"exp": time.Now().Add(time.Hour).Unix(),
+		"iss": oauthValidatorTestIssuer,
+		"realm_access": map[string]interface{}{
+			"roles": []string{"editor"},
+		},
+	})
+
+	got, err := provider.validateAccessToken(state, map[string]interface{}{
+		"access_token": accessToken,
+		"id_token":     idToken,
+	})
+	if err != nil {
+		t.Fatalf("unexpected validateAccessToken error: %v", err)
+	}
+	if !reflect.DeepEqual(got["roles"], []string{"viewer", "editor"}) {
+		t.Fatalf("expected merged roles from id_token and access_token, got %#v", got["roles"])
 	}
 }
 
@@ -194,8 +403,10 @@ func newOAuthValidatorTestProvider(t *testing.T, identityTokenFieldName string) 
 
 	return &IdentityProvider{
 		config: &Config{
+			ClientID:               oauthValidatorTestClientID,
 			Driver:                 "generic",
 			IdentityTokenFieldName: identityTokenFieldName,
+			Issuer:                 oauthValidatorTestIssuer,
 		},
 		keys:  map[string]*JwksKey{jwksKey.KeyID: jwksKey},
 		state: newStateManager(),

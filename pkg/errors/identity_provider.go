@@ -56,9 +56,12 @@ const (
 	ErrIdentityProviderOAuthAccessTokenKeyIDNotRegistered     StandardError = "OAuth 2.0 %s has unregisted key id %v"
 	ErrIdentityProviderOAuthParseToken                        StandardError = "OAuth 2.0 failed to parse %s: %v"
 
-	ErrIdentityProviderOAuthInvalidToken          StandardError = "OAuth 2.0 %s is invalid: %v"
-	ErrIdentityProviderOAuthNonceValidationFailed StandardError = "OAuth 2.0 %s nonce claim validation failed: %v"
-	ErrIdentityProviderOAuthEmailNotFound         StandardError = "OAuth 2.0 %s email claim not found"
+	ErrIdentityProviderOAuthInvalidToken             StandardError = "OAuth 2.0 %s is invalid: %v"
+	ErrIdentityProviderOAuthIssuerValidationFailed   StandardError = "OAuth 2.0 %s issuer claim validation failed: %v"
+	ErrIdentityProviderOAuthAudienceValidationFailed StandardError = "OAuth 2.0 %s audience claim validation failed: %v"
+	ErrIdentityProviderOAuthAzpValidationFailed      StandardError = "OAuth 2.0 %s authorized party claim validation failed: %v"
+	ErrIdentityProviderOAuthNonceValidationFailed    StandardError = "OAuth 2.0 %s nonce claim validation failed: %v"
+	ErrIdentityProviderOAuthEmailNotFound            StandardError = "OAuth 2.0 %s email claim not found"
 
 	ErrIdentityProviderOAuthClaimsParserClaimsNotFound StandardError = "no claims were found during OAuth 2.0 claims parser workflow"
 

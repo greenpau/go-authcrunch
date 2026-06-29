@@ -402,6 +402,9 @@ func (b *IdentityProvider) fetchMetadataURL() error {
 	if _, exists := b.metadata["end_session_endpoint"]; exists {
 		b.logoutURL = b.metadata["end_session_endpoint"].(string)
 	}
+	if issuer, exists := b.metadata["issuer"].(string); exists && issuer != "" && b.config.Issuer == "" {
+		b.config.Issuer = issuer
+	}
 
 	switch b.config.Driver {
 	case "cognito":
