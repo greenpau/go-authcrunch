@@ -42,13 +42,14 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 		if !exists {
 			continue
 		}
+		isNonIdentityAccessToken := tokenName == "access_token" && tokenName != b.config.IdentityTokenFieldName
 
 		tokenString, ok := tokenStringRaw.(string)
 		if !ok {
 			return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(tokenName, fmt.Errorf("not a string"))
 		}
 
-		if tokenName == "access_token" && tokenName != b.config.IdentityTokenFieldName {
+		if isNonIdentityAccessToken {
 			// Access tokens may be opaque. JWT access tokens can contribute
 			// claims only after the same signature checks used below.
 			if !isOAuthJWTToken(tokenString) {
@@ -95,15 +96,24 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 		})
 
 		if err != nil {
+			if isNonIdentityAccessToken {
+				continue
+			}
 			return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(tokenName, err)
 		}
 
 		if !token.Valid {
+			if isNonIdentityAccessToken {
+				continue
+			}
 			return nil, errors.ErrIdentityProviderOAuthInvalidToken.WithArgs(tokenName, tokenString)
 		}
 
 		claims := token.Claims.(jwtlib.MapClaims)
 		if err := b.validateOAuthTokenTrustClaims(tokenName, claims); err != nil {
+			if isNonIdentityAccessToken {
+				continue
+			}
 			return nil, err
 		}
 		if tokenName == b.config.IdentityTokenFieldName || tokenName == "id_token" {

@@ -79,7 +79,7 @@ func TestValidateAccessTokenMergesVerifiedAccessTokenClaims(t *testing.T) {
 	}
 }
 
-func TestValidateAccessTokenRejectsUnsignedAccessTokenClaims(t *testing.T) {
+func TestValidateAccessTokenIgnoresUnsignedAccessTokenClaims(t *testing.T) {
 	provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
 	state, nonce := "state-2", "nonce-2"
 	if err := provider.state.add(state, nonce); err != nil {
@@ -103,11 +103,19 @@ func TestValidateAccessTokenRejectsUnsignedAccessTokenClaims(t *testing.T) {
 		"roles": []string{"admin"},
 	})
 
-	if got, err := provider.validateAccessToken(state, map[string]interface{}{
+	got, err := provider.validateAccessToken(state, map[string]interface{}{
 		"access_token": accessToken,
 		"id_token":     idToken,
-	}); err == nil {
-		t.Fatalf("expected unsigned access_token validation error, got claims: %#v", got)
+	})
+	if err != nil {
+		t.Fatalf("unexpected validateAccessToken error: %v", err)
+	}
+
+	if got["email"] != "user@example.com" {
+		t.Fatalf("expected email from id_token, got %v", got["email"])
+	}
+	if !reflect.DeepEqual(got["roles"], []string{"viewer"}) {
+		t.Fatalf("expected roles from id_token only, got %#v", got["roles"])
 	}
 }
 
@@ -312,7 +320,7 @@ func TestValidateAccessTokenMergesAccessTokenClaimsWithResourceAudienceAndAzp(t 
 	}
 }
 
-func TestValidateAccessTokenRejectsAccessTokenClaimsWithWrongAzp(t *testing.T) {
+func TestValidateAccessTokenIgnoresAccessTokenClaimsWithWrongAzp(t *testing.T) {
 	provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
 	state, nonce := "state-10", "nonce-10"
 	if err := provider.state.add(state, nonce); err != nil {
@@ -339,13 +347,57 @@ func TestValidateAccessTokenRejectsAccessTokenClaimsWithWrongAzp(t *testing.T) {
 		},
 	})
 
-	if got, err := provider.validateAccessToken(state, map[string]interface{}{
+	got, err := provider.validateAccessToken(state, map[string]interface{}{
 		"access_token": accessToken,
 		"id_token":     idToken,
-	}); err == nil {
-		t.Fatalf("expected access_token azp validation error, got claims: %#v", got)
-	} else if !strings.Contains(err.Error(), "authorized party claim validation failed") {
-		t.Fatalf("expected authorized party validation error, got: %v", err)
+	})
+	if err != nil {
+		t.Fatalf("unexpected validateAccessToken error: %v", err)
+	}
+	if !reflect.DeepEqual(got["roles"], []string{"viewer"}) {
+		t.Fatalf("expected roles from id_token only, got %#v", got["roles"])
+	}
+}
+
+func TestValidateAccessTokenIgnoresAccessTokenClaimsWithInvalidSignature(t *testing.T) {
+	provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
+	roguePrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed generating rogue RSA key: %v", err)
+	}
+	state, nonce := "state-12", "nonce-12"
+	if err := provider.state.add(state, nonce); err != nil {
+		t.Fatalf("failed adding state: %v", err)
+	}
+
+	idToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud":   oauthValidatorTestClientID,
+		"email": "user@example.com",
+		"exp":   time.Now().Add(time.Hour).Unix(),
+		"iss":   oauthValidatorTestIssuer,
+		"name":  "Valid User",
+		"nonce": nonce,
+		"roles": []string{"viewer"},
+		"sub":   "subject-user",
+	})
+	accessToken := signOAuthValidatorTestToken(t, roguePrivateKey, jwksKey.KeyID, jwtlib.MapClaims{
+		"aud": oauthValidatorTestAccessAudience,
+		"exp": time.Now().Add(time.Hour).Unix(),
+		"iss": oauthValidatorTestIssuer,
+		"realm_access": map[string]interface{}{
+			"roles": []string{"admin"},
+		},
+	})
+
+	got, err := provider.validateAccessToken(state, map[string]interface{}{
+		"access_token": accessToken,
+		"id_token":     idToken,
+	})
+	if err != nil {
+		t.Fatalf("unexpected validateAccessToken error: %v", err)
+	}
+	if !reflect.DeepEqual(got["roles"], []string{"viewer"}) {
+		t.Fatalf("expected roles from id_token only, got %#v", got["roles"])
 	}
 }
 
