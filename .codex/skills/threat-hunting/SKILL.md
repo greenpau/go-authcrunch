@@ -366,8 +366,11 @@ toolchain line needed by final binary builders.
 Save the full report to a repo-relative `tmp/threat-hunt/` directory. Create
 the directory when it does not exist. Prefix the report filename with the local
 timestamp in `YYYYMMDD_HHMM_` format, for example
-`tmp/threat-hunt/20260629_1530_authz-bypass-review.md`. Mention the saved
-report path in the final response.
+`tmp/threat-hunt/20260629_1530_authz-bypass-review.md`. After saving the
+report, run `versioned -toc -filepath <report-path>` to add or refresh the
+table of contents, for example
+`versioned -toc -filepath tmp/threat-hunt/20260629_1530_authz-bypass-review.md`.
+Mention the saved report path in the final response.
 
 End each report with a **"Not deeply tested"** section naming surfaces that were
 not fully exercised, especially:
@@ -413,4 +416,5 @@ The hunt is complete only when all of the following are true:
       performed, and residual risk
 - [ ] The full report is saved under `tmp/threat-hunt/` with a
       `YYYYMMDD_HHMM_` filename prefix
+- [ ] `versioned -toc -filepath <report-path>` was run against the saved report
 - [ ] A "Not deeply tested" section names unexercised surfaces
