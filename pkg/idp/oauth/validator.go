@@ -29,8 +29,17 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 
 	parsedData := make(map[string]interface{})
 
-	for tokenName, tokenStringRaw := range data {
-		if tokenName != "id_token" && tokenName != b.config.IdentityTokenFieldName && tokenName != "access_token" {
+	tokenNames := []string{"id_token"}
+	if b.config.IdentityTokenFieldName != "" && b.config.IdentityTokenFieldName != "id_token" {
+		tokenNames = append(tokenNames, b.config.IdentityTokenFieldName)
+	}
+	if b.config.IdentityTokenFieldName != "access_token" {
+		tokenNames = append(tokenNames, "access_token")
+	}
+
+	for _, tokenName := range tokenNames {
+		tokenStringRaw, exists := data[tokenName]
+		if !exists {
 			continue
 		}
 
@@ -39,19 +48,12 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 			return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(tokenName, fmt.Errorf("not a string"))
 		}
 
-		if tokenName == "access_token" {
-			token, _, err := new(jwtlib.Parser).ParseUnverified(tokenString, jwtlib.MapClaims{})
-			if err != nil {
-				// return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs(tokenName, err)
+		if tokenName == "access_token" && tokenName != b.config.IdentityTokenFieldName {
+			// Access tokens may be opaque. JWT access tokens can contribute
+			// claims only after the same signature checks used below.
+			if !isOAuthJWTToken(tokenString) {
 				continue
 			}
-			if claims, ok := token.Claims.(jwtlib.MapClaims); ok {
-				if err := b.parseTokenClaims(tokenName, claims, data, parsedData); err != nil {
-					// return nil, err
-					continue
-				}
-			}
-			continue
 		}
 
 		token, err := jwtlib.Parse(tokenString, func(token *jwtlib.Token) (interface{}, error) {
@@ -136,4 +138,14 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 	}
 
 	return parsedData, nil
+}
+
+func isOAuthJWTToken(tokenString string) bool {
+	if strings.Count(tokenString, ".") != 2 {
+		return false
+	}
+	if _, _, err := new(jwtlib.Parser).ParseUnverified(tokenString, jwtlib.MapClaims{}); err != nil {
+		return false
+	}
+	return true
 }
