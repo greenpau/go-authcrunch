@@ -42,6 +42,14 @@ Use the repo-local `testing-and-ci` skill when choosing or running tests, adding
 or updating test coverage, interpreting CI failures, reproducing GitHub Actions
 locally, or documenting validation for this repository.
 
+### Localhost Test Listeners
+
+Go tests that use `httptest.NewServer`, `httptest.NewTLSServer`, or local
+`net.Listen` loopback sockets are expected and allowed for repository
+validation. If the Codex sandbox blocks localhost binding, rerun the exact
+focused or full `go test` command with `sandbox_permissions: require_escalated`
+and explain that the test binds a localhost socket.
+
 ## Threat Hunting
 
 Use the repo-local `threat-hunting` skill when auditing the repository for
