@@ -28,6 +28,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const maxSystemAPIRequestBodySize int64 = 1 << 20
+
 func handleAPISystemError(_ context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request) error {
 	w.Header().Set("Content-Type", "application/json")
 	resp := make(map[string]interface{})
@@ -44,6 +46,11 @@ func handleAPISystemResponse(_ context.Context, w http.ResponseWriter, encrypted
 	w.WriteHeader(200)
 	w.Write(encryptedRespMsg)
 	return nil
+}
+
+func readSystemAPIRequestBody(w http.ResponseWriter, r *http.Request) ([]byte, error) {
+	defer r.Body.Close()
+	return io.ReadAll(http.MaxBytesReader(w, r.Body, maxSystemAPIRequestBodySize))
 }
 
 func (p *Portal) handleAPIExtractUserIdentity(ctx context.Context, rr *requests.Request, m map[string]any) error {
@@ -76,12 +83,10 @@ func (p *Portal) handleAPIExtractUserIdentity(ctx context.Context, rr *requests.
 }
 
 func (p *Portal) handleAPISystem(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, _ *user.User) error {
-	body, err := io.ReadAll(r.Body)
+	body, err := readSystemAPIRequestBody(w, r)
 	if err != nil {
 		return handleAPISystemError(ctx, w, r, rr)
 	}
-
-	defer r.Body.Close()
 
 	footer, err := system.ParseEncryptedMessageFooter(string(body))
 	if err != nil {
