@@ -306,6 +306,38 @@ var (
         "roles": ["viewer"],
         "addr": "2001:DB8::21f:5bff:febf:ce22:8a2e"
     }`
+
+	publicPathViewer = `{
+	        "exp": ` + fmt.Sprintf("%d", time.Now().Add(10*time.Minute).Unix()) + `,
+	        "iat": ` + fmt.Sprintf("%d", time.Now().Add(10*time.Minute*-1).Unix()) + `,
+	        "nbf": ` + fmt.Sprintf("%d", time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix()) + `,
+	        "name":   "Smith, John",
+	        "email":  "smithj@outlook.com",
+	        "origin": "localhost",
+	        "sub":    "smithj@outlook.com",
+	        "roles": ["viewer"],
+	        "acl":{
+	            "paths": {
+	                "/public/**": {}
+	            }
+	        }
+	    }`
+
+	denyAdminPathACL = []*acl.RuleConfiguration{
+		{
+			Conditions: []string{
+				"match method GET",
+				"match path /admin",
+			},
+			Action: `deny`,
+		},
+		{
+			Conditions: []string{
+				"field roles exists",
+			},
+			Action: `allow`,
+		},
+	}
 )
 
 func TestAuthorize(t *testing.T) {
@@ -764,6 +796,44 @@ func TestAuthorize(t *testing.T) {
 			err:                         errors.ErrAccessNotAllowedByPathACL,
 		},
 		{
+			name:               "method path acl rejects encoded traversal to admin path",
+			claims:             viewer2,
+			config:             denyAdminPathACL,
+			method:             "GET",
+			path:               "/public/%2e%2e/admin",
+			validateMethodPath: true,
+			shouldErr:          true,
+			err:                errors.ErrAccessNotAllowed,
+		},
+		{
+			name:               "method path acl rejects double encoded traversal to admin path",
+			claims:             viewer2,
+			config:             denyAdminPathACL,
+			method:             "GET",
+			path:               "/public/%252e%252e/admin",
+			validateMethodPath: true,
+			shouldErr:          true,
+			err:                errors.ErrAccessNotAllowed,
+		},
+		{
+			name:                        "token path acl rejects encoded traversal outside public path",
+			claims:                      publicPathViewer,
+			config:                      defaultRolesDenyACL,
+			method:                      "GET",
+			path:                        "/public/%2e%2e/admin",
+			validateAccessListPathClaim: true,
+			shouldErr:                   true,
+			err:                         errors.ErrAccessNotAllowedByPathACL,
+		},
+		{
+			name:                        "token path acl allows canonical public path",
+			claims:                      publicPathViewer,
+			config:                      defaultRolesDenyACL,
+			method:                      "GET",
+			path:                        "/public/%2e/assets/logo.png",
+			validateAccessListPathClaim: true,
+		},
+		{
 			name:      "user with viewer role claim going to /app/page2/blocked via get",
 			claims:    viewer3,
 			config:    denyViewerAllowOthersACL,
@@ -1088,6 +1158,44 @@ func TestAuthorize(t *testing.T) {
 			w := httptest.NewRecorder()
 			handler(w, req)
 			w.Result()
+		})
+	}
+}
+
+func TestCanonicalRequestPath(t *testing.T) {
+	testcases := []struct {
+		name   string
+		target string
+		want   string
+	}{
+		{
+			name:   "encoded dot segment",
+			target: "/public/%2e%2e/admin",
+			want:   "/admin",
+		},
+		{
+			name:   "double encoded dot segment",
+			target: "/public/%252e%252e/admin",
+			want:   "/admin",
+		},
+		{
+			name:   "encoded current directory segment",
+			target: "/public/%2e/assets/logo.png",
+			want:   "/public/assets/logo.png",
+		},
+		{
+			name:   "duplicate slash preserves trailing slash",
+			target: "/public//assets/",
+			want:   "/public/assets/",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tc.target, nil)
+			if got := canonicalRequestPath(req); got != tc.want {
+				t.Fatalf("canonicalRequestPath() = %q, want %q; parsed path: %q", got, tc.want, req.URL.Path)
+			}
 		})
 	}
 }
