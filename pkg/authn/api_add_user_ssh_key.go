@@ -59,14 +59,22 @@ func (p *Portal) AddUserSSHKey(
 		resp["message"] = "Profile API did not find key content in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["title"]; exists {
-		keyTitle = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "title"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find title in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		keyTitle = v
 	} else {
 		resp["message"] = "Profile API did not find title in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["description"]; exists {
-		keyDescription = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "description"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find description in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		keyDescription = v
 	} else {
 		resp["message"] = "Profile API did not find description in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)

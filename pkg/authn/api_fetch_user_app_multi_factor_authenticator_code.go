@@ -73,14 +73,22 @@ func (p *Portal) FetchUserAppMultiFactorVerifierCode(
 		resp["message"] = "Profile API did not find digits in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["issuer"]; exists {
-		tokenIssuer = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "issuer"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find issuer in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		tokenIssuer = v
 	} else {
 		resp["message"] = "Profile API did not find issuer in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["secret"]; exists {
-		tokenSecret = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "secret"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find secret in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		tokenSecret = v
 	} else {
 		resp["message"] = "Profile API did not find secret in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)

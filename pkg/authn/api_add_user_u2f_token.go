@@ -42,26 +42,42 @@ func (p *Portal) AddUserUniSecFactorToken(
 	var tokenTags []tagging.Tag = []tagging.Tag{}
 
 	// Validate inputs.
-	if v, exists := bodyData["webauthn_register"]; exists {
-		rr.WebAuthn.Register = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "webauthn_register"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find webauthn_register in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		rr.WebAuthn.Register = v
 	} else {
 		resp["message"] = "Profile API did not find webauthn_register in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["webauthn_challenge"]; exists {
-		rr.WebAuthn.Challenge = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "webauthn_challenge"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find webauthn_challenge in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		rr.WebAuthn.Challenge = v
 	} else {
 		resp["message"] = "Profile API did not find webauthn_challenge in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["title"]; exists {
-		tokenTitle = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "title"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find title in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		tokenTitle = v
 	} else {
 		resp["message"] = "Profile API did not find title in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["description"]; exists {
-		tokenDescription = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "description"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find description in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		tokenDescription = v
 	} else {
 		resp["message"] = "Profile API did not find description in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)

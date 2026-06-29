@@ -43,14 +43,22 @@ func (p *Portal) FetchUserUniSecFactorVerParams(
 	rr.MfaToken.Type = "u2f"
 
 	// Validate inputs.
-	if v, exists := bodyData["webauthn_register"]; exists {
-		rr.WebAuthn.Register = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "webauthn_register"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find webauthn_register in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		rr.WebAuthn.Register = v
 	} else {
 		resp["message"] = "Profile API did not find webauthn_register in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["webauthn_challenge"]; exists {
-		rr.WebAuthn.Challenge = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "webauthn_challenge"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find webauthn_challenge in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		rr.WebAuthn.Challenge = v
 	} else {
 		resp["message"] = "Profile API did not find webauthn_challenge in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)

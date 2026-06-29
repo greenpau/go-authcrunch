@@ -76,20 +76,32 @@ func (p *Portal) AddUserAppMultiFactorVerifier(
 		resp["message"] = "Profile API did not find digits in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["title"]; exists {
-		tokenTitle = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "title"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find title in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		tokenTitle = v
 	} else {
 		resp["message"] = "Profile API did not find title in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["description"]; exists {
-		tokenDescription = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "description"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find description in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		tokenDescription = v
 	} else {
 		resp["message"] = "Profile API did not find description in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-	if v, exists := bodyData["secret"]; exists {
-		tokenSecret = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "secret"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find secret in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		tokenSecret = v
 	} else {
 		resp["message"] = "Profile API did not find secret in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)

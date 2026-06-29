@@ -20,13 +20,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/role"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
-
-	"regexp"
-
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"go.uber.org/zap"
@@ -37,6 +35,8 @@ var tokenIssuerRegexPattern = regexp.MustCompile(`^[A-Za-z0-9]{3,50}$`)
 var tokenDescriptionRegexPattern = regexp.MustCompile(`^[\w\s\-\_,\.]{3,255}$`)
 var tokenPasscodeRegexPattern = regexp.MustCompile(`^[0-9]{4,8}$`)
 
+const maxProfileAPIRequestBodySize int64 = 1 << 20
+
 func handleAPIProfileResponse(w http.ResponseWriter, rr *requests.Request, code int, resp map[string]interface{}) error {
 	resp["status"] = code
 	rr.Response.Code = code
@@ -44,6 +44,20 @@ func handleAPIProfileResponse(w http.ResponseWriter, rr *requests.Request, code 
 	w.WriteHeader(rr.Response.Code)
 	w.Write(respBytes)
 	return nil
+}
+
+func readProfileAPIRequestBody(w http.ResponseWriter, r *http.Request) ([]byte, error) {
+	defer r.Body.Close()
+	return io.ReadAll(http.MaxBytesReader(w, r.Body, maxProfileAPIRequestBodySize))
+}
+
+func getProfileAPIStringField(bodyData map[string]interface{}, field string) (string, bool, bool) {
+	v, exists := bodyData[field]
+	if !exists {
+		return "", false, false
+	}
+	s, ok := v.(string)
+	return s, true, ok
 }
 
 func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, parsedUser *user.User) error {
@@ -80,8 +94,7 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	var reqKind = "unknown"
 
 	// Read the request body
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
+	body, err := readProfileAPIRequestBody(w, r)
 	if err != nil {
 		resp["message"] = "Profile API failed to parse request body"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
@@ -92,8 +105,12 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 
-	if v, exists := bodyData["kind"]; exists {
-		reqKind = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "kind"); exists {
+		if !ok {
+			resp["message"] = "Profile API received malformed request type"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		reqKind = v
 	}
 
 	switch reqKind {

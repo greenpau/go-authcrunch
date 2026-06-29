@@ -37,8 +37,12 @@ func (p *Portal) DeleteUserGPGKey(
 	bodyData map[string]interface{}) error {
 
 	rr.Key.Usage = "gpg"
-	if v, exists := bodyData["id"]; exists {
-		rr.Key.ID = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "id"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find id in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		rr.Key.ID = v
 	} else {
 		resp["message"] = "Profile API did not find id in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)

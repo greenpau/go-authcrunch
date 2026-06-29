@@ -36,8 +36,12 @@ func (p *Portal) DeleteUserMultiFactorVerifier(
 	backend ids.IdentityStore,
 	bodyData map[string]interface{}) error {
 
-	if v, exists := bodyData["id"]; exists {
-		rr.MfaToken.ID = v.(string)
+	if v, exists, ok := getProfileAPIStringField(bodyData, "id"); exists {
+		if !ok {
+			resp["message"] = "Profile API did find id in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+		rr.MfaToken.ID = v
 	} else {
 		resp["message"] = "Profile API did not find id in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)

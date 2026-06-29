@@ -59,6 +59,46 @@ Avoid global mutable state outside package constants, defaults, registries, and
 CLI initialization patterns that already exist. Avoid broad refactors while
 fixing localized behavior.
 
+Use object-oriented design where it is natural. Translate object-oriented
+intent into focused structs with methods, small interfaces at package
+boundaries, and package organization that models ownership.
+
+Use utility functions only when they are stateless, narrowly scoped, and do not
+naturally belong to a type.
+
+Prefer object-oriented design for business rules and data processing.
+Encapsulate related data and behavior within structs with methods. Favor
+composition and define small consumer-owned interfaces.
+
+Avoid functional pipelines that obscure state transitions, error handling, or
+the lifecycle of an operation.
+
+## Structure
+
+Keep structs focused on a single responsibility. Avoid large types that perform
+unrelated tasks. When a type grows beyond a clear responsibility, refactor
+functionality into supporting structs or packages.
+
+Export only the types, fields, methods, and functions needed outside the
+package. Keep implementation details unexported.
+
+For exported structs intended for external or persisted data, keep serialization
+tags consistent across `json`, `xml`, and `yaml`.
+
+Keep methods small and focused. A method should perform one logical operation.
+Extract complex logic into private methods or unexported helpers when it
+improves readability and maintainability.
+
+## Constants
+
+Avoid hard-coded values. Define reusable constants in `const` groups.
+
+Use `const` for stable values and `var` only when a value must be computed or
+mutated. Keep configuration keys, route names, tag names, and well-known status
+values named.
+
+
+
 ## Configuration
 
 Keep external config structs serializable with matching `json`, `xml`, and
@@ -156,3 +196,17 @@ gatekeeper, identity store, identity provider, SSO provider, registry,
 keystore, token validator, authenticator, realm, role, and access list. Prefer
 clear package-local constants for defaults, directive keywords, cookie/header
 names, provider kinds, and repeated status values.
+
+## Imports
+
+Group imports in this order when the language supports explicit import groups:
+
+1. Standard library imports
+2. Third-party imports
+3. Local package imports
+
+Let `gofmt` organize imports and keep blank lines between standard library,
+third-party, and local module imports.
+
+Use side-effect imports only for registration or bootstrapping and include a
+short comment when the reason is not obvious.
