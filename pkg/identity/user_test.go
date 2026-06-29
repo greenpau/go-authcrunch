@@ -15,8 +15,9 @@
 package identity
 
 import (
-	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 func TestNewUser(t *testing.T) {
@@ -27,6 +28,14 @@ func TestNewUser(t *testing.T) {
 
 	if err := user.AddPassword("jsmith123", 0); err != nil {
 		t.Fatalf("error adding password: %s", err)
+	}
+
+	// no-op when adding the same password
+	if err := user.AddPassword("jsmith123", 0); err != nil {
+		t.Fatalf("error adding duplicate password: %s", err)
+	}
+	if len(user.Passwords) != 1 {
+		t.Fatalf("expected 1 password after duplicate add, got %d", len(user.Passwords))
 	}
 
 	if err := user.Valid(); err != nil {
@@ -69,4 +78,38 @@ func TestNewUser(t *testing.T) {
 		t.Fatalf("expected 0 public keys")
 	}
 
+}
+
+func TestAddPasswordSame(t *testing.T) {
+	user := NewUser("jsmith")
+	if err := user.AddPassword("jsmith123", 0); err != nil {
+		t.Fatalf("first AddPassword failed: %s", err)
+	}
+	firstHash := user.Passwords[0].Hash
+
+	if err := user.AddPassword("jsmith123", 0); err != nil {
+		t.Fatalf("duplicate AddPassword failed: %s", err)
+	}
+	if len(user.Passwords) != 1 {
+		t.Fatalf("expected 1 password, got %d", len(user.Passwords))
+	}
+	if user.Passwords[0].Hash != firstHash {
+		t.Fatalf("expected same hash on duplicate add, got different one")
+	}
+}
+
+func TestAddPasswordDifferent(t *testing.T) {
+	user := NewUser("jsmith")
+	if err := user.AddPassword("jsmith123", 0); err != nil {
+		t.Fatalf("first AddPassword failed: %s", err)
+	}
+	if err := user.AddPassword("newpass456", 0); err != nil {
+		t.Fatalf("second AddPassword failed: %s", err)
+	}
+	if len(user.Passwords) != 2 {
+		t.Fatalf("expected 2 passwords, got %d", len(user.Passwords))
+	}
+	if !user.Passwords[1].Disabled {
+		t.Fatalf("expected old password to be disabled")
+	}
 }
