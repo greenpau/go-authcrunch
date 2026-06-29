@@ -161,19 +161,31 @@ func (c *SessionCache) Get(sessionID string) (*user.User, error) {
 		return nil, err
 	}
 	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if entry, exists := c.Entries[sessionID]; exists {
-		if err := entry.Valid(); err != nil {
-			delete(c.Entries, sessionID)
-			return nil, fmt.Errorf("cached session id error: %s", err)
-		}
-		if entry.user == nil {
-			delete(c.Entries, sessionID)
-			return nil, fmt.Errorf("cached session id %s has nil user", sessionID)
-		}
-		return entry.user, nil
+	entry, exists := c.Entries[sessionID]
+	c.mu.RUnlock()
+	if !exists {
+		return nil, errors.New("cached session id not found")
 	}
-	return nil, errors.New("cached session id not found")
+	if entry == nil || entry.user == nil || entry.user.Claims == nil {
+		c.deleteEntry(sessionID, entry)
+		return nil, fmt.Errorf("cached session id %s has nil user", sessionID)
+	}
+	if err := entry.Valid(); err != nil {
+		c.deleteEntry(sessionID, entry)
+		return nil, fmt.Errorf("cached session id error: %s", err)
+	}
+	return entry.user, nil
+}
+
+func (c *SessionCache) deleteEntry(sessionID string, entry *SessionCacheEntry) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.Entries == nil {
+		return
+	}
+	if currentEntry, exists := c.Entries[sessionID]; exists && currentEntry == entry {
+		delete(c.Entries, sessionID)
+	}
 }
 
 // Valid checks whether SessionCacheEntry is not expired.
