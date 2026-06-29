@@ -146,6 +146,12 @@ staticcheck ./...
 
 Document any tool that requires network access, an updated vulnerability
 database, or loopback listeners; record that condition in validation notes.
+Treat `govulncheck` findings in the Go standard library as release/toolchain
+notes unless this repository is the final binary being shipped. For this
+library, do not report stdlib CVEs as library-code findings or recommend
+raising the `go` directive solely to clear them. Document the scanning
+toolchain, the downstream/final binary build toolchain, and whether consumers
+need a patched Go release on their supported Go line.
 
 ---
 
@@ -314,8 +320,15 @@ For each suspected issue, reach one of these outcomes before reporting:
 | **Confirmed** | Reproduction or regression test exists |
 | **Deployment-dependent** | Plausible; preconditions documented |
 | **Hardening** | No direct exploit path; concrete risk reduction identified |
+| **Release/toolchain note** | Standard-library or final-binary exposure driven by build toolchain |
 | **False positive** | Source-backed reasoning provided |
 | **Unknown** | Exact missing evidence listed |
+
+When `govulncheck` reports reachable standard-library vulnerabilities, classify
+them as **release/toolchain notes** for go-authcrunch unless the finding is
+caused by repository code that can be fixed independently of the final build
+toolchain. Avoid treating the local scan's Go version as this module's minimum
+supported Go version.
 
 For every confirmed or deployment-dependent finding:
 - Add a focused regression test **before or with** the fix
@@ -335,7 +348,7 @@ Lead with findings, not an audit narrative. For each issue:
 ```
 ## [SEVERITY] Title
 
-**Status:** confirmed | deployment-dependent | hardening | false positive | unknown
+**Status:** confirmed | deployment-dependent | hardening | release/toolchain note | false positive | unknown
 **Files:** pkg/foo/bar.go:L42, pkg/foo/baz.go:L17
 **Root cause:** <one sentence>
 **Impact:** <what an attacker gains>
@@ -345,6 +358,10 @@ Lead with findings, not an audit narrative. For each issue:
 **Validation performed:** <test run, manual trace, or static analysis result>
 **Residual risk / follow-up:** <what remains unverified>
 ```
+
+For release/toolchain notes, include the local scan toolchain, the module's
+declared `go` version, known downstream build constraints, and the patched Go
+toolchain line needed by final binary builders.
 
 Save the full report to a repo-relative `tmp/threat-hunt/` directory. Create
 the directory when it does not exist. Prefix the report filename with the local
