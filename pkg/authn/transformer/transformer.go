@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authchal"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
@@ -31,8 +32,9 @@ type Config struct {
 }
 
 type transform struct {
-	matcher *acl.AccessList
-	actions [][]string
+	matcher              *acl.AccessList
+	actions              [][]string
+	authChallengeRuleset *authchal.Ruleset
 }
 
 // Factory holds configuration and associated finctions
@@ -113,31 +115,63 @@ func NewFactory(cfgs []*Config) (*Factory, error) {
 		if err := matcher.AddRules(context.Background(), matchRuleConfigs); err != nil {
 			return nil, err
 		}
+		var authChallengeStmts []string
+		for _, args := range actions {
+			if len(args) >= 3 && args[0] == "require" && args[1] == "auth" && args[2] == "challenges" {
+				authChallengeStmts = append(authChallengeStmts, cfgutil.EncodeArgs(args[3:]))
+			}
+		}
 		tr := &transform{
 			matcher: matcher,
 			actions: actions,
+		}
+		if len(authChallengeStmts) > 0 {
+			rs, err := authchal.NewRuleset(authChallengeStmts)
+			if err != nil {
+				return nil, fmt.Errorf("transformer auth challenges: %v", err)
+			}
+			tr.authChallengeRuleset = rs
 		}
 		f.transforms = append(f.transforms, tr)
 	}
 	return f, nil
 }
 
-// Transform performs user data transformation.
+// Transform performs user data transformation. For `require auth challenges`
+// rules, the caller must set m["auth_methods"] to []string; the key is
+// consumed and removed.
 func (f *Factory) Transform(m map[string]interface{}) error {
 	var challenges, frontendLinks []string
+	var seenAuthChallenges, matchedAuthChallenges bool
 	if _, exists := m["mail"]; exists {
 		m["email"] = m["mail"].(string)
 		delete(m, "mail")
 	}
+	userAuthMethods, _ := m["auth_methods"].([]string)
+	delete(m, "auth_methods")
 	for _, transform := range f.transforms {
 		if matched := transform.matcher.Allow(context.Background(), m); !matched {
 			continue
 		}
+		var rulesetResolvedHere bool
 		for _, args := range transform.actions {
 			switch args[0] {
 			case "block", "deny":
 				return fmt.Errorf("transformer action is block/deny")
 			case "require":
+				if len(args) >= 3 && args[1] == "auth" && args[2] == "challenges" {
+					seenAuthChallenges = true
+					if matchedAuthChallenges || rulesetResolvedHere {
+						continue
+					}
+					rulesetResolvedHere = true
+					selected := transform.authChallengeRuleset.ResolveChallenges(authMethodsToTypeMap(userAuthMethods))
+					if selected != nil {
+						challenges = append(challenges, selected...)
+						matchedAuthChallenges = true
+					}
+					continue
+				}
 				challenges = append(challenges, cfgutil.EncodeArgs(args[1:]))
 			case "link":
 				frontendLinks = append(frontendLinks, cfgutil.EncodeArgs(args[1:]))
@@ -148,6 +182,9 @@ func (f *Factory) Transform(m map[string]interface{}) error {
 			}
 		}
 	}
+	if seenAuthChallenges && !matchedAuthChallenges {
+		return fmt.Errorf("transformer auth challenges: no rule matched user's registered methods")
+	}
 	if len(challenges) > 0 {
 		m["challenges"] = challenges
 	}
@@ -156,6 +193,14 @@ func (f *Factory) Transform(m map[string]interface{}) error {
 	}
 
 	return nil
+}
+
+func authMethodsToTypeMap(methods []string) map[string]bool {
+	m := make(map[string]bool, len(methods))
+	for _, x := range methods {
+		m[x] = true
+	}
+	return m
 }
 
 func transformData(args []string, m map[string]interface{}, matcher *acl.AccessList) error {

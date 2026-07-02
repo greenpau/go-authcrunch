@@ -1131,12 +1131,14 @@ func (db *Database) IdentifyUser(r *requests.Request) error {
 		r.User.Username = "nobody"
 		r.User.Email = "nobody@localhost"
 		r.User.Challenges = []string{"password"}
+		r.User.AuthMethods = []string{"password"}
 		return nil
 	}
 	if user.Disabled {
 		r.User.Username = "nobody"
 		r.User.Email = "nobody@localhost"
 		r.User.Challenges = []string{"password"}
+		r.User.AuthMethods = []string{"password"}
 		return nil
 	}
 	if r.Flags.Enabled {
@@ -1151,6 +1153,7 @@ func (db *Database) IdentifyUser(r *requests.Request) error {
 		return err
 	}
 	r.User.Challenges = challenges
+	r.User.AuthMethods = user.GetRegisteredAuthMethods()
 	r.Response.Code = 200
 	return nil
 }

@@ -63,6 +63,8 @@ const (
 	ErrInvalidScopeType                   StandardError = "invalid scopes type %T"
 	ErrInvalidOrg                         StandardError = "invalid org type %T in orgs"
 	ErrInvalidOrgType                     StandardError = "invalid orgs type %T"
+	ErrInvalidAmr                         StandardError = "invalid amr type %T in amr"
+	ErrInvalidAmrType                     StandardError = "invalid amr type %T"
 	ErrInvalidAppMetadataRoleType         StandardError = "invalid roles type %T in app_metadata-authorization"
 	ErrInvalidAddrType                    StandardError = "invalid ip address type %T in addr"
 	ErrInvalidAccessListPath              StandardError = "invalid acl path type %T in paths"

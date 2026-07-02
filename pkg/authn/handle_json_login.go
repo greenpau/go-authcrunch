@@ -70,10 +70,18 @@ func (p *Portal) handleIssueTokens(ctx context.Context, r *http.Request, rr *req
 
 	injectPortalRoles(m, p.config)
 
+	// derive amr from request-flow usr.Checkpoints before NewUser shadows usr
+	amr := deriveAmrFromCheckpoints(usr.Checkpoints)
+
 	usr, err := user.NewUser(m)
 	if err != nil {
 		return nil, err
 	}
+
+	if len(amr) == 0 && (rr.Upstream.Method == "local" || rr.Upstream.Method == "ldap") {
+		amr = user.ToAuthMethodReferences([]string{"password"})
+	}
+	usr.SetAmrClaim(amr)
 
 	if err := p.keystore.SignToken(nil, nil, usr); err != nil {
 		return nil, err

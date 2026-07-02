@@ -22,6 +22,73 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authchal"
 )
 
+func TestGetRegisteredAuthMethods(t *testing.T) {
+	testcases := []struct {
+		name   string
+		tokens []*MfaToken
+		want   []string
+	}{
+		{
+			name:   "no mfa tokens returns password only",
+			tokens: nil,
+			want:   []string{authchal.PasswordKeyword},
+		},
+		{
+			name:   "single totp token",
+			tokens: []*MfaToken{{Type: "totp"}},
+			want:   []string{authchal.PasswordKeyword, authchal.TotpKeyword},
+		},
+		{
+			name:   "single u2f token",
+			tokens: []*MfaToken{{Type: "u2f"}},
+			want:   []string{authchal.PasswordKeyword, authchal.U2fKeyword},
+		},
+		{
+			name:   "single email token",
+			tokens: []*MfaToken{{Type: "email"}},
+			want:   []string{authchal.PasswordKeyword, authchal.EmailKeyword},
+		},
+		{
+			name:   "multiple mfa types listed individually no collapse",
+			tokens: []*MfaToken{{Type: "totp"}, {Type: "u2f"}},
+			want:   []string{authchal.PasswordKeyword, authchal.TotpKeyword, authchal.U2fKeyword},
+		},
+		{
+			name:   "three mfa types listed individually",
+			tokens: []*MfaToken{{Type: "totp"}, {Type: "u2f"}, {Type: "email"}},
+			want:   []string{authchal.PasswordKeyword, authchal.TotpKeyword, authchal.U2fKeyword, authchal.EmailKeyword},
+		},
+		{
+			name:   "disabled token skipped",
+			tokens: []*MfaToken{{Type: "totp", Disabled: true}, {Type: "u2f"}},
+			want:   []string{authchal.PasswordKeyword, authchal.U2fKeyword},
+		},
+		{
+			name:   "all tokens disabled returns password only",
+			tokens: []*MfaToken{{Type: "totp", Disabled: true}, {Type: "u2f", Disabled: true}},
+			want:   []string{authchal.PasswordKeyword},
+		},
+		{
+			name:   "duplicate token types deduped",
+			tokens: []*MfaToken{{Type: "totp"}, {Type: "totp"}},
+			want:   []string{authchal.PasswordKeyword, authchal.TotpKeyword},
+		},
+		{
+			name:   "unknown token type ignored",
+			tokens: []*MfaToken{{Type: "sms"}, {Type: "u2f"}},
+			want:   []string{authchal.PasswordKeyword, authchal.U2fKeyword},
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
+			user := &User{MfaTokens: tc.tokens}
+			got := user.GetRegisteredAuthMethods()
+			tests.EvalObjectsWithLog(t, "methods", tc.want, got, msgs)
+		})
+	}
+}
+
 func TestGetChallengesDisabledToken(t *testing.T) {
 	user := &User{
 		MfaTokens: []*MfaToken{

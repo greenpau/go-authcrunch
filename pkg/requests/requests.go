@@ -95,6 +95,7 @@ type User struct {
 	Roles       []string `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
 	Disabled    bool     `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
 	Challenges  []string `json:"challenges,omitempty" xml:"challenges,omitempty" yaml:"challenges,omitempty"`
+	AuthMethods []string `json:"auth_methods,omitempty" xml:"auth_methods,omitempty" yaml:"auth_methods,omitempty"`
 }
 
 // Key holds crypto key attributes.
