@@ -474,14 +474,24 @@ func (b *IdentityProvider) fetchKeysURL() error {
 		return errors.ErrIdentityProviderOauthJwksKeysNotFound
 	}
 
+	var keyErrors []error
+
 	for _, k := range keys {
 		if err := k.Validate(); err != nil {
-			return errors.ErrIdentityProviderOauthJwksInvalidKey.WithArgs(err)
+			keyErrors = append(keyErrors, err)
+			continue
 		}
 		b.keys[k.KeyID] = k
 	}
 
-	return nil
+	switch {
+	case len(b.keys) > 0:
+		return nil
+	case len(keyErrors) > 0:
+		return errors.ErrIdentityProviderOauthJwksInvalidKey.WithArgs(keyErrors)
+	default:
+		return errors.ErrIdentityProviderOauthJwksKeysNotFound
+	}
 }
 
 // GetLoginIcon returns the instance of the icon associated with the provider.

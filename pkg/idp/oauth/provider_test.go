@@ -40,6 +40,10 @@ func TestNewIdentityProvider(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	pk3, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	jpk1, err := NewJwksKeyFromRSAPrivateKey(pk1)
 	if err != nil {
@@ -51,7 +55,13 @@ func TestNewIdentityProvider(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	jpk3, err := NewJwksKeyFromRSAPrivateKey(pk3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	jwksKeys := []*JwksKey{jpk1, jpk2}
+	var currentJwksKeys []*JwksKey
 
 	// Initialize HTTP server.
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +72,11 @@ func TestNewIdentityProvider(t *testing.T) {
 			resp["token_endpoint"] = "https://" + r.Host + "/oauth/access_token"
 			resp["jwks_uri"] = "https://" + r.Host + "/oauth/jwks.json"
 		case "/oauth/jwks.json":
-			resp["keys"] = jwksKeys
+			if currentJwksKeys != nil {
+				resp["keys"] = currentJwksKeys
+			} else {
+				resp["keys"] = jwksKeys
+			}
 		default:
 			t.Fatalf("unsupported path: %v", r.URL.Path)
 		}
@@ -81,9 +95,11 @@ func TestNewIdentityProvider(t *testing.T) {
 
 	testcases := []struct {
 		name      string
+		keys      []*JwksKey
 		config    *Config
 		logger    *zap.Logger
 		want      map[string]interface{}
+		wantKeys  []*JwksKey
 		shouldErr bool
 		errPhase  string
 		err       error
@@ -279,9 +295,115 @@ func TestNewIdentityProvider(t *testing.T) {
 			errPhase:  "initialize",
 			err:       errors.ErrIdentityProviderConfigureNameEmpty,
 		},
+		{
+			name: "no jwks keys returns error",
+			keys: []*JwksKey{},
+			config: &Config{
+				Name:                  "contoso",
+				Realm:                 "contoso",
+				Driver:                "generic",
+				ClientID:              "foo",
+				ClientSecret:          "bar",
+				BaseAuthURL:           ts.URL + "/oauth",
+				MetadataURL:           ts.URL + "/oauth/.well-known/openid-configuration",
+				TLSInsecureSkipVerify: true,
+			},
+			logger:    logutil.NewLogger(),
+			wantKeys:  []*JwksKey{},
+			shouldErr: true,
+			errPhase:  "configure",
+			err:       errors.ErrIdentityProviderOauthKeyFetchFailed.WithArgs(errors.ErrIdentityProviderOauthJwksKeysNotFound),
+		},
+		{
+			name: "all unsupported jwks key types returns error",
+			keys: []*JwksKey{
+				{
+					KeyID:   "unsupported-key-1",
+					KeyType: "unsupported",
+				},
+				{
+					KeyID:   "unsupported-key-2",
+					KeyType: "unsupported",
+				},
+				{
+					KeyID:   "unsupported-key-3",
+					KeyType: "unsupported",
+				},
+			},
+			config: &Config{
+				Name:                  "contoso",
+				Realm:                 "contoso",
+				Driver:                "generic",
+				ClientID:              "foo",
+				ClientSecret:          "bar",
+				BaseAuthURL:           ts.URL + "/oauth",
+				MetadataURL:           ts.URL + "/oauth/.well-known/openid-configuration",
+				TLSInsecureSkipVerify: true,
+			},
+			logger:    logutil.NewLogger(),
+			wantKeys:  []*JwksKey{},
+			shouldErr: true,
+			errPhase:  "configure",
+			err: errors.ErrIdentityProviderOauthKeyFetchFailed.WithArgs(errors.ErrIdentityProviderOauthJwksInvalidKey.WithArgs([]error{
+				errors.ErrJwksKeyTypeUnsupported.WithArgs("unsupported", "unsupported-key-1"),
+				errors.ErrJwksKeyTypeUnsupported.WithArgs("unsupported", "unsupported-key-2"),
+				errors.ErrJwksKeyTypeUnsupported.WithArgs("unsupported", "unsupported-key-3"),
+			})),
+		},
+		{
+			name: "valid jwks set with invalid key succeeds",
+			keys: []*JwksKey{
+				jpk1,
+				jpk2,
+				jpk3,
+				{
+					KeyID:   "unsupported-key-4",
+					KeyType: "unsupported",
+				},
+			},
+			config: &Config{
+				Name:                  "contoso",
+				Realm:                 "contoso",
+				Driver:                "generic",
+				ClientID:              "foo",
+				ClientSecret:          "bar",
+				BaseAuthURL:           ts.URL + "/oauth",
+				MetadataURL:           ts.URL + "/oauth/.well-known/openid-configuration",
+				TLSInsecureSkipVerify: true,
+			},
+			logger:   logutil.NewLogger(),
+			wantKeys: []*JwksKey{jpk1, jpk2, jpk3},
+			want: map[string]interface{}{
+				"kind":  "oauth",
+				"name":  "contoso",
+				"realm": "contoso",
+				"config": map[string]interface{}{
+					"base_auth_url":             ts.URL + "/oauth",
+					"client_id":                 "foo",
+					"client_secret":             "bar",
+					"driver":                    "generic",
+					"identity_token_field_name": "id_token",
+					"metadata_url":              ts.URL + "/oauth/.well-known/openid-configuration",
+					"name":                      "contoso",
+					"realm":                     "contoso",
+					"required_token_fields":     []interface{}{"access_token", "id_token"},
+					"response_type":             []interface{}{"code"},
+					"scopes":                    []interface{}{"openid", "email", "profile"},
+					"server_name":               tsURL.Host,
+					"tls_insecure_skip_verify":  bool(true),
+					"login_icon": map[string]interface{}{
+						"background_color": string("#324960"),
+						"class_name":       string("lab la-codepen la-2x"),
+						"color":            string("white"),
+						"text_color":       string("#37474f"),
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			currentJwksKeys = tc.keys
 			got := make(map[string]interface{})
 			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
 			msgs = append(msgs, fmt.Sprintf("config:\n%v", tc.config))
@@ -300,11 +422,32 @@ func TestNewIdentityProvider(t *testing.T) {
 			err = prv.Configure()
 			if tc.errPhase == "configure" {
 				if tests.EvalErrWithLog(t, err, "IdentityProvider.Configure", tc.shouldErr, tc.err, msgs) {
+					if tc.wantKeys != nil {
+						if len(prv.keys) != len(tc.wantKeys) {
+							t.Fatalf("expected %d keys, got %d", len(tc.wantKeys), len(prv.keys))
+						}
+						for _, k := range tc.wantKeys {
+							if _, exists := prv.keys[k.KeyID]; !exists {
+								t.Fatalf("expected key %s not found in provider keys", k.KeyID)
+							}
+						}
+					}
 					return
 				}
 			} else {
 				if tests.EvalErrWithLog(t, err, "IdentityProvider.Configure", false, nil, msgs) {
 					return
+				}
+			}
+
+			if tc.wantKeys != nil {
+				if len(prv.keys) != len(tc.wantKeys) {
+					t.Fatalf("expected %d keys, got %d", len(tc.wantKeys), len(prv.keys))
+				}
+				for _, k := range tc.wantKeys {
+					if _, exists := prv.keys[k.KeyID]; !exists {
+						t.Fatalf("expected key %s not found in provider keys", k.KeyID)
+					}
 				}
 			}
 
