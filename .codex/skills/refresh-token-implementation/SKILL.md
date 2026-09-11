@@ -19,7 +19,7 @@ These are distinct boundaries; a change may require more than one owner.
 - `pkg/authn/portal.go`: configured-realm capability checks, manager creation,
   failed-construction cleanup, and `Portal.Close()`.
 - `pkg/authn/token_issuer.go`: shared access/refresh issuance. HTTP and JSON
-  login must call the same issuer; `grantAccess` only delivers signed output.
+  sandbox login must call the same issuer; `grantAccess` only delivers signed output.
 - `pkg/authn/refresh_runtime.go`: portal adapters, current transformations,
   challenge checks, and KMS signing.
 - `pkg/authn/refresh/{token,store,memory,manager}.go`: opaque encoding, store

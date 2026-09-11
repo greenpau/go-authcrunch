@@ -40,7 +40,7 @@ cookie name for each portal. `__Host-` names require the root mount; the default
 
 Only explicitly listed realms participate. The local identity store implements
 the required capability. Configuring an unsupported realm fails construction.
-LDAP, OAuth, SAML, and basic-auth login remain access-only; no refresh credential
+LDAP, OAuth, SAML, basic-auth, and API key login remain access-only; no refresh credential
 is minted from an existing access JWT. An absent or disabled block retains
 existing access-token lifetimes and allocates no refresh store.
 

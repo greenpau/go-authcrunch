@@ -1184,7 +1184,7 @@ func (db *Database) LookupAPIKey(r *requests.Request) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	user, exists := db.refAPIKey[r.Key.Prefix]
-	if !exists {
+	if !exists || user.Disabled {
 		return errors.ErrLookupAPIKeyFailed
 	}
 	if err := user.LookupAPIKey(r); err != nil {

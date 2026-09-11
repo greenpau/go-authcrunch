@@ -23,5 +23,5 @@ func connect(c *cli.Context) error {
 	if err := wr.configure(c); err != nil {
 		return err
 	}
-	return wr.authenticate()
+	return wr.authenticate(c.Context)
 }

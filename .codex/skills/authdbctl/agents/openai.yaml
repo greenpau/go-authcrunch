@@ -1,0 +1,4 @@
+interface:
+  display_name: "AuthDB Management CLI"
+  short_description: "CLI commands, terminal input, and executable E2E tests"
+  default_prompt: "Use $authdbctl to maintain CLI behavior and validate it with focused tests and real-portal executable E2E tests."

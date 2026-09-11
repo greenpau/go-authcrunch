@@ -1,9 +1,33 @@
 ---
 name: testing-and-ci
-description: Select, run, and maintain AuthCrunch Go tests through pinned tested, browser refresh-client tests, automation fixtures, coverage artifacts, and GitHub CI gates.
+description: Require corresponding tests for every Go code change, and select, run, and maintain AuthCrunch Go tests through pinned tested, browser refresh-client tests, automation fixtures, coverage artifacts, and GitHub CI gates.
 ---
 
 # Testing and CI
+
+## Corresponding Tests
+
+Every Go code change must have corresponding automated tests. Identify the
+tests that exercise each changed behavior or contract before marking the work
+complete. This applies to library code, CLI code, internal helpers, configuration,
+serialization, and refactors; a small change is not a reason to omit coverage.
+
+Add or update tests in the same change when adding or changing behavior. Cover
+the intended result and meaningful error or boundary cases. Bug fixes require a
+regression test that demonstrates the defect and passes with the fix. For package
+extraction or rewiring, cover both the reusable API and the caller integration.
+
+For changes that preserve behavior, identify and run existing tests that directly
+exercise the affected contract, adding coverage wherever it is missing. Do not
+add redundant tests solely to produce a test-file diff. For test-helper or
+test-only changes, run the tests that use the changed code.
+
+Assertions must verify observable behavior or invariants rather than mirror the
+implementation. A successful build, lint check, unrelated test run, or aggregate
+coverage percentage does not establish corresponding test coverage. Run the
+relevant tests through the lifecycle below and report the commands and results.
+If execution is blocked, report the exact blocker and the tests left unverified;
+do not claim validation passed.
 
 ## Test Lifecycle
 
@@ -104,6 +128,14 @@ external logout, response handling, cache sandbox behavior, cookie settings,
 transformers, icons, and embedded UI pages/static assets. Use `httptest` and
 `internal/testutils` helpers for request/response and token-driven behavior.
 
+Reusable login-client tests live under `pkg/authclient`, including E2E tests
+against a real local TLS portal and identity store in the default test suite;
+CLI tests live under `cmd/authdbctl`, including executable E2E against a real
+portal and local database plus Python-backed pseudo-terminal tests. Use
+`authentication-client` for reusable protocol/credential coverage and its 100%
+gate; use `authdbctl` for command coverage, terminal fixtures, and CLI E2E
+validation. The CLI subprocess is separate from the parent coverage profile.
+
 Authorization tests live under `pkg/authz`, including gatekeeper behavior,
 authentication requests, redirect handlers, cache behavior, options, and token
 validator sources. `pkg/authz/validator` and related tests use `httptest`,
@@ -139,6 +171,11 @@ cases in the nearest package-level test before creating a broader integration
 test.
 
 ## Adding Coverage
+
+Register new exported structs in `internal/tag/tag_test.go`'s
+`TestTagCompliance` table. `TestStructTagCompliance` scans source files for
+missing entries. Keep JSON/XML/YAML tags consistent; mark runtime-only fields
+with `-` and scope exceptions for intentionally preserved serialized fields.
 
 When changing config parsing or validation, add table-driven cases in the
 nearest `*_test.go` file. Include the successful normalized config shape and a

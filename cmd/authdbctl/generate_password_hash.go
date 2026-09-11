@@ -47,8 +47,7 @@ func generatePasswordHash(c *cli.Context) error {
 	}
 	fmt.Printf("Database: %s\n", dbPath)
 	fmt.Printf("Cost: %d\n", cost)
-	maskedPassword := fmt.Sprintf("%s...%s", password[:2], password[len(password)-2:])
-	fmt.Printf("Status: Generating hash for password %s (length %d)\n", maskedPassword, len(password))
+	fmt.Printf("Status: Generating password hash (length %d)\n", len(password))
 
 	db, err := identity.NewDatabase(dbPath)
 	if err != nil {

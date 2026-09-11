@@ -38,7 +38,7 @@ const (
 
 // IdentityProvider represents SAML-based identity provider.
 type IdentityProvider struct {
-	config           *Config `json:"config,omitempty" xml:"config,omitempty" yaml:"config,omitempty"`
+	config           *Config
 	serviceProviders map[string]*samllib.ServiceProvider
 	idpMetadataURL   *url.URL
 	// loginURL is the link to Azure AD authentication portal.

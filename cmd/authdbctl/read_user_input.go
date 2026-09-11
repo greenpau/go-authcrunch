@@ -15,8 +15,9 @@
 package main
 
 import (
-	"errors"
+	"context"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -24,8 +25,22 @@ import (
 	"golang.org/x/term"
 )
 
-func (wr *wrapper) readUserInputWithTimeout(prompt string, timeout time.Duration) (string, error) {
+func (wr *wrapper) readUserInputWithTimeout(ctx context.Context, prompt string, timeout time.Duration) (string, error) {
 	wr.logger.Debug("prompted user for input", zap.String("prompt", prompt), zap.Duration("timeout", timeout))
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	stdin := os.Stdin
+	fd := int(stdin.Fd())
+	// Own terminal state in the caller. ReadPassword(fd) restores echo only
+	// after input arrives, which leaves the terminal altered on timeout.
+	state, err := term.MakeRaw(fd)
+	if err != nil {
+		return "", err
+	}
+	defer term.Restore(fd, state)
 	fmt.Print(prompt)
 
 	type result struct {
@@ -34,11 +49,16 @@ func (wr *wrapper) readUserInputWithTimeout(prompt string, timeout time.Duration
 	}
 
 	resChan := make(chan result, 1)
-	fd := int(os.Stdin.Fd())
-
+	// The line editor handles hidden input and Ctrl-C/Ctrl-D without changing
+	// OS terminal state. A read left pending on cancellation therefore cannot
+	// undo the caller's restoration. This command returns after cancellation.
+	terminal := term.NewTerminal(struct {
+		io.Reader
+		io.Writer
+	}{stdin, io.Discard}, "")
 	go func() {
-		byteInput, err := term.ReadPassword(fd)
-		resChan <- result{string(byteInput), err}
+		input, err := terminal.ReadPassword("")
+		resChan <- result{input, err}
 	}()
 
 	select {
@@ -49,8 +69,7 @@ func (wr *wrapper) readUserInputWithTimeout(prompt string, timeout time.Duration
 		}
 		return res.pw, nil
 
-	case <-time.After(timeout):
-		wr.logger.Error("user input timed out")
-		return "", errors.New("user input timed out")
+	case <-ctx.Done():
+		return "", ctx.Err()
 	}
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
 	"github.com/greenpau/go-authcrunch/pkg/authchal"
+	"github.com/greenpau/go-authcrunch/pkg/authclient"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	authncache "github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
@@ -75,6 +76,21 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test authclient.Client struct", entry: &authclient.Client{}, opts: &Options{}},
+		{name: "test authclient.Config struct", entry: &authclient.Config{}, opts: &Options{}},
+		{
+			name:  "test authclient.Credentials struct",
+			entry: &authclient.Credentials{},
+			opts: &Options{
+				AllowFieldMismatch: true,
+				AllowedFields: map[string]interface{}{
+					"access_token": true, // Required field in the legacy token file.
+				},
+			},
+		},
+		{name: "test authclient.Options struct", entry: &authclient.Options{}, opts: &Options{}},
+		{name: "test authclient.FileTokenStore struct", entry: &authclient.FileTokenStore{}, opts: &Options{}},
+		{name: "test authclient.HTTPError struct", entry: &authclient.HTTPError{}, opts: &Options{}},
 		{name: "test refresh.Result struct", entry: &refresh.Result{}, opts: &Options{}},
 		{name: "test refresh.Principal struct", entry: &refresh.Principal{}, opts: &Options{}},
 		{name: "test refresh.Binding struct", entry: &refresh.Binding{}, opts: &Options{}},

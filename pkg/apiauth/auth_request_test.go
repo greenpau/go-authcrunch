@@ -16,6 +16,7 @@ package apiauth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http/httptest"
 	"strings"
@@ -210,6 +211,53 @@ func TestValidateAuthRequest(t *testing.T) {
 			}
 
 			tests.EvalObjectsWithLog(t, "ChallengeKind", tc.want, tc.input.AsStringMap(), msgs)
+		})
+	}
+}
+
+func TestAPIKeyAuthRequest(t *testing.T) {
+	key := strings.Repeat("a", 64)
+	for _, tc := range []struct {
+		name   string
+		fields map[string]string
+		denied bool
+	}{
+		{name: "API key identifies its owner"},
+		{name: "explicit default transport", fields: map[string]string{"refresh_transport": "cookie"}},
+		{name: "username conflict", fields: map[string]string{"username": "jsmith"}, denied: true},
+		{name: "sandbox ID conflict", fields: map[string]string{"sandbox_id": "id"}, denied: true},
+		{name: "sandbox secret conflict", fields: map[string]string{"sandbox_secret": "secret"}, denied: true},
+		{name: "challenge kind conflict", fields: map[string]string{"challenge_kind": "password"}, denied: true},
+		{name: "challenge response conflict", fields: map[string]string{"challenge_response": "answer"}, denied: true},
+		{name: "no renewable session", fields: map[string]string{"refresh_transport": "body"}, denied: true},
+		{name: "missing realm", fields: map[string]string{"realm": ""}, denied: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fields := map[string]string{"api_key": key, "realm": "local"}
+			for name, value := range tc.fields {
+				fields[name] = value
+			}
+			body, err := json.Marshal(fields)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := httptest.NewRequest("POST", "/login", strings.NewReader(string(body)))
+			got, err := ParseAuthRequest(t.Context(), httptest.NewRecorder(), r)
+			if tc.denied {
+				if err == nil || strings.Contains(err.Error(), key) {
+					t.Fatal("expected a safe validation error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.APIKey != key || got.Username != "" || got.Realm != "local" || got.HasChallengeResponse() {
+				t.Fatal("incorrect API key request")
+			}
+			if _, exists := got.AsStringMap()["api_key"]; exists {
+				t.Fatal("identity metadata includes API key secret")
+			}
 		})
 	}
 }

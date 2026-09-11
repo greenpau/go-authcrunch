@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package authclient
 
 import (
 	"crypto/hmac"
@@ -23,25 +23,16 @@ import (
 	"time"
 )
 
-func generateTOTP(secret string, codeLength int, codeLifetime int) (string, error) {
-	counter := uint64(time.Now().Unix() / int64(codeLifetime))
-	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, counter)
-
-	h := hmac.New(sha1.New, []byte(secret))
-	h.Write(buf)
-	sum := h.Sum(nil)
-
-	// Get the last 4 bits of the hash to use as an offset (RFC 4226)
+// generateTOTP uses raw secret bytes, matching AuthCrunch's identity.MfaToken
+// and the existing authdbctl configuration (not a base32-encoded OTP URI secret).
+// Config.Validate bounds digits and period before this helper is called.
+func generateTOTP(secret string, digits, period int, at time.Time) string {
+	var counter [8]byte
+	binary.BigEndian.PutUint64(counter[:], uint64(at.Unix()/int64(period)))
+	mac := hmac.New(sha1.New, []byte(secret))
+	mac.Write(counter[:])
+	sum := mac.Sum(nil)
 	offset := sum[len(sum)-1] & 0xf
-
-	// Extract a 4-byte slice starting at the offset
-	// Use a 31-bit mask (0x7fffffff) to keep the number positive
-	binaryCode := binary.BigEndian.Uint32(sum[offset : offset+4])
-	binaryCode &= 0x7fffffff
-
-	divisor := uint32(math.Pow10(codeLength))
-	otp := binaryCode % divisor
-
-	return fmt.Sprintf("%0*d", codeLength, otp), nil
+	code := binary.BigEndian.Uint32(sum[offset:offset+4]) & 0x7fffffff
+	return fmt.Sprintf("%0*d", digits, code%uint32(math.Pow10(digits)))
 }

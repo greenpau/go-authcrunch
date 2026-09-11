@@ -65,10 +65,7 @@ func listUsers(c *cli.Context) error {
 	endpointURL := wr.config.BaseURL + "/api/server/users"
 	wr.logger.Debug("listing realms", zap.String("endpoint_url", endpointURL), zap.String("realm", c.String("realm")))
 
-	var reqData = []byte(`{
-		"realm": "` + c.String("realm") + `",
-		"query": "all"
-	}`)
+	reqData, _ := json.Marshal(map[string]string{"realm": c.String("realm"), "query": "all"})
 
 	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, nil, reqData)
 	if err != nil {

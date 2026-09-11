@@ -15,12 +15,18 @@
 package saml
 
 import (
+	"encoding/json"
+	"encoding/xml"
 	"fmt"
+	"strings"
+	"testing"
+
+	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
+
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
-	"go.uber.org/zap"
-	"testing"
 )
 
 func TestNewIdentityProvider(t *testing.T) {
@@ -175,5 +181,29 @@ func TestNewIdentityProvider(t *testing.T) {
 
 			tests.EvalObjectsWithLog(t, "IdentityProvider", tc.want, got, msgs)
 		})
+	}
+}
+
+func TestIdentityProviderSerialization(t *testing.T) {
+	provider := &IdentityProvider{config: &Config{Name: "private-config-name", Realm: "private-config-realm"}}
+	for _, tc := range []struct {
+		name    string
+		marshal func(any) ([]byte, error)
+	}{
+		{"JSON", json.Marshal}, {"XML", xml.Marshal}, {"YAML", yaml.Marshal},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			data, err := tc.marshal(provider)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(data), "private-config") {
+				t.Fatal("runtime provider serialization exposed private configuration")
+			}
+		})
+	}
+	config := provider.GetConfig()
+	if config["name"] != "private-config-name" || config["realm"] != "private-config-realm" {
+		t.Fatal("explicit configuration access changed")
 	}
 }

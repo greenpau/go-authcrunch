@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -229,6 +230,55 @@ func TestDatabaseAddPrefixedPlaintextAPIKey(t *testing.T) {
 	}
 	if lookupReq.User.Email != testEmail1 {
 		t.Fatalf("lookup email = %q, want %q", lookupReq.User.Email, testEmail1)
+	}
+}
+
+func TestDatabaseAPIKeyCredentialState(t *testing.T) {
+	// All lookups exercise the real bcrypt verifier. State changes below model
+	// persisted records, including disabled users restored by database loading.
+	db, err := NewDatabase(filepath.Join(t.TempDir(), "users.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := &requests.Request{User: requests.User{Username: testUser1, Email: testEmail1, Password: testPwd1}}
+	if err := db.AddUser(req); err != nil {
+		t.Fatal(err)
+	}
+	key := strings.Repeat("a", 64)
+	req.Key = requests.Key{Payload: key, Usage: "api", Comment: "test key"}
+	if err := db.AddAPIKey(req); err != nil {
+		t.Fatal(err)
+	}
+	owner := db.Users[0]
+	for _, tc := range []struct {
+		name                                  string
+		disabledKey, expiredKey, disabledUser bool
+	}{
+		{name: "active"},
+		{name: "disabled key", disabledKey: true},
+		{name: "expired key", expiredKey: true},
+		{name: "disabled owner", disabledUser: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			owner.Disabled = tc.disabledUser
+			owner.APIKeys[0].Disabled = tc.disabledKey
+			owner.APIKeys[0].Expired = tc.expiredKey
+			lookup := requests.NewRequest()
+			lookup.Key.Payload = key
+			err := db.LookupAPIKey(lookup)
+			if tc.disabledKey || tc.expiredKey || tc.disabledUser {
+				if err == nil || lookup.User.Username != "" || lookup.User.Email != "" {
+					t.Fatal("unusable API key disclosed an authenticated identity")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if lookup.User.Username != testUser1 || lookup.User.Email != testEmail1 {
+				t.Fatal("API key resolved the wrong identity")
+			}
+		})
 	}
 }
 

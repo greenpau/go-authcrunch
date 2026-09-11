@@ -13,13 +13,16 @@ top-level `authcrunch.Config` and `Server` wire package-owned configs,
 constructors, validators, providers, stores, portals, gatekeepers, registries,
 and crypto key stores.
 
-Use the repo-local `testing-and-ci` skill when choosing, adding, or running
-tests. Use `scripts-and-automation` for Makefile targets, generated assets,
-dependency commands, and release/version workflows. Use
+Use the repo-local `testing-and-ci` skill for every Go code change and when
+choosing, adding, or running tests. Use `scripts-and-automation` for Makefile
+targets, generated assets, dependency commands, and release/version workflows. Use
 `refresh-token-implementation` and its identity/transport owners when changing
 portal refresh behavior; use `release-and-versioning` for version invariants.
 Use `authentication-portal-themes` for custom portal templates, branding assets,
 and their UI configuration and template contracts.
+Use `authentication-client` for reusable portal login clients and CLI credential
+handling. Use `authdbctl` for CLI commands, terminal behavior, and executable E2E
+tests.
 
 ## Package Boundaries
 
@@ -37,8 +40,11 @@ Put behavior in the package that owns the AuthCrunch surface:
 - `pkg/sso`, `pkg/kms`, `pkg/registry`, `pkg/messaging`, `pkg/identity`,
   `pkg/user`, `pkg/translate`, and focused utility packages own their own
   parsing, validation, models, and tests.
-- `cmd/authdbctl` owns CLI configuration, flags, interactive prompts, request
-  wrappers, and command output.
+- `pkg/authclient` owns the JSON portal login client, challenge orchestration,
+  opaque credential results, and optional token-file persistence. It uses the
+  login endpoint without depending on the admin API or a CLI framework.
+- `cmd/authdbctl` owns configuration discovery, application paths, flags,
+  terminal prompts, database commands, management request retries, and output.
 
 Do not add cross-package shortcuts when an existing dispatcher, interface, or
 config object already models the boundary. When adding a provider/store kind,
@@ -170,6 +176,9 @@ cookie, sandbox, token source, and redirect semantics unless the task
 explicitly changes them.
 
 ## Tests
+
+Apply the mandatory [corresponding tests requirement](../testing-and-ci/SKILL.md#corresponding-tests)
+to every Go code change, including CLI code, internal helpers, and refactors.
 
 Add focused table-driven tests beside the package being changed. Use
 `github.com/google/go-cmp/cmp` and `internal/tests` helpers such as `Unpack`,

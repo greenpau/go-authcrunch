@@ -28,7 +28,9 @@
 
 ## Getting Started
 
-The use of the tool requires the `enable admin api` directive in `Caddyfile`:
+Database management commands require the `enable admin api` directive in
+`Caddyfile`. The `connect` command uses the portal's JSON `/login` endpoint and
+does not require the admin API:
 
 ```text
 {
@@ -101,9 +103,20 @@ The configuration file contains the following:
 * Auth Portal URL
 * Default username, password, realm
 * TOTP Shared Secret
+* API key and realm as an alternative to username/password login
 
 The `authdbctl` stores the JWT token acquired after a successful authentication
-in `~/.config/authdbctl/token.jwt`.
+in `~/.config/authdbctl/token.jwt`. Despite the filename, this is a JSON object
+containing the access token, its header name, and issuance metadata.
+
+Applications can reuse portal authentication through `pkg/authclient`. See the
+[authentication client integration guide](../../.codex/skills/authentication-client/references/integration.md)
+for the Go API and application-specific credential paths.
+
+For API key login, use `base_url`, `realm`, and `api_key` in the configuration
+file, omitting `username`, `password`, and `totp_secret`. Run `authdbctl connect`
+as usual. This requires a portal with API key JSON login support and returns an
+access token without a refresh session.
 
 ### TOTP Configuration
 

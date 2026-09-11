@@ -86,7 +86,9 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 		switch {
 		case checkpoint.Type == "password":
 			rr.Flags.Enabled = true
-			rr.User.Username = authRequest.Username
+			// Keep the canonical identity established before acquiring the sandbox,
+			// including when the caller supplied an email address or mixed case.
+			rr.User.Username = usr.Claims.Subject
 			rr.User.Password = authRequest.ChallengeResponse
 			if err := backend.Request(operator.Authenticate, rr); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
@@ -126,7 +128,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				return fmt.Errorf("account temporarily locked due to too many failed MFA attempts")
 			}
 			rr.Flags.Enabled = true
-			rr.User.Username = authRequest.Username
+			rr.User.Username = usr.Claims.Subject
 			rr.MfaToken.Passcode = authRequest.ChallengeResponse
 			if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
@@ -189,7 +191,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			prevCheckpointPassed = true
 		case (checkpoint.Type == "u2f" || checkpoint.Type == "mfa") && authRequest.ChallengeResponse == "webauthn":
 			rr.Flags.Enabled = true
-			rr.User.Username = authRequest.Username
+			rr.User.Username = usr.Claims.Subject
 			if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
 				checkpoint.FailedAttempts++
@@ -267,7 +269,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				return fmt.Errorf("account temporarily locked due to too many failed MFA attempts")
 			}
 			rr.Flags.Enabled = true
-			rr.User.Username = authRequest.Username
+			rr.User.Username = usr.Claims.Subject
 			rr.WebAuthn.Challenge = usr.Authenticator.TempChallenge
 			if err := backend.Request(operator.Authenticate, rr); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
@@ -329,6 +331,9 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 		return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 	}
 
+	if authRequest.APIKey != "" {
+		return p.handleJSONAPIKeyLogin(ctx, w, r, authRequest)
+	}
 	if authRequest.RefreshTransport == "body" && (!p.refreshRealm(authRequest.Realm) || !p.config.RefreshTokens.BodyTransportEnabled) {
 		return p.handleJSONError(ctx, w, http.StatusBadRequest, "Native refresh is unavailable")
 	}

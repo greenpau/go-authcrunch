@@ -74,6 +74,18 @@ var (
 )
 
 func updateUser(c *cli.Context) error {
+	operations := 0
+	for _, selected := range []bool{
+		c.Bool("disable"), c.Bool("enable"), c.Bool("reset-password"),
+		c.IsSet("overwrite-roles"), c.IsSet("add-roles"), c.IsSet("overwrite-auth-challenges"),
+	} {
+		if selected {
+			operations++
+		}
+	}
+	if operations != 1 {
+		return fmt.Errorf("select exactly one user update operation")
+	}
 	wr := new(wrapper)
 	if err := wr.configure(c); err != nil {
 		return err
@@ -131,11 +143,6 @@ func updateUser(c *cli.Context) error {
 	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, nil, reqData)
 	if err != nil {
 		return fmt.Errorf("failed updating %q user to %q realm: %w", c.String("username"), c.String("realm"), err)
-	}
-
-	var data map[string]any
-	if err := json.Unmarshal([]byte(respBody), &data); err != nil {
-		return fmt.Errorf("failed to parse JSON response: %v", err)
 	}
 
 	fmt.Fprintf(os.Stdout, "%s\n", respBody)

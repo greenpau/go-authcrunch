@@ -60,10 +60,12 @@ func (p *Portal) handleAPIRealmInfo(ctx context.Context, w http.ResponseWriter, 
 	}
 
 	metadata := map[string]any{}
+	found := false
 	for _, ids := range p.identityStores {
 		if ids.GetRealm() != req.Realm {
 			continue
 		}
+		found = true
 		var err error
 		metadata, err = ids.GetMetadata(req.Query)
 		if err != nil {
@@ -77,6 +79,9 @@ func (p *Portal) handleAPIRealmInfo(ctx context.Context, w http.ResponseWriter, 
 			return p.handleJSONError(ctx, w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 		}
 		break
+	}
+	if !found {
+		return p.handleJSONError(ctx, w, http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
 	metadata["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)

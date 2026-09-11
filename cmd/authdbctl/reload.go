@@ -32,18 +32,11 @@ func reload(c *cli.Context) error {
 	endpointURL := wr.config.BaseURL + "/api/server/reload"
 	wr.logger.Debug("reloading database", zap.String("endpoint_url", endpointURL), zap.String("realm", c.String("realm")))
 
-	var reqData = []byte(`{
-		"realm": "` + c.String("realm") + `"
-	}`)
+	reqData, _ := json.Marshal(map[string]string{"realm": c.String("realm")})
 
 	respBody, err := wr.doRequestWithRetry(c, http.MethodPost, endpointURL, nil, reqData)
 	if err != nil {
 		return fmt.Errorf("failed fetching database info: %w", err)
-	}
-
-	var data map[string]any
-	if err := json.Unmarshal([]byte(respBody), &data); err != nil {
-		return fmt.Errorf("failed to parse JSON response: %v", err)
 	}
 
 	fmt.Fprintf(os.Stdout, "%s\n", respBody)

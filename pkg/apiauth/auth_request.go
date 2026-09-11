@@ -24,6 +24,9 @@ import (
 
 // AuthRequest is authentication request.
 type AuthRequest struct {
+	// APIKey selects access-only API key login. It cannot be combined with a
+	// username, sandbox challenge, or native refresh transport.
+	APIKey              string `json:"api_key,omitempty" xml:"api_key,omitempty" yaml:"api_key,omitempty"`
 	RefreshTransport    string `json:"refresh_transport,omitempty" xml:"refresh_transport,omitempty" yaml:"refresh_transport,omitempty"`
 	Username            string `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
 	SandboxID           string `json:"sandbox_id,omitempty" xml:"sandbox_id,omitempty" yaml:"sandbox_id,omitempty"`
@@ -80,11 +83,20 @@ func (r *AuthRequest) Validate() error {
 	r.Realm = strings.TrimSpace(r.Realm)
 	r.SandboxID = strings.TrimSpace(r.SandboxID)
 	r.ChallengeResponse = strings.TrimSpace(r.ChallengeResponse)
-	if r.Username == "" {
+	if r.Username == "" && r.APIKey == "" {
 		return errors.New("required username field is empty")
 	}
 	if r.Realm == "" {
 		return errors.New("required realm field is empty")
+	}
+	if r.APIKey != "" {
+		if r.Username != "" || r.SandboxID != "" || r.SandboxSecret != "" || r.ChallengeKind != "" || r.ChallengeResponse != "" {
+			return errors.New("api_key cannot be combined with username or sandbox fields")
+		}
+		if r.RefreshTransport != "cookie" {
+			return errors.New("api_key login does not support refresh transport")
+		}
+		return nil
 	}
 	if r.SandboxID != "" || r.ChallengeResponse != "" || r.ChallengeKind != "" || r.SandboxSecret != "" {
 		if r.SandboxID == "" {

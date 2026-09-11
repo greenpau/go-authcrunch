@@ -33,6 +33,11 @@ issuance and rotation. Reject browser Origin, Fetch Metadata, and Cookie
 headers for native requests; return credentials in JSON and set no cookies.
 Never accept a cookie-family token through body transport or vice versa.
 
+API key JSON `/login` is a separate access-only path owned by
+`authentication-client`. It does not enter sandbox refresh issuance, sets no
+cookies, and rejects `refresh_transport: body`, even in a refresh-enabled realm.
+Do not treat possession of an API key as completed password/MFA login evidence.
+
 Use the status contract: 400 malformed/ambiguous request, 401 login required,
 403 origin/transport violation, 404 disabled/wrong mount, 405 wrong method,
 415 wrong content type, and 503 transient signing/storage/backend failure.

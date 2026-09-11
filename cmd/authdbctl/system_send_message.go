@@ -85,7 +85,7 @@ func systemSendMessage(c *cli.Context) error {
 
 	encryptor, err := system.NewEncryptorFromKey(keyID, keyFilePath)
 	if err != nil {
-		return nil
+		return fmt.Errorf("failed to create system encryptor: %w", err)
 	}
 
 	reqMsg, err := system.ParseMessage(messageData)
@@ -113,7 +113,7 @@ func systemSendMessage(c *cli.Context) error {
 	}
 
 	if !strings.HasPrefix(respBody, "v4.local.") {
-		return fmt.Errorf("unexpected system message response: %s", respBody)
+		return fmt.Errorf("unexpected system message response")
 	}
 
 	respMsg, err := encryptor.DecryptMessage(respBody)
@@ -123,7 +123,7 @@ func systemSendMessage(c *cli.Context) error {
 
 	respMsgMap, err := respMsg.AsMap()
 	if err != nil {
-		return fmt.Errorf("failed to marshal system message response: %s: %v", respBody, err)
+		return fmt.Errorf("failed to marshal system message response: %w", err)
 	}
 
 	wr.logger.Debug("received response message from authentication portal",

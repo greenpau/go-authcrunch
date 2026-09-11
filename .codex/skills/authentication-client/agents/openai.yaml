@@ -1,0 +1,4 @@
+interface:
+  display_name: "Authentication Client"
+  short_description: "Reusable portal login and CLI credential storage"
+  default_prompt: "Use $authentication-client to maintain the reusable portal authentication client and its CLI integration."

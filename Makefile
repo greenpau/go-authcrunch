@@ -54,6 +54,7 @@ install-test-tools:
 test: run-tests
 
 run-tests:
+	@rm -rf .coverage
 	@go tool tested run --output-dir "$$COVERAGE_DIR" \
 		--title "AuthCrunch Go tests" --minimum-coverage "$$MINIMUM_COVERAGE" \
 		-- -mod=readonly -race -count=1 -v -run "$$TEST" $$TEST_DIR

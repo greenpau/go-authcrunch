@@ -38,7 +38,8 @@ AuthCrunch packages.
 
 ## Testing and CI
 
-Use the repo-local `testing-and-ci` skill when choosing or running tests, adding
+Use the repo-local `testing-and-ci` skill for every Go code change to enforce
+its corresponding tests requirement, and when choosing or running tests, adding
 or updating test coverage, interpreting CI failures, reproducing GitHub Actions
 locally, or documenting validation for this repository.
 
@@ -84,6 +85,14 @@ coordination, continuation, and logout.
 
 Use `authentication-portal-themes` for custom portal templates, CSS, branding
 assets, theme configuration, and compatibility with current portal pages.
+
+## Authentication Clients
+
+Use `authentication-client` for `pkg/authclient`, JSON portal login consumers,
+credential files, and authentication protocol wiring. Use `authdbctl` for
+`cmd/authdbctl` commands, configuration, terminal input, and executable E2E tests.
+The reusable client uses `/login` without the admin API; database management
+commands and their retry policy stay in `cmd/authdbctl`.
 
 ## Versioning and Releases
 

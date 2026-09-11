@@ -47,9 +47,9 @@ func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, opts *
 	}
 
 	if !opts.disableAccessToken {
-		if wr.config.accessToken == "" {
-			if authErr := wr.authenticate(); authErr != nil {
-				return "", fmt.Errorf("authentication failed: %v", authErr)
+		if wr.credentials.AccessToken == "" {
+			if authErr := wr.authenticate(c.Context); authErr != nil {
+				return "", fmt.Errorf("authentication failed: %w", authErr)
 			}
 		}
 	}
@@ -63,15 +63,38 @@ func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, opts *
 	}
 
 	for i := 1; i <= maxAttempts; i++ {
-		req, _ := http.NewRequest(method, url, bytes.NewBuffer(body))
+		req, reqErr := http.NewRequestWithContext(c.Context, method, url, bytes.NewBuffer(body))
+		if reqErr != nil {
+			return "", fmt.Errorf("create request: %w", reqErr)
+		}
 		req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 		if !opts.disableAccessToken {
-			req.Header.Set("Authorization", wr.config.accessTokenName+"="+wr.config.accessToken)
+			authorization, authErr := wr.credentials.Authorization()
+			if authErr != nil {
+				return "", authErr
+			}
+			req.Header.Set("Authorization", authorization)
 		}
 
 		respBody, resp, err = wr.browser.Do(req)
+		if contextErr := c.Context.Err(); contextErr != nil {
+			return "", contextErr
+		}
 
 		if err == nil && resp != nil && resp.StatusCode == http.StatusOK {
+			// Management handlers also report operation failures in HTTP 200
+			// responses. Do not report success or retry a failed mutation.
+			if !opts.disableAccessToken {
+				var result *struct {
+					Status string `json:"status"`
+				}
+				if json.Unmarshal([]byte(respBody), &result) != nil || result == nil {
+					return "", fmt.Errorf("invalid management response")
+				}
+				if result.Status == "failure" {
+					return "", fmt.Errorf("management operation failed")
+				}
+			}
 			return respBody, nil
 		}
 
@@ -83,15 +106,12 @@ func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, opts *
 			zap.Int("max_attempts", maxAttempts),
 			zap.String("url", url),
 			zap.Error(err),
-			zap.Any("server_response", errorData),
-			zap.String("access_token_name", wr.config.accessTokenName),
-			zap.String("access_token", wr.config.accessToken),
 		)
 
-		if msg, ok := errorData["message"].(string); ok && strings.ToLower(msg) == "access denied" {
-			wr.logger.Debug("access denied detected, attempting to re-authenticate", zap.Int("attempt", i), zap.String("response_body", respBody))
-			if authErr := wr.authenticate(); authErr != nil {
-				return "", fmt.Errorf("re-authentication failed: %v", authErr)
+		if msg, ok := errorData["message"].(string); ok && strings.EqualFold(msg, "access denied") && !opts.disableAccessToken && i < maxAttempts {
+			wr.logger.Debug("access denied detected, attempting to re-authenticate", zap.Int("attempt", i))
+			if authErr := wr.authenticate(c.Context); authErr != nil {
+				return "", fmt.Errorf("re-authentication failed: %w", authErr)
 			}
 		}
 
@@ -105,12 +125,18 @@ func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, opts *
 
 		if i == maxAttempts {
 			if err != nil {
-				return "", fmt.Errorf("request failed after %d attempts: %v", maxAttempts, err)
+				return "", fmt.Errorf("request failed after %d attempts: %w", maxAttempts, err)
 			}
 			return "", fmt.Errorf("server responded with %d after %d attempts", resp.StatusCode, maxAttempts)
 		}
 
-		time.Sleep(c.Duration("retry-interval"))
+		timer := time.NewTimer(c.Duration("retry-interval"))
+		select {
+		case <-c.Context.Done():
+			timer.Stop()
+			return "", c.Context.Err()
+		case <-timer.C:
+		}
 	}
 
 	return respBody, nil

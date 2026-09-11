@@ -485,6 +485,9 @@ func (user *User) DeleteAPIKey(r *requests.Request) error {
 func (user *User) LookupAPIKey(r *requests.Request) error {
 	for _, k := range user.APIKeys {
 		if k.Prefix == r.Key.Prefix {
+			if k.Disabled || k.Expired {
+				return errors.ErrLookupAPIKeyFailed
+			}
 			if k.Match(r.Key.Payload) {
 				return nil
 			}

@@ -82,11 +82,6 @@ func fetchUserInfo(c *cli.Context) error {
 		return fmt.Errorf("failed fetching database %q realm info: %w", c.String("realm"), err)
 	}
 
-	var data map[string]any
-	if err := json.Unmarshal([]byte(respBody), &data); err != nil {
-		return fmt.Errorf("failed to parse JSON response: %v", err)
-	}
-
 	fmt.Fprintf(os.Stdout, "%s\n", respBody)
 	return nil
 }

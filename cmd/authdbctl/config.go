@@ -16,183 +16,142 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/greenpau/go-authcrunch/pkg/util"
-	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
-	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
+
+	"github.com/greenpau/go-authcrunch/pkg/authclient"
+	"github.com/greenpau/go-authcrunch/pkg/util"
+	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
+	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 )
 
-// Config holds the configuration for the CLI.
+// Config holds CLI file settings alongside reusable authentication settings.
 type Config struct {
-	BaseURL          string `json:"base_url,omitempty" xml:"base_url,omitempty" yaml:"base_url,omitempty"`
-	TokenPath        string `json:"token_path,omitempty" xml:"token_path,omitempty" yaml:"token_path,omitempty"`
-	Username         string `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
-	Password         string `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
-	TotpSecret       string `json:"totp_secret,omitempty" xml:"totp_secret,omitempty" yaml:"totp_secret,omitempty"`
-	TotpCodeLength   int    `json:"totp_code_length,omitempty" xml:"totp_code_length,omitempty" yaml:"totp_code_length,omitempty"`
-	TotpCodeLifetime int    `json:"totp_code_lifetime,omitempty" xml:"totp_code_lifetime,omitempty" yaml:"totp_code_lifetime,omitempty"`
-	Realm            string `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
-	CookieName       string `json:"cookie_name,omitempty" xml:"cookie_name,omitempty" yaml:"cookie_name,omitempty"`
-
-	path            string
-	accessToken     string
-	accessTokenName string
-	refreshToken    string
-	// refreshTokenName string
-	tokenAcquired bool
+	authclient.Config `yaml:",inline"`
+	TokenPath         string `json:"token_path,omitempty" xml:"token_path,omitempty" yaml:"token_path,omitempty"`
+	// CookieName is retained for compatibility with existing configuration files.
+	CookieName string `json:"cookie_name,omitempty" xml:"cookie_name,omitempty" yaml:"cookie_name,omitempty"`
 }
 
 type wrapper struct {
-	config  *Config
-	logger  *zap.Logger
-	browser *util.Browser
+	config        *Config
+	logger        *zap.Logger
+	browser       *util.Browser
+	authenticator *authclient.Client
+	tokenStore    *authclient.FileTokenStore
+	credentials   authclient.Credentials
+	input         *bufio.Reader
 }
 
 func (wr *wrapper) configure(c *cli.Context) error {
 	cfg := &Config{}
-	cfg.path = c.String("config")
-
+	configPath := c.String("config")
 	if c.Bool("debug") {
 		wr.logger = logutil.NewLogger()
 	} else {
 		wr.logger = logutil.NewInfoLogger()
 	}
-
-	cfgBytes, err := fileutil.ReadFileBytes(cfg.path)
+	cfgBytes, err := fileutil.ReadFileBytes(configPath)
 	if err != nil {
-		switch {
-		case errors.Is(err, os.ErrNotExist):
-			wr.logger.Debug(
-				"configuration file does not exist",
-				zap.String("path", cfg.path),
-			)
-		default:
+		if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-	} else {
-		if err := yaml.Unmarshal(cfgBytes, cfg); err != nil {
-			return err
-		}
-		cfg.path = c.String("config")
+		wr.logger.Debug("configuration file does not exist", zap.String("path", configPath))
+	} else if err := yaml.Unmarshal(cfgBytes, cfg); err != nil {
+		// YAML conversion errors may contain configured secrets.
+		return fmt.Errorf("invalid configuration YAML")
 	}
-
-	if cfg.TokenPath == "" && c.String("token-path") != "" {
+	if cfg.TokenPath == "" {
 		cfg.TokenPath = c.String("token-path")
 	}
-
 	cfg.TokenPath = fileutil.ExpandPath(cfg.TokenPath)
-
 	if cfg.BaseURL == "" {
 		return fmt.Errorf("the base_url configuration not found")
 	}
-
-	tokenBytes, err := fileutil.ReadFileBytes(cfg.TokenPath)
+	store, err := authclient.NewFileTokenStore(cfg.TokenPath)
 	if err != nil {
-		switch {
-		case errors.Is(err, os.ErrNotExist):
-			wr.logger.Debug(
-				"token file does not exist",
-				zap.String("path", cfg.TokenPath),
-			)
-		default:
-			return err
-		}
-	} else {
-		tokenData := make(map[string]string)
-		err := json.Unmarshal(tokenBytes, &tokenData)
-		if err != nil {
-			wr.logger.Debug(
-				"token file parsing failed",
-				zap.String("path", cfg.TokenPath),
-				zap.Error(err),
-			)
-			return err
-		}
-		if v, ok := tokenData["access_token"]; ok {
-			cfg.accessToken = v
-		}
-		if v, ok := tokenData["access_token_name"]; ok {
-			cfg.accessTokenName = v
-		}
-		if v, ok := tokenData["refresh_token"]; ok {
-			cfg.refreshToken = v
-		}
+		return err
 	}
-
-	for _, s := range []string{"username", "realm"} {
-		var skip bool
-		switch {
-		case (s == "username") && (cfg.Username != ""):
-			skip = true
-		case (s == "realm") && (cfg.Realm != ""):
-			skip = true
+	// A wrapper normally serves one command. Reset state if it is configured again.
+	wr.credentials = authclient.Credentials{}
+	credentials, err := store.Load()
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
 		}
-		if skip {
+		wr.logger.Debug("token file does not exist", zap.String("path", cfg.TokenPath))
+	} else {
+		wr.credentials = *credentials
+	}
+	for _, field := range []struct {
+		name  string
+		value *string
+	}{
+		{"username", &cfg.Username},
+		{"realm", &cfg.Realm},
+	} {
+		if field.name == "username" && cfg.APIKey != "" {
 			continue
 		}
-		input, err := wr.readUserInput(s)
-		if err != nil {
-			return err
-		}
-		switch s {
-		case "username":
-			cfg.Username = input
-		case "realm":
-			cfg.Realm = input
+		if *field.value == "" {
+			input, err := wr.readUserInput(field.name)
+			if err != nil {
+				return err
+			}
+			*field.value = input
 		}
 	}
-
 	if cfg.CookieName == "" {
 		cfg.CookieName = "AUTHP_ACCESS_TOKEN"
 	}
-
-	if cfg.accessTokenName == "" {
-		cfg.accessTokenName = c.String("access-token-name")
+	// Preserve legacy precedence: a cached name wins over the CLI fallback.
+	if wr.credentials.AccessTokenName != "" {
+		cfg.AccessTokenName = wr.credentials.AccessTokenName
+	} else if cfg.AccessTokenName == "" {
+		cfg.AccessTokenName = c.String("access-token-name")
 	}
-
-	if cfg.TotpCodeLength == 0 {
-		cfg.TotpCodeLength = 6
+	if err := cfg.Config.Validate(); err != nil {
+		return err
 	}
-
-	if cfg.TotpCodeLifetime == 0 {
-		cfg.TotpCodeLifetime = 30
+	if wr.credentials.AccessTokenName == "" {
+		wr.credentials.AccessTokenName = cfg.AccessTokenName
 	}
-
-	wr.logger.Debug(
-		"runtime configuration",
-		zap.String("config_path", cfg.path),
-		zap.String("base_url", cfg.BaseURL),
-		zap.String("token_path", cfg.TokenPath),
-		zap.String("username", cfg.Username),
-		zap.String("realm", cfg.Realm),
-		zap.Any("FFF", cfg),
-	)
-
-	wr.config = cfg
-
+	authenticator, err := authclient.NewClient(&cfg.Config, authclient.Options{
+		Prompt:    wr.promptAuthentication,
+		UserAgent: app.Name + "/" + app.Version,
+	})
+	if err != nil {
+		return err
+	}
 	browser, err := util.NewBrowser()
 	if err != nil {
 		return err
 	}
-
+	wr.config = cfg
+	wr.tokenStore = store
+	wr.authenticator = authenticator
 	wr.browser = browser
+	wr.logger.Debug("runtime configuration",
+		zap.String("config_path", configPath),
+		zap.String("token_path", cfg.TokenPath),
+		zap.String("username", cfg.Username),
+		zap.String("realm", cfg.Realm),
+	)
 	return nil
 }
 
 func (wr *wrapper) readUserInput(s string) (string, error) {
-	reader := bufio.NewReader(os.Stdin)
+	if wr.input == nil {
+		wr.input = bufio.NewReader(os.Stdin)
+	}
 	fmt.Printf("Enter %s: ", s)
-	input, err := reader.ReadString('\n')
+	input, err := wr.input.ReadString('\n')
 	if err != nil {
 		wr.logger.Error(
 			"An error occured while reading input. Please try again.",
@@ -206,43 +165,4 @@ func (wr *wrapper) readUserInput(s string) (string, error) {
 		return "", fmt.Errorf("empty input")
 	}
 	return input, nil
-}
-
-func (wr *wrapper) commitToken() error {
-	fileDir := filepath.Dir(wr.config.TokenPath)
-
-	if _, err := os.Stat(fileDir); os.IsNotExist(err) {
-		wr.logger.Error("creating token file directory", zap.String("path", fileDir))
-		if err := os.MkdirAll(fileDir, 0700); err != nil {
-			return fmt.Errorf("failed creating %q directory: %v", fileDir, err)
-		}
-	}
-
-	fh, err := os.OpenFile(wr.config.TokenPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return fmt.Errorf("failed opening %q file: %v", wr.config.TokenPath, err)
-	}
-
-	data := make(map[string]string)
-	data["access_token"] = wr.config.accessToken
-	if wr.config.accessTokenName != "" {
-		data["access_token_name"] = wr.config.accessTokenName
-	}
-	if wr.config.refreshToken != "" {
-		data["refresh_token"] = wr.config.refreshToken
-	}
-	data["created_at"] = time.Now().UTC().Format(time.RFC3339Nano)
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("failed marshaling data to %q file: %v", wr.config.TokenPath, err)
-	}
-	if _, err := fh.WriteString(string(jsonData) + "\n"); err != nil {
-		return fmt.Errorf("failed writing to %q file: %v", wr.config.TokenPath, err)
-	}
-	if err := fh.Close(); err != nil {
-		return fmt.Errorf("failed closing %q file: %v", wr.config.TokenPath, err)
-	}
-
-	wr.logger.Debug("wrote token to file", zap.String("path", wr.config.TokenPath))
-	return nil
 }
