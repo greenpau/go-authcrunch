@@ -1,4 +1,4 @@
 interface:
   display_name: "Testing and CI"
-  short_description: "go-authcrunch test and CI workflow"
-  default_prompt: "Use $testing-and-ci to choose and run the right go-authcrunch test workflow."
+  short_description: "AuthCrunch tests, required E2E coverage, and CI"
+  default_prompt: "Use $testing-and-ci to develop corresponding tests and E2E coverage, then run the right AuthCrunch validation workflow."

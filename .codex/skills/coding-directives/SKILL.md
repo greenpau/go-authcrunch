@@ -20,6 +20,9 @@ targets, generated assets, dependency commands, and release/version workflows. U
 portal refresh behavior; use `release-and-versioning` for version invariants.
 Use `authentication-portal-themes` for custom portal templates, branding assets,
 and their UI configuration and template contracts.
+Use [authentication-portal-jwks](../authentication-portal-jwks/SKILL.md) for
+portal public signing-key discovery, opt-in admin private-key export, issuer
+selection, and JWK serialization.
 Use [local-password-authentication](../local-password-authentication/SKILL.md)
 for local-store password verification and bcrypt work equalization.
 Use `authentication-client` for reusable portal login clients and CLI credential
@@ -181,6 +184,8 @@ explicitly changes them.
 
 Apply the mandatory [corresponding tests requirement](../testing-and-ci/SKILL.md#corresponding-tests)
 to every Go code change, including CLI code, internal helpers, and refactors.
+Follow its [required E2E coverage](../testing-and-ci/SKILL.md#required-end-to-end-coverage)
+whenever developing tests.
 
 Add focused table-driven tests beside the package being changed. Use
 `github.com/google/go-cmp/cmp` and `internal/tests` helpers such as `Unpack`,

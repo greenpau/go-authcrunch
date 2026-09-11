@@ -15,6 +15,7 @@
 package kms
 
 import (
+	stderrors "errors"
 	"fmt"
 	"strings"
 
@@ -234,23 +235,41 @@ func (ks *CryptoKeyStore) ParseToken(ar *requests.AuthorizationRequest) (*user.U
 		}
 
 		parsedToken, err := jwtlib.Parse(ar.Token.Payload, k.ProvideKey)
-		if err != nil && !strings.Contains(err.Error(), "is expired") {
+		if err != nil && !stderrors.Is(err, jwtlib.ErrTokenExpired) {
 			continue
+		}
+		if parsedToken == nil {
+			return nil, errors.ErrCryptoKeyStoreTokenData
+		}
+		claims, ok := parsedToken.Claims.(jwtlib.MapClaims)
+		if !ok {
+			return nil, errors.ErrCryptoKeyStoreTokenData
 		}
 
 		userData := make(map[string]interface{})
 		errData := make(map[string]interface{})
-		for k, v := range parsedToken.Claims.(jwtlib.MapClaims) {
+		for k, v := range claims {
+			// A verified signature does not establish the types of its claims.
+			// Validate identity metadata before building users or expiry hints.
+			var text string
+			switch k {
+			case "iss", "mail", "email", "sub", "name", "jti":
+				var valid bool
+				text, valid = v.(string)
+				if !valid {
+					return nil, errors.ErrCryptoKeyStoreTokenData
+				}
+			}
 			switch k {
 			case "iss":
-				if strings.HasPrefix(v.(string), "http") {
-					ar.Redirect.AuthURL = strings.TrimSuffix(v.(string), "authorization-code-callback")
+				if strings.HasPrefix(text, "http") {
+					ar.Redirect.AuthURL = strings.TrimSuffix(text, "authorization-code-callback")
 				}
 			case "mail", "email":
-				errData["email"] = v.(string)
-				ar.Redirect.LoginHint = v.(string)
+				errData["email"] = text
+				ar.Redirect.LoginHint = text
 			case "sub", "name", "jti":
-				errData[k] = v.(string)
+				errData[k] = text
 			}
 			userData[k] = v
 		}

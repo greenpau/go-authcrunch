@@ -1,6 +1,6 @@
 ---
 name: testing-and-ci
-description: Require corresponding tests for every Go code change, and select, run, and maintain AuthCrunch Go tests through pinned tested, browser refresh-client tests, automation fixtures, coverage artifacts, and GitHub CI gates.
+description: Require corresponding tests for every Go code change and E2E coverage whenever developing tests; select, run, and maintain AuthCrunch tests through pinned tested, browser tests, automation fixtures, coverage artifacts, and CI gates.
 ---
 
 # Testing and CI
@@ -29,9 +29,37 @@ relevant tests through the lifecycle below and report the commands and results.
 If execution is blocked, report the exact blocker and the tests left unverified;
 do not claim validation passed.
 
+## Required End-to-End Coverage
+
+Whenever developing tests, also add or extend E2E tests for the affected
+behavior in the same change. This includes test-only work, regression tests,
+and changes to test helpers. Run the E2E cases before marking the work complete;
+unit tests, handler recorders, and coverage percentages alone do not satisfy
+this requirement.
+
+Exercise the supported consumer entry point through the real production
+components to an observable result. For portal HTTP features, use a local TLS
+listener, a temporary identity database, real login and authorization, and a
+client that cannot access portal internals. For CLI behavior, run the built
+executable. For library or automation behavior, exercise the owning public
+workflow with real temporary files or local processes as appropriate.
+
+Cover the main successful journey and relevant rejection or persistence
+boundaries. Extend an existing E2E scenario when it can verify the new behavior;
+do not relabel an isolated mock or add an unrelated smoke test. Use independent
+consumer assertions where possible, such as signature verification from fetched
+keys or reopening an exported file in a fresh runtime.
+
+Keep local E2E tests in the default suite, named `TestE2E...` in Go, without
+opt-in build tags or live-service credentials. Bound network calls, close
+listeners and response bodies, release runtime workers, isolate filesystem
+state, and keep secrets out of failures and reports. If a required E2E run is
+blocked, report the exact blocker and leave that validation explicitly
+incomplete rather than silently substituting unit coverage.
+
 ## Test Lifecycle
 
-The root Go module declares Go `1.25.0`. Repository coverage uses the pinned
+The root Go module declares Go `1.26.0`. Repository coverage uses the pinned
 `github.com/greenpau/tested` tool in `go.mod`, invoked through `go tool tested`.
 It owns `-json`, `-coverprofile`, child-process status, and coherent reports.
 Do not reintroduce `go test | tee`, log-grep success detection, richgo, tparse,
@@ -40,6 +68,7 @@ or go-test-report into the lifecycle.
 ```sh
 make test
 make test TEST_DIR='./pkg/authn/...' TEST='TestPortalRefresh'
+make test TEST_DIR='./pkg/authn' TEST='^TestE2EPortalJWKS' COVERAGE_DIR='.coverage/jwks-e2e'
 make qtest QUICK_TEST_DIR='./pkg/authn/refresh'
 make test-ui
 make test-automation
@@ -159,6 +188,9 @@ KMS and credential tests live under `pkg/kms` and `pkg/credentials`. They use
 RSA, ECDSA, GPG, OAuth, malformed PEM, missing-key, and mixed-key fixtures
 under `testdata`. Preserve package-relative paths such as
 `../../testdata/rskeys/test_2_pri.pem` when adding cases.
+Use [authentication-portal-jwks](../authentication-portal-jwks/SKILL.md) for
+public signing-key export, admin private-key export authorization, and portal
+endpoint tests that independently verify issued JWT signatures.
 
 Embedded UI tests live under `pkg/authn/ui`. `static_test.go` asserts the
 static asset count, sorted paths, and content types; `pages_test.go` and

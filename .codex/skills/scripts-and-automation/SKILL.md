@@ -43,7 +43,7 @@ The lifecycle fixture in `assets/scripts/tests/tested_test.py` checks this
 isolation alongside fresh evidence and nonzero exits after test/build failures.
 Whole-directory cleanup belongs to the explicitly requested `make clean`.
 
-The Go module minimum is `1.25.0`; CI selects Go `1.26.0`, Node 24, and Python
+The Go module minimum is `1.26.0`; CI selects Go `1.26.0`, Node 24, and Python
 3. Use Python 3.9+ locally. `go.mod` and `go.sum` pin `tested`, `versioned`, and
 `golint`; never replace the pinned lifecycle with global tools installed at
 `@latest`. `make install-test-tools` resolves `go tool tested` without modifying

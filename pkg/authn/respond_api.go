@@ -54,6 +54,8 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	switch {
+	case strings.HasSuffix(r.URL.Path, privateKeysPath):
+		return p.handleAPIFetchPrivateKeys(ctx, w, r, rr, usr)
 	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/system"):
 		return p.handleAPISystem(ctx, w, r, rr, usr)
 	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/realms"):

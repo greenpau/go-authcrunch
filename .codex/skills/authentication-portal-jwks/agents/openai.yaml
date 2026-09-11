@@ -1,0 +1,4 @@
+interface:
+  display_name: "Authentication Portal JWKS"
+  short_description: "Maintain public discovery and admin private-key export"
+  default_prompt: "Use $authentication-portal-jwks to maintain public signing-key discovery and opt-in admin private-key export with authorization and signature-verification tests."

@@ -16,6 +16,11 @@ package errors
 
 // Key Management System Errors
 const (
+	// Private signing-key export options.
+	ErrPrivateKeyExportFormat   StandardError = "unsupported private key format: use pkcs8, pkcs1, sec1, or jwk"
+	ErrPrivateKeyExportEncoding StandardError = "unsupported private key encoding: use pem or der, or json for jwk"
+	ErrPrivateKeyExportKeyType  StandardError = "private key format is incompatible with signing keys: pkcs1 requires RSA-only keys and sec1 requires EC-only keys"
+
 	// CryptoKeyConfig
 	ErrCryptoKeyConfigNewInvalidArgs            StandardError = "kms: invalid token config arguments: %v"
 	ErrCryptoKeyConfigNewArgTypeInvalid         StandardError = "kms: invalid token config argument type: %T"

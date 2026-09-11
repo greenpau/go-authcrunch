@@ -15,12 +15,53 @@
 package authn
 
 import (
+	"maps"
+	"reflect"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/authchal"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
+
+func TestInjectPortalRoles(t *testing.T) {
+	cfg := &PortalConfig{Name: "role-normalization-test"}
+	if err := cfg.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	before := maps.Clone(cfg.GetReservedPortalRoles())
+	t.Cleanup(func() {
+		if !reflect.DeepEqual(cfg.GetReservedPortalRoles(), before) {
+			t.Error("request processing changed reserved role configuration")
+		}
+	})
+	for _, tc := range []struct {
+		name  string
+		input any
+		want  []string
+	}{
+		{"admin string", " authp/admin authp/admin ", []string{"authp/admin"}},
+		{"admin slice", []string{"authp/admin", "authp/admin"}, []string{"authp/admin"}},
+		{"member", []string{"authp/user", "team/editor"}, []string{"authp/user", "team/editor"}},
+		{"interface slice", []any{"authp/admin", 123, "team/editor"}, []string{"authp/admin", "team/editor"}},
+		{"empty roles", []string{}, []string{"authp/guest"}},
+		{"missing roles", nil, []string{"authp/guest"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			for range 128 {
+				claims := map[string]any{}
+				if tc.input != nil {
+					claims["roles"] = tc.input
+				}
+				injectPortalRoles(claims, cfg)
+				if !reflect.DeepEqual(claims["roles"], tc.want) {
+					t.Fatal("role normalization changed the request's permissions")
+				}
+			}
+		})
+	}
+}
 
 func TestInjectUserChallenges(t *testing.T) {
 	var testcases = []struct {

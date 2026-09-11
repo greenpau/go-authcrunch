@@ -39,9 +39,9 @@ AuthCrunch packages.
 ## Testing and CI
 
 Use the repo-local `testing-and-ci` skill for every Go code change to enforce
-its corresponding tests requirement, and when choosing or running tests, adding
-or updating test coverage, interpreting CI failures, reproducing GitHub Actions
-locally, or documenting validation for this repository.
+its corresponding tests and required E2E coverage, and when choosing or running
+tests, adding or updating test coverage, interpreting CI failures, reproducing
+GitHub Actions locally, or documenting validation for this repository.
 
 ### Localhost Test Listeners
 
@@ -90,6 +90,12 @@ assets, theme configuration, and compatibility with current portal pages.
 
 Use `local-password-authentication` for local password creation, imports,
 changes, resets, verification, bcrypt work equalization, and regression tests.
+
+## Portal Signing-Key Discovery
+
+Use `authentication-portal-jwks` for the portal `/.well-known/jwks.json`
+endpoint, public signing-key serialization, issuer selection, and base-path
+routing, plus opt-in admin private-key export.
 
 ## Authentication Clients
 

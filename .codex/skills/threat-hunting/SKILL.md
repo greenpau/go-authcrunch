@@ -299,6 +299,10 @@ errors for malformed user input.
   group search filter escaping
 
 **KMS / JWT:**
+- Use [authentication-portal-jwks](../authentication-portal-jwks/SKILL.md) for
+  the portal's public signing-key export boundary, issuer selection, and
+  public-only serialization tests, plus the separate opt-in admin private-key
+  export boundary.
 - Verify: key usage separation (sign vs. encrypt), accepted algorithm set,
   required claims (`iss`, `aud`, `exp`, `nbf`), claim type assertions,
   expiration and not-before enforcement, and malformed-token error handling

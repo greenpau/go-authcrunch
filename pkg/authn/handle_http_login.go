@@ -491,7 +491,8 @@ func injectPortalRoles(m map[string]interface{}, cfg *PortalConfig) {
 			continue
 		}
 		if _, exists := reservedRoles[roleName]; exists {
-			reservedRoles[roleName] = true
+			// This map belongs to validated portal configuration and is shared
+			// by concurrent logins. Only the request's claims may be changed.
 			reservedRoleFound = true
 		}
 		roleMap[roleName] = true
