@@ -89,6 +89,8 @@ func (p *Portal) createSandboxUser(ctx context.Context, _ http.ResponseWriter, r
 		}
 	}
 
+	usr.LoginEvidence = rr.Authentication
+	usr.RefreshTransport = "cookie"
 	usr.Authenticator.Name = rr.Upstream.Name
 	usr.Authenticator.Realm = rr.Upstream.Realm
 	usr.Authenticator.Method = rr.Upstream.Method

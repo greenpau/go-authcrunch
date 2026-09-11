@@ -16,6 +16,10 @@ package apiauth
 
 // AuthResponse is the response to authentication request.
 type AuthResponse struct {
+	SessionID        string `json:"session_id,omitempty" xml:"session_id,omitempty" yaml:"session_id,omitempty"`
+	AccessExpiresAt  int64  `json:"access_expires_at,omitempty" xml:"access_expires_at,omitempty" yaml:"access_expires_at,omitempty"`
+	RefreshExpiresAt int64  `json:"refresh_expires_at,omitempty" xml:"refresh_expires_at,omitempty" yaml:"refresh_expires_at,omitempty"`
+	SessionExpiresAt int64  `json:"session_expires_at,omitempty" xml:"session_expires_at,omitempty" yaml:"session_expires_at,omitempty"`
 	Authenticated    bool   `json:"authenticated,omitempty" xml:"authenticated,omitempty" yaml:"authenticated,omitempty"`
 	AccessToken      string `json:"access_token,omitempty" xml:"access_token,omitempty" yaml:"access_token,omitempty"`
 	AccessTokenName  string `json:"access_token_name,omitempty" xml:"access_token_name,omitempty" yaml:"access_token_name,omitempty"`

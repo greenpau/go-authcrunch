@@ -1,3 +1,4 @@
+version: 2
 project_name: go-authcrunch
 
 release:
@@ -22,15 +23,17 @@ builds:
       - amd64
       - arm64
     main: ./cmd/authdbctl
-    binary: ./bin/authdbctl
+    binary: authdbctl
     flags:
       - -trimpath
       - -mod=readonly
-    asmflags:
-      - all=-trimpath={{.Env.GOPATH}}
-    gcflags:
-      - all=-trimpath={{.Env.GOPATH}}
-    ldflags: -s -w
+    ldflags:
+      - >-
+        -s -w
+        -X main.appVersion={{.Version}}
+        -X main.gitCommit={{.FullCommit}}
+        -X main.buildUser=goreleaser
+        -X main.buildDate={{.Date}}
 
 
 nfpms:

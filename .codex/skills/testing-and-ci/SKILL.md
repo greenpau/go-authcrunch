@@ -1,73 +1,75 @@
 ---
 name: testing-and-ci
-description: go-authcrunch repository testing and CI workflow guidance, including Go test command selection, Makefile report targets, shared test helpers, package-specific authn/authz/identity/idp/kms/UI fixture patterns, generated coverage/build artifacts, and GitHub Actions test/release/CLA behavior. Use when choosing or running tests, adding or updating test coverage, interpreting CI failures, reproducing GitHub Actions locally, or documenting validation for this Go AuthCrunch library.
+description: Select, run, and maintain AuthCrunch Go tests through pinned tested, browser refresh-client tests, automation fixtures, coverage artifacts, and GitHub CI gates.
 ---
 
 # Testing and CI
 
-## Overview
+## Test Lifecycle
 
-Use this skill for go-authcrunch test selection, coverage additions, fixture
-maintenance, and CI reproduction. Prefer the narrowest direct `go test` command
-while editing, then use Makefile targets when the user asks for the repository
-workflow, report artifacts, or CI-like validation.
+The root Go module declares Go `1.25.0`. Repository coverage uses the pinned
+`github.com/greenpau/tested` tool in `go.mod`, invoked through `go tool tested`.
+It owns `-json`, `-coverprofile`, child-process status, and coherent reports.
+Do not reintroduce `go test | tee`, log-grep success detection, richgo, tparse,
+or go-test-report into the lifecycle.
 
-The Go module is rooted at the repository top level and declares Go `1.25.0`.
-If the task becomes release, dependency, embedded UI asset refresh, or general
-automation work rather than testing/CI work, also use the repo-local
-`scripts-and-automation` skill.
-
-## Command Selection
-
-Use direct Go tests for quick feedback:
-
-```bash
-go test ./...
-go test ./pkg/authn -run TestServeHTTP
-go test ./pkg/authz/validator -run TestValidate
-go test ./pkg/idp/oauth -run TestConfiguredQueryParamsArePreserved
-go test ./pkg/kms -run TestGetKeysFromConfig
-go test ./pkg/system -run TestEncryptorRoundTrip
+```sh
+make test
+make test TEST_DIR='./pkg/authn/...' TEST='TestPortalRefresh'
+make qtest QUICK_TEST_DIR='./pkg/authn/refresh'
+make test-ui
+make test-automation
+make ci-check
 ```
 
-Use `go test ./pkg/<name> -run <TestName>` or `go test -run <TestName> ./...`
-for focused validation. Do not rely on `make test TEST=...` for focused runs;
-the Makefile passes the command-line `TEST` value directly to `go test`.
+Go lifecycle runs use `-mod=readonly -race -count=1 -v`. `TEST` is a test regex
+(default `.`); `TEST_DIR` accepts package patterns (default `./...`). Reports
+land in `.coverage`, or `.coverage/quick` for `qtest`. Use `COVERAGE_DIR` to
+separate independent concurrent runs. `MINIMUM_COVERAGE` defaults to 1 percent
+as a nonzero-profile check, matching the reference tested workflow; it is not a
+claim of a substantial coverage target. Raise it only with an intentional
+coverage policy and measured baseline.
 
-Use `make qtest` only when the current Makefile quick-test scope is desired.
-The current `QUICK_TEST_DIR` is `./pkg/system`; quick-test pattern variables are
-commented out.
+Direct `go test` is appropriate for a narrow debugging iteration, compile-only
+check, or fuzzing; it is not the report lifecycle. Browser tests use Node's spec
+reporter, and automation uses verbose Python unittest discovery. Both use only
+standard-library facilities. Loopback `httptest` listeners are expected.
 
-Use `make test` for the full local report workflow. It runs `templates`,
-`covdir`, `linter`, `install-test-tools`, `run-tests`, and `run-reports`; writes
-`.coverage/coverage.out`, `.coverage/test_output.jsonl`,
-`.coverage/test_output.html`, and `.coverage/coverage.html`; then fails if any
-JSON test action failed. On a fresh checkout, run `make dep` first because
-`linter` expects `golint` before `install-test-tools` runs.
+## Evidence and Reports
 
-Use `make` or `make build` when validation needs the `cmd/authdbctl` binary or
-when reproducing the GitHub Actions build step. `build` depends on `templates`
-and `mod-tidy`, compiles `bin/authdbctl`, and runs `bin/authdbctl --version`
-and `bin/authdbctl --help`.
+`make test` returns tested's failure status for test, build, and coverage-policy
+failures. An offline `make run-reports` preserves recorded failure status.
+Inspect `run.json`, `stderr.log`, and `test_output.jsonl` before rerunning a
+failed command; do not replace failed evidence with a passing summary.
 
-`make dep`, `make install-test-tools`, `make`, `make build`, `go mod tidy`,
-`go mod verify`, `go get`, and `go install` may require network access.
+A coherent full coverage run produces:
 
-## Makefile Side Effects
+```text
+.coverage/index.html
+.coverage/test_output.html
+.coverage/coverage.html
+.coverage/coverage.out
+.coverage/summary.json
+.coverage/junit.xml
+.coverage/test_output.jsonl
+.coverage/stderr.log
+.coverage/run.json
+.coverage/manifest.json
+```
 
-Treat Makefile workflows as potentially mutating commands.
+The manifest is published last for a coherent generation; build/coverage failures
+can leave partial evidence without every report. Upload that evidence too.
+Raw test output and coverage source are unredacted: use synthetic fixtures and
+never print real credentials. Ignore all report artifacts in Git.
 
-- `templates` runs `license`.
-- `license` installs or invokes `versioned`, applies the repository license
-  header to Go files, and regenerates the table of contents in
-  `cmd/authdbctl/README.md`.
-- `build` runs `versioned -sync ./pkg/identity/database.go`.
-- `mod-tidy` runs `go mod tidy` and `go mod verify`.
-- `test` and `qtest` replace `.coverage/` report files.
+Tests and builds do not run license rewrites, version synchronization, or
+module tidy. `make ci-check` serializes version checks, automation fixtures,
+existing golint, full Go coverage, browser tests, and the CLI build. Use
+`scripts-and-automation` for maintenance side effects and
+`release-and-versioning` for release/tag operations.
 
-Review the diff after Makefile targets before keeping source changes. Generated
-license, README table-of-contents, version metadata, `go.mod`, or `go.sum`
-changes are intentional only when the user asked for that workflow.
+Refresh changes use `refresh-token-implementation`, `refresh-token-identity`,
+and `refresh-token-transports` according to their affected boundaries.
 
 ## Test Helpers
 
@@ -166,58 +168,32 @@ go test ./pkg/<package> -run <TestName>
 go test ./...
 ```
 
-Use `make test` after direct Go tests when the user wants the local report
-workflow or CI-like validation.
+Use `make test` for the repository coverage lifecycle after a narrow diagnostic
+iteration. Use `make test-ui` for embedded refresh-client JavaScript.
 
 ## CI Workflow
 
-`.github/workflows/test.yml` runs on pushes and pull requests to `main` and on
-manual dispatch. It uses Ubuntu, Go `1.25.x`, sets `GOBIN` to
-`/home/runner/.local/bin`, installs `make` and `libnss3-tools`, creates
-`.coverage`, runs `make dep`, runs `make test`, always lists `.coverage`, runs
-`make`, and uploads `.coverage/` as `Test Coverage Artifacts`.
+`.github/workflows/test.yml` runs on pushes/PRs to main, manual dispatch, and
+reusable workflow calls. It selects Ubuntu 24.04, Go 1.26.0, Node 24, Python 3,
+and the existing NSS test utilities. It resolves versioned artifact identity,
+runs `make dep` and `make ci-check`, checks that tracked source did not change,
+and always uploads `.coverage/` after the gate was attempted, including hidden
+files. Missing artifacts fail the upload; test failures remain failures.
 
-For local CI reproduction, use:
+The complete local reproduction is `make dep` followed by `make ci-check`.
+The workflow uses read-only contents permission and immutable action pins.
+The release workflow calls the same gate before GoReleaser; the exact version
+and tag contract belongs to `release-and-versioning`. CLA automation remains
+separate.
 
-```bash
-make dep
-make test
-make
-```
+Automation changes run `make test-automation`. Its version tests exercise
+namespace rejection, synchronization drift, and exact artifact tag binding;
+release tests use isolated fixture repositories and local bare remotes to
+verify patch/minor bumps, failure gates, exact tags, and atomic push behavior.
+Never test publishing against this checkout's remote. When changing tested
+or its invocation, also exercise an intentional Go test failure and build
+failure in an isolated fixture and verify a nonzero status with fresh evidence.
 
-If CI fails in `make test`, inspect `.coverage/test_output.jsonl` first. The
-Makefile fails after `run-reports` when the JSON stream contains
-`"Action":"fail"`, so the original package/test failure is usually earlier in
-that file.
-
-`.github/workflows/release.yml` runs GoReleaser on `v*` tags with Go `~1.25`.
-Treat releases, tags, pushes, and release Makefile targets as human-operator
-actions unless the user explicitly requests them.
-
-`.github/workflows/cla.yml` uses CLA Assistant and may update
-`assets/cla/signatures.json` through GitHub automation. Do not edit CLA
-signature or consent artifacts unless the user asks.
-
-## Generated Artifacts
-
-Treat these as generated outputs unless the user explicitly asks to preserve or
-commit them:
-
-```text
-bin/authdbctl
-.coverage/coverage.html
-.coverage/coverage.out
-.coverage/test_output.jsonl
-.coverage/test_output.html
-.doc/index.txt
-/tmp/testdata/go-authcrunch/
-```
-
-Also review source diffs from automation carefully:
-
-```text
-cmd/authdbctl/README.md
-pkg/identity/database.go
-go.mod
-go.sum
-```
+Skill changes use `skill-authoring-patterns` and the default skill-creator quick
+validator. Inspect routing, exact code names, and links as well as frontmatter.
+Do not treat prose-matching tests as behavioral validation.

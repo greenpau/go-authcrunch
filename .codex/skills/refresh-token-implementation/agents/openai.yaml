@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Refresh Token Implementation'
+  short_description: 'Maintain refresh issuance and rotation'
+  default_prompt: 'Use $refresh-token-implementation to guide this repository task.'

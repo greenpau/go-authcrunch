@@ -15,6 +15,7 @@
 package cache
 
 import (
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"sync"
@@ -30,11 +31,64 @@ const minSandboxMaxEntryLifetime int = 60
 
 // SandboxCacheEntry is an entry in SandboxCache.
 type SandboxCacheEntry struct {
+	requestMu sync.Mutex
 	sandboxID string
 	createdAt time.Time
 	user      *user.User
 	// When set to true, the sandbox entry is no longer active.
 	expired bool
+}
+
+// SandboxLease serializes checkpoint verification and redemption for one login.
+// Release must be called after the request finishes. User is private to the
+// lease until release; callers must not retain it or mutate it concurrently.
+type SandboxLease struct {
+	cache *SandboxCache
+	entry *SandboxCacheEntry
+	User  *user.User `json:"-" xml:"-" yaml:"-"`
+}
+
+// Acquire validates a sandbox secret and locks its authentication state.
+func (c *SandboxCache) Acquire(id, secret string) (*SandboxLease, error) {
+	if err := parseCacheID(id); err != nil {
+		return nil, err
+	}
+	c.mu.RLock()
+	e := c.Entries[id]
+	c.mu.RUnlock()
+	if e == nil {
+		return nil, errors.New("cached sandbox id not found")
+	}
+	e.requestMu.Lock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.Entries[id] != e || e.Valid(c.maxEntryLifetime) != nil || e.user == nil || secret == "" || subtle.ConstantTimeCompare([]byte(e.user.Authenticator.TempSecret), []byte(secret)) != 1 {
+		e.requestMu.Unlock()
+		return nil, errors.New("invalid sandbox credential")
+	}
+	return &SandboxLease{cache: c, entry: e, User: e.user}, nil
+}
+
+// Release allows the next request to inspect this sandbox.
+func (l *SandboxLease) Release() { l.entry.requestMu.Unlock() }
+
+// Redeem atomically checks completion, snapshots evidence and consumes the
+// sandbox. No Get/Delete sequence can issue two refresh families for this login.
+func (l *SandboxLease) Redeem() (*user.User, error) {
+	c, e := l.cache, l.entry
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.Entries[e.sandboxID] != e || e.Valid(c.maxEntryLifetime) != nil || len(e.user.Checkpoints) == 0 {
+		return nil, errors.New("invalid completed sandbox")
+	}
+	for _, checkpoint := range e.user.Checkpoints {
+		if checkpoint == nil || !checkpoint.Passed {
+			return nil, errors.New("incomplete authentication")
+		}
+	}
+	proof := e.user.Clone()
+	delete(c.Entries, e.sandboxID)
+	return proof, nil
 }
 
 // SandboxCache contains cached tokens
@@ -80,56 +134,46 @@ func (c *SandboxCache) SetMaxEntryLifetime(i int) error {
 	return nil
 }
 
-func manageSandboxCache(c *SandboxCache) {
-	c.managed = true
-	intervals := time.NewTicker(time.Second * time.Duration(c.cleanupInternal))
-	for range intervals.C {
-		if c == nil {
-			continue
-		}
-		c.mu.Lock()
+func manageSandboxCache(c *SandboxCache, exit <-chan bool, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
 		select {
-		case <-c.exit:
-			c.managed = false
-		default:
-		}
-		if !c.managed {
-			c.mu.Unlock()
-			break
-		}
-		if c.Entries == nil {
-			c.mu.Unlock()
-			continue
-		}
-		deleteList := []string{}
-		for sandboxID, entry := range c.Entries {
-			if err := entry.Valid(c.maxEntryLifetime); err != nil {
-				deleteList = append(deleteList, sandboxID)
-				continue
+		case <-exit:
+			return
+		case <-ticker.C:
+			c.mu.Lock()
+			for id, entry := range c.Entries {
+				if entry.Valid(c.maxEntryLifetime) != nil {
+					delete(c.Entries, id)
+				}
 			}
+			c.mu.Unlock()
 		}
-		if len(deleteList) > 0 {
-			for _, sandboxID := range deleteList {
-				delete(c.Entries, sandboxID)
-			}
-		}
-		c.mu.Unlock()
 	}
 }
 
 // Run starts management of SandboxCache instance.
 func (c *SandboxCache) Run() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if c.managed {
 		return
 	}
-	go manageSandboxCache(c)
+	c.managed = true
+	c.exit = make(chan bool)
+	go manageSandboxCache(c, c.exit, time.Duration(c.cleanupInternal)*time.Second)
 }
 
-// Stop stops management of SandboxCache instance.
+// Stop stops management of SandboxCache instance and releases its ticker.
 func (c *SandboxCache) Stop() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if !c.managed {
+		return
+	}
 	c.managed = false
+	close(c.exit)
 }
 
 // GetCleanupInterval returns cleanup interval.

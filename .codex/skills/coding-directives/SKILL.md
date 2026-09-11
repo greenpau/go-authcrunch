@@ -15,7 +15,9 @@ and crypto key stores.
 
 Use the repo-local `testing-and-ci` skill when choosing, adding, or running
 tests. Use `scripts-and-automation` for Makefile targets, generated assets,
-dependency commands, and release/version workflows.
+dependency commands, and release/version workflows. Use
+`refresh-token-implementation` and its identity/transport owners when changing
+portal refresh behavior; use `release-and-versioning` for version invariants.
 
 ## Package Boundaries
 

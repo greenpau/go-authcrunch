@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	datautil "github.com/greenpau/go-authcrunch/pkg/util/data"
 )
@@ -41,6 +42,11 @@ var reservedFields = map[string]interface{}{
 
 // User is a user with claims and status.
 type User struct {
+	// LoginEvidence and RefreshTransport are server-only sandbox state.
+	LoginEvidence    requests.AuthenticationEvidence `json:"-" xml:"-" yaml:"-"`
+	RefreshTransport string                          `json:"-" xml:"-" yaml:"-"`
+	LoginMethods     []string                        `json:"-" xml:"-" yaml:"-"`
+
 	Claims          *Claims       `json:"claims,omitempty" xml:"claims,omitempty" yaml:"claims,omitempty"`
 	Token           string        `json:"token,omitempty" xml:"token,omitempty" yaml:"token,omitempty"`
 	TokenName       string        `json:"token_name,omitempty" xml:"token_name,omitempty" yaml:"token_name,omitempty"`
@@ -80,6 +86,7 @@ func (u *User) Clone() *User {
 	}
 
 	clone := *u
+	clone.LoginMethods = cloneStringSlice(u.LoginMethods)
 
 	if u.Claims != nil {
 		claims := *u.Claims

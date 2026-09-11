@@ -35,6 +35,9 @@ func (p *Portal) deleteAuthCookies(w http.ResponseWriter, r *http.Request) {
 
 func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, parsedUser *user.User) error {
 	p.disableClientCache(w)
+	if p.hasRefreshCookie(r) {
+		return p.handleSessionPage(ctx, w, r, rr, "logout")
+	}
 	p.injectRedirectURL(ctx, w, r, rr)
 	h := addrutil.GetSourceHost(r)
 

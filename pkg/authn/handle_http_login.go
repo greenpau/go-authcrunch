@@ -38,8 +38,18 @@ import (
 
 func (p *Portal) handleHTTPLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
 	p.injectRedirectURL(ctx, w, r, rr)
+	if p.refresh != nil && r.Method == http.MethodPost {
+		return p.handleHTTPLoginRequest(ctx, w, r, rr)
+	}
+	if p.refresh != nil && r.Method == http.MethodGet && r.URL.Query().Get("fresh") == "1" {
+		rr.Response.Authenticated = false
+		return p.handleHTTPLoginScreen(ctx, w, r, rr)
+	}
 	if usr != nil {
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/portal")
+	}
+	if r.Method == http.MethodGet && p.hasRefreshCookie(r) {
+		return p.handleSessionPage(ctx, w, r, rr, "continue")
 	}
 	if r.Method == http.MethodPost {
 		return p.handleHTTPLoginRequest(ctx, w, r, rr)
@@ -129,6 +139,11 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 	if err := p.identifyUserRequest(rr, identity); err != nil {
 		rr.Response.Code = http.StatusBadRequest
 		return p.handleHTTPErrorWithLog(ctx, w, r, rr, rr.Response.Code, err.Error())
+	}
+	if p.refreshRealm(rr.Upstream.Realm) {
+		if err := p.validateRefreshLogin(r, "cookie"); err != nil {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
+		}
 	}
 
 	usr, err := p.createSandboxUser(ctx, w, r, rr)
@@ -321,33 +336,25 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 		zap.Any("backend", usr.Authenticator),
 		zap.Any("user", m),
 	)
-	p.grantAccess(ctx, w, r, rr, usr)
-	return nil
+	return p.grantAccess(ctx, w, r, rr, usr)
 }
 
-func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) {
+func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
 	var redirectLocation string
-
-	usr.SetExpiresAtClaim(time.Now().Add(time.Duration(p.keystore.GetTokenLifetime(nil, nil)) * time.Second).UTC().Unix())
-	usr.SetIssuedAtClaim(time.Now().UTC().Unix())
-	usr.SetNotBeforeClaim(time.Now().Add(time.Duration(60) * time.Second * -1).UTC().Unix())
-
-	if err := p.keystore.SignToken(nil, nil, usr); err != nil {
-		p.logger.Warn(
-			"user token signing failed",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-			zap.Error(err),
-		)
-		rr.Response.Code = http.StatusInternalServerError
-		return
+	if usr.Token == "" {
+		return fmt.Errorf("access token has not been issued")
+	}
+	if err := p.revokeRefreshOnLogin(ctx, w, r); err != nil {
+		return err
 	}
 
 	h := addrutil.GetSourceHost(r)
 
 	rr.Response.Authenticated = true
 	usr.Authorized = true
-	p.sessions.Add(rr.Upstream.SessionID, usr)
+	if err := p.sessions.Add(usr.Claims.ID, usr); err != nil {
+		return err
+	}
 
 	w.Header().Set("Authorization", "Bearer "+usr.Token)
 
@@ -357,15 +364,15 @@ func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.R
 	// 	w.Header().Set("Set-Cookie", p.cookie.GetCookie(h, usr.TokenName, usr.Token))
 	// }
 
-	w.Header().Set("Set-Cookie", p.cookie.GetAccessTokenCookie(h, usr.Token))
+	w.Header().Add("Set-Cookie", p.cookie.GetAccessTokenCookie(h, usr.Token))
 
 	// Add a cookie with identity token, if id_token is available.
 	if rr.Response.IdentityTokenCookie.Enabled {
 		w.Header().Add("Set-Cookie", p.cookie.GetIdentityTokenCookie(rr.Upstream.BasePath, rr.Response.IdentityTokenCookie.Name, rr.Response.IdentityTokenCookie.Payload))
 	}
 
-	// Add refresh session cookie.
-	w.Header().Add("Set-Cookie", p.cookie.GetRefreshTokenCookie(rr.Upstream.BasePath, usr.Token))
+	// Remove the legacy JWT-valued refresh cookie.
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie(rr.Upstream.BasePath))
 
 	// Delete sandbox cookie, if present.
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteSandboxIDCookie(rr.Upstream.BasePath))
@@ -403,6 +410,7 @@ func (p *Portal) grantAccess(_ context.Context, w http.ResponseWriter, r *http.R
 	}
 	w.Header().Set("Location", redirectLocation)
 	rr.Response.Code = http.StatusSeeOther
+	return nil
 }
 
 func combineGroupRoles(m map[string]interface{}) {

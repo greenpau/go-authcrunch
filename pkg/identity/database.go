@@ -69,7 +69,7 @@ func init() {
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
 	app.SetVersion(appVersion, "1.1.41")
 	app.SetGitBranch(gitBranch, "")
-	app.SetGitCommit(gitCommit, "1.1.41")
+	app.SetGitCommit(gitCommit, "")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
@@ -289,6 +289,7 @@ func (db *Database) ResetUserPassword(r *requests.Request) error {
 		}
 	}
 
+	user.CredentialVersion++
 	if err := db.commit(); err != nil {
 		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
 	}
@@ -378,6 +379,7 @@ func (db *Database) OverwriteUserAuthChallengeRules(r *requests.Request) error {
 		}
 	}
 
+	user.CredentialVersion++
 	if err := db.commit(); err != nil {
 		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
 	}
@@ -548,6 +550,7 @@ func (db *Database) DisableUser(r *requests.Request) error {
 			break
 		}
 	}
+	user.CredentialVersion++
 	if err := db.commit(); err != nil {
 		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
 	}
@@ -607,6 +610,7 @@ func (db *Database) EnableUser(r *requests.Request) error {
 		}
 	}
 
+	user.CredentialVersion++
 	if err := db.commit(); err != nil {
 		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
 	}
@@ -615,6 +619,7 @@ func (db *Database) EnableUser(r *requests.Request) error {
 
 // AuthenticateUser adds user identity to the database.
 func (db *Database) AuthenticateUser(r *requests.Request) error {
+	r.Authentication = requests.AuthenticationEvidence{}
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 	user, err := db.getUser(r.User.Username)
@@ -646,6 +651,13 @@ func (db *Database) AuthenticateUser(r *requests.Request) error {
 		return errors.ErrAuthFailed.WithArgs("malformed auth request")
 	}
 
+	r.Authentication = db.authenticationEvidence(user)
+	r.Authentication.AuthenticatedAt = time.Now().Unix()
+	if r.User.Password != "" {
+		r.Authentication.Method = "pwd"
+	} else {
+		r.Authentication.Method = "hwk"
+	}
 	r.Response.Code = 200
 	return nil
 }
@@ -1095,6 +1107,7 @@ func (db *Database) ChangeUserPassword(r *requests.Request) error {
 	if err := user.ChangePassword(r, db.Policy.Password.KeepVersions); err != nil {
 		return err
 	}
+	user.CredentialVersion++
 	if err := db.commit(); err != nil {
 		return errors.ErrChangeUserPassword.WithArgs(err)
 	}
@@ -1115,6 +1128,7 @@ func (db *Database) UpdateUserPassword(r *requests.Request) error {
 	if err := user.UpdatePassword(r, db.Policy.Password.KeepVersions); err != nil {
 		return err
 	}
+	user.CredentialVersion++
 	if err := db.commit(); err != nil {
 		return errors.ErrUpdateUserPassword.WithArgs(err)
 	}
@@ -1124,6 +1138,7 @@ func (db *Database) UpdateUserPassword(r *requests.Request) error {
 // IdentifyUser returns user identity and a list of challenges that should be
 // satisfied prior to successfully authenticating a user.
 func (db *Database) IdentifyUser(r *requests.Request) error {
+	r.Authentication = requests.AuthenticationEvidence{}
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	user, err := db.getUser(r.User.Username)
@@ -1142,6 +1157,7 @@ func (db *Database) IdentifyUser(r *requests.Request) error {
 	if r.Flags.Enabled {
 		user.GetFlags(r)
 	}
+	r.Authentication = db.authenticationEvidence(user)
 	r.User.Username = user.Username
 	r.User.Email = user.GetMailClaim()
 	r.User.FullName = user.GetNameClaim()
@@ -1191,6 +1207,7 @@ func (db *Database) AddMfaToken(r *requests.Request) error {
 	if err := user.AddMfaToken(r); err != nil {
 		return err
 	}
+	user.CredentialVersion++
 	if err := db.commit(); err != nil {
 		return errors.ErrAddMfaToken.WithArgs(err)
 	}
@@ -1252,6 +1269,7 @@ func (db *Database) DeleteMfaToken(r *requests.Request) error {
 	if err := user.DeleteMfaToken(r); err != nil {
 		return err
 	}
+	user.CredentialVersion++
 	if err := db.commit(); err != nil {
 		return errors.ErrDeleteMfaToken.WithArgs(r.MfaToken.ID, err)
 	}

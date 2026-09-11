@@ -24,6 +24,9 @@ import (
 
 // Request hold the data associated with identity database
 type Request struct {
+	// Authentication is backend-produced evidence, never decoded from a client.
+	Authentication AuthenticationEvidence `json:"-" xml:"-" yaml:"-"`
+
 	ID       string      `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
 	Upstream Upstream    `json:"upstream,omitempty" xml:"upstream,omitempty" yaml:"upstream,omitempty"`
 	Sandbox  Sandbox     `json:"sandbox,omitempty" xml:"sandbox,omitempty" yaml:"sandbox,omitempty"`
@@ -35,6 +38,15 @@ type Request struct {
 	Flags    Flags       `json:"flags,omitempty" xml:"flags,omitempty" yaml:"flags,omitempty"`
 	Response Response    `json:"response,omitempty" xml:"response,omitempty" yaml:"response,omitempty"`
 	Logger   *zap.Logger `json:"-"`
+}
+
+// AuthenticationEvidence binds a checkpoint to a backend record and its security
+// version. Identified evidence alone is not completed authentication.
+type AuthenticationEvidence struct {
+	UserID, BackendVersion string `json:"-" xml:"-" yaml:"-"`
+	CredentialVersion      uint64 `json:"-" xml:"-" yaml:"-"`
+	AuthenticatedAt        int64  `json:"-" xml:"-" yaml:"-"`
+	Method                 string `json:"-" xml:"-" yaml:"-"`
 }
 
 // Response hold the response associated with identity database

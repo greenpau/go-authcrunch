@@ -76,7 +76,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
 	}
 
-	usr, err := p.sandboxes.Get(sandboxID)
+	lease, err := p.sandboxes.Acquire(sandboxID, sandboxSecret)
 	if err != nil {
 		p.logger.Debug(
 			"failed to extract cached entry from sandbox",
@@ -86,6 +86,14 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		)
 		rr.Response.RedirectURL = rr.Upstream.BasePath
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
+	}
+
+	defer lease.Release()
+	usr := lease.User
+	if p.refreshRealm(usr.Authenticator.Realm) {
+		if usr.RefreshTransport != "cookie" || p.validateRefreshLogin(r, "cookie") != nil {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
+		}
 	}
 
 	if usr.Authenticator.TempSecret != sandboxSecret {
@@ -124,7 +132,6 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 	p.logger.Debug(
 		"user authorization sandbox",
 		zap.String("sandbox_id", sandboxID),
-		zap.String("sandbox_secret", sandboxSecret),
 		zap.String("sandbox_partition", sandboxPartition),
 		zap.Any("checkpoints", usr.Checkpoints),
 	)
@@ -133,7 +140,14 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 	rr.User.Username = usr.Claims.Subject
 	rr.User.Email = usr.Claims.Email
 
+	completedBefore := passedCheckpointCount(usr)
 	data, err := p.nextSandboxCheckpoint(r, rr, usr, sandboxPartition)
+	if err == nil {
+		if proofErr := p.recordLoginEvidence(usr, rr, completedBefore); proofErr != nil {
+			p.sandboxes.Delete(sandboxID)
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
+		}
+	}
 	if err != nil {
 		p.logger.Warn(
 			"user authorization checkpoint failed",
@@ -164,7 +178,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		rr.Response.Code = http.StatusOK
 	}
 
-	if _, exists := data["authorized"]; exists {
+	if _, exists := data["authorized"]; exists && err == nil {
 		// The user passed all authorization checkpoints.
 		p.logger.Info(
 			"user passed all authorization checkpoints",
@@ -172,7 +186,20 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 			zap.String("request_id", rr.ID),
 			zap.Any("checkpoints", usr.Checkpoints),
 		)
-		p.grantAccess(ctx, w, r, rr, usr)
+		proof, err := lease.Redeem()
+		if err != nil {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
+		}
+		issued, tokens, err := p.issueSandboxTokens(ctx, r, rr, proof)
+		if err != nil {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
+		}
+		if err := p.grantAccess(ctx, w, r, rr, issued); err != nil {
+			return err
+		}
+		if tokens != nil {
+			p.deliverRefreshCookies(w, r, tokens)
+		}
 		w.WriteHeader(rr.Response.Code)
 		return nil
 	}

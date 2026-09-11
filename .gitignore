@@ -7,6 +7,12 @@ bin/**
 123*
 .tmp/**
 
+# macOS Finder metadata
+.DS_Store
+__pycache__/
+*.py[cod]
+dist/
+
 # Binaries for programs and plugins
 *.exe
 *.exe~

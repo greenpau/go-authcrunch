@@ -375,6 +375,16 @@ func TestDefaultTokenLifetimePropagation(t *testing.T) {
 	}
 }
 
+func TestTokenLifetimeSkipsSystemSigningKeys(t *testing.T) {
+	ks := &CryptoKeyStore{signKeys: []*CryptoKey{
+		{Config: &CryptoKeyConfig{Usage: "system"}, Sign: &CryptoKeyOperator{Token: &CryptoKeyTokenOperator{MaxLifetime: 3600}}},
+		{Config: &CryptoKeyConfig{}, Sign: &CryptoKeyOperator{Token: &CryptoKeyTokenOperator{MaxLifetime: 120}}},
+	}}
+	if got := ks.GetTokenLifetime(nil, nil); got != 120 {
+		t.Fatalf("access lifetime uses system key: %d", got)
+	}
+}
+
 func TestCryptoKeyStoreAutoGenerate(t *testing.T) {
 	var testcases = []struct {
 		name      string

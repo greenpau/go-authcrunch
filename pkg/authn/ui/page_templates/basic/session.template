@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ .PageTitle }}</title>
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/generic.css" }}">
+  </head>
+  <body>
+    <main>
+      <h1>{{ .PageTitle }}</h1>
+      <p id="session-message">{{ .Message }}</p>
+      {{ if eq .Data.session_action "logout" }}<button id="session-logout" type="button">Sign out</button>{{ end }}
+      <p><a href="{{ pathjoin .ActionEndpoint "/login" }}?fresh=1">Sign in</a></p>
+      <noscript>JavaScript is required to continue this session.</noscript>
+    </main>
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/refresh.js" }}" data-base="{{ .ActionEndpoint }}" data-action="{{ .Data.session_action }}" data-next="{{ .Data.session_next }}"></script>
+  </body>
+</html>

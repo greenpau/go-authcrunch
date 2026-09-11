@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Refresh Token Identity'
+  short_description: 'Preserve login proof and identity revalidation'
+  default_prompt: 'Use $refresh-token-identity to guide this repository task.'

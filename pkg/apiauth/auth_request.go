@@ -24,6 +24,7 @@ import (
 
 // AuthRequest is authentication request.
 type AuthRequest struct {
+	RefreshTransport    string `json:"refresh_transport,omitempty" xml:"refresh_transport,omitempty" yaml:"refresh_transport,omitempty"`
 	Username            string `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
 	SandboxID           string `json:"sandbox_id,omitempty" xml:"sandbox_id,omitempty" yaml:"sandbox_id,omitempty"`
 	SandboxSecret       string `json:"sandbox_secret,omitempty" xml:"sandbox_secret,omitempty" yaml:"sandbox_secret,omitempty"`
@@ -69,6 +70,12 @@ func (r *AuthRequest) AsStringMap() map[string]string {
 
 // Validate validates the required AuthRequest fields.
 func (r *AuthRequest) Validate() error {
+	if r.RefreshTransport == "" {
+		r.RefreshTransport = "cookie"
+	}
+	if r.RefreshTransport != "cookie" && r.RefreshTransport != "body" {
+		return errors.New("invalid refresh_transport")
+	}
 	r.Username = strings.TrimSpace(r.Username)
 	r.Realm = strings.TrimSpace(r.Realm)
 	r.SandboxID = strings.TrimSpace(r.SandboxID)

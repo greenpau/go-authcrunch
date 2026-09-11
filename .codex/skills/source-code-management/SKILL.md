@@ -5,6 +5,14 @@ description: go-authcrunch source code management and commit message rules. Use 
 
 # Source Code Management
 
+## Change Inspection
+
+Inspect status, staged diff, and unstaged diff separately. Never change the
+index unless asked. Default a commit-message request to staged changes when the
+index is nonempty and state which unstaged changes are excluded. If the index
+is empty, describe the working-tree changes and say they must be staged before
+committing.
+
 ## Commit Message Rules
 
 All commits must have a proper commit message.
@@ -77,10 +85,9 @@ Selection rules:
   release, or repository maintenance changes. Use `github` for GitHub Actions,
   issue templates, CLA workflow/assets, Funding metadata, or other GitHub
   repository metadata.
-- The current Makefile release target creates subjects like `released v1.1.39`
-  without a change indicator. Treat that as existing automation behavior, not a
-  template for hand-written commit messages. For hand-written release workflow
-  changes, use `ops`.
+- Automated patch and minor releases use `ops: released v<VERSION>`.
+  Use `release-and-versioning` for the release workflow. Hand-written release
+  workflow changes also use `ops`.
 - Use `various` only when a commit intentionally spans unrelated surfaces and no
   more specific indicator is honest.
 - Normalize older repository labels when creating new messages: use
@@ -238,7 +245,10 @@ More info: added a focused contributor workflow and repository etiquette notes.
 
 ## Commit Message File Workflow
 
-When asked to "create commit message for the change", create a file in
-`tmp/commits` and place the commit message in that file. Commit message files in
-`tmp/commits` are working artifacts and should not be committed unless explicitly
-requested. Prefix the file name with `YYYYMMDD_HHMM_` prefix.
+For every request to create or generate a commit message, write it below
+`tmp/commits` with a `YYYYMMDD_HHMM_` prefix and always provide the corresponding
+`git commit -F ...` command. Do not require the user to ask separately for a
+message file. A review-only request does not create a file unless asked.
+
+Commit message files in `tmp/commits` are working artifacts and should not be
+committed unless explicitly requested.

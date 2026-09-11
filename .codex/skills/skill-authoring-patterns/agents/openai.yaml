@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Skill Authoring Patterns'
+  short_description: 'Create maintainable repository-local skills'
+  default_prompt: 'Use $skill-authoring-patterns to guide this repository task.'

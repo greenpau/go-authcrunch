@@ -16,10 +16,28 @@ package cookie
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
 )
+
+func TestLegacySecureRefreshCookieDeletion(t *testing.T) {
+	cfg := NewConfig()
+	cfg.RefreshTokenCookieName = "__Secure-legacy-refresh"
+	f, err := NewFactory(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := http.ParseSetCookie(f.GetDeleteRefreshTokenCookie("/auth"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !c.Secure || !c.HttpOnly || c.Path != "/auth/api/refresh_token" || !c.Expires.Before(time.Now()) {
+		t.Fatal("legacy prefixed cookie cannot be deleted with matching attributes")
+	}
+}
 
 func TestFactory(t *testing.T) {
 	var testcases = []struct {

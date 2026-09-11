@@ -23,6 +23,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
+	"github.com/greenpau/go-authcrunch/pkg/authn/refresh"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
@@ -51,6 +52,8 @@ const (
 
 // Portal is an authentication portal.
 type Portal struct {
+	refresh           *refresh.Manager
+	refreshStore      *refresh.MemoryStore
 	id                string
 	config            *PortalConfig
 	userRegistries    map[string]registry.Provider
@@ -165,9 +168,25 @@ func NewPortal(params PortalParameters) (*Portal, error) {
 	}
 
 	if err := p.configure(); err != nil {
+		p.Close()
 		return nil, err
 	}
 	return p, nil
+}
+
+// Close releases portal-owned cache workers and revokes its volatile refresh
+// sessions. Embedding applications should quiesce requests before disposal.
+// Calling Close more than once is safe.
+func (p *Portal) Close() {
+	if p.sessions != nil {
+		p.sessions.Stop()
+	}
+	if p.sandboxes != nil {
+		p.sandboxes.Stop()
+	}
+	if p.refreshStore != nil {
+		p.refreshStore.Close()
+	}
 }
 
 // GetName returns the configuration name of the Portal.
@@ -189,6 +208,9 @@ func (p *Portal) configure() error {
 		return err
 	}
 	if err := p.configureUserTransformer(); err != nil {
+		return err
+	}
+	if err := p.configureRefresh(); err != nil {
 		return err
 	}
 

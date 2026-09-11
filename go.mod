@@ -35,6 +35,7 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20260416181348-e7dc79048676 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
+	github.com/greenpau/tested v1.0.2 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/mattermost/xml-roundtrip-validator v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
@@ -48,5 +49,13 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/lint v0.0.0-20241112194109-818c5a804067 // indirect
 	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
+)
+
+tool (
+	github.com/greenpau/tested
+	github.com/greenpau/versioned/cmd/versioned
+	golang.org/x/lint/golint
 )

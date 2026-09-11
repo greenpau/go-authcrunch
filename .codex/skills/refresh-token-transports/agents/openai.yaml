@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Refresh Token Transports'
+  short_description: 'Maintain refresh HTTP and browser contracts'
+  default_prompt: 'Use $refresh-token-transports to guide this repository task.'

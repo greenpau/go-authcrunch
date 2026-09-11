@@ -295,6 +295,10 @@ func (ks *CryptoKeyStore) SignToken(tokenName, signMethod interface{}, usr *user
 // GetTokenLifetime returns lifetime for a signed token.
 func (ks *CryptoKeyStore) GetTokenLifetime(tokenName, signMethod interface{}) int {
 	for _, k := range ks.signKeys {
+		// Match SignToken's key selection; system keys do not issue access JWTs.
+		if k.Config.Usage == "system" {
+			continue
+		}
 		if tokenName != nil {
 			if tokenName.(string) != k.Sign.Token.Name {
 				continue

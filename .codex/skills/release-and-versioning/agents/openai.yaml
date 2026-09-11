@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Release and Versioning'
+  short_description: 'Maintain fixed-major versions and releases'
+  default_prompt: 'Use $release-and-versioning to guide this repository task.'

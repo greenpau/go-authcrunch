@@ -312,6 +312,9 @@ func TestGrantAccessRedirectCookieValidation(t *testing.T) {
 				t.Fatalf("failed to create user: %v", err)
 			}
 
+			if err := p.keystore.SignToken(nil, nil, usr); err != nil {
+				t.Fatal(err)
+			}
 			p.grantAccess(context.Background(), rw, r, rr, usr)
 
 			location := rw.Header().Get("Location")

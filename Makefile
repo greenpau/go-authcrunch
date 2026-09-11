@@ -1,191 +1,130 @@
-APP_VERSION:=$(shell cat VERSION | head -1)
-GIT_COMMIT:=$(shell git describe --dirty --always)
-GIT_BRANCH:=$(shell git rev-parse --abbrev-ref HEAD -- | head -1)
-BUILD_USER:=$(shell whoami)
-BUILD_DATE:=$(shell date +"%Y-%m-%d")
-VERBOSE:=-v
-ifdef TEST
-	TEST:="-run ${TEST}"
-endif
-TEST_DIR:="./..."
+SHELL := /bin/bash
+.DEFAULT_GOAL := all
+
+APP_VERSION := $(shell head -1 VERSION)
+GIT_COMMIT := $(shell git describe --dirty --always)
+GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+BUILD_USER := $(shell whoami)
+BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+PYTHON ?= python3
+TEST ?= .
+TEST_DIR ?= ./...
+QUICK_TEST_DIR ?= ./pkg/system
+COVERAGE_DIR ?= .coverage
+MINIMUM_COVERAGE ?= 1
+export TEST TEST_DIR QUICK_TEST_DIR COVERAGE_DIR MINIMUM_COVERAGE
+export APP_VERSION GIT_COMMIT GIT_BRANCH BUILD_USER BUILD_DATE
+export PYTHONDONTWRITEBYTECODE := 1
+
+.PHONY: all info build linter dep install-test-tools test run-tests qtest run-quick-tests run-reports test-ui test-automation ci-check version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release release-git-check release-update-version release-git-commit
 
 all: info build
-	@echo "$@: complete"
 
-.PHONY: info
 info:
-	@echo "Version: $(APP_VERSION), Branch: $(GIT_BRANCH), Revision: $(GIT_COMMIT)"
-	@echo "Build on $(BUILD_DATE) by $(BUILD_USER)"
+	@echo "Version: $$APP_VERSION, Branch: $$GIT_BRANCH, Revision: $$GIT_COMMIT"
+	@echo "Built on $$BUILD_DATE by $$BUILD_USER"
 
-.PHONY: build
-build: templates mod-tidy
-	@mkdir -p bin/
-	@rm -rf ./bin/*
-	@versioned -sync ./pkg/identity/database.go
-	@CGO_ENABLED=0 go build -o ./bin/authdbctl $(VERBOSE) \
+# Validation and builds never rewrite source, licenses, or module manifests.
+build: version-check
+	@mkdir -p bin
+	@CGO_ENABLED=0 go build -mod=readonly -trimpath -o bin/authdbctl \
 		-ldflags="-w -s \
-		-X main.appVersion=$(APP_VERSION) \
-		-X main.gitBranch=$(GIT_BRANCH) \
-		-X main.gitCommit=$(GIT_COMMIT) \
-		-X main.buildUser=$(BUILD_USER) \
-		-X main.buildDate=$(BUILD_DATE)" \
-		-gcflags="all=-trimpath=$(GOPATH)/src" \
-		-asmflags="all=-trimpath $(GOPATH)/src" \
-		cmd/authdbctl/*.go
+		-X main.appVersion=$$APP_VERSION \
+		-X main.gitBranch=$$GIT_BRANCH \
+		-X main.gitCommit=$$GIT_COMMIT \
+		-X main.buildUser=$$BUILD_USER \
+		-X main.buildDate=$$BUILD_DATE" ./cmd/authdbctl
 	@./bin/authdbctl --version
 	@./bin/authdbctl --help
-	@echo "$@: complete"
 
-.PHONY: linter
 linter:
-	@echo "Running lint checks"
-	@golint -set_exit_status $(TEST_DIR)
-	@echo "$@: complete"
+	@go tool golint -set_exit_status ./...
 
-.PHONY: install-test-tools
+# Tools are pinned by go.mod/go.sum; no global installation is required.
+dep:
+	@go mod download
+	@go mod verify
+	@$(MAKE) install-test-tools
+	@go tool versioned -version
+	@go tool golint -h >/dev/null 2>&1
+
 install-test-tools:
-	@echo "$@: started"
-	@richgo version || go install github.com/kyoh86/richgo@latest
-	@tparse -v || go install github.com/mfridman/tparse@latest
-	@go-test-report version || go install github.com/vakenbolt/go-test-report@latest
-	@echo "$@: complete"
+	@go tool tested version
 
-.PHONY: run-tests
+test: run-tests
+
 run-tests:
-	@echo "$@: started"
-	@go test -json $(VERBOSE) $(TEST) -coverprofile=.coverage/coverage.out $(TEST_DIR) | tee .coverage/test_output.jsonl
-	@echo "$@: complete"
+	@go tool tested run --output-dir "$$COVERAGE_DIR" \
+		--title "AuthCrunch Go tests" --minimum-coverage "$$MINIMUM_COVERAGE" \
+		-- -mod=readonly -race -count=1 -v -run "$$TEST" $$TEST_DIR
 
+qtest: run-quick-tests
 
-# QUICK_TEST_DIR="./pkg/authn/..."
-# QUICK_TEST_DIR="./pkg/kms/..."
-#QUICK_TEST_DIR="./pkg/authz/validator"
-#QUICK_TEST_DIR="./pkg/authn/cookie"
-# QUICK_TEST_DIR="./pkg/authproxy"
-QUICK_TEST_DIR="./pkg/system"
-# QUICK_TEST_PATTERN_RUN="-run"
-# QUICK_TEST_PATTERN="TestHandleHTTPExternalLogout"
-.PHONY: run-quick-tests
 run-quick-tests:
-	@echo "$@: started"
-	@go test -json $(VERBOSE) -coverprofile=.coverage/coverage.out $(QUICK_TEST_PATTERN_RUN) $(QUICK_TEST_PATTERN) $(QUICK_TEST_DIR) | tee .coverage/test_output.jsonl
-	@echo "$@: complete"
+	@$(MAKE) run-tests TEST_DIR="$$QUICK_TEST_DIR" COVERAGE_DIR="$$COVERAGE_DIR/quick"
 
-.PHONY: run-reports
 run-reports:
-	@echo "$@: started"
-	@cat .coverage/test_output.jsonl | go-test-report -o .coverage/test_output.html
-	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
-	@echo "$@: complete"
+	@go tool tested report --output-dir "$$COVERAGE_DIR" --title "AuthCrunch Go tests"
 
-.PHONY: test
-test: templates covdir linter install-test-tools run-tests run-reports
-	@if grep -q '"Action":"fail"' .coverage/test_output.jsonl; then \
-		echo "ERROR: Go tests failed! See .coverage/test_output.jsonl for details."; \
-		exit 1; \
-	fi
-	@echo "$@: complete"
+test-ui:
+	@node --test --test-reporter=spec pkg/authn/ui/testdata/refresh_client_test.cjs
 
-.PHONY: covdir
-covdir:
-	@echo "Creating .coverage/ directory"
-	@mkdir -p .coverage
-	@rm -rf .coverage/{coverage,test_output}.{html,jsonl,out}
-	@echo "$@: complete"
+test-automation:
+	@$(PYTHON) -m unittest discover -s assets/scripts/tests -p '*_test.py' -v
 
-# .PHONY: coverage
-# coverage:
-# 	@#go tool cover -help
-# 	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
-# 	@go test -covermode=count -coverprofile=.coverage/coverage.out $(TEST_DIR)
-# 	@go tool cover -func=.coverage/coverage.out | grep -v "100.0"
-# 	@echo "$@: complete"
+# Recursive invocations deliberately serialize gates, even with make -j.
+ci-check:
+	@$(MAKE) version-check
+	@$(MAKE) test-automation
+	@$(MAKE) linter
+	@$(MAKE) test TEST=. TEST_DIR=./... COVERAGE_DIR=.coverage MINIMUM_COVERAGE=1
+	@$(MAKE) test-ui
+	@$(MAKE) build
 
-.PHONY: templates
+version-check:
+	@$(PYTHON) assets/scripts/version.py check
+
+version-sync:
+	@$(PYTHON) assets/scripts/version.py sync
+
+artifact-id:
+	@$(PYTHON) assets/scripts/version.py artifact
+
+# Explicit maintenance actions are separate from test/build entry points.
 templates: license
-	@echo "$@: complete"
 
-.PHONY: docs
+license:
+	@find . -type f -name '*.go' -not -path './vendor/*' -not -path './tmp/*' -not -path './.tmp/*' \
+		-exec go tool versioned -addlicense -copyright="Paul Greenberg greenpau@outlook.com" -year=2022 -filepath={} \;
+	@go tool versioned -toc -filepath cmd/authdbctl/README.md
+
 docs:
 	@mkdir -p .doc
 	@go doc -all > .doc/index.txt
 	@cat .doc/index.txt
-	@echo "$@: complete"
 
-.PHONY: clean
 clean:
-	@rm -rf .doc
-	@rm -rf .coverage
-	@rm -rf bin/
-	@echo "$@: complete"
+	@rm -rf .doc .coverage bin
 
-.PHONY: qtest
-qtest: covdir install-test-tools run-quick-tests run-reports
-	@if grep -q '"Action":"fail"' .coverage/test_output.jsonl; then \
-		echo "ERROR: Go tests failed! See .coverage/test_output.jsonl for details."; \
-		exit 1; \
-	fi
-	@echo "$@: complete"
-
-.PHONY: dep
-dep:
-	@echo "Making dependencies check ..."
-	@golint || go install golang.org/x/lint/golint@latest
-	@go install github.com/kyoh86/richgo@latest
-	@versioned || go install github.com/greenpau/versioned/cmd/versioned@latest
-	@echo "$@: complete"
-
-.PHONY: license
-license:
-	@versioned || go install github.com/greenpau/versioned/cmd/versioned@latest
-	@for f in `find ./ -type f -name '*.go'`; do versioned -addlicense -copyright="Paul Greenberg greenpau@outlook.com" -year=2022 -filepath=$$f; done
-	@#for f in `find ./ -type f -name '*.go'`; do versioned -striplicense -filepath=$$f; done
-	@versioned -toc -filepath cmd/authdbctl/README.md
-	@echo "$@: complete"
-
-.PHONY: upgrade
 upgrade:
-	@echo "Making upgrade"
-	@go get -u $(TEST_DIR)
+	@go get -u ./...
 	@go mod tidy
-	@echo "$@: complete"
 
-
-.PHONY: mod-tidy
 mod-tidy:
-	@echo "DEBUG: started $@"
-	@go mod tidy;
-	@go mod verify;
-	@echo "DEBUG: completed $@"
+	@go mod tidy
+	@go mod verify
 
-.PHONY: release-git-check
-release-git-check: mod-tidy
-	@echo "DEBUG: started $@"
-	@if [ $(GIT_BRANCH) != "main" ]; then echo "cannot release to non-main branch $(GIT_BRANCH)" && false; fi
-	@git diff-index --quiet HEAD -- || ( echo "git directory is dirty, commit changes first" && false )
-	@echo "DEBUG: completed $@"
+# Only run these publishing commands when a release is explicitly requested.
+release:
+	@bash assets/scripts/release.sh patch
 
-.PHONY: release-update-version
-release-update-version:
-	@echo "DEBUG: started $@"
-	@versioned -patch
-	@versioned -prerelease -sync ./cmd/authdbctl/main.go
-	@versioned -prerelease -sync ./pkg/identity/database.go
-	@git add VERSION ./cmd/authdbctl/main.go ./pkg/identity/database.go
+minor-release:
+	@bash assets/scripts/release.sh minor
 
-.PHONY: release-git-commit
-release-git-commit:
-	@echo "DEBUG: started $@"
-	@git commit -m "ops: released v`cat VERSION | head -1`"
-	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
-	@git push
-	@git push --tags
-	@echo "If necessary, run the following commands:"
-	@echo "  git push --delete origin v$(APP_VERSION)"
-	@echo "  git tag --delete v$(APP_VERSION)"
-	@echo "  go mod edit -retract v$(APP_VERSION)"
-	@echo "DEBUG: completed $@"
+release-git-check:
+	@bash assets/scripts/release.sh check
 
-.PHONY: release
-release: release-git-check release-update-version release-git-commit
-	@echo "DEBUG: completed $@"
+# Old partial entry points could bypass release checks and publish unrelated tags.
+release-update-version release-git-commit:
+	@echo "Use make release (patch) or make minor-release for the complete checked workflow." >&2
+	@exit 1

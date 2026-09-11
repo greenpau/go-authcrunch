@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 	"unicode"
 
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
@@ -34,62 +33,24 @@ import (
 	"go.uber.org/zap"
 )
 
-func (p *Portal) handleIssueTokens(ctx context.Context, r *http.Request, rr *requests.Request, usr *user.User) (*apiauth.AuthResponse, error) {
-	backend := p.getIdentityStoreByRealm(usr.Authenticator.Realm)
-	if backend == nil {
-		return nil, fmt.Errorf("authentication realm not found")
-	}
-
-	if err := backend.Request(operator.IdentifyUser, rr); err != nil {
-		return nil, fmt.Errorf("user lookup failed: %v", err)
-	}
-
-	m := make(map[string]interface{})
-
-	m["sub"] = rr.User.Username
-	m["email"] = rr.User.Email
-	if rr.User.FullName != "" {
-		m["name"] = rr.User.FullName
-	}
-	if len(rr.User.Roles) > 0 {
-		m["roles"] = rr.User.Roles
-	}
-
-	m["jti"] = rr.Upstream.SessionID
-	m["exp"] = time.Now().Add(time.Duration(p.keystore.GetTokenLifetime(nil, nil)) * time.Second).UTC().Unix()
-	m["iat"] = time.Now().UTC().Unix()
-	m["nbf"] = time.Now().Add(time.Duration(60) * time.Second * -1).UTC().Unix()
-	m["realm"] = backend.GetRealm()
-	m["origin"] = rr.Upstream.Realm
-	m["iss"] = util.GetIssuerURL(r)
-	m["addr"] = addrutil.GetSourceAddress(r)
-
-	if err := p.transformUser(ctx, rr, m); err != nil {
-		return nil, err
-	}
-
-	injectPortalRoles(m, p.config)
-
-	usr, err := user.NewUser(m)
+func (p *Portal) handleIssueTokens(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, proof *user.User) (*apiauth.AuthResponse, error) {
+	u, tokens, err := p.issueSandboxTokens(ctx, r, rr, proof)
 	if err != nil {
 		return nil, err
 	}
-
-	if err := p.keystore.SignToken(nil, nil, usr); err != nil {
-		return nil, err
+	if tokens == nil {
+		return &apiauth.AuthResponse{Authenticated: true, AccessToken: u.Token, AccessTokenName: p.config.TokenGrantorOptions.AccessTokenCookieName}, nil
 	}
-
-	usr.Authenticator.Name = backend.GetName()
-	usr.Authenticator.Realm = backend.GetRealm()
-	usr.Authenticator.Method = backend.GetKind()
-
-	authResponse := &apiauth.AuthResponse{
-		Authenticated:   true,
-		AccessToken:     usr.Token,
-		AccessTokenName: p.config.TokenGrantorOptions.AccessTokenCookieName,
+	if proof.RefreshTransport == "cookie" {
+		if err := p.revokeRefreshOnLogin(ctx, w, r); err != nil {
+			return nil, err
+		}
+		if err := p.sessions.Add(u.Claims.ID, u); err != nil {
+			return nil, err
+		}
+		p.deliverRefreshCookies(w, r, tokens)
 	}
-
-	return authResponse, nil
+	return p.refreshResponse(tokens, proof.RefreshTransport), nil
 }
 
 func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.Request, rr *requests.Request, usr *user.User, authRequest *apiauth.AuthRequest) error {
@@ -368,6 +329,18 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 		return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 	}
 
+	if authRequest.RefreshTransport == "body" && (!p.refreshRealm(authRequest.Realm) || !p.config.RefreshTokens.BodyTransportEnabled) {
+		return p.handleJSONError(ctx, w, http.StatusBadRequest, "Native refresh is unavailable")
+	}
+	if p.refreshRealm(authRequest.Realm) {
+		if err := p.validateRefreshLogin(r, authRequest.RefreshTransport); err != nil {
+			return p.handleJSONError(ctx, w, http.StatusForbidden, "Invalid refresh transport")
+		}
+	}
+	if authRequest.RefreshTransport == "body" {
+		// Native clients receive credentials only in JSON, including during login.
+		w.Header().Del("Set-Cookie")
+	}
 	rr.Flags.Enabled = true
 	if err := p.identifyUserRequest(rr, authRequest.AsStringMap()); err != nil {
 		p.logger.Warn(
@@ -381,7 +354,7 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 	}
 
 	if authRequest.HasChallengeResponse() {
-		usr, err := p.sandboxes.Get(authRequest.SandboxID)
+		lease, err := p.sandboxes.Acquire(authRequest.SandboxID, authRequest.SandboxSecret)
 		if err != nil {
 			p.logger.Warn(
 				"failed fetching user from sandbox",
@@ -391,6 +364,12 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 				zap.Error(err),
 			)
 			return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+		}
+
+		defer lease.Release()
+		usr := lease.User
+		if usr.Authenticator.Realm != authRequest.Realm || usr.Claims.Subject != rr.User.Username || usr.RefreshTransport != authRequest.RefreshTransport {
+			return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Invalid authentication context")
 		}
 
 		if usr.Authenticator.TempSecret != authRequest.SandboxSecret {
@@ -404,6 +383,7 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 			return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 		}
 
+		completedBefore := passedCheckpointCount(usr)
 		if err := p.handleSandboxCheckpointVerification(ctx, r, rr, usr, authRequest); err != nil {
 			p.logger.Warn(
 				"user sandbox checkpoint verification failed",
@@ -414,6 +394,11 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 				zap.Error(err),
 			)
 			return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+		}
+
+		if err := p.recordLoginEvidence(usr, rr, completedBefore); err != nil {
+			p.sandboxes.Delete(authRequest.SandboxID)
+			return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Reauthentication required")
 		}
 
 		if usr.Authorized {
@@ -431,8 +416,15 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 				return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 			}
 
-			authResp, err = p.handleIssueTokens(ctx, r, rr, usr)
+			proof, redeemErr := lease.Redeem()
+			if redeemErr != nil {
+				return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Invalid completed authentication")
+			}
+			authResp, err = p.handleIssueTokens(ctx, w, r, rr, proof)
 			if err != nil {
+				if p.refreshRealm(proof.Authenticator.Realm) {
+					return p.refreshError(ctx, w, err)
+				}
 				p.logger.Warn(
 					"failed to issue tokens",
 					zap.String("session_id", rr.Upstream.SessionID),
@@ -443,7 +435,6 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 				)
 				return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 			}
-			p.sandboxes.Delete(usr.Authenticator.TempSessionID)
 			p.logger.Debug(
 				"user was successfully authenticated",
 				zap.String("session_id", rr.Upstream.SessionID),
@@ -474,6 +465,7 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 			return p.handleHTTPErrorWithLog(ctx, w, r, rr, http.StatusBadRequest, err.Error())
 		}
 
+		usr.RefreshTransport = authRequest.RefreshTransport
 		if err := p.sandboxes.Add(usr.Authenticator.TempSessionID, usr); err != nil {
 			rr.Response.Code = http.StatusInternalServerError
 			return p.handleHTTPErrorWithLog(ctx, w, r, rr, http.StatusInternalServerError, err.Error())

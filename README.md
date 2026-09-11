@@ -14,6 +14,26 @@ server's security functionality, including authentication portal, authorization 
 
 Please browse to [docs.authcrunch.com](https://docs.authcrunch.com/).
 
+See [portal refresh sessions](.codex/skills/refresh-token-implementation/references/configuration-and-clients.md) for opt-in rotating refresh
+credentials, configuration, client integration, and lifecycle behavior.
+
+## Development
+
+Use Go 1.25 or newer (CI uses 1.26.0), Node 24, Python 3.9+, and Make.
+
+```sh
+make dep
+make ci-check
+```
+
+`make test` runs race-enabled Go tests through pinned `tested` and writes the
+coverage/report bundle to `.coverage/index.html`. Use `make test-ui` for browser
+session tests and `make build` for `bin/authdbctl`.
+
+Repository guidance lives in [repo-local skills](.codex/skills).
+[Release and versioning](.codex/skills/release-and-versioning/SKILL.md) describes
+`make release` (patch) and `make minor-release`, which publish a release.
+
 ## Issues
 
 Please open issues in [caddy-security](https://github.com/greenpau/caddy-security/issues/new/choose).

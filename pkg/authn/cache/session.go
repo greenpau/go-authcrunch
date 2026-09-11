@@ -68,56 +68,46 @@ func (c *SessionCache) SetCleanupInterval(i int) error {
 
 }
 
-func manageSessionCache(c *SessionCache) {
-	c.managed = true
-	intervals := time.NewTicker(time.Second * time.Duration(c.cleanupInternal))
-	for range intervals.C {
-		if c == nil {
-			continue
-		}
-		c.mu.Lock()
+func manageSessionCache(c *SessionCache, exit <-chan bool, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
 		select {
-		case <-c.exit:
-			c.managed = false
-		default:
-		}
-		if !c.managed {
-			c.mu.Unlock()
-			break
-		}
-		if c.Entries == nil {
-			c.mu.Unlock()
-			continue
-		}
-		deleteList := []string{}
-		for sessionID, entry := range c.Entries {
-			if err := entry.Valid(); err != nil {
-				deleteList = append(deleteList, sessionID)
-				continue
+		case <-exit:
+			return
+		case <-ticker.C:
+			c.mu.Lock()
+			for id, entry := range c.Entries {
+				if entry.Valid() != nil {
+					delete(c.Entries, id)
+				}
 			}
+			c.mu.Unlock()
 		}
-		if len(deleteList) > 0 {
-			for _, sessionID := range deleteList {
-				delete(c.Entries, sessionID)
-			}
-		}
-		c.mu.Unlock()
 	}
 }
 
 // Run starts management of SessionCache instance.
 func (c *SessionCache) Run() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if c.managed {
 		return
 	}
-	go manageSessionCache(c)
+	c.managed = true
+	c.exit = make(chan bool)
+	go manageSessionCache(c, c.exit, time.Duration(c.cleanupInternal)*time.Second)
 }
 
-// Stop stops management of SessionCache instance.
+// Stop stops management of SessionCache instance and releases its ticker.
 func (c *SessionCache) Stop() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if !c.managed {
+		return
+	}
 	c.managed = false
+	close(c.exit)
 }
 
 // GetCleanupInterval returns cleanup interval.

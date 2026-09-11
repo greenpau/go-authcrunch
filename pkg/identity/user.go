@@ -46,6 +46,9 @@ type UserMetadataBundle struct {
 
 // User is a user identity.
 type User struct {
+	// CredentialVersion invalidates refresh sessions after security changes.
+	// Legacy records start at version zero; the next change persists version one.
+	CredentialVersion    uint64          `json:"credential_version,omitempty" xml:"credential_version,omitempty" yaml:"credential_version,omitempty"`
 	ID                   string          `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
 	Disabled             bool            `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
 	Human                bool            `json:"human,omitempty" xml:"human,omitempty" yaml:"human,omitempty"`

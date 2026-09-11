@@ -41,6 +41,9 @@ func (p *Portal) handleHTTPPortal(ctx context.Context, w http.ResponseWriter, r 
 	p.disableClientCache(w)
 	p.injectRedirectURL(ctx, w, r, rr)
 	if parsedUser == nil {
+		if p.hasRefreshCookie(r) {
+			return p.handleSessionPage(ctx, w, r, rr, "continue")
+		}
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 	}
 	usr, err := p.sessions.Get(parsedUser.Claims.ID)
@@ -92,6 +95,13 @@ func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWrit
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
 	}
 	resp := p.ui.GetArgs()
+	if p.refresh != nil {
+		if sid, ok := usr.AsMap()["sid"].(string); ok {
+			resp.Data["refresh_enabled"] = true
+			resp.Data["refresh_session"] = sid
+			resp.Data["refresh_expires"] = usr.Claims.ExpiresAt
+		}
+	}
 	resp.BaseURL(rr.Upstream.BasePath)
 	resp.PageTitle = translate.Translate("applications_label", p.ui.Language, nil)
 	if len(usr.FrontendLinks) > 0 {

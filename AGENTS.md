@@ -63,3 +63,27 @@ findings and remediation plans.
 
 Use the repo-local `source-code-management` skill for commit message rules and
 for the workflow used when asked to create a commit message for a change.
+
+## Repository Knowledge
+
+This repository has no `docs/` directory. Keep durable implementation,
+configuration, integration, and operational guidance in the narrow owning
+`.codex/skills` skill or its linked references. Keep this file to routing and
+cross-cutting invariants, and README to onboarding and common commands.
+Use `skill-authoring-patterns` with the default `skill-creator` for skill work.
+
+## Refresh Tokens
+
+Use `refresh-token-implementation` for portal refresh configuration, issuance,
+rotation, replay, storage, and lifecycle. Use `refresh-token-identity` for login
+proof, MFA, sandbox redemption, and credential-version invalidation. Use
+`refresh-token-transports` for HTTP/cookies, native transport, browser
+coordination, continuation, and logout.
+
+## Versioning and Releases
+
+Use `release-and-versioning` for the fixed `1.<minor>.<patch>` namespace,
+version synchronization, versioned CI artifacts, and patch/minor releases.
+`make test` uses pinned `tested`; `make ci-check` is the complete quality gate.
+`make release` and `make minor-release` publish commits and tags and are only
+run when an actual release is requested.

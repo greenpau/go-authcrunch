@@ -84,6 +84,8 @@ type PortalConfig struct {
 	guestPortalRoles        []string
 	// API holds the configuration for API endpoints.
 	API *APIConfig `json:"api,omitempty" xml:"api,omitempty" yaml:"api,omitempty"`
+	// RefreshTokens configures optional rotating portal sessions.
+	RefreshTokens *RefreshConfig `json:"refresh_tokens,omitempty" xml:"refresh_tokens,omitempty" yaml:"refresh_tokens,omitempty"`
 	// Indicated that the config was successfully validated.
 	validated bool
 }
@@ -193,6 +195,9 @@ func (cfg *PortalConfig) Validate() error {
 	}
 	if cfg.Name == "" {
 		return errors.ErrPortalConfigNameNotFound
+	}
+	if err := cfg.RefreshTokens.Validate(); err != nil {
+		return err
 	}
 
 	// if len(cfg.IdentityStores) == 0 && len(cfg.IdentityProviders) == 0 {

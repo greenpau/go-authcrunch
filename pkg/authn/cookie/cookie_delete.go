@@ -80,6 +80,9 @@ func (f *Factory) GetDeleteRefreshTokenCookie(basePath string) string {
 	}
 	sb.WriteString(" Path=" + basePath + "api/refresh_token;")
 	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
+	if strings.HasPrefix(f.RefreshTokenCookieName, "__Secure-") || strings.HasPrefix(f.RefreshTokenCookieName, "__Host-") {
+		sb.WriteString(" Secure; HttpOnly;")
+	}
 	return sb.String()
 }
 

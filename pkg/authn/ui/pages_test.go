@@ -35,7 +35,7 @@ func TestNewPageTemplatesLibrary(t *testing.T) {
 		t.Fatal("Expected StaticAssetLibrary instance, got nil")
 	}
 
-	wantCount := 8
+	wantCount := 9
 	gotCount := sal.GetAssetCount()
 	if gotCount != wantCount {
 		t.Errorf("Expected asset count %d, got %d", wantCount, gotCount)
@@ -49,6 +49,7 @@ func TestNewPageTemplatesLibrary(t *testing.T) {
 		"basic/portal",
 		"basic/register",
 		"basic/sandbox",
+		"basic/session",
 		"basic/whoami",
 	}
 
