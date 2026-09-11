@@ -1,0 +1,4 @@
+interface:
+  display_name: "Authentication Portal Themes"
+  short_description: "Build custom AuthCrunch portal templates and branding"
+  default_prompt: "Use $authentication-portal-themes to build a custom AuthCrunch authentication portal theme with my branding and deployment configuration."

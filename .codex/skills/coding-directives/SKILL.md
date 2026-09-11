@@ -18,6 +18,8 @@ tests. Use `scripts-and-automation` for Makefile targets, generated assets,
 dependency commands, and release/version workflows. Use
 `refresh-token-implementation` and its identity/transport owners when changing
 portal refresh behavior; use `release-and-versioning` for version invariants.
+Use `authentication-portal-themes` for custom portal templates, branding assets,
+and their UI configuration and template contracts.
 
 ## Package Boundaries
 

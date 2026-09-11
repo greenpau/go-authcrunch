@@ -80,6 +80,11 @@ proof, MFA, sandbox redemption, and credential-version invalidation. Use
 `refresh-token-transports` for HTTP/cookies, native transport, browser
 coordination, continuation, and logout.
 
+## Authentication Portal Themes
+
+Use `authentication-portal-themes` for custom portal templates, CSS, branding
+assets, theme configuration, and compatibility with current portal pages.
+
 ## Versioning and Releases
 
 Use `release-and-versioning` for the fixed `1.<minor>.<patch>` namespace,
