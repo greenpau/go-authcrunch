@@ -156,21 +156,44 @@ func (user *User) Valid() error {
 	return nil
 }
 
-// AddPassword returns creates and adds password for a user identity.
+// AddPassword adds a password, reusing a matching active first record.
+// Other enabled password records are disabled even when the hash is reused.
 func (user *User) AddPassword(s string, keepVersions int) error {
-	var passwords []*Password
+	// Creation/import and duplicate detection must interpret the same input.
+	s = strings.TrimSpace(s)
 	password, err := NewPassword(s)
 	if err != nil {
 		return err
 	}
 
-	// Check if the existing password is the same as the one provided.
 	if len(user.Passwords) > 0 {
-		if user.Passwords[0].Hash == password.Hash {
+		current := user.Passwords[0]
+		// Encoded equality handles imports; plaintext needs bcrypt comparison.
+		// Disabled or expired records must receive an active replacement.
+		if !current.Disabled && !current.Expired &&
+			(current.Hash == password.Hash || (!strings.HasPrefix(s, "bcrypt:") && current.Match(s))) {
+			var changed bool
+			for _, p := range user.Passwords[1:] {
+				if !p.Disabled {
+					p.Disable()
+					changed = true
+				}
+			}
+			if changed {
+				user.Revise()
+			}
 			return nil
 		}
 	}
 
+	user.replacePassword(password, keepVersions)
+	return nil
+}
+
+// replacePassword installs a validated active record and revokes older ones.
+// Resets call this directly so equality never suppresses a replacement.
+func (user *User) replacePassword(password *Password, keepVersions int) {
+	var passwords []*Password
 	if keepVersions < 1 {
 		keepVersions = 9
 	}
@@ -188,7 +211,6 @@ func (user *User) AddPassword(s string, keepVersions int) error {
 	}
 	user.Passwords = passwords
 	user.Revise()
-	return nil
 }
 
 // AddEmailAddress returns creates and adds password for a user identity.
@@ -301,17 +323,14 @@ func (user *User) VerifyPassword(s string) error {
 	return errors.ErrUserPasswordInvalid
 }
 
-// ResetPassword resets password for the User.
+// ResetPassword installs a fresh active password, including for the same secret.
 func (user *User) ResetPassword(s string, keepVersions int) error {
-	for _, p := range user.Passwords {
-		if p.Disabled || p.Expired {
-			continue
-		}
-		p.Disabled = true
-	}
-	if err := user.AddPassword(s, keepVersions); err != nil {
+	// Validate before revoking anything so rejected input cannot lock out a user.
+	password, err := NewPassword(s)
+	if err != nil {
 		return errors.ErrChangeUserPassword.WithArgs(err)
 	}
+	user.replacePassword(password, keepVersions)
 	user.Revise()
 	return nil
 }
@@ -563,15 +582,8 @@ func (user *User) ChangePassword(r *requests.Request, keepVersions int) error {
 	return nil
 }
 
-// UpdatePassword update user password.
+// UpdatePassword updates user password and revokes other enabled passwords.
 func (user *User) UpdatePassword(r *requests.Request, keepVersions int) error {
-	if !strings.HasPrefix(r.User.Password, "bcrypt:") {
-		// Check whether the existing password matches the newly provided password,
-		// and skip updating if it is.
-		if user.VerifyPassword(r.User.Password) == nil {
-			return nil
-		}
-	}
 	if err := user.AddPassword(r.User.Password, keepVersions); err != nil {
 		return errors.ErrUpdateUserPassword.WithArgs(err)
 	}

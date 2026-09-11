@@ -88,8 +88,8 @@ assets, theme configuration, and compatibility with current portal pages.
 
 ## Local Password Authentication
 
-Use `local-password-authentication` for server-side local-store password
-verification, bcrypt work equalization, and timing-enumeration regression tests.
+Use `local-password-authentication` for local password creation, imports,
+changes, resets, verification, bcrypt work equalization, and regression tests.
 
 ## Authentication Clients
 

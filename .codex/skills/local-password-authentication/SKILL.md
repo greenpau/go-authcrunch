@@ -1,6 +1,6 @@
 ---
 name: local-password-authentication
-description: Maintain server-side local identity store password authentication in pkg/identity, including bcrypt work equalization, missing identities, mixed password costs, dummy comparisons, and timing-enumeration regression tests.
+description: Maintain local password creation, bcrypt imports, duplicate detection, changes, resets, credential revocation, and server-side authentication in pkg/identity, including bcrypt work equalization and timing-enumeration regression tests.
 ---
 
 # Local Password Authentication
@@ -23,6 +23,46 @@ The local adapter delegates through `pkg/ids/local/store.go` and
 checks. Substituting that per-user method for the database's store-wide verifier
 would remove work equalization. Client protocol and refresh-evidence lifecycle
 changes belong to their separate owning skills.
+
+## Password Management
+
+`pkg/identity/user.go` owns AddPassword, ResetPassword, ChangePassword, and
+UpdatePassword. Their shared replacement helper installs a validated active
+record and disables retained older records. Keep these mutation semantics
+separate from the authentication verifier's raw-plaintext comparison schedule.
+
+- Validate replacement input through NewPassword before mutating credentials.
+  Creation/import trims surrounding whitespace; duplicate comparison uses that
+  same normalized input. Validation must still reject invalid imports and
+  overlength plaintext even if a comparison could match an existing hash.
+- For plaintext duplicates, compare against the first active record with
+  Password.Match. For bcrypt imports, compare the parsed encoded hash directly;
+  never verify the serialized import string as though it were plaintext.
+- A matching first record is reusable only while enabled and unexpired.
+  AddPassword retains its hash, timestamps, and existing history when reusable.
+  It must still disable other enabled password records. A duplicate is a
+  complete no-op only when there are no such records left to revoke.
+- Do not return early from UpdatePassword merely because VerifyPassword
+  accepts the candidate: another active credential may need revocation.
+- ResetPassword always installs a fresh active record, even when the plaintext
+  or imported hash is unchanged. Validate before disabling the old credential;
+  a failed reset must leave credentials usable and state unchanged.
+- ChangePassword still verifies the old password before replacing credentials.
+  Database mutation wrappers must continue advancing CredentialVersion and
+  persisting it even when the active hash is reused. Hash deduplication does
+  not preserve refresh eligibility.
+
+An encoded-hash equality check is useful for repeated imports; independent
+salted hashes cannot establish plaintext equality. Cover both forms instead
+of substituting one comparison for the other. Preserve existing password
+history limits when installing replacements.
+
+`pkg/identity/user_password_test.go` covers duplicate-state preservation,
+active/disabled/expired records, plaintext/imported replacements, multiple
+active passwords, rejected input without mutation, persistence, and refresh
+evidence invalidation. Use TestUserAddPasswordIdempotent, TestUserPasswordMutation
+(the SameSecret, DifferentSecret, and InvalidInput cases), and
+TestDatabasePasswordMutationPersistence for focused checks.
 
 ## Verification Invariants
 

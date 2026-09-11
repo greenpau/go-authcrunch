@@ -1,4 +1,4 @@
 interface:
   display_name: "Local Password Authentication"
-  short_description: "Local bcrypt verification and enumeration defenses"
-  default_prompt: "Use $local-password-authentication to maintain local-store password verification and its timing-enumeration regression tests."
+  short_description: "Local password lifecycle and enumeration defenses"
+  default_prompt: "Use $local-password-authentication to maintain local password creation, imports, resets, verification, and credential lifecycle regression tests."
