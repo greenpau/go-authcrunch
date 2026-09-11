@@ -146,6 +146,8 @@ Identity and store tests live under `pkg/identity`, `pkg/ids`,
 `pkg/ids/local`, `pkg/ids/ldap`, and `pkg/registry`. They rely on temporary
 identity databases, registration/user JSON fixtures, domain restriction cases,
 LDAP DN/config parsing, and table-driven success/error cases.
+Use [local-password-authentication](../local-password-authentication/SKILL.md)
+for the password-verifier regression matrix and controlled timing validation.
 
 Identity provider and SSO tests live under `pkg/idp`, `pkg/idp/oauth`,
 `pkg/idp/saml`, and `pkg/sso`. OAuth tests cover request parsing, state,

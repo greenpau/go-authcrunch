@@ -86,6 +86,11 @@ coordination, continuation, and logout.
 Use `authentication-portal-themes` for custom portal templates, CSS, branding
 assets, theme configuration, and compatibility with current portal pages.
 
+## Local Password Authentication
+
+Use `local-password-authentication` for server-side local-store password
+verification, bcrypt work equalization, and timing-enumeration regression tests.
+
 ## Authentication Clients
 
 Use `authentication-client` for `pkg/authclient`, JSON portal login consumers,

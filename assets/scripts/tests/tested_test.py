@@ -1,4 +1,4 @@
-"""Verify Make preserves real test/build failures and tested evidence freshness."""
+"""Verify Make preserves failures, fresh evidence, and independent report bundles."""
 
 import json
 import os
@@ -41,9 +41,17 @@ class TestedLifecycleTests(unittest.TestCase):
                 return subprocess.run(['make', *arguments], cwd=root, env=env, text=True,
                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
+            def bundle(directory):
+                return {path.relative_to(directory): path.read_bytes()
+                        for path in directory.rglob('*') if path.is_file()}
+
+            report = root / '.coverage'
+            report.mkdir()
+            notes = report / 'notes.txt'
+            notes.write_text('Keep investigation notes across test runs.\n')
             result = make('test', 'TEST=^TestSelected$')
             self.assertEqual(result.returncode, 0, result.stdout)
-            report = root / '.coverage'
+            self.assertEqual(notes.read_text(), 'Keep investigation notes across test runs.\n')
             for name in ('index.html', 'test_output.html', 'coverage.html', 'coverage.out',
                          'summary.json', 'junit.xml', 'test_output.jsonl', 'stderr.log',
                          'run.json', 'manifest.json'):
@@ -54,10 +62,20 @@ class TestedLifecycleTests(unittest.TestCase):
             first_profile = (report / 'coverage.out').read_bytes()
             self.assertIn('TestSelected', (report / 'test_output.jsonl').read_text())
             self.assertNotIn('TestExcluded', (report / 'test_output.jsonl').read_text())
+            first_bundle = bundle(report)
             quick = make('qtest', 'QUICK_TEST_DIR=.', 'TEST=^TestSelected$')
             self.assertEqual(quick.returncode, 0, quick.stdout)
             self.assertTrue((report / 'quick/manifest.json').is_file())
-            self.assertEqual(json.loads((report / 'run.json').read_text()), first_run)
+            for name, content in first_bundle.items():
+                self.assertEqual((report / name).read_bytes(), content, str(name))
+            quick_bundle = bundle(report / 'quick')
+            combined_bundle = bundle(report)
+
+            custom = make('test', 'TEST=^TestSelected$', 'COVERAGE_DIR=custom-reports')
+            self.assertEqual(custom.returncode, 0, custom.stdout)
+            self.assertTrue((root / 'custom-reports/manifest.json').is_file())
+            custom_bundle = bundle(root / 'custom-reports')
+            self.assertEqual(bundle(report), combined_bundle)
 
             result = make('test')
             self.assertNotEqual(result.returncode, 0, result.stdout)
@@ -81,6 +99,9 @@ class TestedLifecycleTests(unittest.TestCase):
                 self.assertNotEqual((report / 'coverage.out').read_bytes(), first_profile)
                 self.assertNotIn('fixture.go', (report / 'coverage.out').read_text())
             self.assertNotIn('TestSelected', (report / 'test_output.jsonl').read_text())
+            self.assertEqual(notes.read_text(), 'Keep investigation notes across test runs.\n')
+            self.assertEqual(bundle(report / 'quick'), quick_bundle)
+            self.assertEqual(bundle(root / 'custom-reports'), custom_bundle)
 
 
 if __name__ == '__main__':

@@ -34,6 +34,15 @@ lifecycle. `run-quick-tests` underlies `qtest`. There is no `ctest` target.
 `COVERAGE_DIR` selects output; concurrent independent invocations must use
 separate directories. `TEST` is a regex, not a fragment of Go flags.
 
+Let pinned `tested` clean up its managed artifacts inside the selected
+`COVERAGE_DIR`. Do not recursively delete `.coverage` or the selected directory
+in `run-tests`: quick runs must preserve the parent full-suite bundle, full
+runs must preserve the quick bundle, and custom-output runs must preserve
+other output directories. Unrelated files in a report directory also survive.
+The lifecycle fixture in `assets/scripts/tests/tested_test.py` checks this
+isolation alongside fresh evidence and nonzero exits after test/build failures.
+Whole-directory cleanup belongs to the explicitly requested `make clean`.
+
 The Go module minimum is `1.25.0`; CI selects Go `1.26.0`, Node 24, and Python
 3. Use Python 3.9+ locally. `go.mod` and `go.sum` pin `tested`, `versioned`, and
 `golint`; never replace the pinned lifecycle with global tools installed at

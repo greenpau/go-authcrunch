@@ -20,6 +20,8 @@ targets, generated assets, dependency commands, and release/version workflows. U
 portal refresh behavior; use `release-and-versioning` for version invariants.
 Use `authentication-portal-themes` for custom portal templates, branding assets,
 and their UI configuration and template contracts.
+Use [local-password-authentication](../local-password-authentication/SKILL.md)
+for local-store password verification and bcrypt work equalization.
 Use `authentication-client` for reusable portal login clients and CLI credential
 handling. Use `authdbctl` for CLI commands, terminal behavior, and executable E2E
 tests.

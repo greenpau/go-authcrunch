@@ -623,10 +623,14 @@ func (db *Database) AuthenticateUser(r *requests.Request) error {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 	user, err := db.getUser(r.User.Username)
+	var passwordErr error
+	if r.User.Password != "" {
+		// Missing, disabled and existing identities must perform the same
+		// bcrypt work, even when stored password costs differ.
+		passwordErr = newPasswordVerifier(db.Users).verify(user, r.User.Password)
+	}
 	if err != nil {
 		r.Response.Code = 400
-		// Calculate password hash as the means to prevent user discovery.
-		NewPassword(r.User.Password)
 		return errors.ErrAuthFailed.WithArgs(err)
 	}
 
@@ -637,9 +641,9 @@ func (db *Database) AuthenticateUser(r *requests.Request) error {
 
 	switch {
 	case r.User.Password != "":
-		if err := user.VerifyPassword(r.User.Password); err != nil {
+		if passwordErr != nil {
 			r.Response.Code = 400
-			return errors.ErrAuthFailed.WithArgs(err)
+			return errors.ErrAuthFailed.WithArgs(passwordErr)
 		}
 	case r.WebAuthn.Request != "":
 		if err := user.VerifyWebAuthnRequest(r); err != nil {
