@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
@@ -138,6 +139,13 @@ func GetKeysFromConfig(cfg *CryptoKeyConfig) ([]*CryptoKey, error) {
 				return nil, fmt.Errorf("generating key failed: %v", err)
 			}
 			keys = append(keys, key)
+		case "ed25519":
+			cfg.parsed = true
+			key, err := generateKey(cfg, cfg.ID, "EdDSA")
+			if err != nil {
+				return nil, fmt.Errorf("generating key failed: %v", err)
+			}
+			keys = append(keys, key)
 		default:
 			return nil, fmt.Errorf("unsupported algorithm for generate: %s", cfg.Algorithm)
 		}
@@ -161,7 +169,7 @@ func GetKeysFromConfig(cfg *CryptoKeyConfig) ([]*CryptoKey, error) {
 			}
 			k.Sign.Secret = secretKey
 			k.Verify.Secret = secretKey
-		case "rsa", "ecdsa":
+		case "rsa", "ecdsa", "ed25519":
 		default:
 			return nil, fmt.Errorf("unsupported config algorithm %s", k.Config.Algorithm)
 		}
@@ -251,6 +259,8 @@ func (k *CryptoKey) sign(signMethod, data interface{}) (interface{}, error) {
 		return k.signRSA(method, s)
 	case "ecdsa":
 		return k.signECDSA(method, s)
+	case "ed25519":
+		return k.signEd25519(method, s)
 	}
 
 	return nil, errors.ErrDataSigningFailed.WithArgs(method, "unsupported method")
@@ -270,6 +280,22 @@ func (k *CryptoKey) ProvideKey(token *jwtlib.Token) (interface{}, error) {
 	case "ecdsa":
 		if _, validMethod := token.Method.(*jwtlib.SigningMethodECDSA); !validMethod {
 			return nil, errors.ErrUnexpectedSigningMethod.WithArgs("ES", token.Header["alg"])
+		}
+	case "ed25519":
+		// Both JOSE names use Ed25519, but the signed header must retain its
+		// exact algorithm. Never let an HMAC method consume these public bytes.
+		switch token.Method.(type) {
+		case *jwtlib.SigningMethodEd25519, *signingMethodEd25519:
+		default:
+			return nil, errors.ErrUnexpectedSigningMethod.WithArgs("Ed25519", token.Header["alg"])
+		}
+		method := token.Method.Alg()
+		if (method != "EdDSA" && method != "Ed25519") || token.Header["alg"] != method {
+			return nil, errors.ErrUnexpectedSigningMethod.WithArgs("Ed25519", token.Header["alg"])
+		}
+		public, ok := k.Verify.Secret.(ed25519.PublicKey)
+		if !k.Verify.Capable || !ok || len(public) != ed25519.PublicKeySize {
+			return nil, jwtlib.ErrInvalidKey
 		}
 	}
 	return k.Verify.Secret, nil
@@ -382,8 +408,17 @@ func extractKey(kb []byte, cfg *CryptoKeyConfig) (*CryptoKey, error) {
 				k.Verify.Capable = true
 				k.Verify.Secret = privKey.Public()
 			}
+		case ed25519.PrivateKey:
+			k.Config.Algorithm = "ed25519"
+			if k.Config.Usage != "verify" {
+				k.Sign.Capable = true
+				k.Sign.Secret = privKey
+			}
+			if k.Config.Usage != "sign" {
+				k.Verify.Capable = true
+				k.Verify.Secret = privKey.Public()
+			}
 		default:
-			// case ed25519.PrivateKey
 			return nil, errors.ErrCryptoKeyConfigUnsupportedPrivateKeyAlgo.WithArgs(privKey)
 		}
 	case bytes.Contains(kb, []byte("RSA PUBLIC KEY")):
@@ -412,9 +447,14 @@ func extractKey(kb []byte, cfg *CryptoKeyConfig) (*CryptoKey, error) {
 				return nil, errors.ErrNoECDSACurveParamsFound
 			}
 			curveName = curve.Name
+		case ed25519.PublicKey:
+			if k.Config.Usage == "sign" {
+				return nil, fmt.Errorf("Ed25519 signing requires a private key")
+			}
+			k.Config.Algorithm = "ed25519"
+			k.Verify.Secret = pubKey
 		default:
 			// case *dsa.PublicKey
-			// case ed25519.PublicKey
 			return nil, errors.ErrCryptoKeyConfigUnsupportedPublicKeyAlgo.WithArgs(pubKey)
 		}
 	default:
@@ -615,6 +655,8 @@ func generateKey(cfg *CryptoKeyConfig, tag, algo string) (*CryptoKey, error) {
 	switch algo {
 	case "ES512":
 		generateKey = generateES512Key
+	case "EdDSA", "Ed25519":
+		generateKey = generateEd25519Key
 	default:
 		return nil, errors.ErrCryptoKeyStoreAutoGenerateAlgo.WithArgs(algo)
 	}
@@ -643,6 +685,15 @@ func generateKey(cfg *CryptoKeyConfig, tag, algo string) (*CryptoKey, error) {
 	key, err := extractKey([]byte(kb), cfg)
 	if err != nil {
 		return nil, errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs(err)
+	}
+	// The shared buffer stores key material by tag, not a JOSE algorithm.
+	// Reject incompatible reuse; two Ed25519 issuers may share material while
+	// choosing different JWT algorithm names independently.
+	if key.Config.Algorithm != signingMethods[algo] {
+		return nil, errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs("shared key tag uses an incompatible algorithm")
+	}
+	if algo == "Ed25519" {
+		key.Sign.Token.PreferredMethods = []string{"Ed25519", "EdDSA"}
 	}
 
 	return key, nil

@@ -61,8 +61,8 @@ are JWKs; admin entries pair `public_key` with `private_key` in every format.
 ## Key Selection and Encoding
 
 The first non-system signing key determines whether discovery is available.
-When it is asymmetric, publish the public parts of configured non-system RSA
-and ECDSA signing keys, in signing order, deduplicating identical JWK entries.
+When it is asymmetric, publish the public parts of configured non-system RSA,
+ECDSA, and Ed25519 signing keys, in signing order, deduplicating identical JWK entries.
 Exclude symmetric keys, verification-only keys, and system keys. Derive public
 parameters from the actual private signing operator, so sign-only keys work
 and a separately loaded verifier cannot substitute another issuer's key.
@@ -78,6 +78,7 @@ and [RFC 7518 section 6](https://www.rfc-editor.org/rfc/rfc7518.html#section-6):
 | ECDSA P-256 | `kty: EC`, `crv: P-256`, 32-byte `x` and `y` |
 | ECDSA P-384 | `kty: EC`, `crv: P-384`, 48-byte `x` and `y` |
 | ECDSA P-521 | `kty: EC`, `crv: P-521`, 66-byte `x` and `y` |
+| Ed25519 | `kty: OKP`, `crv: Ed25519`, 32-byte `x`; no `y` |
 
 Encode integers/coordinates with unpadded base64url. EC coordinates require
 leading zero padding; `big.Int.Bytes()` alone is insufficient. Advertise
@@ -103,10 +104,10 @@ For persistent signing material, configure the portal with, for example:
 crypto key signing-v1 sign-verify from file /etc/authcrunch/signing-key.pem
 ```
 
-RSA and supported ECDSA private PEM keys work. `sign` also works when portal
+RSA, supported ECDSA, and Ed25519 PKCS#8 private PEM keys work. `sign` also works when portal
 verification is configured separately. A literal shared secret, such as
 `crypto key sign-verify <shared-secret>`, selects HMAC and yields 404. Merely
-loading a public RSA/EC verifier does not configure an asymmetric issuer.
+loading a public RSA/EC/Ed25519 verifier does not configure an asymmetric issuer.
 
 Configure an application's verifier with the trusted portal JWKS URL and its
 expected algorithms, issuer, and audience. Use matching `kid` values when
@@ -115,6 +116,65 @@ distinct IDs for configured keys to avoid ambiguous selection in a multi-key
 set. Publication reflects current configuration; it does not retain removed
 keys for rollover or coordinate keys across processes. This endpoint does not
 add `jku` JWT headers or OpenID discovery metadata.
+
+## Ed25519 Signing and Verification
+
+`pkg/kms/ed25519.go` supports both exact JOSE names `EdDSA` (RFC 8037)
+and `Ed25519` (RFC 9864), using pure `crypto/ed25519` over the original JWS
+input. No prehash, context, Ed448, or X25519 signing is supported. The pinned
+JWT library registers only `EdDSA`; KMS registers a separate `Ed25519` method
+whose `Alg()` returns `Ed25519`. Keep algorithm allowlists exact and never
+rewrite a JWT header before verifying its signature.
+
+Existing PEM loading accepts Ed25519 PKCS#8 private keys and PKIX public keys
+through files, directories, or PEM-valued environment variables:
+
+```text
+crypto key sign-verify from file /etc/authcrunch/ed25519-private.pem
+crypto key verify from file /etc/authcrunch/ed25519-public.pem
+```
+
+These are separate issuer/verifier examples. Imported Ed25519 private keys
+sign with `EdDSA` by default. Verification accepts both names with the same
+public key. The existing `CryptoKey.SignToken` and `CryptoKeyStore.SignToken`
+method argument can explicitly select either name. A PEM has no JOSE-label
+preference; reimporting an exported generated key restores its material and
+uses the imported `EdDSA` default. There is no new Caddy directive to select
+the other label for an imported key.
+
+The existing `crypto default autogenerate algorithm` setting additionally
+accepts `EdDSA` and `Ed25519`. Each selects Ed25519 key generation and its
+corresponding default signing label. Omitted settings retain ES512 generation;
+existing HMAC/RSA/ECDSA selection, per-key defaults, token names/lifetimes,
+and first-eligible signing order remain unchanged. Explicit method arguments
+do not search later keys for a matching algorithm.
+
+Autogeneration tags still share key material within a process. EdDSA and
+Ed25519 configurations may share a tag while retaining their own labels.
+Reusing a tag across incompatible key families fails configuration. The
+existing tag directive can isolate unrelated issuers. Explicit verification
+keys continue to suppress autogeneration just as other explicit keys do.
+An Ed25519 private key configured for `verify` contributes only its public
+verification operator and cannot become the portal signer or an exported key.
+
+Public JWKS advertises each key's actual default signing label, preserving the
+existing key-order and `kid` rules. An explicit Go signing-method override does
+not alter discovery metadata, just as for existing RSA methods. Consumers
+verifying both labels must configure an appropriate algorithm policy.
+
+`pkg/kms/ed25519_test.go` covers both directions, exact allowlists, the RFC 8037
+signature vector, existing key sources, role boundaries, invalid key material,
+algorithm confusion, generation sharing, exports, and parser fuzzing.
+`pkg/authn/ed25519_e2e_test.go` covers TLS login/refresh compatibility, both
+verification labels, denied admin export, and PEM persistence. The JWKS E2E
+format suite also covers OKP, mixed RSA/EC/Ed25519 sets, and independent
+standard-library signature verification. Run:
+
+```sh
+make test TEST_DIR='./pkg/kms ./pkg/authn' TEST='Ed25519|JWKS|TestE2EPortalSigningAndRefreshCompatibility' COVERAGE_DIR=.coverage/ed25519
+go test -mod=readonly -race ./pkg/kms -run '^$' -fuzz '^FuzzEd25519TokenParsing$' -fuzztime=10000x -parallel=2
+make ci-check
+```
 
 ## Admin Private-Key Export
 
@@ -159,10 +219,10 @@ representation. The surrounding response always remains JSON, and
 
 | `format` | Supported keys | `encoding` | `private_key` value |
 | --- | --- | --- | --- |
-| `pkcs8` (default) | RSA and ECDSA | `pem` (default), `der` | PKCS#8 PEM string or standard-base64 DER string |
+| `pkcs8` (default) | RSA, ECDSA, and Ed25519 | `pem` (default), `der` | PKCS#8 PEM string or standard-base64 DER string |
 | `pkcs1` | RSA only | `pem` (default), `der` | RSA PRIVATE KEY PEM string or standard-base64 DER string |
 | `sec1` | ECDSA only | `pem` (default), `der` | EC PRIVATE KEY PEM string or standard-base64 DER string |
-| `jwk` | RSA and ECDSA | `json` (default) | Private JWK object, including its public parameters |
+| `jwk` | RSA, ECDSA, and Ed25519 | `json` (default) | Private JWK object, including its public parameters |
 
 For example, request `?format=pkcs8&encoding=der`, `?format=pkcs1`,
 `?format=sec1`, or `?format=jwk`. `format=json` retains the existing JSON API
@@ -179,7 +239,8 @@ KMS callers; empty arguments there select defaults.
 
 Private JWK encoding follows RFC 7518 section 6: RSA includes `d`, `p`, `q`,
 `dp`, `dq`, `qi`, and `oth` for additional primes; EC includes a fixed-width
-`d` scalar. The public serializer must never use `privateJSONWebKey`.
+`d` scalar. Ed25519 uses the RFC 8037 32-byte seed for `d`, never Go's
+64-byte private key. The public serializer must never use `privateJSONWebKey`.
 
 The selected issuer must be asymmetric, just as for public discovery. Export
 includes autogenerated keys and configured signing keys, while excluding

@@ -34,6 +34,11 @@ func TestGetSigningMethodAlias(t *testing.T) {
 		{name: "ES256", want: "ecdsa"},
 		{name: "ES384", want: "ecdsa"},
 		{name: "ES512", want: "ecdsa"},
+		{name: "EdDSA", want: "ed25519"},
+		{name: "Ed25519", want: "ed25519"},
+		{name: "eddsa", want: "ed25519"},
+		{name: "ED25519", want: "ed25519"},
+		{name: "Ed448", want: "unknown"},
 		{name: "TBD", want: "unknown"},
 	}
 	for _, tc := range testcases {

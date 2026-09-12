@@ -30,6 +30,8 @@ var (
 		"ES256":    "ecdsa",
 		"ES384":    "ecdsa",
 		"ES512":    "ecdsa",
+		"EdDSA":    "ed25519",
+		"Ed25519":  "ed25519",
 		"v4.local": "XChaCha20-Poly1305",
 	}
 
@@ -37,6 +39,7 @@ var (
 		"hmac":               {"HS512", "HS384", "HS256"},
 		"rsa":                {"RS512", "RS384", "RS256"},
 		"ecdsa":              {"ES512", "ES384", "ES256"},
+		"ed25519":            {"EdDSA", "Ed25519"},
 		"XChaCha20-Poly1305": {"v4.local"},
 	}
 )
@@ -44,6 +47,10 @@ var (
 // getSigningMethodAlias returns alias for the provided signing method.
 func getSigningMethodAlias(s string) string {
 	s = strings.ToUpper(s)
+	switch s {
+	case "EDDSA", "ED25519":
+		return "ed25519"
+	}
 	if v, exists := signingMethods[s]; exists {
 		arr := strings.SplitN(v, ",", 2)
 		return strings.TrimSpace(arr[0])

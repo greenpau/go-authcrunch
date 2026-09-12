@@ -16,6 +16,7 @@ package kms
 
 import (
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rsa"
 	"encoding/base64"
@@ -43,7 +44,7 @@ type jwksSigningKey struct {
 	signer    *CryptoKey
 }
 
-// GetJWKS returns an RFC 7517 JWK Set of public RSA and ECDSA signing keys.
+// GetJWKS returns an RFC 7517 JWK Set of public RSA, ECDSA, and Ed25519 signing keys.
 // A successful result always contains a keys array, including for one key.
 // It returns nil without an error when the signer selected by
 // SignToken(nil, nil, user) is symmetric or absent. Verification-only keys and
@@ -77,10 +78,10 @@ func (ks *CryptoKeyStore) getJWKSSigningKeys() ([]jwksSigningKey, error) {
 			continue
 		}
 		algorithm := signingMethods[k.Sign.Token.DefaultMethod]
-		asymmetric := algorithm == "rsa" || algorithm == "ecdsa"
+		asymmetric := algorithm == "rsa" || algorithm == "ecdsa" || algorithm == "ed25519"
 		if !selected {
-			// Portal issuance uses the first non-system signer. A later RSA or
-			// EC key must not enable discovery for an HMAC issuer.
+			// Portal issuance uses the first non-system signer. A later
+			// asymmetric key must not enable discovery for an HMAC issuer.
 			if !asymmetric {
 				return nil, nil
 			}
@@ -139,6 +140,13 @@ func (k *CryptoKey) publicJWK() (publicJSONWebKey, error) {
 		size := (secret.Curve.Params().BitSize + 7) / 8
 		key.X = base64.RawURLEncoding.EncodeToString(secret.X.FillBytes(make([]byte, size)))
 		key.Y = base64.RawURLEncoding.EncodeToString(secret.Y.FillBytes(make([]byte, size)))
+	case ed25519.PrivateKey:
+		if signingMethods[key.Algorithm] != "ed25519" || validateEd25519PrivateKey(secret) != nil {
+			return publicJSONWebKey{}, fmt.Errorf("kms: invalid Ed25519 signing key for JWKS")
+		}
+		key.KeyType = "OKP"
+		key.Curve = "Ed25519"
+		key.X = base64.RawURLEncoding.EncodeToString(secret.Public().(ed25519.PublicKey))
 	default:
 		return publicJSONWebKey{}, fmt.Errorf("kms: unsupported signing key for JWKS")
 	}

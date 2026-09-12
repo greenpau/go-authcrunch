@@ -16,6 +16,7 @@ package kms
 
 import (
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
@@ -122,6 +123,11 @@ func (key jwksSigningKey) privateSigningKey() (any, error) {
 			return nil, fmt.Errorf("kms: private signing key does not match its public key")
 		}
 		return secret, nil
+	case ed25519.PrivateKey:
+		if err := validateEd25519PrivateKey(secret); err != nil {
+			return nil, fmt.Errorf("kms: invalid private signing key")
+		}
+		return secret, nil
 	}
 	return nil, fmt.Errorf("kms: unsupported private signing key")
 }
@@ -190,6 +196,9 @@ func marshalPrivateJWK(public publicJSONWebKey, secret any) ([]byte, error) {
 	case *ecdsa.PrivateKey:
 		size := (private.Curve.Params().N.BitLen() + 7) / 8
 		key.D = encode(private.D.FillBytes(make([]byte, size)))
+	case ed25519.PrivateKey:
+		// RFC 8037 encodes the 32-byte seed, not Go's 64-byte private key.
+		key.D = encode(private.Seed())
 	}
 	return json.Marshal(key)
 }

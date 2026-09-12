@@ -72,7 +72,8 @@ type CryptoKeyConfig struct {
 	CookieNames []string `json:"cookie_names,omitempty" xml:"cookie_names,omitempty" yaml:"cookie_names,omitempty"`
 	// Source is either config or env.
 	Source string `json:"source,omitempty" xml:"source,omitempty" yaml:"source,omitempty"`
-	// Algorithm is either hmac, rsa, or ecdsa.
+	// Algorithm identifies the key family: hmac, rsa, ecdsa, ed25519, or
+	// XChaCha20-Poly1305. PEM loading infers the asymmetric key family.
 	Algorithm string `json:"algorithm,omitempty" xml:"algorithm,omitempty" yaml:"algorithm,omitempty"`
 	// EnvVarName is the name of environment variables holding either the value of
 	// a key or the path a directory or file containing a key.
@@ -191,6 +192,7 @@ func (k *CryptoKeyConfig) validate() error {
 	case "hmac":
 	case "rsa":
 	case "ecdsa":
+	case "ed25519":
 	case "XChaCha20-Poly1305":
 	case "":
 	default:
