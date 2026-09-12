@@ -15,6 +15,7 @@
 package oauth
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -22,7 +23,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
-func (b *IdentityProvider) validateAccessToken(state string, data map[string]interface{}) (map[string]interface{}, error) {
+func (b *IdentityProvider) validateAccessToken(ctx context.Context, state string, data map[string]interface{}) (map[string]interface{}, error) {
 	if data == nil {
 		return nil, errors.ErrIdentityProviderOAuthClaimsParserClaimsNotFound
 	}
@@ -57,43 +58,7 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 			}
 		}
 
-		token, err := jwtlib.Parse(tokenString, func(token *jwtlib.Token) (interface{}, error) {
-			switch {
-			case strings.HasPrefix(token.Method.Alg(), "RS"):
-				if _, validMethod := token.Method.(*jwtlib.SigningMethodRSA); !validMethod {
-					return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(tokenName, token.Header["alg"])
-				}
-			case strings.HasPrefix(token.Method.Alg(), "ES"):
-				if _, validMethod := token.Method.(*jwtlib.SigningMethodECDSA); !validMethod {
-					return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(tokenName, token.Header["alg"])
-				}
-			case strings.HasPrefix(token.Method.Alg(), "HS"):
-				return nil, errors.ErrIdentityProviderOAuthAccessTokenSignMethodNotSupported.WithArgs(tokenName, token.Method.Alg())
-			}
-
-			keyID, found := token.Header["kid"].(string)
-			if !found {
-				// If key id is not found in the header, then try the first available key.
-				for _, key := range b.keys {
-					return key.GetPublic(), nil
-				}
-				// return nil, errors.ErrIdentityProviderOAuthAccessTokenKeyIDNotFound.WithArgs(b.config.IdentityTokenName)
-			}
-			key, exists := b.keys[keyID]
-			if !exists {
-				if !b.disableKeyVerification {
-					if err := b.fetchKeysURL(); err != nil {
-						return nil, errors.ErrIdentityProviderOauthKeyFetchFailed.WithArgs(err)
-					}
-				}
-
-				key, exists = b.keys[keyID]
-				if !exists {
-					return nil, errors.ErrIdentityProviderOAuthAccessTokenKeyIDNotRegistered.WithArgs(tokenName, keyID)
-				}
-			}
-			return key.GetPublic(), nil
-		})
+		token, err := b.parseOAuthJWT(ctx, tokenName, tokenString)
 
 		if err != nil {
 			if isNonIdentityAccessToken {
@@ -117,10 +82,14 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 			return nil, err
 		}
 		if tokenName == b.config.IdentityTokenFieldName || tokenName == "id_token" {
-			if _, exists := claims["nonce"]; !exists {
+			nonce, exists, nonceErr := getOAuthStringClaim(claims, "nonce")
+			if nonceErr != nil {
+				return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, nonceErr)
+			}
+			if !exists {
 				return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, "nonce not found")
 			}
-			if err := b.state.validateNonce(state, claims["nonce"].(string)); err != nil {
+			if err := b.state.validateNonce(state, nonce); err != nil {
 				return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, err)
 			}
 
@@ -143,7 +112,12 @@ func (b *IdentityProvider) validateAccessToken(state string, data map[string]int
 	if _, exists := parsedData["name"]; !exists {
 		if _, exists := parsedData["given_name"]; exists {
 			if _, exists := parsedData["family_name"]; exists {
-				parsedData["name"] = fmt.Sprintf("%s %s", parsedData["given_name"].(string), parsedData["family_name"].(string))
+				given, givenOK := parsedData["given_name"].(string)
+				family, familyOK := parsedData["family_name"].(string)
+				if !givenOK || !familyOK {
+					return nil, errors.ErrIdentityProviderOAuthParseToken.WithArgs("identity", fmt.Errorf("name claims must be strings"))
+				}
+				parsedData["name"] = fmt.Sprintf("%s %s", given, family)
 				delete(parsedData, "given_name")
 				delete(parsedData, "family_name")
 			}

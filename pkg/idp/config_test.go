@@ -235,3 +235,33 @@ func TestNewIdentityProviderConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestOAuthTrustConfigurationFields(t *testing.T) {
+	for _, tc := range []struct {
+		name, field string
+		value       any
+		valid       bool
+	}{
+		{"issuer", "issuer", "https://issuer.example", true},
+		{"access audience", "access_token_audience", "resource-api", true},
+		{"numeric issuer", "issuer", 17, false},
+		{"null issuer", "issuer", nil, false},
+		{"null access audience", "access_token_audience", nil, false},
+		{"audience array", "access_token_audience", []string{"resource-api"}, false},
+		{"unknown field", "unsupported_field", "value", false},
+		{"unserializable", "scopes", make(chan int), false},
+		{"invalid optional field type", "delay_start", "not-an-integer", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			params := map[string]any{"realm": "upstream", "driver": "generic", "client_id": "client", "client_secret": "synthetic", "base_auth_url": "https://issuer.example", "metadata_url": "https://issuer.example/.well-known/openid-configuration"}
+			params[tc.field] = tc.value
+			cfg, err := NewIdentityProviderConfig("upstream", "oauth", params)
+			if (err == nil) != tc.valid {
+				t.Fatalf("valid=%v: %v", tc.valid, err)
+			}
+			if tc.valid && cfg.Params[tc.field] != tc.value {
+				t.Fatal("trust setting changed during dispatch validation")
+			}
+		})
+	}
+}

@@ -91,6 +91,12 @@ assets, theme configuration, and compatibility with current portal pages.
 Use `local-password-authentication` for local password creation, imports,
 changes, resets, verification, bcrypt work equalization, and regression tests.
 
+## OAuth Identity Providers
+
+Use `oauth-identity-provider` for upstream OAuth/OIDC discovery, JWKS and static
+public PEM verification, EdDSA/Ed25519 validation, key refresh, shared provider
+configuration dispatch, and real portal OAuth E2E tests.
+
 ## Portal Signing-Key Discovery
 
 Use `authentication-portal-jwks` for the portal `/.well-known/jwks.json`

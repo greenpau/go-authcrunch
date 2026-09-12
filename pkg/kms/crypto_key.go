@@ -34,6 +34,7 @@ import (
 	"strings"
 
 	jwtlib "github.com/golang-jwt/jwt/v5"
+	"github.com/greenpau/go-authcrunch/internal/jwtutil"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/shared"
 	"github.com/greenpau/go-authcrunch/pkg/system"
@@ -284,9 +285,7 @@ func (k *CryptoKey) ProvideKey(token *jwtlib.Token) (interface{}, error) {
 	case "ed25519":
 		// Both JOSE names use Ed25519, but the signed header must retain its
 		// exact algorithm. Never let an HMAC method consume these public bytes.
-		switch token.Method.(type) {
-		case *jwtlib.SigningMethodEd25519, *signingMethodEd25519:
-		default:
+		if !jwtutil.IsEd25519Method(token.Method) {
 			return nil, errors.ErrUnexpectedSigningMethod.WithArgs("Ed25519", token.Header["alg"])
 		}
 		method := token.Method.Alg()

@@ -262,6 +262,8 @@ func TestNewConfig(t *testing.T) {
 						"base_auth_url":         "https://localhost/oauth",
 						"token_url":             "https://localhost/oauth/access_token",
 						"authorization_url":     "https://localhost/oauth/authorize",
+						"issuer":                "https://localhost/oauth",
+						"access_token_audience": "resource-api",
 						"client_id":             "foo",
 						"client_secret":         "bar",
 						"driver":                "generic",

@@ -19,6 +19,7 @@ and private exports use `getJWKSSigningKeys` for identical selection, ordering,
 and deduplication; keep private encoding separate from `GetJWKS`.
 
 This is portal-issued JWT discovery. Upstream OAuth key consumption belongs to
+[oauth-identity-provider](../oauth-identity-provider/SKILL.md) and
 `pkg/idp/oauth/jwks.go`; its `JwksKey` model includes shared secrets and must
 not be reused as a public export model. JWTs here use signatures, not
 asymmetric payload encryption.
@@ -122,7 +123,8 @@ add `jku` JWT headers or OpenID discovery metadata.
 `pkg/kms/ed25519.go` supports both exact JOSE names `EdDSA` (RFC 8037)
 and `Ed25519` (RFC 9864), using pure `crypto/ed25519` over the original JWS
 input. No prehash, context, Ed448, or X25519 signing is supported. The pinned
-JWT library registers only `EdDSA`; KMS registers a separate `Ed25519` method
+JWT library registers only `EdDSA`; `internal/jwtutil`, shared by KMS and
+OAuth, registers a separate `Ed25519` method
 whose `Alg()` returns `Ed25519`. Keep algorithm allowlists exact and never
 rewrite a JWT header before verifying its signature.
 

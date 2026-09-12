@@ -57,7 +57,7 @@ func TestValidateAccessTokenMergesVerifiedAccessTokenClaims(t *testing.T) {
 		},
 	})
 
-	got, err := provider.validateAccessToken(state, map[string]interface{}{
+	got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{
 		"access_token": accessToken,
 		"id_token":     idToken,
 	})
@@ -103,7 +103,7 @@ func TestValidateAccessTokenIgnoresUnsignedAccessTokenClaims(t *testing.T) {
 		"roles": []string{"admin"},
 	})
 
-	got, err := provider.validateAccessToken(state, map[string]interface{}{
+	got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{
 		"access_token": accessToken,
 		"id_token":     idToken,
 	})
@@ -137,7 +137,7 @@ func TestValidateAccessTokenIgnoresOpaqueAccessTokenClaims(t *testing.T) {
 		"sub":   "subject-user",
 	})
 
-	got, err := provider.validateAccessToken(state, map[string]interface{}{
+	got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{
 		"access_token": "opaque-access-token",
 		"id_token":     idToken,
 	})
@@ -171,7 +171,7 @@ func TestValidateAccessTokenAcceptsSignedAccessTokenWhenConfiguredAsIdentityToke
 		"sub":   "subject-user",
 	})
 
-	got, err := provider.validateAccessToken(state, map[string]interface{}{
+	got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{
 		"access_token": accessToken,
 	})
 	if err != nil {
@@ -203,7 +203,7 @@ func TestValidateAccessTokenRejectsUnsignedAccessTokenWhenConfiguredAsIdentityTo
 		"sub":   "subject-attacker",
 	})
 
-	if got, err := provider.validateAccessToken(state, map[string]interface{}{"access_token": accessToken}); err == nil {
+	if got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{"access_token": accessToken}); err == nil {
 		t.Fatalf("expected unsigned access_token validation error, got claims: %#v", got)
 	}
 }
@@ -225,7 +225,7 @@ func TestValidateAccessTokenRejectsWrongIDTokenIssuer(t *testing.T) {
 		"sub":   "subject-user",
 	})
 
-	if got, err := provider.validateAccessToken(state, map[string]interface{}{"id_token": idToken}); err == nil {
+	if got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{"id_token": idToken}); err == nil {
 		t.Fatalf("expected issuer validation error, got claims: %#v", got)
 	} else if !strings.Contains(err.Error(), "issuer claim validation failed") {
 		t.Fatalf("expected issuer validation error, got: %v", err)
@@ -249,7 +249,7 @@ func TestValidateAccessTokenRejectsWrongIDTokenAudience(t *testing.T) {
 		"sub":   "subject-user",
 	})
 
-	if got, err := provider.validateAccessToken(state, map[string]interface{}{"id_token": idToken}); err == nil {
+	if got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{"id_token": idToken}); err == nil {
 		t.Fatalf("expected audience validation error, got claims: %#v", got)
 	} else if !strings.Contains(err.Error(), "audience claim validation failed") {
 		t.Fatalf("expected audience validation error, got: %v", err)
@@ -274,7 +274,7 @@ func TestValidateAccessTokenRejectsWrongIDTokenAuthorizedParty(t *testing.T) {
 		"sub":   "subject-user",
 	})
 
-	if got, err := provider.validateAccessToken(state, map[string]interface{}{"id_token": idToken}); err == nil {
+	if got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{"id_token": idToken}); err == nil {
 		t.Fatalf("expected authorized party validation error, got claims: %#v", got)
 	} else if !strings.Contains(err.Error(), "authorized party claim validation failed") {
 		t.Fatalf("expected authorized party validation error, got: %v", err)
@@ -308,7 +308,7 @@ func TestValidateAccessTokenMergesAccessTokenClaimsWithResourceAudienceAndAzp(t 
 		},
 	})
 
-	got, err := provider.validateAccessToken(state, map[string]interface{}{
+	got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{
 		"access_token": accessToken,
 		"id_token":     idToken,
 	})
@@ -347,7 +347,7 @@ func TestValidateAccessTokenIgnoresAccessTokenClaimsWithWrongAzp(t *testing.T) {
 		},
 	})
 
-	got, err := provider.validateAccessToken(state, map[string]interface{}{
+	got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{
 		"access_token": accessToken,
 		"id_token":     idToken,
 	})
@@ -389,7 +389,7 @@ func TestValidateAccessTokenIgnoresAccessTokenClaimsWithInvalidSignature(t *test
 		},
 	})
 
-	got, err := provider.validateAccessToken(state, map[string]interface{}{
+	got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{
 		"access_token": accessToken,
 		"id_token":     idToken,
 	})
@@ -428,7 +428,7 @@ func TestValidateAccessTokenMergesAccessTokenClaimsWithConfiguredAudience(t *tes
 		},
 	})
 
-	got, err := provider.validateAccessToken(state, map[string]interface{}{
+	got, err := provider.validateAccessToken(t.Context(), state, map[string]interface{}{
 		"access_token": accessToken,
 		"id_token":     idToken,
 	})
@@ -460,7 +460,7 @@ func newOAuthValidatorTestProvider(t *testing.T, identityTokenFieldName string) 
 			IdentityTokenFieldName: identityTokenFieldName,
 			Issuer:                 oauthValidatorTestIssuer,
 		},
-		keys:  map[string]*JwksKey{jwksKey.KeyID: jwksKey},
+		keys:  newOAuthJwksSet([]*JwksKey{jwksKey}),
 		state: newStateManager(),
 	}, privateKey, jwksKey
 }

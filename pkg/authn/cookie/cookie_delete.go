@@ -65,7 +65,9 @@ func (f *Factory) GetDeleteIdentityTokenCookie(s, basePath string) string {
 	if !strings.HasSuffix(basePath, "/") {
 		basePath = basePath + "/"
 	}
-	sb.WriteString(" Path=" + basePath + "whoami;")
+	sb.WriteString(" Path=")
+	sb.WriteString(basePath)
+	sb.WriteString("whoami;")
 	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
 	return sb.String()
 }
@@ -78,7 +80,9 @@ func (f *Factory) GetDeleteRefreshTokenCookie(basePath string) string {
 	if !strings.HasSuffix(basePath, "/") {
 		basePath = basePath + "/"
 	}
-	sb.WriteString(" Path=" + basePath + "api/refresh_token;")
+	sb.WriteString(" Path=")
+	sb.WriteString(basePath)
+	sb.WriteString("api/refresh_token;")
 	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
 	if strings.HasPrefix(f.RefreshTokenCookieName, "__Secure-") || strings.HasPrefix(f.RefreshTokenCookieName, "__Host-") {
 		sb.WriteString(" Secure; HttpOnly;")
@@ -92,7 +96,9 @@ func (f *Factory) GetDeleteSandboxIDCookie(basePath string) string {
 	sb.WriteString(f.SandboxIDCookieName)
 	sb.WriteString("=delete;")
 	basePath = strings.TrimSuffix(basePath, "/")
-	sb.WriteString(" Path=" + basePath + ";")
+	sb.WriteString(" Path=")
+	sb.WriteString(basePath)
+	sb.WriteString(";")
 	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
 	return sb.String()
 }
@@ -103,7 +109,9 @@ func (f *Factory) GetDeleteRefererCookie(basePath string) string {
 	sb.WriteString(f.RefererCookieName)
 	sb.WriteString("=delete;")
 	basePath = strings.TrimSuffix(basePath, "/")
-	sb.WriteString(" Path=" + basePath + ";")
+	sb.WriteString(" Path=")
+	sb.WriteString(basePath)
+	sb.WriteString(";")
 	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
 	return sb.String()
 }

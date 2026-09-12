@@ -37,6 +37,13 @@ import (
 
 // Authenticate performs authentication.
 func (b *IdentityProvider) Authenticate(r *requests.Request) error {
+	// Delayed discovery publishes endpoints and issuer together. Do not read
+	// partially configured metadata while its background initialization runs.
+	if b.configured && !b.ready.Load() {
+		return errors.ErrIdentityProviderConfig.WithArgs("OAuth provider is not ready")
+	}
+	b.setupMu.RLock()
+	defer b.setupMu.RUnlock()
 	reqPath := r.Upstream.BaseURL + path.Join(r.Upstream.BasePath, r.Upstream.Method, r.Upstream.Realm)
 	r.Response.Code = http.StatusBadRequest
 
@@ -108,7 +115,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 					return errors.ErrIdentityProviderOauthFetchClaimsFailed.WithArgs(err)
 				}
 			default:
-				m, err = b.validateAccessToken(reqParams.state, accessToken)
+				m, err = b.validateAccessToken(r.Upstream.Request.Context(), reqParams.state, accessToken)
 				if err != nil {
 					return errors.ErrIdentityProviderOauthValidateAccessTokenFailed.WithArgs(err)
 				}
@@ -154,7 +161,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 				"access_token": reqParams.accessToken,
 				"id_token":     reqParams.idToken,
 			}
-			m, err := b.validateAccessToken(reqParams.state, accessToken)
+			m, err := b.validateAccessToken(r.Upstream.Request.Context(), reqParams.state, accessToken)
 			if err != nil {
 				return errors.ErrIdentityProviderOauthValidateAccessTokenFailed.WithArgs(err)
 			}

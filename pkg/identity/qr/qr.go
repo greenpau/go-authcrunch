@@ -93,14 +93,19 @@ func (c *Code) Build() error {
 	}
 	var sb strings.Builder
 	sb.WriteString("otpauth://")
-	sb.WriteString(c.Type + "/" + url.QueryEscape(c.Label))
+	sb.WriteString(c.Type)
+	sb.WriteString("/")
+	sb.WriteString(url.QueryEscape(c.Label))
 	secretEncoder := base32.StdEncoding.WithPadding(base32.NoPadding)
-	sb.WriteString("?secret=" + secretEncoder.EncodeToString([]byte(c.Secret)))
+	sb.WriteString("?secret=")
+	sb.WriteString(secretEncoder.EncodeToString([]byte(c.Secret)))
 	if c.Issuer != "" {
-		sb.WriteString("&issuer=" + url.QueryEscape(c.Issuer))
+		sb.WriteString("&issuer=")
+		sb.WriteString(url.QueryEscape(c.Issuer))
 	}
 	if c.Algorithm != "" {
-		sb.WriteString("&algorithm=" + c.Algorithm)
+		sb.WriteString("&algorithm=")
+		sb.WriteString(c.Algorithm)
 	}
 	if c.Digits > 0 {
 		sb.WriteString(fmt.Sprintf("&digits=%d", c.Digits))

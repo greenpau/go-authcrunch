@@ -106,11 +106,14 @@ func (sm *stateManager) addCode(state, code string) {
 	sm.codes[state] = code
 }
 
-func manageStateManager(sm *stateManager) {
+func manageStateManager(sm *stateManager, stop <-chan struct{}) {
 	intervals := time.NewTicker(time.Minute * time.Duration(2))
-	for range intervals.C {
-		if sm.states == nil {
+	defer intervals.Stop()
+	for {
+		select {
+		case <-stop:
 			return
+		case <-intervals.C:
 		}
 		now := time.Now()
 		sm.mux.Lock()

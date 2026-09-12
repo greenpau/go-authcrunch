@@ -1,6 +1,6 @@
 ---
 name: testing-and-ci
-description: Require corresponding tests for every Go code change and E2E coverage whenever developing tests; select, run, and maintain AuthCrunch tests through pinned tested, browser tests, automation fixtures, coverage artifacts, and CI gates.
+description: Require corresponding tests for every Go code change, E2E coverage whenever developing tests, and immediate diagnostic remediation while agents edit code; select, run, and maintain AuthCrunch tests through pinned tested, browser tests, automation fixtures, coverage artifacts, and CI gates.
 ---
 
 # Testing and CI
@@ -87,6 +87,64 @@ Direct `go test` is appropriate for a narrow debugging iteration, compile-only
 check, or fuzzing; it is not the report lifecycle. Browser tests use Node's spec
 reporter, and automation uses verbose Python unittest discovery. Both use only
 standard-library facilities. Loopback `httptest` listeners are expected.
+
+## Diagnostics in Agent Changes
+
+Diagnostic remediation is part of editing code. After each coherent edit,
+inspect the affected code's compiler, editor/language-server, lint, and static
+analysis findings using the applicable tools. Fix confirmed problems in the
+same iteration, before moving to unrelated work or presenting the change as
+complete. Do not wait for the user to notice them or defer them to final testing.
+This applies across diagnostic types, including correctness, resource handling,
+deprecated APIs, unused code, inefficiency, and style.
+
+Establish ownership before editing: inspect the initial staged, unstaged, and
+untracked changes, and track the code the agent creates or edits during the
+task, including earlier turns. A Git diff helps locate changes but does not
+prove the agent authored them. Check every agent-created or edited code file,
+including tests and new untracked files. Inspect each finding against the
+agent's actual changes. Fix a problem in a statement the agent is rewriting
+even if it existed before that edit. Leave unrelated existing or user-authored
+code alone; editing one line does not authorize cleanup of the entire file,
+package, or repository.
+
+Inspect the full diagnostic output for affected code, not just one named
+warning or a matching text pattern. Review errors, warnings, and actionable
+informational/hint diagnostics; severity alone is not a reason to ignore a
+confirmed problem. For Go, use available editor diagnostics or run gopls from
+the module root with an explicit list of affected files, for example:
+
+```sh
+gopls version
+gopls check -severity=hint pkg/example/changed.go pkg/example/changed_test.go
+```
+
+Use an installed, compatible version and check `gopls help check` for supported
+flags. Inspect the diagnostic output, not only the exit status: `gopls check`
+can exit zero while reporting problems. If editor and CLI results differ,
+verify the analyzer version/settings before declaring a reported issue absent.
+For other languages, use their applicable repository-supported diagnostics.
+Passing tests or one analysis tool does not clear findings from another;
+the current `make ci-check` does not run gopls. Do not silently substitute a
+regex search or a linter that lacks the relevant analysis. If a required check
+cannot run, report the blocker and leave that validation explicitly incomplete.
+
+Fix the cause within the agent's code and the minimal supporting changes it
+requires, preserving behavior unless the task calls for a behavior change.
+Evaluate optional refactoring suggestions for applicability rather than
+applying every suggestion blindly. Explain false positives or concrete
+compatibility reasons for retaining flagged code. Do not suppress diagnostics,
+lower the reporting severity, or disable checks to obtain a clean result.
+Avoid repository-wide autofixes or toolchain, dependency, and editor-setting
+changes just to remove diagnostics.
+
+After a fix, format the edited code and rerun the affected diagnostics until
+confirmed in-scope problems are resolved. Run the corresponding tests and
+required E2E coverage under the rules above. At completion, record the
+tool/version, checked files, results, and any unresolved findings with ownership
+and reason; distinguish unrelated findings from blocked in-scope work. A clear
+result for agent changes is not a claim that the whole repository has no
+diagnostics.
 
 ## Evidence and Reports
 
@@ -181,6 +239,8 @@ for the password-verifier regression matrix and controlled timing validation.
 Identity provider and SSO tests live under `pkg/idp`, `pkg/idp/oauth`,
 `pkg/idp/saml`, and `pkg/sso`. OAuth tests cover request parsing, state,
 provider setup, JWKS, GitHub email lookup, and provider HTTP interactions.
+Use [oauth-identity-provider](../oauth-identity-provider/SKILL.md) for upstream
+JWT/JWKS, static key provisioning, rotation, and real portal OAuth E2E coverage.
 SAML/SSO tests use metadata, certificate, and key fixtures from
 `testdata/saml` and `testdata/sso`.
 

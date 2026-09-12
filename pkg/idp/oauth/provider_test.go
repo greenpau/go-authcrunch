@@ -409,6 +409,9 @@ func TestNewIdentityProvider(t *testing.T) {
 			msgs = append(msgs, fmt.Sprintf("config:\n%v", tc.config))
 
 			prv, err := NewIdentityProvider(tc.config, tc.logger)
+			if prv != nil {
+				t.Cleanup(prv.Close)
+			}
 			if tc.errPhase == "initialize" {
 				if tests.EvalErrWithLog(t, err, "NewIdentityProvider", tc.shouldErr, tc.err, msgs) {
 					return
@@ -423,11 +426,11 @@ func TestNewIdentityProvider(t *testing.T) {
 			if tc.errPhase == "configure" {
 				if tests.EvalErrWithLog(t, err, "IdentityProvider.Configure", tc.shouldErr, tc.err, msgs) {
 					if tc.wantKeys != nil {
-						if len(prv.keys) != len(tc.wantKeys) {
-							t.Fatalf("expected %d keys, got %d", len(tc.wantKeys), len(prv.keys))
+						if len(prv.keys.all) != len(tc.wantKeys) {
+							t.Fatalf("expected %d keys, got %d", len(tc.wantKeys), len(prv.keys.all))
 						}
 						for _, k := range tc.wantKeys {
-							if _, exists := prv.keys[k.KeyID]; !exists {
+							if _, exists := prv.keys.byID[k.KeyID]; !exists {
 								t.Fatalf("expected key %s not found in provider keys", k.KeyID)
 							}
 						}
@@ -441,11 +444,11 @@ func TestNewIdentityProvider(t *testing.T) {
 			}
 
 			if tc.wantKeys != nil {
-				if len(prv.keys) != len(tc.wantKeys) {
-					t.Fatalf("expected %d keys, got %d", len(tc.wantKeys), len(prv.keys))
+				if len(prv.keys.all) != len(tc.wantKeys) {
+					t.Fatalf("expected %d keys, got %d", len(tc.wantKeys), len(prv.keys.all))
 				}
 				for _, k := range tc.wantKeys {
-					if _, exists := prv.keys[k.KeyID]; !exists {
+					if _, exists := prv.keys.byID[k.KeyID]; !exists {
 						t.Fatalf("expected key %s not found in provider keys", k.KeyID)
 					}
 				}

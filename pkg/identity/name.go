@@ -57,7 +57,8 @@ func (n *Name) GetFullName() string {
 		b.WriteString(n.Last)
 	}
 	if n.First != "" {
-		b.WriteString(", " + n.First)
+		b.WriteString(", ")
+		b.WriteString(n.First)
 	}
 	return b.String()
 }

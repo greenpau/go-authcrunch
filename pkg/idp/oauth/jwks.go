@@ -17,6 +17,7 @@ package oauth
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/x509"
@@ -24,24 +25,26 @@ import (
 	"encoding/binary"
 	"encoding/pem"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/util"
 	"io/ioutil"
 	"math/big"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
 // JwksKey is a JSON object that represents a cryptographic key.
 // See https://tools.ietf.org/html/rfc7517#section-4,
 // https://tools.ietf.org/html/rfc7518#section-6.3
 type JwksKey struct {
-	Algorithm    string `json:"alg,omitempty" xml:"alg,omitempty" yaml:"alg,omitempty"`
-	Exponent     string `json:"e,omitempty" xml:"e,omitempty" yaml:"e,omitempty"`
-	KeyID        string `json:"kid,omitempty" xml:"kid,omitempty" yaml:"kid,omitempty"`
-	KeyType      string `json:"kty,omitempty" xml:"kty,omitempty" yaml:"kty,omitempty"`
-	Modulus      string `json:"n,omitempty" xml:"n,omitempty" yaml:"n,omitempty"`
-	PublicKeyUse string `json:"use,omitempty" xml:"use,omitempty" yaml:"use,omitempty"`
-	NotBefore    string `json:"nbf,omitempty" xml:"nbf,omitempty" yaml:"nbf,omitempty"`
+	Algorithm     string   `json:"alg,omitempty" xml:"alg,omitempty" yaml:"alg,omitempty"`
+	Exponent      string   `json:"e,omitempty" xml:"e,omitempty" yaml:"e,omitempty"`
+	KeyID         string   `json:"kid,omitempty" xml:"kid,omitempty" yaml:"kid,omitempty"`
+	KeyType       string   `json:"kty,omitempty" xml:"kty,omitempty" yaml:"kty,omitempty"`
+	Modulus       string   `json:"n,omitempty" xml:"n,omitempty" yaml:"n,omitempty"`
+	PublicKeyUse  string   `json:"use,omitempty" xml:"use,omitempty" yaml:"use,omitempty"`
+	KeyOperations []string `json:"key_ops,omitempty" xml:"key_ops,omitempty" yaml:"key_ops,omitempty"`
+	NotBefore     string   `json:"nbf,omitempty" xml:"nbf,omitempty" yaml:"nbf,omitempty"`
 
 	Curve  string `json:"crv,omitempty" xml:"crv,omitempty" yaml:"crv,omitempty"`
 	CoordX string `json:"x,omitempty" xml:"x,omitempty" yaml:"x,omitempty"`
@@ -54,10 +57,23 @@ type JwksKey struct {
 
 // Validate returns error if JwksKey does not contain relevant information.
 func (k *JwksKey) Validate() error {
+	if k == nil {
+		return errors.ErrJwksKeyIDEmpty
+	}
+	k.publicKey = nil
 	if k.KeyID == "" {
 		return errors.ErrJwksKeyIDEmpty
 	}
 
+	return k.validatePublicKey()
+}
+
+// Remote JWKS may omit kid. Public constructors still require the supplied ID.
+func (k *JwksKey) validatePublicKey() error {
+	k.publicKey = nil
+	if k.KeyType == "OKP" {
+		return k.validateEd25519()
+	}
 	switch k.KeyType {
 	case "RSA":
 		switch k.Algorithm {
@@ -280,4 +296,83 @@ func NewJwksKeyFromRSAPublicKeyPEM(kid, fp string) (*JwksKey, error) {
 	}
 
 	return jk, nil
+}
+
+// validateEd25519 restricts new OKP support to public signature-verification keys.
+// Legacy RSA/EC metadata acceptance remains unchanged.
+func (k *JwksKey) validateEd25519() error {
+	if k.Curve != "Ed25519" {
+		return errors.ErrJwksKeyCurveUnsupported.WithArgs(k.Curve, k.KeyID)
+	}
+	if k.Algorithm != "" && k.Algorithm != "EdDSA" && k.Algorithm != "Ed25519" {
+		return errors.ErrJwksKeyAlgoUnsupported.WithArgs(k.Algorithm, k.KeyID)
+	}
+	if k.PublicKeyUse != "" && k.PublicKeyUse != "sig" {
+		return errors.ErrJwksKeyUsageUnsupported.WithArgs(k.PublicKeyUse, k.KeyID)
+	}
+	if k.CoordY != "" || k.Modulus != "" || k.Exponent != "" || k.SharedSecret != "" {
+		return errors.ErrJwksKeyPublicParameters.WithArgs(k.KeyID)
+	}
+	if k.KeyOperations != nil {
+		seen := make(map[string]bool)
+		for _, op := range k.KeyOperations {
+			// sign/verify is the permitted signature-operation combination.
+			if (op != "sign" && op != "verify") || seen[op] {
+				return errors.ErrJwksKeyVerificationOperation.WithArgs(k.KeyID)
+			}
+			seen[op] = true
+		}
+		if !seen["verify"] {
+			return errors.ErrJwksKeyVerificationOperation.WithArgs(k.KeyID)
+		}
+	}
+	public, err := base64.RawURLEncoding.Strict().DecodeString(k.CoordX)
+	if err != nil || base64.RawURLEncoding.EncodeToString(public) != k.CoordX {
+		return errors.ErrJwksKeyPublicEncoding.WithArgs(k.KeyID)
+	}
+	if len(public) != ed25519.PublicKeySize {
+		return errors.ErrJwksKeyCoordLength.WithArgs(k.KeyID, k.Curve, len(public), ed25519.PublicKeySize)
+	}
+	k.publicKey = ed25519.PublicKey(public)
+	return nil
+}
+
+// NewJwksKeyFromPublicKeyPEM loads an RSA or Ed25519 public PEM verification key.
+// PEM carries no JOSE algorithm restriction; Ed25519 keys allow both JOSE names.
+func NewJwksKeyFromPublicKeyPEM(kid, fp string) (*JwksKey, error) {
+	data, err := ioutil.ReadFile(fp)
+	if err != nil {
+		return nil, err
+	}
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return nil, errors.ErrNotPEMEncodedKey
+	}
+	if block.Type == "RSA PUBLIC KEY" {
+		return NewJwksKeyFromRSAPublicKeyPEM(kid, fp)
+	}
+	if block.Type != "PUBLIC KEY" {
+		return nil, fmt.Errorf("key payload is not a supported public key")
+	}
+	public, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	var key *JwksKey
+	switch pub := public.(type) {
+	case *rsa.PublicKey:
+		key = createJwksKeyFromPubKey(pub)
+	case ed25519.PublicKey:
+		key = &JwksKey{
+			KeyType: "OKP", Curve: "Ed25519", PublicKeyUse: "sig",
+			CoordX: base64.RawURLEncoding.EncodeToString(pub),
+		}
+	default:
+		return nil, fmt.Errorf("key payload is not a supported public key")
+	}
+	key.KeyID = kid
+	if err := key.Validate(); err != nil {
+		return nil, fmt.Errorf("failed creating jwks key: %w", err)
+	}
+	return key, nil
 }

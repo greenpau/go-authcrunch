@@ -16,6 +16,10 @@ package errors
 
 // JWKS Errors
 const (
+	ErrJwksKeyPublicParameters      StandardError = "jwks key %q contains incompatible public key parameters"
+	ErrJwksKeyPublicEncoding        StandardError = "jwks key %q has invalid public key encoding"
+	ErrJwksKeyVerificationOperation StandardError = "jwks key %q does not permit signature verification"
+
 	ErrJwksKeyIDEmpty          StandardError = "jwks key id is empty"
 	ErrJwksKeyAlgoUnsupported  StandardError = "jwks unsupported key algorithm %s for %s"
 	ErrJwksKeyTypeEmpty        StandardError = "jwks key type is empty for %s"

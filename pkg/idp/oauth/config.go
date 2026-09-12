@@ -302,7 +302,7 @@ func (cfg *Config) Validate() error {
 	default:
 		if len(cfg.JwksKeys) > 0 && cfg.AuthorizationURL != "" && cfg.TokenURL != "" {
 			for kid, fp := range cfg.JwksKeys {
-				if _, err := NewJwksKeyFromRSAPublicKeyPEM(kid, fp); err != nil {
+				if _, err := NewJwksKeyFromPublicKeyPEM(kid, fp); err != nil {
 					return errors.ErrIdentityProviderConfig.WithArgs(
 						fmt.Errorf("failed loading kid %q: %v", kid, err),
 					)

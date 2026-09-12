@@ -42,7 +42,8 @@ func readPEMFile(fp string) string {
 	scanner := bufio.NewScanner(fileHandle)
 	for scanner.Scan() {
 		line := scanner.Text()
-		buffer.WriteString(strings.TrimSpace(line) + "\n")
+		buffer.WriteString(strings.TrimSpace(line))
+		buffer.WriteString("\n")
 	}
 	if err := scanner.Err(); err != nil {
 		panic(err)

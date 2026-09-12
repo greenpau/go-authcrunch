@@ -113,27 +113,37 @@ func (k *CryptoKeyConfig) SetCookieNames(cookieNames []string) {
 // ToString returns string representation of a crypto key config.
 func (k *CryptoKeyConfig) ToString() string {
 	var sb strings.Builder
-	sb.WriteString("key config for kid: " + k.ID)
+	sb.WriteString("key config for kid: ")
+	sb.WriteString(k.ID)
 	if k.Usage != "" {
-		sb.WriteString(", usage: " + k.Usage)
+		sb.WriteString(", usage: ")
+		sb.WriteString(k.Usage)
 	}
 	if k.Source != "" {
-		sb.WriteString(", source: " + k.Source)
+		sb.WriteString(", source: ")
+		sb.WriteString(k.Source)
 	}
 	if k.Secret != "" {
-		sb.WriteString(", secret: " + k.Secret)
+		sb.WriteString(", secret: ")
+		sb.WriteString(k.Secret)
 	}
 	if k.Algorithm != "" {
-		sb.WriteString(", algo: " + k.Algorithm)
+		sb.WriteString(", algo: ")
+		sb.WriteString(k.Algorithm)
 	}
 	if k.EnvVarName != "" {
-		sb.WriteString(", env var as " + k.EnvVarType + ": " + k.EnvVarName)
+		sb.WriteString(", env var as ")
+		sb.WriteString(k.EnvVarType)
+		sb.WriteString(": ")
+		sb.WriteString(k.EnvVarName)
 	}
 	if k.FilePath != "" {
-		sb.WriteString(", file path: " + k.FilePath)
+		sb.WriteString(", file path: ")
+		sb.WriteString(k.FilePath)
 	}
 	if k.DirPath != "" {
-		sb.WriteString(", dir path: " + k.DirPath)
+		sb.WriteString(", dir path: ")
+		sb.WriteString(k.DirPath)
 	}
 	if k.validated || k.parsed {
 		sb.WriteString(", flags:")
@@ -145,7 +155,8 @@ func (k *CryptoKeyConfig) ToString() string {
 		}
 	}
 	if k.TokenName != "" {
-		sb.WriteString(", token name=" + k.TokenName)
+		sb.WriteString(", token name=")
+		sb.WriteString(k.TokenName)
 	}
 	if k.TokenLifetime != 0 {
 		sb.WriteString(fmt.Sprintf(" lifetime=%d", k.TokenLifetime))

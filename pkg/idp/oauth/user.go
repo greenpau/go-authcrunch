@@ -228,11 +228,15 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 				errMsg := data["error"].(map[string]interface{})
 				if v, exists := errMsg["code"]; exists {
 					errCode := strconv.FormatFloat(v.(float64), 'f', 0, 64)
-					fbError.WriteString("code=" + errCode)
+					fbError.WriteString("code=")
+					fbError.WriteString(errCode)
 				}
 				for _, k := range []string{"fbtrace_id", "message", "type"} {
 					if v, exists := errMsg[k]; exists {
-						fbError.WriteString(", " + k + "=" + v.(string))
+						fbError.WriteString(", ")
+						fbError.WriteString(k)
+						fbError.WriteString("=")
+						fbError.WriteString(v.(string))
 					}
 				}
 				return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, error: %s", fbError.String())

@@ -16,10 +16,13 @@ package oauth
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
@@ -35,9 +38,17 @@ const (
 
 // IdentityProvider represents OAuth-based identity provider.
 type IdentityProvider struct {
-	config           *Config
-	metadata         map[string]interface{}
-	keys             map[string]*JwksKey
+	setupMu  sync.RWMutex
+	ready    atomic.Bool
+	config   *Config
+	metadata map[string]interface{}
+	// Published key sets are immutable; readers never observe partial refreshes.
+	keyMu            sync.RWMutex
+	keys             oauthJwksSet
+	staticKeys       oauthJwksSet
+	keyFetchVersion  uint64
+	keyFetchMu       sync.Mutex
+	keyFetchError    error
 	authorizationURL string
 	tokenURL         string
 	keysURL          string
@@ -76,6 +87,9 @@ type IdentityProvider struct {
 	logger        *zap.Logger
 	browserConfig *browserConfig
 	configured    bool
+	stop          chan struct{}
+	stateDone     chan struct{}
+	stopOnce      sync.Once
 	// Disabled the check for the presence of email field in a token.
 	disableEmailClaimCheck bool
 }
@@ -87,10 +101,11 @@ func NewIdentityProvider(cfg *Config, logger *zap.Logger) (*IdentityProvider, er
 	}
 
 	b := &IdentityProvider{
-		config: cfg,
-		state:  newStateManager(),
-		keys:   make(map[string]*JwksKey),
-		logger: logger,
+		config:    cfg,
+		state:     newStateManager(),
+		stop:      make(chan struct{}),
+		stateDone: make(chan struct{}),
+		logger:    logger,
 	}
 
 	if err := b.config.Validate(); err != nil {
@@ -109,9 +124,25 @@ func NewIdentityProvider(cfg *Config, logger *zap.Logger) (*IdentityProvider, er
 		}
 	}
 
-	go manageStateManager(b.state)
+	go func() { defer close(b.stateDone); manageStateManager(b.state, b.stop) }()
 
 	return b, nil
+}
+
+// Close releases the OAuth state worker. Call after draining provider requests.
+// It is safe to call Close repeatedly or concurrently.
+func (b *IdentityProvider) Close() {
+	if b == nil {
+		return
+	}
+	b.stopOnce.Do(func() {
+		if b.stop != nil {
+			close(b.stop)
+		}
+	})
+	if b.stateDone != nil {
+		<-b.stateDone
+	}
 }
 
 // GetRealm return authentication realm.
@@ -136,6 +167,8 @@ func (b *IdentityProvider) Configured() bool {
 
 // GetConfig returns IdentityProvider configuration.
 func (b *IdentityProvider) GetConfig() map[string]interface{} {
+	b.setupMu.RLock()
+	defer b.setupMu.RUnlock()
 	var m map[string]interface{}
 	j, _ := json.Marshal(b.config)
 	json.Unmarshal(j, &m)
@@ -267,6 +300,10 @@ func (b *IdentityProvider) Configure() error {
 		b.userOrgFilters = append(b.userOrgFilters, regexp.MustCompile(pattern))
 	}
 
+	if err := b.installStaticKeys(); err != nil {
+		return err
+	}
+
 	if b.config.DelayStart > 0 {
 		go b.fetchConfig()
 	} else {
@@ -281,8 +318,7 @@ func (b *IdentityProvider) Configure() error {
 		zap.String("client_id", b.config.ClientID),
 		zap.String("server_id", b.config.ServerID),
 		zap.String("domain_name", b.config.DomainName),
-		zap.Any("metadata", b.metadata),
-		zap.Any("jwks_keys", b.keys),
+		zap.Int("static_key_count", len(b.staticKeys.all)),
 		zap.Strings("required_token_fields", b.config.RequiredTokenFields),
 		zap.Int("delayed_by", b.config.DelayStart),
 		zap.Int("retry_attempts", b.config.RetryAttempts),
@@ -297,17 +333,30 @@ func (b *IdentityProvider) Configure() error {
 	return nil
 }
 
-func (b *IdentityProvider) fetchConfig() error {
+func (b *IdentityProvider) fetchConfig() (err error) {
+	b.setupMu.Lock()
+	defer func() {
+		if err == nil {
+			b.ready.Store(true)
+		}
+		b.setupMu.Unlock()
+	}()
 	if b.config.DelayStart > 0 {
 		b.logger.Debug(
 			"Delaying identity provider configuration",
 			zap.String("identity_provider_name", b.config.Name),
 			zap.Int("delayed_by", b.config.DelayStart),
 		)
-		time.Sleep(time.Duration(b.config.DelayStart) * time.Second)
+		timer := time.NewTimer(time.Duration(b.config.DelayStart) * time.Second)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-b.stop:
+			return fmt.Errorf("OAuth provider closed before discovery")
+		}
 	}
 
-	if b.authorizationURL == "" {
+	if b.authorizationURL == "" || (len(b.config.JwksKeys) > 0 && b.config.MetadataURL != "") {
 		if b.config.RetryAttempts > 0 {
 			for i := 0; i < b.config.RetryAttempts; i++ {
 				err := b.fetchMetadataURL()
@@ -343,7 +392,7 @@ func (b *IdentityProvider) fetchConfig() error {
 		)
 	}
 
-	if !b.disableKeyVerification {
+	if !b.disableKeyVerification && (b.keysURL != "" || len(b.staticKeys.all) == 0) {
 		if b.config.RetryAttempts > 0 {
 			for i := 0; i < b.config.RetryAttempts; i++ {
 				err := b.fetchKeysURL()
@@ -375,123 +424,64 @@ func (b *IdentityProvider) fetchMetadataURL() error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("GET", b.config.MetadataURL, nil)
+	defer cli.CloseIdleConnections()
+	req, err := http.NewRequest(http.MethodGet, b.config.MetadataURL, nil)
+	if err != nil {
+		return err
+	}
 	resp, err := cli.Do(req)
 	if err != nil {
 		return err
 	}
-	respBody, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("OAuth metadata endpoint returned HTTP %d", resp.StatusCode)
+	}
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxOAuthJwksBytes+1))
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(respBody, &b.metadata); err != nil {
+	if len(respBody) > maxOAuthJwksBytes {
+		return fmt.Errorf("OAuth metadata response exceeds %d bytes", maxOAuthJwksBytes)
+	}
+	var metadata map[string]interface{}
+	if err := json.Unmarshal(respBody, &metadata); err != nil {
 		return err
 	}
 	for _, k := range []string{"authorization_endpoint", "token_endpoint", "jwks_uri"} {
-		if _, exists := b.metadata[k]; !exists {
+		value, exists := metadata[k]
+		if !exists {
 			return errors.ErrIdentityProviderOauthMetadataFieldNotFound.WithArgs(k, b.config.Driver)
 		}
+		if text, ok := value.(string); !ok || text == "" {
+			return fmt.Errorf("OAuth metadata %s must be a nonempty string", k)
+		}
 	}
-	b.authorizationURL = b.metadata["authorization_endpoint"].(string)
-	b.tokenURL = b.metadata["token_endpoint"].(string)
-	b.keysURL = b.metadata["jwks_uri"].(string)
-	if _, exists := b.metadata["userinfo_endpoint"]; exists {
-		b.userInfoURL = b.metadata["userinfo_endpoint"].(string)
+	for _, k := range []string{"issuer", "userinfo_endpoint", "end_session_endpoint"} {
+		if value, exists := metadata[k]; exists {
+			if _, ok := value.(string); !ok {
+				return fmt.Errorf("OAuth metadata %s must be a string", k)
+			}
+		}
 	}
-	if _, exists := b.metadata["end_session_endpoint"]; exists {
-		b.logoutURL = b.metadata["end_session_endpoint"].(string)
+	// Publish only validated metadata, preserving explicitly configured endpoints.
+	b.metadata = metadata
+	if b.config.AuthorizationURL == "" {
+		b.authorizationURL = metadata["authorization_endpoint"].(string)
 	}
-	if issuer, exists := b.metadata["issuer"].(string); exists && issuer != "" && b.config.Issuer == "" {
+	if b.config.TokenURL == "" {
+		b.tokenURL = metadata["token_endpoint"].(string)
+	}
+	b.keysURL = metadata["jwks_uri"].(string)
+	b.userInfoURL, _ = metadata["userinfo_endpoint"].(string)
+	b.logoutURL, _ = metadata["end_session_endpoint"].(string)
+	if issuer, exists := metadata["issuer"].(string); exists && issuer != "" && b.config.Issuer == "" {
 		b.config.Issuer = issuer
 	}
-
-	switch b.config.Driver {
-	case "cognito":
+	if b.config.Driver == "cognito" {
 		b.logoutURL = strings.ReplaceAll(b.authorizationURL, "oauth2/authorize", "logout")
 	}
 	return nil
-}
-
-func (b *IdentityProvider) countFetchKeysAttempt() {
-	b.lastKeyFetch = time.Now().UTC()
-	b.keyFetchAttempts++
-}
-
-func (b *IdentityProvider) fetchKeysURL() error {
-	if b.keyFetchAttempts > 3 {
-		timeDiff := time.Now().UTC().Sub(b.lastKeyFetch).Minutes()
-		if timeDiff < 5 {
-			return errors.ErrIdentityProviderOauthJwksKeysTooManyAttempts
-		}
-		b.lastKeyFetch = time.Now().UTC()
-		b.keyFetchAttempts = 0
-	}
-	b.countFetchKeysAttempt()
-
-	//  Create new http client instance.
-	cli, err := b.newBrowser()
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("GET", b.keysURL, nil)
-	if err != nil {
-		return err
-	}
-
-	// Fetch data from the URL.
-	resp, err := cli.Do(req)
-	if err != nil {
-		return err
-	}
-
-	respBody, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return err
-	}
-	data := make(map[string]interface{})
-
-	if err := json.Unmarshal(respBody, &data); err != nil {
-		return err
-	}
-
-	if _, exists := data["keys"]; !exists {
-		return errors.ErrIdentityProviderOauthJwksResponseKeysNotFound
-	}
-
-	jwksJSON, err := json.Marshal(data["keys"])
-	if err != nil {
-		return errors.ErrIdentityProviderOauthJwksKeysParseFailed.WithArgs(err)
-	}
-
-	keys := []*JwksKey{}
-	if err := json.Unmarshal(jwksJSON, &keys); err != nil {
-		return err
-	}
-
-	if len(keys) < 1 {
-		return errors.ErrIdentityProviderOauthJwksKeysNotFound
-	}
-
-	var keyErrors []error
-
-	for _, k := range keys {
-		if err := k.Validate(); err != nil {
-			keyErrors = append(keyErrors, err)
-			continue
-		}
-		b.keys[k.KeyID] = k
-	}
-
-	switch {
-	case len(b.keys) > 0:
-		return nil
-	case len(keyErrors) > 0:
-		return errors.ErrIdentityProviderOauthJwksInvalidKey.WithArgs(keyErrors)
-	default:
-		return errors.ErrIdentityProviderOauthJwksKeysNotFound
-	}
 }
 
 // GetLoginIcon returns the instance of the icon associated with the provider.
@@ -501,6 +491,11 @@ func (b *IdentityProvider) GetLoginIcon() *icons.LoginIcon {
 
 // GetLogoutURL returns the logout URL associated with the provider.
 func (b *IdentityProvider) GetLogoutURL() string {
+	if b.configured && !b.ready.Load() {
+		return ""
+	}
+	b.setupMu.RLock()
+	defer b.setupMu.RUnlock()
 	if b.config.LogoutURL != "" {
 		return b.config.LogoutURL
 	}

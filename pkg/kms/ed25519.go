@@ -17,62 +17,23 @@ package kms
 import (
 	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/subtle"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 
-	jwtlib "github.com/golang-jwt/jwt/v5"
-
+	"github.com/greenpau/go-authcrunch/internal/jwtutil"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
-// golang-jwt implements Ed25519 under the EdDSA JOSE name. RFC 9864 adds a
-// distinct Ed25519 name for the same primitive. Its method must return that
-// exact name so parser algorithm allowlists continue to distinguish the two.
-type signingMethodEd25519 struct{}
-
-func init() {
-	jwtlib.RegisterSigningMethod("Ed25519", func() jwtlib.SigningMethod {
-		return &signingMethodEd25519{}
-	})
-}
-
-func (*signingMethodEd25519) Alg() string { return "Ed25519" }
-
-func (*signingMethodEd25519) Verify(data string, signature []byte, key any) error {
-	return jwtlib.SigningMethodEdDSA.Verify(data, signature, key)
-}
-
-func (*signingMethodEd25519) Sign(data string, key any) ([]byte, error) {
-	private, ok := key.(ed25519.PrivateKey)
-	if !ok {
-		return nil, jwtlib.ErrInvalidKeyType
-	}
-	if err := validateEd25519PrivateKey(private); err != nil {
-		return nil, err
-	}
-	// Pure Ed25519 signs the original JWS input, without a prehash or context.
-	return ed25519.Sign(private, []byte(data)), nil
-}
-
 func validateEd25519PrivateKey(key ed25519.PrivateKey) error {
-	// Check length before Seed, Public, or Sign, which assume a valid key.
-	if len(key) != ed25519.PrivateKeySize {
-		return jwtlib.ErrInvalidKey
-	}
-	derived := ed25519.NewKeyFromSeed(key.Seed())
-	if subtle.ConstantTimeCompare(key, derived) != 1 {
-		return jwtlib.ErrInvalidKey
-	}
-	return nil
+	return jwtutil.ValidateEd25519PrivateKey(key)
 }
 
 func (k *CryptoKey) signEd25519(method, data string) (interface{}, error) {
 	if method != "EdDSA" && method != "Ed25519" {
 		return nil, errors.ErrDataSigningFailed.WithArgs("Ed25519", "unsupported method")
 	}
-	signature, err := (&signingMethodEd25519{}).Sign(data, k.Sign.Secret)
+	signature, err := jwtutil.Ed25519().Sign(data, k.Sign.Secret)
 	if err != nil {
 		return nil, errors.ErrDataSigningFailed.WithArgs(method, err)
 	}

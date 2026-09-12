@@ -66,6 +66,8 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			"metadata_url",
 			"authorization_url",
 			"token_url",
+			"issuer",
+			"access_token_audience",
 			// Disabled features.
 			"metadata_discovery_disabled",
 			"key_verification_disabled",
@@ -129,11 +131,26 @@ func (cfg *IdentityProviderConfig) Validate() error {
 		return errors.ErrIdentityProviderConfigInvalid.WithArgs(err)
 	}
 
-	b, _ := json.Marshal(cfg.Params)
+	if cfg.Kind == "oauth" {
+		for _, field := range []string{"issuer", "access_token_audience"} {
+			if value, exists := cfg.Params[field]; exists {
+				if _, ok := value.(string); !ok {
+					return errors.ErrIdentityProviderConfigInvalid.WithArgs(fmt.Errorf("%s must be a string", field))
+				}
+			}
+		}
+	}
+
+	b, err := json.Marshal(cfg.Params)
+	if err != nil {
+		return errors.ErrIdentityProviderConfigInvalid.WithArgs(err)
+	}
 	switch cfg.Kind {
 	case "oauth":
 		config := &oauth.Config{}
-		json.Unmarshal(b, config)
+		if err := json.Unmarshal(b, config); err != nil {
+			return errors.ErrIdentityProviderConfigInvalid.WithArgs(err)
+		}
 		config.Name = cfg.Name
 		if err := config.Validate(); err != nil {
 			return errors.ErrIdentityProviderConfigInvalid.WithArgs(err)
