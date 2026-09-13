@@ -60,6 +60,7 @@ the supported shapes:
 | Package | Constructor arguments | Result |
 | --- | --- | --- |
 | `pkg/authn/admin_api/parser` | `NewAdminAPIConfigFromDirectives(statements []string)` | `*authn.AdminAPIConfig` |
+| `pkg/authn/cookie/parser` | `NewCookieConfigFromDirectives(statements []string)` | `*cookie.Config` |
 | `pkg/authn/token_refresh/parser` | `NewTokenRefreshConfigFromDirectives(statements []string)` | `*authn.TokenRefreshConfig` |
 | `pkg/oidc/parser` | `NewOIDCClientConfigFromDirectives(nickname string, statements []string)` | `*oidc.ClientConfig` |
 | `pkg/oidc/parser` | `NewOIDCProviderConfigFromDirectives(statements []string, applications map[string]*oidc.ClientConfig)` | `*oidc.Config` |

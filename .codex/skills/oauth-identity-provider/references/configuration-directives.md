@@ -145,7 +145,12 @@ fields, filter regex validation, icon defaults, and public-key validation remain
 owned by `oauth.Config.Validate`. The parser adds strict grammar and duplicate
 checks, not a second implementation of domain constraints. When identity token
 cookies are enabled without an explicit name, validation uses
-`cookie.DefaultIdentityTokenCookieName`.
+`cookie.NewConfig().IdentityTokenCookieName` (`AUTHP_ID_TOKEN`). The public
+`DefaultIdentityTokenCookieName` constant is only the suffix. An explicit
+provider cookie name remains authoritative for issuance, Whoami, and logout;
+see the [shared cookie owner](../../authentication-portal-cookies/SKILL.md).
+`pkg/authn/oauth_cookie_e2e_test.go` verifies both defaults and overrides through
+the real TLS login, Whoami, and external logout workflow.
 
 Validation can read configured static key files; parsing does not fetch
 discovery/JWKS, generate credentials, start workers, or bind sockets. Repeated

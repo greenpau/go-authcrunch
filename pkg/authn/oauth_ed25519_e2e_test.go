@@ -239,7 +239,7 @@ type oidcE2EPortal struct {
 	issuer *oidcE2EIssuer
 }
 
-type oidcE2ETrustConfig struct{ issuer, audience string }
+type oidcE2ETrustConfig struct{ issuer, audience, identityCookie string }
 
 func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode string, trust ...oidcE2ETrustConfig) *oidcE2EPortal {
 	t.Helper()
@@ -304,6 +304,12 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 	if issuer.accessMode == "userinfo" {
 		add("user_info_fields", "email", "roles")
 	}
+	if settings.identityCookie != "" {
+		add("identity", "token", "cookie", "enabled")
+		if settings.identityCookie != "default" {
+			add("identity", "token", "cookie", "name", settings.identityCookie)
+		}
+	}
 	providerConfig, err := idpparser.NewOAuthIdentityProviderConfigFromDirectives("upstream", directives)
 	if err != nil {
 		t.Fatal("parse OAuth provider directives", err)
@@ -344,7 +350,12 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 	}
 	cookies := cookie.NewConfig()
 	cookies.AccessTokenCookieName = "oauth_portal_token"
-	portal, err := authn.NewPortal(authn.PortalParameters{Config: &authn.PortalConfig{Name: "oauth-e2e", IdentityStores: []string{"local"}, IdentityProviders: []string{"upstream"}, RawCryptoKeyStoreConfig: keys, CookieConfig: cookies}, Logger: logger, IdentityStores: []ids.IdentityStore{store}, IdentityProviders: []idp.IdentityProvider{provider}})
+	portalConfig := &authn.PortalConfig{Name: "oauth-e2e", IdentityStores: []string{"local"}, IdentityProviders: []string{"upstream"}, RawCryptoKeyStoreConfig: keys, CookieConfig: cookies}
+	if settings.identityCookie != "" {
+		// Identity-cookie consumers need permission to call the portal's Whoami.
+		portalConfig.AccessListConfigs = []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer"}, Action: "allow stop"}}
+	}
+	portal, err := authn.NewPortal(authn.PortalParameters{Config: portalConfig, Logger: logger, IdentityStores: []ids.IdentityStore{store}, IdentityProviders: []idp.IdentityProvider{provider}})
 	if err != nil {
 		t.Fatal("construct OAuth E2E portal", err)
 	}

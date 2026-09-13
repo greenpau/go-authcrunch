@@ -18,9 +18,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 // Factory holds configuration and associated finctions
@@ -47,6 +44,9 @@ func NewFactory(c *Config) (*Factory, error) {
 	} else {
 		f.config = c
 	}
+	if err := f.config.Validate(); err != nil {
+		return nil, err
+	}
 	if f.config.Domains != nil {
 		// Strip leading dots from domain values (RFC 6265 Section 5.2.3).
 		for k, v := range f.config.Domains {
@@ -71,8 +71,6 @@ func NewFactory(c *Config) (*Factory, error) {
 		f.domains = domains
 	}
 
-	f.config.ApplyDefaults()
-
 	f.CookieNamePrefix = f.config.CookieNamePrefix
 	f.RefererCookieName = f.config.RefererCookieName
 	f.SessionIDCookieName = f.config.SessionIDCookieName
@@ -82,15 +80,6 @@ func NewFactory(c *Config) (*Factory, error) {
 	f.RefreshTokenCookieName = f.config.RefreshTokenCookieName
 	f.OIDCSessionIDCookieName = f.config.OIDCSessionIDCookieName
 	f.OIDCRequestIDCookieName = f.config.OIDCRequestIDCookieName
-
-	switch strings.ToLower(f.config.SameSite) {
-	case "":
-	case "lax", "strict", "none":
-		caser := cases.Title(language.English)
-		f.config.SameSite = caser.String(f.config.SameSite)
-	default:
-		return nil, fmt.Errorf("the SameSite cookie attribute %q is invalid", f.config.SameSite)
-	}
 
 	hasOverlaps, duplicate := f.HasCookieNameOverlaps()
 	if hasOverlaps {

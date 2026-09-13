@@ -23,6 +23,8 @@ normalization; never broaden trust merely to make a proxy setup pass.
 
 Cookie transport returns session/expiry metadata only. Cookie names come from
 the portal factory's `RefreshTokenCookieName`, defaulting to `AUTHP_REFRESH_TOKEN`.
+Use the [shared cookie owner](../authentication-portal-cookies/SKILL.md) for
+`cookie prefix`, `cookie refresh token name`, and the reusable cookie parser.
 Honor the common prefix and explicit name settings. An enabled token refresh
 `cookie name` directive overrides the shared refresh-cookie setting before
 factory construction. Read that effective name for request extraction, browser
@@ -94,5 +96,6 @@ secure-cookie, browser, or hardware WebAuthn behavior; name those limits when
 reporting validation. Update UI asset inventories when adding embedded files.
 `TestE2ETokenRefreshCookieLifecycle` in
 `pkg/authn/token_refresh_config_parser_e2e_test.go` uses a real TLS client and
-cookie jar to check prefix/name overrides, legacy-path cleanup, rotation, logout,
-and revocation. Keep ordinary fixtures on the common portal cookie convention.
+cookie jar with both public configuration parsers to check prefix/name overrides,
+legacy-path cleanup, rotation, logout, and revocation. Keep ordinary fixtures on
+the common portal cookie convention.

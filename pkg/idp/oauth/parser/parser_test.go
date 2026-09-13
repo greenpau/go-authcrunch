@@ -164,7 +164,7 @@ func TestOAuthIdentityProviderDirectiveStates(t *testing.T) {
 				if reflect.ValueOf(config).Elem().FieldByName(tc.field).Bool() != want {
 					t.Fatal("directive state does not match the typed setting")
 				}
-				if config.IdentityTokenCookieEnabled && config.IdentityTokenCookieName != cookie.DefaultIdentityTokenCookieName {
+				if config.IdentityTokenCookieEnabled && config.IdentityTokenCookieName != cookie.NewConfig().IdentityTokenCookieName {
 					t.Fatal("identity token cookie did not use the repository default")
 				}
 				for _, second := range []string{"enabled", "disabled"} {

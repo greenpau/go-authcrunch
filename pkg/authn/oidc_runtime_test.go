@@ -51,8 +51,8 @@ func TestOIDCCookieConfiguration(t *testing.T) {
 		refresh                                          bool
 	}{
 		{name: "custom names", mount: "/auth", sessionName: "PORTAL_LOGIN", requestName: "PORTAL_REQUEST"},
-		{name: "invalid session name", mount: "/auth", sessionName: "invalid name", wantError: "invalid oidc cookie name"},
-		{name: "invalid request name", mount: "/auth", requestName: "invalid;name", wantError: "invalid oidc cookie name"},
+		{name: "invalid session name", mount: "/auth", sessionName: "invalid name", wantError: "invalid cookie name"},
+		{name: "invalid request name", mount: "/auth", requestName: "invalid;name", wantError: "invalid cookie name"},
 		{name: "optional host prefix at root", sessionName: "__Host-session", requestName: "__Host-request"},
 		{name: "host session at nested mount", mount: "/auth", sessionName: "__Host-session", wantError: "root issuer path"},
 		{name: "host request at nested mount", mount: "/auth", requestName: "__Host-request", wantError: "root issuer path"},

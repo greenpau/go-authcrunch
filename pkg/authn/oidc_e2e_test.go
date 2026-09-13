@@ -44,6 +44,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	cookieparser "github.com/greenpau/go-authcrunch/pkg/authn/cookie/parser"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
@@ -110,9 +111,13 @@ func newOIDCE2EFixtureWithProviderDirectives(t *testing.T, mount string, refresh
 			"applications consenting-web trusted-web post-web browser-app",
 		}
 	}
-	portalConfig := &authn.PortalConfig{Name: "oidc-e2e", CookieConfig: cookie.NewConfig(), API: &authn.APIConfig{AdminEnabled: true, ProfileEnabled: true}, IdentityStores: []string{"oidc-local"}}
-	if len(cookieConfigs) != 0 {
-		portalConfig.CookieConfig = cookieConfigs[0]
+	portalConfig := &authn.PortalConfig{Name: "oidc-e2e", API: &authn.APIConfig{AdminEnabled: true, ProfileEnabled: true}, IdentityStores: []string{"oidc-local"}}
+	cookies := cookie.NewConfig()
+	if len(cookieConfigs) != 0 && cookieConfigs[0] != nil {
+		cookies = cookieConfigs[0]
+	}
+	if err := portalConfig.ConfigureCookies(cookies); err != nil {
+		t.Fatal(err)
 	}
 	if refresh {
 		portalConfig.RefreshTokens = &authn.TokenRefreshConfig{Enabled: true, PublicOrigin: "https://" + server.Listener.Addr().String(), BasePath: mount, Realms: []string{"local"}, BodyTransportEnabled: true}
@@ -444,19 +449,35 @@ func oidcE2ECookie(t *testing.T, response oidcE2EResponse, name, path string, ma
 }
 
 func TestE2EOIDCProviderBrowserConsent(t *testing.T) {
+	initialized := cookie.NewConfig()
+	if err := initialized.SetCookieNamePrefix("INITIALIZED"); err != nil {
+		t.Fatal(err)
+	}
 	for _, tc := range []struct {
 		name, mount, sessionName, requestName string
+		directives                            []string
 		cookies                               *cookie.Config
 		refresh                               bool
 	}{
 		{name: "root", sessionName: "AUTHP_OIDC_SESSION_ID", requestName: "AUTHP_OIDC_REQUEST_ID"},
 		{name: "auth mount", mount: "/auth", sessionName: "AUTHP_OIDC_SESSION_ID", requestName: "AUTHP_OIDC_REQUEST_ID"},
 		{name: "nested mount", mount: "/tenant/custom", sessionName: "AUTHP_OIDC_SESSION_ID", requestName: "AUTHP_OIDC_REQUEST_ID"},
-		{name: "custom prefix with refresh", mount: "/auth", cookies: &cookie.Config{CookieNamePrefix: "PORTAL"}, sessionName: "PORTAL_OIDC_SESSION_ID", requestName: "PORTAL_OIDC_REQUEST_ID", refresh: true},
-		{name: "explicit names", mount: "/tenant/custom", cookies: &cookie.Config{CookieNamePrefix: "PORTAL", OIDCSessionIDCookieName: "LOGIN", OIDCRequestIDCookieName: "REQUEST"}, sessionName: "LOGIN", requestName: "REQUEST"},
+		{name: "custom prefix with refresh", mount: "/auth", directives: []string{"cookie prefix PORTAL"}, sessionName: "PORTAL_OIDC_SESSION_ID", requestName: "PORTAL_OIDC_REQUEST_ID", refresh: true},
+		{name: "explicit names", mount: "/tenant/custom", directives: []string{"cookie oidc session id name LOGIN", "cookie prefix PORTAL", "cookie oidc request id name REQUEST"}, sessionName: "LOGIN", requestName: "REQUEST"},
+		{name: "constructor prefix change", mount: "/auth", cookies: initialized, sessionName: "INITIALIZED_OIDC_SESSION_ID", requestName: "INITIALIZED_OIDC_REQUEST_ID", refresh: true},
+		{name: "explicit old default", mount: "/auth", directives: []string{"cookie oidc session id name AUTHP_OIDC_SESSION_ID", "cookie prefix PORTAL"}, sessionName: "AUTHP_OIDC_SESSION_ID", requestName: "PORTAL_OIDC_REQUEST_ID"},
+		{name: "explicit names after prefix", mount: "/auth", directives: []string{"cookie prefix PORTAL", "cookie oidc session id name LOGIN", "cookie oidc request id name REQUEST"}, sessionName: "LOGIN", requestName: "REQUEST"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			f := newOIDCE2EFixture(t, tc.mount, tc.refresh, tc.cookies)
+			cookies := tc.cookies
+			if cookies == nil {
+				var err error
+				cookies, err = cookieparser.NewCookieConfigFromDirectives(tc.directives)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			f := newOIDCE2EFixture(t, tc.mount, tc.refresh, cookies)
 			cookiePath := tc.mount
 			if cookiePath == "" {
 				cookiePath = "/"
@@ -539,6 +560,17 @@ func TestE2EOIDCProviderBrowserConsent(t *testing.T) {
 			}
 			oidcE2ECookie(t, loggedOut, tc.sessionName, cookiePath, -1)
 			oidcE2ECookie(t, loggedOut, tc.requestName, cookiePath, -1)
+			allowed := map[string]bool{}
+			for _, name := range []string{cookies.SessionIDCookieName, cookies.RefererCookieName, cookies.SandboxIDCookieName, cookies.IdentityTokenCookieName, cookies.AccessTokenCookieName, cookies.RefreshTokenCookieName, cookies.OIDCSessionIDCookieName, cookies.OIDCRequestIDCookieName} {
+				allowed[name] = true
+			}
+			for _, response := range []oidcE2EResponse{start, loginPage, completed, approval, pending, loggedOut} {
+				for _, emitted := range (&http.Response{Header: response.header}).Cookies() {
+					if !allowed[emitted.Name] {
+						t.Fatal("portal emitted a cookie outside its configured names")
+					}
+				}
+			}
 			target, _ := url.Parse(f.issuer + "/oidc/continue")
 			for _, c := range f.client.Jar.Cookies(target) {
 				if c.Name == tc.sessionName || c.Name == tc.requestName {

@@ -167,6 +167,14 @@ set the two names explicitly. For example, `"cookie_config":
 with other portal cookies. Portals with overlapping paths on one host need
 distinct prefixes or explicit names.
 
+The reusable cookie parser accepts `cookie prefix PORTAL`,
+`cookie oidc session id name LOGIN_SESSION`, and
+`cookie oidc request id name LOGIN_REQUEST`. Apply its typed result with
+`PortalConfig.ConfigureCookies`. For a config already initialized by
+`cookie.NewConfig`, use `SetCookieNamePrefix` instead of assigning the prefix
+field. See [cookie grammar and application](../../authentication-portal-cookies/references/directives.md)
+for explicit-name precedence, all cookie roles, and consumer integration.
+
 Both cookies are host-only, Secure, HttpOnly, SameSite=Lax, and scoped to the
 issuer mount (`/` for a root issuer). Their lifetime follows provider session
 and interaction expiry. These attributes are independent of access-cookie

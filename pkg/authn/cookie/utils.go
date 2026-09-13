@@ -45,7 +45,7 @@ func (f *Factory) evalHost(h string) *DomainConfig {
 		var candidate *DomainConfig
 		for _, k := range f.domains {
 			if h == k {
-				return f.config.Domains[k]
+				return domainAttributes(f.config.Domains[k])
 			}
 			if strings.HasSuffix(h, "."+k) {
 				candidate = f.config.Domains[k]
@@ -53,7 +53,7 @@ func (f *Factory) evalHost(h string) *DomainConfig {
 		}
 		if candidate != nil {
 			// Partial match between the provided hostname and the config domain.
-			return candidate
+			return domainAttributes(candidate)
 		}
 	}
 
@@ -84,4 +84,14 @@ func (f *Factory) evalHost(h string) *DomainConfig {
 	c.Insecure = f.config.Insecure
 	c.SameSite = f.config.SameSite
 	return c
+}
+
+// A domain policy can select a host while requesting host-only cookies.
+func domainAttributes(config *DomainConfig) *DomainConfig {
+	if config == nil || !config.StripDomainEnabled {
+		return config
+	}
+	attributes := *config
+	attributes.Domain = ""
+	return &attributes
 }

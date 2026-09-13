@@ -78,6 +78,12 @@ configuration, integration, and operational guidance in the narrow owning
 cross-cutting invariants, and README to onboarding and common commands.
 Use `skill-authoring-patterns` with the default `skill-creator` for skill work.
 
+## Portal Cookies
+
+Use `authentication-portal-cookies` for reusable cookie directives, common
+prefixes, explicit names, factory attributes, and cookie interoperability across
+portal features and gatekeepers.
+
 ## Refresh Tokens
 
 Use `refresh-token-implementation` for portal refresh configuration, issuance,

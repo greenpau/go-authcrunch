@@ -1,0 +1,4 @@
+interface:
+  display_name: "Authentication Portal Cookies"
+  short_description: "Maintain cookie directives, names, and factory behavior"
+  default_prompt: "Use $authentication-portal-cookies to maintain reusable cookie configuration, common prefixes, explicit names, and real consumer cookie lifecycle tests."

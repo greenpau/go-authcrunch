@@ -81,7 +81,9 @@ no cookies during login, refresh, or logout, including error responses.
 
 OIDC browser credentials use the portal cookie factory's configurable names:
 `AUTHP_OIDC_SESSION_ID` and `AUTHP_OIDC_REQUEST_ID` by default. They honor
-`cookie_config.cookie_name_prefix` and explicit name overrides. Credentials are
+`cookie_config.cookie_name_prefix` and explicit name overrides. Use the
+[shared cookie parser and prefix API](../authentication-portal-cookies/SKILL.md)
+for directive configuration and post-initialization prefix changes. Credentials are
 random, host-only cookies with Secure, HttpOnly, SameSite=Lax, and the issuer
 mount as Path (root issuers use `/`). Use distinct names or prefixes for portals
 with overlapping mounts on one host. Issuance and deletion use matching paths;

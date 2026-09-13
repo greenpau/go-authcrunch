@@ -140,6 +140,7 @@ func (g *Gatekeeper) configure() error {
 		}
 	} else {
 		g.opts.AuthorizationCookieNames = []string{
+			cookie.NewConfig().AccessTokenCookieName,
 			"access_token",
 			"jwt_access_token",
 		}
@@ -176,7 +177,7 @@ func (g *Gatekeeper) configure() error {
 	if g.config.SessionIDCookieName != "" {
 		g.sessionIDCookieName = g.config.SessionIDCookieName
 	} else {
-		g.sessionIDCookieName = cookie.DefaultSessionIDCookieName
+		g.sessionIDCookieName = cookie.NewConfig().SessionIDCookieName
 	}
 
 	g.logger.Debug(

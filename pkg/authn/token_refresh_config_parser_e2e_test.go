@@ -28,7 +28,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
-	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	cookieparser "github.com/greenpau/go-authcrunch/pkg/authn/cookie/parser"
 )
 
 func (f *jwksE2EPortal) browserRefreshRequest(t *testing.T, endpoint string, body any, status int, cookies ...*http.Cookie) (*apiauth.AuthResponse, []*http.Cookie) {
@@ -209,21 +209,25 @@ func TestE2ETokenRefreshCookieLifecycle(t *testing.T) {
 	db := newJWKSE2EDatabase(t)
 	for _, tc := range []struct {
 		name, base, want, override string
-		cookies                    *cookie.Config
+		directives                 []string
 	}{
 		{name: "default root", want: "AUTHP_REFRESH_TOKEN"},
 		{name: "default nested", base: "/auth", want: "AUTHP_REFRESH_TOKEN"},
-		{name: "custom prefix", base: "/tenant/auth", cookies: &cookie.Config{CookieNamePrefix: "TENANT"}, want: "TENANT_REFRESH_TOKEN"},
-		{name: "explicit cookie name", base: "/auth", cookies: &cookie.Config{CookieNamePrefix: "TENANT", RefreshTokenCookieName: "LOGIN_REFRESH"}, want: "LOGIN_REFRESH"},
-		{name: "directive override", base: "/auth", cookies: &cookie.Config{CookieNamePrefix: "TENANT", RefreshTokenCookieName: "COOKIE_REFRESH"}, override: "DIRECTIVE_REFRESH", want: "DIRECTIVE_REFRESH"},
-		{name: "independent security attributes", base: "/auth", cookies: &cookie.Config{CookieNamePrefix: "CUSTOM", Insecure: true, SameSite: "none", Path: "/", Lifetime: 3600}, want: "CUSTOM_REFRESH_TOKEN"},
+		{name: "custom prefix", base: "/tenant/auth", directives: []string{"cookie prefix TENANT"}, want: "TENANT_REFRESH_TOKEN"},
+		{name: "explicit cookie name", base: "/auth", directives: []string{"cookie prefix TENANT", "cookie refresh token name LOGIN_REFRESH"}, want: "LOGIN_REFRESH"},
+		{name: "directive override", base: "/auth", directives: []string{"cookie prefix TENANT", "cookie refresh token name COOKIE_REFRESH"}, override: "DIRECTIVE_REFRESH", want: "DIRECTIVE_REFRESH"},
+		{name: "independent security attributes", base: "/auth", directives: []string{"cookie prefix CUSTOM", "cookie insecure enabled", "cookie same site none", "cookie path /", "cookie lifetime 3600"}, want: "CUSTOM_REFRESH_TOKEN"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			settings := []string{"access lifetime 45", "idle timeout 90", "absolute timeout 240"}
 			if tc.override != "" {
 				settings = append(settings, "cookie name "+tc.override)
 			}
-			f := newJWKSE2EPortalWithCookies(t, db, tc.base, nil, tc.cookies, settings)
+			cookiesConfig, err := cookieparser.NewCookieConfigFromDirectives(tc.directives)
+			if err != nil {
+				t.Fatal(err)
+			}
+			f := newJWKSE2EPortalWithCookies(t, db, tc.base, nil, cookiesConfig, settings)
 			jar, err := cookiejar.New(nil)
 			if err != nil {
 				t.Fatal(err)

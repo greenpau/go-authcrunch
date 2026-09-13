@@ -354,7 +354,7 @@ func (cfg *Config) Validate() error {
 
 	// Configure default identity token name.
 	if cfg.IdentityTokenCookieEnabled && cfg.IdentityTokenCookieName == "" {
-		cfg.IdentityTokenCookieName = cookie.DefaultIdentityTokenCookieName
+		cfg.IdentityTokenCookieName = cookie.NewConfig().IdentityTokenCookieName
 	}
 
 	return nil

@@ -20,6 +20,8 @@ targets, generated assets, dependency commands, and release/version workflows. U
 portal refresh behavior; use `release-and-versioning` for version invariants.
 Use `authentication-portal-themes` for custom portal templates, branding assets,
 and their UI configuration and template contracts.
+Use [authentication-portal-cookies](../authentication-portal-cookies/SKILL.md)
+for shared cookie directives, prefix/name configuration, and consumer behavior.
 Use [oauth-identity-provider](../oauth-identity-provider/SKILL.md) for upstream
 OAuth directive parsers and shared configuration adapters, OAuth/OIDC token
 trust, and key ingestion and refresh.
@@ -237,8 +239,13 @@ changed configuration parser.
 Use `pkg/authn/cookie.Config` and `cookie.Factory` as the owners of portal cookie
 names. Honor `CookieNamePrefix`, the `AUTHP_<SUFFIX>` defaults, and explicit name
 overrides. New cookie roles belong in that package's constants, configuration,
-defaults, and collision checks. Feature-specific naming aliases must resolve to
-the shared setting before factory construction; runtime reads, writes, response
+defaults, parser, and collision checks. Public cookie-name constants are suffixes;
+use initialized config/factory fields for complete names. After initialization,
+change prefixes with `SetCookieNamePrefix`, not a raw prefix-field assignment.
+The [cookie owner](../authentication-portal-cookies/SKILL.md) defines ordering,
+directive application, and consumer compatibility. Feature-specific naming
+aliases must resolve to the shared setting before factory construction;
+runtime reads, writes, response
 metadata, and deletion all use the factory's effective name.
 
 Do not generate separate hashed cookie names or require `__Host-`/`__Secure-`

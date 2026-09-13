@@ -14,33 +14,31 @@
 
 package cookie
 
-import "fmt"
-
 // DefaultCookieNamePrefix is the default prefix for cookie names.
 const DefaultCookieNamePrefix string = "AUTHP"
 
-// DefaultSessionIDCookieName is the default session id cookie name.
+// DefaultSessionIDCookieName is the session id suffix, combined with the prefix.
 const DefaultSessionIDCookieName string = "SESSION_ID"
 
-// DefaultRefererCookieName is the default redirect url cookie name.
+// DefaultRefererCookieName is the redirect url suffix, combined with the prefix.
 const DefaultRefererCookieName string = "REDIRECT_URL"
 
-// DefaultSandboxIDCookieName is the default sandbox id cookie name.
+// DefaultSandboxIDCookieName is the sandbox id suffix, combined with the prefix.
 const DefaultSandboxIDCookieName string = "SANDBOX_ID"
 
-// DefaultIdentityTokenCookieName is the default identity token cookie name.
+// DefaultIdentityTokenCookieName is the identity token suffix, combined with the prefix.
 const DefaultIdentityTokenCookieName string = "ID_TOKEN"
 
-// DefaultAccessTokenCookieName is the default access token cookie name.
+// DefaultAccessTokenCookieName is the access token suffix, combined with the prefix.
 const DefaultAccessTokenCookieName string = "ACCESS_TOKEN"
 
-// DefaultRefreshTokenCookieName is the default refresh token cookie name.
+// DefaultRefreshTokenCookieName is the refresh token suffix, combined with the prefix.
 const DefaultRefreshTokenCookieName string = "REFRESH_TOKEN"
 
-// DefaultOIDCSessionIDCookieName is the default OpenID Provider session cookie name.
+// DefaultOIDCSessionIDCookieName is the OIDC session suffix, combined with the prefix.
 const DefaultOIDCSessionIDCookieName string = "OIDC_SESSION_ID"
 
-// DefaultOIDCRequestIDCookieName is the default OpenID Provider request cookie name.
+// DefaultOIDCRequestIDCookieName is the OIDC request suffix, combined with the prefix.
 const DefaultOIDCRequestIDCookieName string = "OIDC_REQUEST_ID"
 
 // Config represents a common set of configuration settings
@@ -64,48 +62,24 @@ type Config struct {
 	CookieNamePrefix        string                   `json:"cookie_name_prefix,omitempty" xml:"cookie_name_prefix,omitempty" yaml:"cookie_name_prefix,omitempty"`
 }
 
-// NewConfig returns an instance of Config.
+// NewConfig returns cookie configuration with the common AUTHP names.
+// Use SetCookieNamePrefix to change the prefix after defaults are initialized.
 func NewConfig() *Config {
-	return &Config{
-		CookieNamePrefix:        DefaultCookieNamePrefix,
-		RefererCookieName:       fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultRefererCookieName),
-		SessionIDCookieName:     fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultSessionIDCookieName),
-		SandboxIDCookieName:     fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultSandboxIDCookieName),
-		IdentityTokenCookieName: fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultIdentityTokenCookieName),
-		AccessTokenCookieName:   fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultAccessTokenCookieName),
-		RefreshTokenCookieName:  fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultRefreshTokenCookieName),
-		OIDCSessionIDCookieName: fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultOIDCSessionIDCookieName),
-		OIDCRequestIDCookieName: fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultOIDCRequestIDCookieName),
-	}
+	c := &Config{}
+	c.ApplyDefaults()
+	return c
 }
 
-// ApplyDefaults applies default values to the configuration.
+// ApplyDefaults fills omitted names without replacing explicit names.
+// Use SetCookieNamePrefix instead of assigning CookieNamePrefix after calling
+// NewConfig or ApplyDefaults; initialized names are otherwise explicit values.
 func (c *Config) ApplyDefaults() {
 	if c.CookieNamePrefix == "" {
 		c.CookieNamePrefix = DefaultCookieNamePrefix
 	}
-	if c.RefererCookieName == "" {
-		c.RefererCookieName = fmt.Sprintf("%s_%s", c.CookieNamePrefix, DefaultRefererCookieName)
-	}
-	if c.SessionIDCookieName == "" {
-		c.SessionIDCookieName = fmt.Sprintf("%s_%s", c.CookieNamePrefix, DefaultSessionIDCookieName)
-	}
-	if c.SandboxIDCookieName == "" {
-		c.SandboxIDCookieName = fmt.Sprintf("%s_%s", c.CookieNamePrefix, DefaultSandboxIDCookieName)
-	}
-	if c.IdentityTokenCookieName == "" {
-		c.IdentityTokenCookieName = fmt.Sprintf("%s_%s", c.CookieNamePrefix, DefaultIdentityTokenCookieName)
-	}
-	if c.AccessTokenCookieName == "" {
-		c.AccessTokenCookieName = fmt.Sprintf("%s_%s", c.CookieNamePrefix, DefaultAccessTokenCookieName)
-	}
-	if c.RefreshTokenCookieName == "" {
-		c.RefreshTokenCookieName = fmt.Sprintf("%s_%s", c.CookieNamePrefix, DefaultRefreshTokenCookieName)
-	}
-	if c.OIDCSessionIDCookieName == "" {
-		c.OIDCSessionIDCookieName = fmt.Sprintf("%s_%s", c.CookieNamePrefix, DefaultOIDCSessionIDCookieName)
-	}
-	if c.OIDCRequestIDCookieName == "" {
-		c.OIDCRequestIDCookieName = fmt.Sprintf("%s_%s", c.CookieNamePrefix, DefaultOIDCRequestIDCookieName)
+	for _, entry := range c.names() {
+		if *entry.value == "" {
+			*entry.value = c.CookieNamePrefix + "_" + entry.suffix
+		}
 	}
 }
