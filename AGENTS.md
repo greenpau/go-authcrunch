@@ -98,9 +98,10 @@ changes, resets, verification, bcrypt work equalization, and regression tests.
 
 ## OAuth Identity Providers
 
-Use `oauth-identity-provider` for upstream OAuth/OIDC discovery, JWKS and static
-public PEM verification, EdDSA/Ed25519 validation, key refresh, shared provider
-configuration dispatch, and real portal OAuth E2E tests.
+Use `oauth-identity-provider` for reusable upstream OAuth directive parsers,
+shared provider configuration dispatch, OAuth/OIDC discovery, JWKS and static
+public PEM verification, EdDSA/Ed25519 validation, key refresh, and real portal
+OAuth E2E tests.
 
 ## Portal OpenID Provider
 

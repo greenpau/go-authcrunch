@@ -21,7 +21,8 @@ portal refresh behavior; use `release-and-versioning` for version invariants.
 Use `authentication-portal-themes` for custom portal templates, branding assets,
 and their UI configuration and template contracts.
 Use [oauth-identity-provider](../oauth-identity-provider/SKILL.md) for upstream
-OAuth/OIDC token trust, key ingestion and refresh, and provider configuration.
+OAuth directive parsers and shared configuration adapters, OAuth/OIDC token
+trust, and key ingestion and refresh.
 Use [authentication-portal-jwks](../authentication-portal-jwks/SKILL.md) for
 portal public signing-key discovery, reusable admin API directive configuration,
 opt-in private-key export, issuer selection, and JWK serialization.

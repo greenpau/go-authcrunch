@@ -317,6 +317,14 @@ uses them. Check that new config fields are reachable through the parser and
 have observable consumer coverage; a struct tag or assignment test alone does
 not establish directive support.
 
+For a feature parser with a shared-dispatch adapter, test both public
+constructors and run the consumer E2E journey through the adapter. Cover
+normalized defaults, nested settings, relevant numeric conversion boundaries,
+and rejection of fields supported only by the direct typed API. Check that
+serialization and revalidation preserve the settings being exercised. Reuse
+the feature parser's grammar tests; adapter tests should focus on conversion,
+dispatch validation, independent results, and error redaction.
+
 For typed application methods, test preservation of unrelated settings,
 independent snapshots, and failure without mutation. When a parser is extracted,
 run existing typed-config callers as well as the new parser's consumer E2E

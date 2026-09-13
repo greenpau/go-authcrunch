@@ -1,4 +1,4 @@
 interface:
   display_name: "OAuth Identity Provider"
-  short_description: "Maintain upstream JWT trust and OAuth login flows"
-  default_prompt: "Use $oauth-identity-provider to maintain upstream OAuth/OIDC verification, key discovery and refresh, and real portal E2E coverage."
+  short_description: "Maintain OAuth directive parsing and upstream JWT trust"
+  default_prompt: "Use $oauth-identity-provider to maintain reusable upstream OAuth directive parsers, configuration dispatch, OAuth/OIDC verification, key discovery and refresh, and real portal E2E coverage."

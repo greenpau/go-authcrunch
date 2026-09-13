@@ -1,6 +1,6 @@
 ---
 name: oauth-identity-provider
-description: Maintain upstream OAuth/OIDC discovery, JWKS and static public PEM verification, EdDSA/Ed25519 token validation, key refresh, identity-provider configuration dispatch, and real portal OAuth E2E tests. Excludes portal signing-key publication.
+description: Maintain upstream OAuth identity-provider directive parsers, shared configuration dispatch, OAuth/OIDC discovery, JWKS and static public PEM verification, EdDSA/Ed25519 token validation, key refresh, and real portal OAuth E2E tests. Excludes portal signing-key publication.
 ---
 
 # OAuth Identity Provider
@@ -12,6 +12,16 @@ description: Maintain upstream OAuth/OIDC discovery, JWKS and static public PEM 
 under `pkg/idp/oauth`. Exercise this dispatcher as well as concrete helpers:
 an OAuth `Config` field is not usable through the shared API until dispatch
 accepts it and checks its type.
+
+`pkg/idp/oauth/parser.NewOAuthIdentityProviderConfigFromDirectives` returns
+`*oauth.Config`. `pkg/idp/parser.NewOAuthIdentityProviderConfigFromDirectives`
+reuses that parser and returns `*idp.IdentityProviderConfig` for the shared
+dispatcher or root `Config.AddIdentityProvider`. Both take the provider name
+and encoded body statements. Keep grammar in the OAuth parser; the shared
+adapter owns only normalized configuration conversion and allowlist validation.
+See [directive parsing](references/configuration-directives.md) for the complete
+grammar, application examples, parser maintenance, defaults, and validation
+boundaries.
 
 `authenticate.go` owns redirects and code exchange; `validator.go` owns token
 roles and trust claims; `jwt.go` owns signature verification and bounded retry;
@@ -87,8 +97,9 @@ The shared AuthCrunch configuration accepts the OAuth `issuer` and
 `access_token_audience` string fields. An explicit issuer overrides discovered
 issuer information. Do not derive issuer from `base_auth_url`. Static-only
 users can supply issuer explicitly; absent issuer keeps the existing optional
-issuer-check contract. Caddyfile exposure is owned by the separate
-caddy-security repository and must not be assumed from a Go config field.
+issuer-check contract. The public parsers accept both settings as single-value
+directives. Embedding-server block recognition and parser wiring are separate
+consumer work; never edit sibling checkouts to implement or validate them.
 
 ## Selection and Refresh
 
@@ -149,7 +160,15 @@ Follow the repository testing lifecycle. Focused coverage belongs in
 tests. Keep the existing KMS signing/default/refresh/export tests passing when
 changing the shared adapter.
 
-`pkg/authn/oauth_ed25519_e2e_test.go` exercises the public provider dispatcher,
+Parser unit tests and executable examples belong in `pkg/idp/oauth/parser`
+and `pkg/idp/parser`, in `package parser_test`. Cover complete grammar, exact
+token boundaries, duplicate aliases/states, redacted errors, immutable inputs,
+driver defaults, static key files, and issuer/audience serialization. Root
+`config_oauth_identity_provider_test.go` verifies parsed provider registration
+and configuration reload.
+
+`pkg/authn/oauth_ed25519_e2e_test.go` imports the shared public parser and reloads
+its serialized output before exercising the public provider dispatcher,
 local TLS OIDC endpoints, real state/nonce/PKCE code exchange, a portal with a
 temporary local database, and an authorization gatekeeper. The fixture signs
 upstream JWTs independently with standard-library crypto and uses unrelated
@@ -158,8 +177,16 @@ verified access claims, signing compatibility, failures, and rollover. Local
 self-signed TLS configuration is fixture-only. Use fresh browser sessions and
 subjects where caches could obscure verification; stop listeners and workers.
 
+`pkg/authn/oauth_config_e2e_test.go` uses that fixture to verify explicit and
+discovered issuers, exact issuer matching, static-only behavior, explicit issuer
+overrides, optional access-token audience/issuer rejection without role leakage,
+and the existing `azp` fallback only when access audience is omitted. ID-token
+audience remains the client ID. Check both successful protected-resource access
+and absence of portal credentials after rejected identity tokens.
+
 ```sh
 make test TEST_DIR='./internal/jwtutil ./pkg/idp/... ./pkg/kms' COVERAGE_DIR='.coverage/oauth-core'
+make test TEST_DIR='./pkg/idp/... ./pkg/authn .' TEST='Test(NewOAuthIdentityProvider|OAuthIdentityProvider|ConfigOAuthIdentityProvider|E2EOAuth)|ExampleNewOAuthIdentityProvider' COVERAGE_DIR='.coverage/oauth-directives'
 make test TEST_DIR='./pkg/authn' TEST='^TestE2EOAuth' COVERAGE_DIR='.coverage/oauth-e2e'
 go test -mod=readonly -race ./pkg/idp/oauth -run '^$' -fuzz '^FuzzOAuthJwks$' -fuzztime=10000x -parallel=2
 make ci-check

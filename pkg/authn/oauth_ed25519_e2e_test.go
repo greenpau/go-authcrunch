@@ -49,8 +49,10 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
+	idpparser "github.com/greenpau/go-authcrunch/pkg/idp/parser"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 const (
@@ -152,7 +154,11 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 	switch r.URL.Path {
 	case "/.well-known/openid-configuration":
 		f.metadataFetches++
-		json.NewEncoder(w).Encode(map[string]any{"issuer": f.server.URL, "authorization_endpoint": f.server.URL + "/authorize", "token_endpoint": f.server.URL + "/token", "jwks_uri": f.server.URL + "/jwks", "userinfo_endpoint": f.server.URL + "/userinfo", "id_token_signing_alg_values_supported": []string{"RS256", "EdDSA", "Ed25519", "future-algorithm"}})
+		issuer := f.server.URL
+		if f.failure == "discovery issuer" {
+			issuer = "https://wrong.example"
+		}
+		json.NewEncoder(w).Encode(map[string]any{"issuer": issuer, "authorization_endpoint": f.server.URL + "/authorize", "token_endpoint": f.server.URL + "/token", "jwks_uri": f.server.URL + "/jwks", "userinfo_endpoint": f.server.URL + "/userinfo", "id_token_signing_alg_values_supported": []string{"RS256", "EdDSA", "Ed25519", "future-algorithm"}})
 	case "/jwks":
 		f.keyFetches++
 		json.NewEncoder(w).Encode(map[string]any{"keys": f.keys})
@@ -203,6 +209,9 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 		access := "opaque-" + record.subject
 		if f.accessMode == "jwt" {
 			accessClaims := map[string]any{"iss": f.server.URL, "aud": "resource-api", "azp": oidcE2EClientID, "exp": time.Now().Add(time.Hour).Unix(), "roles": []string{"editor"}}
+			if f.failure == "access issuer" {
+				accessClaims["iss"] = "https://wrong.example"
+			}
 			access = f.sign(t, "Ed25519", accessClaims)
 		}
 		f.accessSubjects[access] = record.subject
@@ -230,15 +239,30 @@ type oidcE2EPortal struct {
 	issuer *oidcE2EIssuer
 }
 
-func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode string) *oidcE2EPortal {
+type oidcE2ETrustConfig struct{ issuer, audience string }
+
+func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode string, trust ...oidcE2ETrustConfig) *oidcE2EPortal {
 	t.Helper()
 	logger := zap.NewNop()
 	server := httptest.NewUnstartedServer(nil)
 	t.Cleanup(server.Close)
-	providerConfig := &oauth.Config{Name: "upstream", Realm: "upstream", Driver: "generic", ClientID: oidcE2EClientID, ClientSecret: oidcE2EClientSecret, BaseAuthURL: issuer.server.URL, MetadataURL: issuer.server.URL + "/.well-known/openid-configuration", TLSInsecureSkipVerify: true}
+	var directives []string
+	add := func(args ...string) { directives = append(directives, cfgutil.EncodeArgs(args)) }
+	add("realm", "upstream")
+	add("driver", "generic")
+	add("client_id", oidcE2EClientID)
+	add("client_secret", oidcE2EClientSecret)
+	add("base_auth_url", issuer.server.URL)
 	// The self-signed upstream certificate is confined to this local fixture.
 	// No nonce, PKCE, or JWT signature control is disabled.
+	add("tls", "verification", "disabled")
 	static := mode == "static" || mode == "static-pkcs1"
+	settings := oidcE2ETrustConfig{}
+	if !static {
+		add("metadata_url", issuer.server.URL+"/.well-known/openid-configuration")
+	} else {
+		settings.issuer = issuer.server.URL
+	}
 	if static || mode == "combined" {
 		public, id := issuer.private.Public(), issuer.keyID
 		if issuer.algorithm == "RS256" {
@@ -253,30 +277,43 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 			block.Type = "RSA PUBLIC KEY"
 			block.Bytes = x509.MarshalPKCS1PublicKey(&issuer.rsaPrivate.PublicKey)
 		}
-		path := filepath.Join(t.TempDir(), "upstream-public.pem")
+		path := filepath.Join(t.TempDir(), "upstream public.pem")
 		if err := os.WriteFile(path, pem.EncodeToMemory(block), 0600); err != nil {
 			t.Fatal(err)
 		}
-		providerConfig.JwksKeys = map[string]string{id: path}
-		providerConfig.AuthorizationURL = issuer.server.URL + "/authorize"
-		providerConfig.TokenURL = issuer.server.URL + "/token"
-		if static {
-			providerConfig.MetadataURL = ""
-			providerConfig.Issuer = issuer.server.URL
-		}
+		add("jwks", "key", id, path)
+		add("authorization_url", issuer.server.URL+"/authorize")
+		add("token_url", issuer.server.URL+"/token")
 	}
 	if issuer.accessMode == "jwt" {
-		providerConfig.AccessTokenAudience = "resource-api"
+		settings.audience = "resource-api"
+	}
+	if len(trust) > 1 {
+		t.Fatal("expected at most one trust configuration")
+	}
+	if len(trust) == 1 {
+		// Empty fields intentionally omit the corresponding directive.
+		settings = trust[0]
+	}
+	if settings.issuer != "" {
+		add("issuer", settings.issuer)
+	}
+	if settings.audience != "" {
+		add("access_token_audience", settings.audience)
 	}
 	if issuer.accessMode == "userinfo" {
-		providerConfig.UserInfoFields = []string{"email", "roles"}
+		add("user_info_fields", "email", "roles")
 	}
-	var params map[string]any
-	if err := json.Unmarshal(oidcE2EJSON(t, providerConfig), &params); err != nil {
+	providerConfig, err := idpparser.NewOAuthIdentityProviderConfigFromDirectives("upstream", directives)
+	if err != nil {
+		t.Fatal("parse OAuth provider directives", err)
+	}
+	// Exercise the same serialized shared configuration consumed by a server.
+	var restored idp.IdentityProviderConfig
+	if err := json.Unmarshal(oidcE2EJSON(t, providerConfig), &restored); err != nil {
 		t.Fatal(err)
 	}
-	delete(params, "name")
-	provider, err := idp.NewIdentityProvider(&idp.IdentityProviderConfig{Name: "upstream", Kind: "oauth", Params: params}, logger)
+	provider, err := idp.NewIdentityProvider(&restored, logger)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -2,7 +2,8 @@
 
 Sections: [package layout](#package-layout-and-ownership),
 [constructor](#public-constructor), [grammar](#encoded-statements-and-grammar),
-[validation](#validation-and-composition), and
+[validation](#validation-and-composition),
+[shared adapters](#shared-configuration-adapters), and
 [integration](#integration-and-migration).
 
 Use this contract when adding or changing configuration. Every configuration
@@ -63,6 +64,8 @@ the supported shapes:
 | `pkg/oidc/parser` | `NewOIDCClientConfigFromDirectives(nickname string, statements []string)` | `*oidc.ClientConfig` |
 | `pkg/oidc/parser` | `NewOIDCProviderConfigFromDirectives(statements []string, applications map[string]*oidc.ClientConfig)` | `*oidc.Config` |
 | `pkg/oidc/parser` | `NewOAuthApplicationConfigFromDirectives(header string, statements []string, persisted *oidc.OAuthApplicationConfig)` | `*oidc.OAuthApplicationConfig` |
+| `pkg/idp/oauth/parser` | `NewOAuthIdentityProviderConfigFromDirectives(name string, statements []string)` | `*oauth.Config` |
+| `pkg/idp/parser` | `NewOAuthIdentityProviderConfigFromDirectives(name string, statements []string)` | `*idp.IdentityProviderConfig` |
 
 Every constructor also returns `error`. Additional arguments are explicit,
 typed inputs required by that feature: a nickname, an encoded header, a
@@ -143,6 +146,29 @@ entry point that invokes it. Ordinary adaptation and reload must not silently
 regenerate client IDs, secrets, or signing keys. Use explicit provisioning and
 persisted credentials as required by the feature; configuration parsing does
 not start runtime workers, bind listeners, or make network requests.
+
+## Shared Configuration Adapters
+
+When a dispatcher consumes a shared configuration envelope, a public parser
+adapter may return that established model. The feature's parser still owns the
+grammar and typed validation. The adapter calls it and converts the result;
+it does not copy the model or implement a second grammar. For example,
+`pkg/idp/parser` adapts `pkg/idp/oauth/parser` output for shared provider dispatch.
+Keep provider-specific adapters in separate files as other kinds are added.
+
+Preserve normalized values and defaults across conversion, including nested
+settings and integer precision when passing through a generic map. Strip only
+fields deliberately owned by the envelope or derived by the runtime. Validate
+against the shared dispatcher's allowlist; reject unsupported typed settings
+instead of silently deleting them to make validation pass. Document differences
+between direct typed configuration and shared dispatch in the owning skill.
+
+Return a fresh result or `nil, err`, preserving the feature parser's error
+redaction contract at the conversion boundary. Keep the adapter within its own
+`parser` package so the dispatcher can continue consuming configuration without
+importing a parser that depends on it. See the
+[upstream OAuth implementation](../../oauth-identity-provider/references/configuration-directives.md#public-apis)
+for concrete APIs and consumer registration.
 
 ## Integration and Migration
 
