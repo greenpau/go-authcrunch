@@ -86,6 +86,8 @@ type PortalConfig struct {
 	API *APIConfig `json:"api,omitempty" xml:"api,omitempty" yaml:"api,omitempty"`
 	// RefreshTokens configures optional rotating portal sessions.
 	RefreshTokens *RefreshConfig `json:"refresh_tokens,omitempty" xml:"refresh_tokens,omitempty" yaml:"refresh_tokens,omitempty"`
+	// OIDCProvider configures the optional downstream OpenID Provider.
+	OIDCProvider *OIDCProviderConfig `json:"oidc_provider,omitempty" xml:"oidc_provider,omitempty" yaml:"oidc_provider,omitempty"`
 	// Indicated that the config was successfully validated.
 	validated bool
 }
@@ -198,6 +200,17 @@ func (cfg *PortalConfig) Validate() error {
 	}
 	if err := cfg.RefreshTokens.Validate(); err != nil {
 		return err
+	}
+	if err := validateOIDCPortalConfig(cfg.OIDCProvider); err != nil {
+		return err
+	}
+	if cfg.OIDCProvider != nil && cfg.OIDCProvider.Enabled {
+		if cfg.CookieConfig == nil {
+			cfg.CookieConfig = cookie.NewConfig()
+		}
+		if cfg.API == nil {
+			cfg.API = &APIConfig{}
+		}
 	}
 
 	// if len(cfg.IdentityStores) == 0 && len(cfg.IdentityProviders) == 0 {

@@ -52,6 +52,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/ids/local"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
+	"github.com/greenpau/go-authcrunch/pkg/oidc"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -76,6 +77,17 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test oidc.Provider struct", entry: &oidc.Provider{}, opts: &Options{}},
+		{name: "test oidc.Options struct", entry: &oidc.Options{}, opts: &Options{}},
+		{name: "test oidc.Authentication struct", entry: &oidc.Authentication{}, opts: &Options{}},
+		{name: "test oidc.Identity struct", entry: &oidc.Identity{}, opts: &Options{}},
+		{name: "test oidc.Config struct", entry: &oidc.Config{}, opts: &Options{}},
+		{
+			name: "test oidc.ClientConfig struct", entry: &oidc.ClientConfig{},
+			opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{
+				"redirect_uris": true, // Standard OIDC registration name; URIs is one acronym.
+			}},
+		},
 		{name: "test authclient.Client struct", entry: &authclient.Client{}, opts: &Options{}},
 		{name: "test authclient.Config struct", entry: &authclient.Config{}, opts: &Options{}},
 		{

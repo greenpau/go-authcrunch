@@ -37,6 +37,12 @@ const DefaultAccessTokenCookieName string = "ACCESS_TOKEN"
 // DefaultRefreshTokenCookieName is the default access token cookie name.
 const DefaultRefreshTokenCookieName string = "REFRESH_TOKEN"
 
+// DefaultOIDCSessionIDCookieName is the default OpenID Provider session cookie name.
+const DefaultOIDCSessionIDCookieName string = "OIDC_SESSION_ID"
+
+// DefaultOIDCRequestIDCookieName is the default OpenID Provider request cookie name.
+const DefaultOIDCRequestIDCookieName string = "OIDC_REQUEST_ID"
+
 // Config represents a common set of configuration settings
 // applicable to the cookies issued by authn.Authenticator.
 type Config struct {
@@ -53,6 +59,8 @@ type Config struct {
 	IdentityTokenCookieName string                   `json:"identity_token_cookie_name,omitempty" xml:"identity_token_cookie_name,omitempty" yaml:"identity_token_cookie_name,omitempty"`
 	AccessTokenCookieName   string                   `json:"access_token_cookie_name,omitempty" xml:"access_token_cookie_name,omitempty" yaml:"access_token_cookie_name,omitempty"`
 	RefreshTokenCookieName  string                   `json:"refresh_token_cookie_name,omitempty" xml:"refresh_token_cookie_name,omitempty" yaml:"refresh_token_cookie_name,omitempty"`
+	OIDCSessionIDCookieName string                   `json:"oidc_session_id_cookie_name,omitempty" xml:"oidc_session_id_cookie_name,omitempty" yaml:"oidc_session_id_cookie_name,omitempty"`
+	OIDCRequestIDCookieName string                   `json:"oidc_request_id_cookie_name,omitempty" xml:"oidc_request_id_cookie_name,omitempty" yaml:"oidc_request_id_cookie_name,omitempty"`
 	CookieNamePrefix        string                   `json:"cookie_name_prefix,omitempty" xml:"cookie_name_prefix,omitempty" yaml:"cookie_name_prefix,omitempty"`
 }
 
@@ -66,6 +74,8 @@ func NewConfig() *Config {
 		IdentityTokenCookieName: fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultIdentityTokenCookieName),
 		AccessTokenCookieName:   fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultAccessTokenCookieName),
 		RefreshTokenCookieName:  fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultRefreshTokenCookieName),
+		OIDCSessionIDCookieName: fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultOIDCSessionIDCookieName),
+		OIDCRequestIDCookieName: fmt.Sprintf("%s_%s", DefaultCookieNamePrefix, DefaultOIDCRequestIDCookieName),
 	}
 }
 
@@ -91,5 +101,11 @@ func (c *Config) ApplyDefaults() {
 	}
 	if c.RefreshTokenCookieName == "" {
 		c.RefreshTokenCookieName = fmt.Sprintf("%s_%s", c.CookieNamePrefix, DefaultRefreshTokenCookieName)
+	}
+	if c.OIDCSessionIDCookieName == "" {
+		c.OIDCSessionIDCookieName = fmt.Sprintf("%s_%s", c.CookieNamePrefix, DefaultOIDCSessionIDCookieName)
+	}
+	if c.OIDCRequestIDCookieName == "" {
+		c.OIDCRequestIDCookieName = fmt.Sprintf("%s_%s", c.CookieNamePrefix, DefaultOIDCRequestIDCookieName)
 	}
 }

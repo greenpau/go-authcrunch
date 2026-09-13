@@ -1,0 +1,241 @@
+# Reusing the Go OpenID Provider
+
+Import `github.com/greenpau/go-authcrunch/pkg/oidc`. Applications can construct
+`*oidc.Provider` directly, use it through `oidc.OpenIDProvider`, and serve it as
+an `http.Handler`. No authentication portal or local-store implementation is
+required. The host supplies authentication and an `oidc.IdentityVerifier`.
+
+## Construction
+
+```go
+func newProvider(verifier oidc.IdentityVerifier) (*oidc.Provider, error) {
+    return oidc.NewProvider(&oidc.Config{
+        Enabled: true,
+        Issuer: "https://login.example.com/auth",
+        Realms: []string{"employees"},
+        SigningKeyFiles: []string{"/etc/example/oidc-rsa.pem"},
+        Clients: []*oidc.ClientConfig{{
+            ClientID: "desktop-app",
+            TokenEndpointAuthMethod: "none",
+            RedirectURIs: []string{"http://127.0.0.1:8400/callback"},
+        }},
+    }, verifier, oidc.Options{
+        LoginURL: "https://login.example.com/auth/sign-in?fresh=1",
+        SessionCookieName: "APP_OIDC_SESSION_ID",
+        RequestCookieName: "APP_OIDC_REQUEST_ID",
+    })
+}
+```
+
+`NewProvider` requires enabled configuration and a non-nil verifier. It validates
+and snapshots the configuration without changing the caller's value. All
+clients, redirect URIs, realms, and limits are fixed for that provider instance.
+The example uses a public client, which requires S256 PKCE. See
+[configuration and clients](configuration-and-clients.md) for protocol options.
+
+`Options.LoginURL` defaults to `<issuer>/login?fresh=1`. A custom URL must stay on
+the issuer origin and inside its mount so browser interaction cookies reach it.
+Cookie names default to `AUTHP_OIDC_SESSION_ID` and `AUTHP_OIDC_REQUEST_ID`.
+Choose names that do not collide with the host's other cookies. Cookies remain
+host-only, Secure, HttpOnly, SameSite=Lax, and scoped to the issuer mount.
+
+Supply `Options.ExcludedSigningKeys` with public keys trusted for other token
+purposes in the host. Construction rejects matching OIDC signing keys. The
+portal adapter supplies its access-token verification keys automatically.
+
+## Provisioning clients and signing keys
+
+### OAuth application directives
+
+For a block such as:
+
+```caddyfile
+oauth application myapp {
+    client_id myapp
+    client_name "My application"
+    client_secret <persisted-client-secret>
+    redirect_uris https://app.example.com/oidc/callback https://app.example.com/other/callback
+    scopes openid profile email
+    require_pkce yes
+    skip_consent no
+}
+```
+
+Call the public parser with the nickname and body statements:
+
+```go
+client, err := oidc.NewClientConfigFromDirectives("myapp", []string{
+    "client_id myapp",
+    `client_name "My application"`,
+    "redirect_uris https://app.example.com/oidc/callback https://app.example.com/other/callback",
+    "scopes openid profile email",
+    "require_pkce yes",
+})
+if err != nil {
+    return err
+}
+if err := config.AddClient(client); err != nil {
+    return err
+}
+```
+
+The Go example omits the secret for initial generation. A Caddy adapter collects
+each line with `cfgutil.EncodeArgs(append([]string{key}, args...))`, just as the
+crypto adapter does. `NewClientConfigFromDirectives` decodes each statement with
+`cfgutil.DecodeArgs`; pass the body without the header or braces. Preserve token
+boundaries with the encoder rather than joining arguments with spaces. Resolve
+host-specific placeholders before encoding. The library has no Caddy dependency
+and this change does not install the outer `oauth application` Caddyfile grammar.
+
+| Directive | Values |
+| --- | --- |
+| `client_id` | One identifier; generated if omitted. |
+| `client_name` | One display name; defaults to the block nickname. |
+| `client_secret` | One secret; generated for confidential clients if omitted. |
+| `token_endpoint_auth_method` | One of `client_secret_basic` (default), `client_secret_post`, or `none`. |
+| `redirect_uris` | One or more exact callback URIs; required. |
+| `scopes` | One or more scopes; defaults to `openid profile email`. |
+| `require_pkce` | One boolean; defaults to true; public clients cannot disable it. |
+| `skip_consent` | One boolean; defaults to false. |
+
+Booleans follow `cfgutil.ParseBoolArg`: true/yes/on/1 and false/no/off/0,
+case-insensitively. Each directive may occur once. Put multiple list values on
+one line. Unknown directives, wrong argument counts, empty supplied values,
+invalid quoting, and embedded newlines fail without echoing credential values.
+An explicit empty secret or ID is an error; omission requests generation.
+
+The nickname is a host configuration label and supplies the default display
+name. The host owns nickname lookup and uniqueness; `Config.AddClient` checks
+client ID uniqueness. Persist generated registration values before using this
+constructor during another adaptation. Supplying the saved ID and secret
+preserves them. PKCE is enabled by default; unlike `NewClientConfig`, this parser
+also honors an explicit `require_pkce false` for confidential clients.
+
+### Typed configuration and keys
+
+Embedders such as `caddy-security` can provision a confidential application with
+only its name and exact callback URI. All helpers belong to the public `oidc`
+package; no portal runtime is needed to create configuration.
+
+```go
+func provisionProvider(issuer, keyFile string) (*oidc.Config, error) {
+    client, err := oidc.NewClientConfig(oidc.ClientConfig{
+        ClientName: "My application",
+        RedirectURIs: []string{"https://app.example.com/oidc/callback"},
+    })
+    if err != nil {
+        return nil, err
+    }
+    config := &oidc.Config{
+        Enabled: true,
+        Issuer: issuer,
+        Realms: []string{"local"},
+        SigningKeyFiles: []string{keyFile},
+    }
+    if err := config.AddClient(client); err != nil {
+        return nil, err
+    }
+    if err := config.Validate(); err != nil {
+        return nil, err
+    }
+    if err := oidc.GenerateSigningKeyFile(keyFile); err != nil {
+        return nil, err
+    }
+    return config, nil
+}
+```
+
+This is an initial provisioning operation. Persist the returned configuration
+securely before serving it, and provision the relying party with its client ID
+and secret through a protected channel. Do not call this operation on every
+Caddyfile adaptation or reload: load the saved registration and key instead.
+The returned config can be assigned directly to `authn.PortalConfig.OIDCProvider`.
+This library change does not add Caddyfile directives or a management endpoint.
+
+`NewClientConfig` accepts a `ClientConfig` value and returns an independent,
+validated copy. Missing client IDs and confidential-client secrets each receive
+32 random bytes encoded with unpadded base64url. Supplied credentials remain
+unchanged. It defaults to `client_secret_basic`, scopes `openid profile email`,
+and S256 PKCE; consent remains required unless `SkipConsent` is explicitly set.
+To provision a public client, set `TokenEndpointAuthMethod: "none"` and omit the
+secret. To use POST client authentication, set `"client_secret_post"`. Invalid
+values still fail validation; the helper does not repair bad redirect URIs or
+replace invalid supplied secrets. It always enables PKCE; a confidential client
+can explicitly clear `RequirePKCE` on the result before `AddClient` if required
+for compatibility. Public clients cannot disable it.
+
+`Config.AddClient` validates and appends its own copy, preserving supplied
+credentials and PKCE policy and rejecting duplicate IDs. It neither generates
+credentials nor updates a running provider. Plain `ClientConfig.Validate` and
+`NewProvider` continue to reject missing credentials. Callers needing individual
+values can use `GenerateClientID()` and `GenerateClientSecret()`.
+
+`GenerateSigningKey()` returns a dedicated 3072-bit RSA private key as PKCS#8 PEM
+for caller-owned persistence. `GenerateSigningKeyFile(path)` creates a complete
+owner-only file (0600 before umask), refuses existing files and symlinks, and
+returns an error wrapping `fs.ErrExist` when another provisioner wins. Its parent
+directory must already exist, be trusted, and support hard links. It never loads
+or silently replaces an existing key. Retain the path in `SigningKeyFiles` on
+reload; ID-token signing keys belong to the provider, independently of clients.
+
+The executable examples are in `pkg/oidc/provisioning_example_test.go`. The TLS
+E2E test persists generated configuration and keys, restores a fresh provider,
+and reuses the original client credentials and public signing key.
+
+## Identity boundary
+
+Implement the public interface:
+
+```go
+WithIdentity(context.Context, oidc.Authentication, func(oidc.Identity) error) error
+```
+
+`Authentication` contains the realm, backend namespace, username, immutable
+`Evidence.UserID`, backend and credential versions, original authentication
+time, and completed methods/challenges. Generate this evidence after actual
+server-side authentication. Do not populate it from unverified HTTP claims or
+an arbitrary bearer token.
+
+The verifier checks current account status, immutable identity, version evidence,
+and authentication policy. It invokes the callback exactly once, synchronously,
+under the lock or transaction that serializes account revocation. Finish fallible
+backend work first, then return the callback's result without further fallible
+work. Return `oidc.ErrIdentityDenied` without calling the callback when evidence
+is stale or ineligible. Do not retain or reenter the callback or provider: the
+provider already holds its state lock. This preserves atomic identity checks
+through code/token issuance.
+
+Return current attributes as `oidc.Identity`. Assert `EmailVerified` only when
+the backend has verified ownership. Subjects are derived from backend, realm,
+and immutable user ID; attribute updates do not redefine identity.
+
+## HTTP and browser lifecycle
+
+| Public method | Integration |
+| --- | --- |
+| `ServeHTTP` | Standard handler for discovery and `<issuer>/oidc/*`; unmatched requests return 404. |
+| `HandleHTTP` | Returns false without changing unmatched requests, for hosts with their own router. |
+| `ValidateLoginRequest` | Checks origin before the host processes browser credentials; writes 403 on rejection. |
+| `CompleteLogin` | Verifies completed login evidence and creates the browser session. A `Location` header resumes pending authorization. Unsupported realms clear the old session. |
+| `ClearSession` | Revokes the old browser session while retaining its pending authorization, for a fresh login. |
+| `Logout` | Revokes the browser session and pending interaction, then clears both cookies. The host must first authorize logout. |
+| `SupportsRealm` | Reports whether a realm is configured. |
+| `Discovery`, `JWKS` | Return fresh public metadata maps. |
+| `Close` | Invalidates process-local sessions and grants; safe to call repeatedly. |
+
+The host owns its login page, credential parsing, required challenges, and logout
+authorization. Call `ValidateLoginRequest` before handling browser credentials,
+then `CompleteLogin` only after successful authentication. These methods use
+browser cookies; native credential transports should not call them. The host
+also owns trusted proxy normalization. Keep protocol requests behind the public
+HTTP dispatcher, which applies issuer, method, parsing, and CORS checks.
+
+Provider state is bounded and process-local. Restarting requires new browser
+authentication. The standalone E2E example is
+`pkg/oidc/provider_e2e_test.go`; it implements the host using only `pkg/oidc` and
+the standard library.
+
+For an existing AuthCrunch portal, `Portal.GetOIDCProvider()` returns the public
+interface, or nil when disabled. The portal keeps its existing `oidc_provider`
+configuration and cookie-prefix behavior. `authn.OIDCProviderConfig` and
+`authn.OIDCClientConfig` remain aliases of `oidc.Config` and `oidc.ClientConfig`.

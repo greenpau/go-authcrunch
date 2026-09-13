@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reusable OIDC Provider"
+  short_description: "Maintain local-user OIDC provider and conformance"
+  default_prompt: "Use $authentication-portal-oidc to maintain the reusable OpenID Provider, its public API, portal integration, and conformance tests."

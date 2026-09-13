@@ -27,6 +27,9 @@ portal public signing-key discovery, opt-in admin private-key export, issuer
 selection, and JWK serialization.
 Use [local-password-authentication](../local-password-authentication/SKILL.md)
 for local-store password verification and bcrypt work equalization.
+Use [authentication-portal-oidc](../authentication-portal-oidc/SKILL.md) for the
+portal acting as a downstream OpenID Provider, including client registration,
+authorization grants, consent, dedicated keys, and conformance.
 Use `authentication-client` for reusable portal login clients and CLI credential
 handling. Use `authdbctl` for CLI commands, terminal behavior, and executable E2E
 tests.
@@ -47,6 +50,9 @@ Put behavior in the package that owns the AuthCrunch surface:
 - `pkg/sso`, `pkg/kms`, `pkg/registry`, `pkg/messaging`, `pkg/identity`,
   `pkg/user`, `pkg/translate`, and focused utility packages own their own
   parsing, validation, models, and tests.
+- `pkg/oidc` owns the reusable OpenID Provider, public configuration, identity
+  verifier interface, protocol handlers, and browser-session lifecycle. Portal
+  identity, sandbox, and refresh adapters remain in `pkg/authn`.
 - `pkg/authclient` owns the JSON portal login client, challenge orchestration,
   opaque credential results, and optional token-file persistence. It uses the
   login endpoint without depending on the admin API or a CLI framework.

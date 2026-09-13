@@ -38,6 +38,9 @@ func (p *Portal) handleIssueTokens(ctx context.Context, w http.ResponseWriter, r
 	if err != nil {
 		return nil, err
 	}
+	if err := p.finishOIDCLogin(ctx, w, r, proof); err != nil {
+		return nil, err
+	}
 	if tokens == nil {
 		return &apiauth.AuthResponse{Authenticated: true, AccessToken: u.Token, AccessTokenName: p.config.TokenGrantorOptions.AccessTokenCookieName}, nil
 	}

@@ -17,11 +17,61 @@ package cookie
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
 )
+
+func TestOIDCCookieNames(t *testing.T) {
+	for _, tc := range []struct {
+		name                     string
+		config                   *Config
+		sessionName, requestName string
+	}{
+		{"nil config", nil, "AUTHP_OIDC_SESSION_ID", "AUTHP_OIDC_REQUEST_ID"},
+		{"default config", NewConfig(), "AUTHP_OIDC_SESSION_ID", "AUTHP_OIDC_REQUEST_ID"},
+		{"empty config", &Config{}, "AUTHP_OIDC_SESSION_ID", "AUTHP_OIDC_REQUEST_ID"},
+		{"custom prefix", &Config{CookieNamePrefix: "PORTAL"}, "PORTAL_OIDC_SESSION_ID", "PORTAL_OIDC_REQUEST_ID"},
+		{"explicit names", &Config{CookieNamePrefix: "PORTAL", OIDCSessionIDCookieName: "LOGIN", OIDCRequestIDCookieName: "REQUEST"}, "LOGIN", "REQUEST"},
+		{"partial override", &Config{CookieNamePrefix: "PORTAL", OIDCSessionIDCookieName: "LOGIN"}, "LOGIN", "PORTAL_OIDC_REQUEST_ID"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f, err := NewFactory(tc.config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if f.OIDCSessionIDCookieName != tc.sessionName || f.OIDCRequestIDCookieName != tc.requestName {
+				t.Fatal("OIDC names did not follow portal cookie configuration")
+			}
+			if f.config.OIDCSessionIDCookieName != f.OIDCSessionIDCookieName || f.config.OIDCRequestIDCookieName != f.OIDCRequestIDCookieName {
+				t.Fatal("factory and configuration cookie names differ")
+			}
+		})
+	}
+}
+
+func TestOIDCCookieNameCollisions(t *testing.T) {
+	for _, field := range []string{"session", "request"} {
+		for _, suffix := range []string{"SESSION_ID", "REDIRECT_URL", "SANDBOX_ID", "ID_TOKEN", "ACCESS_TOKEN", "REFRESH_TOKEN", "OIDC_SESSION_ID", "OIDC_REQUEST_ID"} {
+			if field == "session" && suffix == "OIDC_SESSION_ID" || field == "request" && suffix == "OIDC_REQUEST_ID" {
+				continue
+			}
+			t.Run(field+"/"+suffix, func(t *testing.T) {
+				c := NewConfig()
+				if field == "session" {
+					c.OIDCSessionIDCookieName = "AUTHP_" + suffix
+				} else {
+					c.OIDCRequestIDCookieName = "AUTHP_" + suffix
+				}
+				if _, err := NewFactory(c); err == nil || !strings.Contains(err.Error(), "duplicate cookie name") {
+					t.Fatal("cookie name collision was not rejected")
+				}
+			})
+		}
+	}
+}
 
 func TestLegacySecureRefreshCookieDeletion(t *testing.T) {
 	cfg := NewConfig()

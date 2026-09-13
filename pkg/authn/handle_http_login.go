@@ -38,10 +38,10 @@ import (
 
 func (p *Portal) handleHTTPLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
 	p.injectRedirectURL(ctx, w, r, rr)
-	if p.refresh != nil && r.Method == http.MethodPost {
+	if (p.refresh != nil || p.oidc != nil) && r.Method == http.MethodPost {
 		return p.handleHTTPLoginRequest(ctx, w, r, rr)
 	}
-	if p.refresh != nil && r.Method == http.MethodGet && r.URL.Query().Get("fresh") == "1" {
+	if (p.refresh != nil || p.oidc != nil) && r.Method == http.MethodGet && r.URL.Query().Get("fresh") == "1" {
 		rr.Response.Authenticated = false
 		return p.handleHTTPLoginScreen(ctx, w, r, rr)
 	}
@@ -347,6 +347,7 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	if err := p.revokeRefreshOnLogin(ctx, w, r); err != nil {
 		return err
 	}
+	p.replaceOIDCBrowserSession(w, r)
 
 	h := addrutil.GetSourceHost(r)
 

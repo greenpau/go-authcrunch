@@ -35,7 +35,7 @@ func passedCheckpointCount(u *user.User) int {
 // recordLoginEvidence runs only under a sandbox lease, after actual checkpoint
 // verification. Never advance the original authentication time after MFA.
 func (p *Portal) recordLoginEvidence(u *user.User, rr *requests.Request, before int) error {
-	if !p.refreshRealm(u.Authenticator.Realm) {
+	if !p.refreshRealm(u.Authenticator.Realm) && !p.oidcRealm(u.Authenticator.Realm) {
 		return nil
 	}
 	if u.LoginEvidence.UserID == "" {

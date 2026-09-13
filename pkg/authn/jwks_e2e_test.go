@@ -466,9 +466,10 @@ func TestE2EPortalJWKSFormats(t *testing.T) {
 				mixed = mixed || key["kty"] != tc.kind
 			}
 			if !mixed {
-				if public[0]["kty"] == "RSA" {
+				switch public[0]["kty"] {
+				case "RSA":
 					formats = append(formats, "pkcs1")
-				} else if public[0]["kty"] == "EC" {
+				case "EC":
 					formats = append(formats, "sec1")
 				}
 			}

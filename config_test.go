@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
@@ -28,6 +29,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"go.uber.org/zap"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -405,4 +407,42 @@ func TestValidateNilConfig(t *testing.T) {
 	var cfg *Config
 	err := cfg.Validate()
 	tests.EvalErrWithLog(t, err, "Validate", true, fmt.Errorf("config is nil"), nil)
+}
+
+func TestNewServerOIDCConfigurationDispatch(t *testing.T) {
+	for _, invalid := range []bool{false, true} {
+		name := "valid"
+		if invalid {
+			name = "invalid issuer"
+		}
+		t.Run(name, func(t *testing.T) {
+			config := &Config{
+				IdentityStores: []*ids.IdentityStoreConfig{{Name: "local", Kind: "local", Params: map[string]any{"realm": "local", "path": filepath.Join(t.TempDir(), "users.json")}}},
+				AuthenticationPortals: []*authn.PortalConfig{{Name: "oidc", OIDCProvider: &authn.OIDCProviderConfig{
+					Enabled: true, Issuer: "https://auth.example.test/auth", Realms: []string{"local"}, SigningKeyFiles: []string{"testdata/rskeys/test_2_pri.pem"},
+					Clients: []*authn.OIDCClientConfig{{ClientID: "client", ClientSecret: strings.Repeat("s", 32), RedirectURIs: []string{"https://client.example.test/callback"}}},
+				}}},
+			}
+			if invalid {
+				config.AuthenticationPortals[0].OIDCProvider.Issuer = "http://auth.example.test"
+			}
+			server, err := NewServer(config, zap.NewNop())
+			if (err != nil) != invalid {
+				t.Fatalf("invalid = %v, expected %v", err != nil, invalid)
+			}
+			if !invalid {
+				for _, running := range server.portals {
+					t.Cleanup(running.Close)
+					provider := running.GetOIDCProvider()
+					if provider == nil || !provider.SupportsRealm("local") || provider.Discovery()["issuer"] != "https://auth.example.test/auth" {
+						t.Fatal("public OIDC provider was not wired through root configuration")
+					}
+				}
+				portal := config.AuthenticationPortals[0]
+				if len(portal.IdentityStores) != 1 || portal.IdentityStores[0] != "local" || portal.OIDCProvider.TokenLifetimeSeconds != 300 || portal.CookieConfig == nil || portal.API == nil {
+					t.Fatal("OIDC portal defaults were not wired through root configuration")
+				}
+			}
+		})
+	}
 }

@@ -32,6 +32,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/oidc"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
@@ -52,6 +53,7 @@ const (
 
 // Portal is an authentication portal.
 type Portal struct {
+	oidc              oidc.OpenIDProvider
 	refresh           *refresh.Manager
 	refreshStore      *refresh.MemoryStore
 	id                string
@@ -178,6 +180,9 @@ func NewPortal(params PortalParameters) (*Portal, error) {
 // sessions. Embedding applications should quiesce requests before disposal.
 // Calling Close more than once is safe.
 func (p *Portal) Close() {
+	if p.oidc != nil {
+		p.oidc.Close()
+	}
 	if p.sessions != nil {
 		p.sessions.Stop()
 	}
@@ -211,6 +216,9 @@ func (p *Portal) configure() error {
 		return err
 	}
 	if err := p.configureRefresh(); err != nil {
+		return err
+	}
+	if err := p.configureOIDC(); err != nil {
 		return err
 	}
 

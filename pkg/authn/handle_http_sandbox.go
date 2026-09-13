@@ -200,6 +200,9 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		if tokens != nil {
 			p.deliverRefreshCookies(w, r, tokens)
 		}
+		if err := p.finishOIDCLogin(ctx, w, r, proof); err != nil {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
+		}
 		w.WriteHeader(rr.Response.Code)
 		return nil
 	}

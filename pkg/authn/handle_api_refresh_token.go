@@ -177,6 +177,7 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 			}
 		}
 		if transport == refresh.CookieTransport {
+			p.revokeOIDCBrowser(w, r)
 			p.deleteRefreshCookies(w, r)
 		}
 		rr.Response.Code = http.StatusOK

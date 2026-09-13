@@ -25,6 +25,14 @@ import (
 
 // ServeHTTP is a gateway for the authentication portal.
 func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
+	if p.oidc != nil && p.oidc.HandleHTTP(w, r) {
+		return nil
+	}
+	// Browser OIDC login uses the existing portal checkpoints. Reject cross-site
+	// credential submission before it can replace the provider's browser session.
+	if p.oidc != nil && r.Method == http.MethodPost && (strings.Contains(r.URL.Path, "/login") || strings.Contains(r.URL.Path, "/sandbox/")) && !p.oidc.ValidateLoginRequest(w, r) {
+		return nil
+	}
 	if rr.ID == "" {
 		rr.ID = util.GetRequestID(r)
 	}

@@ -97,6 +97,13 @@ Use `oauth-identity-provider` for upstream OAuth/OIDC discovery, JWKS and static
 public PEM verification, EdDSA/Ed25519 validation, key refresh, shared provider
 configuration dispatch, and real portal OAuth E2E tests.
 
+## Portal OpenID Provider
+
+Use `authentication-portal-oidc` for downstream OIDC discovery, registered clients,
+authorization code/PKCE flows, local-user consent, dedicated ID-token signing keys,
+UserInfo, revocation, and OP conformance testing. This covers the reusable
+`pkg/oidc` public API and the local-user portal adapter in `pkg/authn`.
+
 ## Portal Signing-Key Discovery
 
 Use `authentication-portal-jwks` for the portal `/.well-known/jwks.json`

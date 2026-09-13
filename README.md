@@ -17,6 +17,11 @@ Please browse to [docs.authcrunch.com](https://docs.authcrunch.com/).
 See [portal refresh sessions](.codex/skills/refresh-token-implementation/references/configuration-and-clients.md) for opt-in rotating refresh
 credentials, configuration, client integration, and lifecycle behavior.
 
+See [the portal OpenID Provider](.codex/skills/authentication-portal-oidc/references/configuration-and-clients.md)
+for local-user OIDC login and relying-party registration, the
+[reusable Go provider](.codex/skills/authentication-portal-oidc/references/reusable-provider.md), and
+[conformance testing](.codex/skills/authentication-portal-oidc/references/conformance.md).
+
 ## Development
 
 Use Go 1.25 or newer (CI uses 1.26.0), Node 24, Python 3.9+, and Make.
