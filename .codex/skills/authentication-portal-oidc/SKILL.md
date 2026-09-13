@@ -15,9 +15,12 @@ runtime `Options`. The package has no dependency on the `authn` portal runtime.
 - `config.go`: public `Config`, `ClientConfig`, and validation.
 - `provisioning.go`: public client constructors, credential generation,
   `Config.AddClient`, and dedicated signing-key generation in PEM or a new file.
-- `client_config_parser.go`: `NewClientConfigFromDirectives(nickname, statements)`
-  parses an OAuth application block body with the crypto-style `cfg.DecodeArgs`
-  encoding. Caddy adapters collect statements using `cfg.EncodeArgs`.
+- `pkg/oidc/parser`: public
+  `NewOIDCClientConfigFromDirectives(nickname, statements)` parses an OAuth
+  application block body with `cfgutil.DecodeArgs` and returns `*oidc.ClientConfig`.
+  This separate package owns the parser and its external-package unit tests;
+  it delegates provisioning to `oidc.NewClientConfig`. Embedding adapters collect
+  statements using `cfgutil.EncodeArgs` and import the parser directly.
 - `identity.go`: public `Authentication`, `Identity`, `IdentityVerifier`, and
   `OpenIDProvider` contracts.
 - `options.go`: construction, configurable login URL, cookie names, and excluded
@@ -61,7 +64,9 @@ OIDC browser credentials use the portal cookie factory's configurable names:
 random, host-only cookies with Secure, HttpOnly, SameSite=Lax, and the issuer
 mount as Path (root issuers use `/`). Use distinct names or prefixes for portals
 with overlapping mounts on one host. Issuance and deletion use matching paths;
-lifetimes remain provider-owned. Duplicate cookies are rejected. Successful interactive
+lifetimes remain provider-owned. The common cookie factory rejects collisions
+with the effective token refresh cookie as well as the other portal cookie roles.
+Duplicate cookies are rejected. Successful interactive
 login replaces the previous provider session; external/LDAP portal login clears
 it without making that external identity eligible. Logout clears provider
 sessions and pending interaction. When a refresh cookie is present, GET logout
@@ -90,9 +95,9 @@ enables S256 PKCE. `Validate`, `Config.AddClient`, and `NewProvider` never gener
 credentials. Embedders persist generated registrations and signing keys before
 starting the provider, then reuse them on reload. `AddClient` validates and copies
 the registration, rejects duplicate IDs, and does not mutate running providers.
-`NewClientConfigFromDirectives` is also a provisioning constructor: omitted
-credentials are generated. It accepts single-value fields, multi-value
-`redirect_uris`/`scopes`, and `cfg.ParseBoolArg` booleans. It rejects duplicate or
+`parser.NewOIDCClientConfigFromDirectives` is also a provisioning entry point:
+omitted credentials are generated. It accepts single-value fields, multi-value
+`redirect_uris`/`scopes`, and `cfgutil.ParseBoolArg` booleans. It rejects duplicate or
 unknown directives and never includes raw statements or values in errors.
 `GenerateSigningKeyFile` publishes a complete owner-only file with a hard link;
 it never overwrites existing paths or follows a destination symlink.
@@ -150,17 +155,18 @@ access tokens authorize UserInfo. No OIDC refresh tokens are issued.
 
 ## Validation
 
-`pkg/oidc/config_test.go` covers config/parser/client-auth/PKCE contracts.
+`pkg/oidc/config_test.go` covers config, client authentication, and PKCE contracts.
 `provisioning_test.go` covers generated credentials, defaults, copied registration,
 duplicate rejection, private-key format, file permissions, and concurrent creation.
-`client_config_parser_test.go` covers directive parsing, quoting, arity, boolean
-compatibility, error redaction, and stable adaptation with persisted credentials.
+`parser/client_test.go` and `parser/example_test.go` cover the separate public
+parser, quoting, arity, boolean compatibility, error redaction, concurrent reuse,
+and stable adaptation with persisted credentials.
 `provider_test.go` and `options_test.go` cover keys, hints, identity, expiry,
 capacity, construction, public methods, lifecycle, lock release, and parser
 fuzzing. `request_object_test.go` covers strict request assembly and fuzzing.
-`pkg/oidc/provider_e2e_test.go` imports only the public package and the standard
-library, running TLS login, consent, PKCE exchange, independent RSA verification,
-UserInfo, fresh login, account disablement, and logout without a portal. It
+`pkg/oidc/provider_e2e_test.go` imports the public provider and parser packages
+and the standard library, running TLS login, consent, PKCE exchange, independent
+RSA verification, UserInfo, fresh login, account disablement, and logout without a portal. It
 provisions and persists generated clients/keys, exercises all three client
 authentication methods, and repeats login/exchange after restoring the provider.
 
@@ -174,6 +180,7 @@ consume codes.
 
 ```sh
 make test TEST_DIR='./ ./pkg/oidc ./pkg/authn ./internal/tag' TEST='OIDC|Provider|TestTagCompliance|TestStructTagCompliance' COVERAGE_DIR=.coverage/oidc
+make test TEST_DIR='./pkg/oidc/parser' COVERAGE_DIR=.coverage/oidc-parser
 go test -mod=readonly -race ./pkg/oidc -run '^$' -fuzz '^FuzzOIDCAuthorizationParameters$' -fuzztime=10000x -parallel=2
 go test -mod=readonly -race ./pkg/oidc -run '^$' -fuzz '^FuzzOIDCRequestObjects$' -fuzztime=10000x -parallel=2
 make ci-check

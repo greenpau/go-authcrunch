@@ -24,7 +24,7 @@ import (
 )
 
 func (p *Portal) hasRefreshCookie(r *http.Request) bool {
-	return p.refresh != nil && len(r.CookiesNamed(p.config.RefreshTokens.CookieName)) > 0
+	return p.refresh != nil && len(r.CookiesNamed(p.cookie.RefreshTokenCookieName)) > 0
 }
 
 func (p *Portal) handleSessionPage(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, action string) error {

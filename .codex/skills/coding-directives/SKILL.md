@@ -34,6 +34,24 @@ Use `authentication-client` for reusable portal login clients and CLI credential
 handling. Use `authdbctl` for CLI commands, terminal behavior, and executable E2E
 tests.
 
+## Repository Scope
+
+Keep all repository changes inside `go-authcrunch`. Never change sibling
+directories. Sibling projects will be updated separately; these workflows have
+no cross-repository exception or approval path.
+
+This prohibition covers creating, editing, deleting, restoring, staging, or
+committing files, and changes to code, tests, fixtures, dependency files, skills,
+generated artifacts, or repository metadata. Do not run commands that can write
+to sibling directories, including build, test, formatting, license, dependency,
+or cleanup commands. Compatibility fixes and failing consumer tests do not
+permit sibling changes.
+
+Provide reusable APIs and test their public workflows in this repository.
+References to dependencies, consumer wiring, or compatible directive syntax
+are context only. Describe any remaining consumer integration as separate
+work; do not perform it or request to expand this task into sibling directories.
+
 ## Package Boundaries
 
 Put behavior in the package that owns the AuthCrunch surface:
@@ -41,6 +59,9 @@ Put behavior in the package that owns the AuthCrunch surface:
 - `pkg/authn`: authentication portals, portal HTTP/API handlers, sessions,
   cookies, MFA/WebAuthn/TOTP/GPG/SSH/API-key profile operations, UI serving,
   and portal-specific config.
+- `pkg/authn/token_refresh` (Go identifier `tokenrefresh`): opaque refresh
+  tokens, session storage, and atomic issuance/rotation. Portal configuration,
+  login evidence, and HTTP adapters remain in `pkg/authn`.
 - `pkg/authz`: authorization gatekeepers, access policy config, token
   validators, bypass rules, auth redirects, header injection, and auth proxy
   integration.
@@ -48,8 +69,9 @@ Put behavior in the package that owns the AuthCrunch surface:
   stores and identity providers. Put provider-specific behavior in
   `pkg/ids/local`, `pkg/ids/ldap`, `pkg/idp/oauth`, or `pkg/idp/saml`.
 - `pkg/sso`, `pkg/kms`, `pkg/registry`, `pkg/messaging`, `pkg/identity`,
-  `pkg/user`, `pkg/translate`, and focused utility packages own their own
-  parsing, validation, models, and tests.
+  `pkg/user`, `pkg/translate`, and focused utility packages own their models,
+  validation, and tests. Configuration directive parsers have separate public
+  packages under their owning domain.
 - `pkg/oidc` owns the reusable OpenID Provider, public configuration, identity
   verifier interface, protocol handlers, and browser-session lifecycle. Portal
   identity, sandbox, and refresh adapters remain in `pkg/authn`.
@@ -128,6 +150,12 @@ Keep external config structs serializable with matching `json`, `xml`, and
 `yaml` tags. Use snake_case tag names and `omitempty` unless the surrounding
 type deliberately preserves false/zero values.
 
+In shared packages, name public configuration types for the complete feature:
+use `authn.TokenRefreshConfig` for token refresh. Keep the type, constructor
+return type, owning filenames, consumers, tests, examples, and skill references
+consistent when renaming a feature. Preserve established serialization keys and
+distinct protocol concepts; do not retain an ambiguous type as a new alias.
+
 Treat `Validate` methods as the repository's normalization boundary. Existing
 validators commonly fill defaults, compile regexps, parse raw directive
 strings, build derived config, and set `validated bool` to avoid repeat work.
@@ -143,9 +171,57 @@ Keep constructors strict:
 - Configure package-owned defaults, icons, crypto stores, and raw directives
   close to the config type that owns them.
 
-For raw directive strings, use existing parsers such as `cfgutil.DecodeArgs` or
-domain-specific parsers. Preserve unsupported-field checks in shared config
-dispatchers so malformed config fails early instead of being silently ignored.
+### Reusable Directive Parser Packages
+
+Put new or substantially revised configuration directive parsers in dedicated,
+public packages under their owning domain, separate from runtime implementation.
+Export a typed constructor that accepts ordinary Go values. Embedding
+applications must be able to import the parser directly;
+do not require a server-specific token iterator, HTTP handler, or running portal.
+
+Name directive constructors `New<Domain><Subject>ConfigFromDirectives`.
+Include the complete domain and subject, even when the package path supplies
+that context: use `NewTokenRefreshConfigFromDirectives` for token refresh and
+`NewOIDCClientConfigFromDirectives` for OIDC clients. Preserve Go initialisms
+such as `OIDC`. Apply the same name to declarations, public comments, callers,
+unit tests, executable examples, and owning skill references whenever changing
+the API or extracting it into a package.
+
+Keep argument encoding in `pkg/util/cfg` and use `cfgutil.DecodeArgs` for encoded
+statements. Keep semantic validation, defaults, and provisioning in the owning
+configuration API; the parser calls that API rather than duplicating its rules.
+Return the existing configuration type and an error without a partial result.
+Document credential generation or other intentional provisioning behavior.
+
+Keep dependencies acyclic: parser packages may import their domain's public
+configuration API, while the runtime does not import a parser that depends on it.
+If both layers require shared types, give those types a lower-level owner rather
+than duplicating models. When extracting a parser, move its implementation and
+unit tests together, update consumers and examples, and identify changed import
+paths and entry points. Do not leave the parsing implementation behind a wrapper
+in the runtime package.
+
+Preserve unsupported-field checks in shared config dispatchers so malformed
+config fails early instead of being silently ignored. Use the external-package
+unit tests and consumer E2E requirements in `testing-and-ci` for parser changes.
+
+### Cookie Configuration
+
+Use `pkg/authn/cookie.Config` and `cookie.Factory` as the owners of portal cookie
+names. Honor `CookieNamePrefix`, the `AUTHP_<SUFFIX>` defaults, and explicit name
+overrides. New cookie roles belong in that package's constants, configuration,
+defaults, and collision checks. Feature-specific naming aliases must resolve to
+the shared setting before factory construction; runtime reads, writes, response
+metadata, and deletion all use the factory's effective name.
+
+Do not generate separate hashed cookie names or require `__Host-`/`__Secure-`
+namespaces for a feature. Those prefixes may be explicitly configured and must
+retain their attribute validation. Ordinary examples and fixtures use portal
+defaults or explicit conventional names; prefix-specific cases test compatibility.
+Keep Secure, HttpOnly, SameSite, lifetime, and domain/path requirements explicit
+and independent of naming. Issuance and deletion must match name, domain, and
+path, including cleanup of a legacy cookie at a different path. Verify actual
+cookie-jar login, rotation, and logout behavior in consumer E2E tests.
 
 ## Errors
 

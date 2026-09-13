@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
-	"github.com/greenpau/go-authcrunch/pkg/authn/refresh"
+	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
@@ -29,7 +29,7 @@ import (
 )
 
 // issueSandboxTokens is shared by browser and JSON login after atomic redemption.
-func (p *Portal) issueSandboxTokens(ctx context.Context, r *http.Request, rr *requests.Request, proof *user.User) (*user.User, *refresh.Result, error) {
+func (p *Portal) issueSandboxTokens(ctx context.Context, r *http.Request, rr *requests.Request, proof *user.User) (*user.User, *tokenrefresh.Result, error) {
 	backend := p.getIdentityStoreByRealm(proof.Authenticator.Realm)
 	if backend == nil {
 		return nil, nil, fmt.Errorf("authentication realm not found")
@@ -38,7 +38,7 @@ func (p *Portal) issueSandboxTokens(ctx context.Context, r *http.Request, rr *re
 		if err := p.validateRefreshLogin(r, proof.RefreshTransport); err != nil {
 			return nil, nil, err
 		}
-		principal := refresh.Principal{
+		principal := tokenrefresh.Principal{
 			Backend: backend.GetName(), Realm: backend.GetRealm(), UserID: proof.LoginEvidence.UserID,
 			Subject: proof.Claims.Subject, CredentialVersion: proof.LoginEvidence.CredentialVersion,
 			BackendVersion: proof.LoginEvidence.BackendVersion, AuthTime: proof.LoginEvidence.AuthenticatedAt,
@@ -46,7 +46,7 @@ func (p *Portal) issueSandboxTokens(ctx context.Context, r *http.Request, rr *re
 		}
 		for _, c := range proof.Checkpoints {
 			if !c.Passed {
-				return nil, nil, refresh.ErrDenied
+				return nil, nil, tokenrefresh.ErrDenied
 			}
 			principal.Challenges = append(principal.Challenges, c.Type+":"+c.Parameters)
 		}
@@ -63,7 +63,7 @@ func (p *Portal) issueSandboxTokens(ctx context.Context, r *http.Request, rr *re
 		return nil, nil, err
 	}
 	if rr.User.Username != proof.Claims.Subject || rr.User.Email != proof.Claims.Email {
-		return nil, nil, refresh.ErrDenied
+		return nil, nil, tokenrefresh.ErrDenied
 	}
 	m := map[string]any{"sub": rr.User.Username, "email": rr.User.Email, "name": rr.User.FullName, "roles": rr.User.Roles, "origin": backend.GetRealm(), "realm": backend.GetRealm(), "iss": util.GetIssuerURL(r), "addr": addrutil.GetSourceAddress(r)}
 	now := time.Now().Unix()
@@ -88,7 +88,7 @@ func (p *Portal) issueSandboxTokens(ctx context.Context, r *http.Request, rr *re
 	return u, nil, nil
 }
 
-func (p *Portal) userFromRefresh(tokens *refresh.Result) (*user.User, error) {
+func (p *Portal) userFromRefresh(tokens *tokenrefresh.Result) (*user.User, error) {
 	u, err := user.NewUser(tokens.Claims)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (p *Portal) userFromRefresh(tokens *refresh.Result) (*user.User, error) {
 	u.Authorized = true
 	backend := p.getIdentityStoreByRealm(u.Claims.Origin)
 	if backend == nil {
-		return nil, refresh.ErrDenied
+		return nil, tokenrefresh.ErrDenied
 	}
 	u.Authenticator = user.Authenticator{Name: backend.GetName(), Realm: backend.GetRealm(), Method: backend.GetKind()}
 	if v, ok := tokens.Claims["frontend_links"]; ok {

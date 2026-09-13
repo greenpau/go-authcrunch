@@ -46,9 +46,11 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	refreshparser "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh/parser"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 const (
@@ -110,10 +112,18 @@ func newJWKSE2ECurveFile(t *testing.T, curve elliptic.Curve) string {
 
 func newJWKSE2EPortal(t *testing.T, dbPath, base string, api *authn.APIConfig, directives ...string) *jwksE2EPortal {
 	t.Helper()
-	return newJWKSE2EPortalWithRefresh(t, dbPath, base, api, false, directives...)
+	return newJWKSE2EPortalWithRefresh(t, dbPath, base, api, nil, directives...)
 }
 
-func newJWKSE2EPortalWithRefresh(t *testing.T, dbPath, base string, api *authn.APIConfig, refresh bool, directives ...string) *jwksE2EPortal {
+// A nil refresh directive list leaves the feature absent; an empty non-nil
+// list enables its defaults. Required origin and realm directives are supplied
+// by the fixture, while optional settings come from the consumer test.
+func newJWKSE2EPortalWithRefresh(t *testing.T, dbPath, base string, api *authn.APIConfig, refreshDirectives []string, directives ...string) *jwksE2EPortal {
+	t.Helper()
+	return newJWKSE2EPortalWithCookies(t, dbPath, base, api, cookie.NewConfig(), refreshDirectives, directives...)
+}
+
+func newJWKSE2EPortalWithCookies(t *testing.T, dbPath, base string, api *authn.APIConfig, cookies *cookie.Config, refreshDirectives []string, directives ...string) *jwksE2EPortal {
 	t.Helper()
 	server := httptest.NewUnstartedServer(nil)
 	t.Cleanup(server.Close)
@@ -130,9 +140,23 @@ func newJWKSE2EPortalWithRefresh(t *testing.T, dbPath, base string, api *authn.A
 	}
 	// Isolate generated keys from other portal fixtures, including shuffled runs.
 	keys := append([]string{"crypto default autogenerate tag " + t.Name()}, directives...)
-	config := &authn.PortalConfig{Name: "jwks-e2e", IdentityStores: []string{"jwks-local"}, API: api, RawCryptoKeyStoreConfig: keys, CookieConfig: cookie.NewConfig()}
-	if refresh {
-		config.RefreshTokens = &authn.RefreshConfig{Enabled: true, Realms: []string{"local"}, PublicOrigin: "https://" + server.Listener.Addr().String(), BasePath: base, BodyTransportEnabled: true}
+	config := &authn.PortalConfig{Name: "jwks-e2e", IdentityStores: []string{"jwks-local"}, API: api, RawCryptoKeyStoreConfig: keys, CookieConfig: cookies}
+	if refreshDirectives != nil {
+		// Exercise the public directive constructor through serialization, real
+		// local login, TLS, and rotation in the signing/refresh E2E scenarios.
+		mount := base
+		if mount == "" {
+			mount = "/"
+		}
+		statements := []string{
+			"realms local",
+			cfgutil.EncodeArgs([]string{"public", "origin", "https://" + server.Listener.Addr().String()}),
+			cfgutil.EncodeArgs([]string{"base", "path", mount}),
+		}
+		config.RefreshTokens, err = refreshparser.NewTokenRefreshConfigFromDirectives(append(statements, refreshDirectives...))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	encoded, err := json.Marshal(config)
 	if err != nil {

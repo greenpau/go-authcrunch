@@ -20,12 +20,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 
 	jwtlib "github.com/golang-jwt/jwt/v5"
 
-	"github.com/greenpau/go-authcrunch/pkg/authn/refresh"
+	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -80,9 +79,6 @@ func (p *Portal) configureOIDC() error {
 	}
 	options := oidc.Options{SessionCookieName: p.cookie.OIDCSessionIDCookieName, RequestCookieName: p.cookie.OIDCRequestIDCookieName}
 	if p.refresh != nil {
-		if slices.Contains([]string{options.SessionCookieName, options.RequestCookieName}, p.config.RefreshTokens.CookieName) {
-			return fmt.Errorf("oidc cookie collides with the refresh cookie")
-		}
 		issuer, _ := url.Parse(config.Issuer)
 		if p.config.RefreshTokens.PublicOrigin != issuer.Scheme+"://"+issuer.Host || strings.TrimSuffix(p.config.RefreshTokens.BasePath, "/") != issuer.Path {
 			return fmt.Errorf("oidc issuer and refresh origin/mount must agree")
@@ -147,7 +143,7 @@ func (p *Portal) oidcRealm(realm string) bool {
 }
 
 func (p *Portal) finishOIDCLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, proof *user.User) error {
-	if p.oidc == nil || proof.RefreshTransport == refresh.BodyTransport {
+	if p.oidc == nil || proof.RefreshTransport == tokenrefresh.BodyTransport {
 		return nil
 	}
 	authentication := oidc.Authentication{Realm: proof.Authenticator.Realm, Backend: proof.Authenticator.Name, Username: proof.Claims.Subject, Evidence: proof.LoginEvidence, Methods: proof.LoginMethods}

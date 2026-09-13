@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
-	"github.com/greenpau/go-authcrunch/pkg/authn/refresh"
+	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 )
@@ -45,11 +45,11 @@ func (p *Portal) validateRefreshOrigin(r *http.Request) error {
 		secure = forwarded == "https"
 	}
 	if !secure || "https://"+addrutil.GetSourceHost(r) != c.PublicOrigin {
-		return refresh.ErrDenied
+		return tokenrefresh.ErrDenied
 	}
 	mount := strings.TrimSuffix(c.BasePath, "/")
 	if r.URL.RawPath != "" || (r.URL.Path != c.BasePath && !strings.HasPrefix(r.URL.Path, mount+"/")) {
-		return refresh.ErrDenied
+		return tokenrefresh.ErrDenied
 	}
 	return nil
 }
@@ -59,24 +59,24 @@ func (p *Portal) validateRefreshLogin(r *http.Request, transport string) error {
 		return err
 	}
 	switch transport {
-	case refresh.CookieTransport:
+	case tokenrefresh.CookieTransport:
 		if values := r.Header.Values("Origin"); len(values) > 1 || (len(values) == 1 && values[0] != p.config.RefreshTokens.PublicOrigin) {
-			return refresh.ErrDenied
+			return tokenrefresh.ErrDenied
 		}
 		if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" && site != "none" {
-			return refresh.ErrDenied
+			return tokenrefresh.ErrDenied
 		}
-	case refresh.BodyTransport:
+	case tokenrefresh.BodyTransport:
 		if !p.config.RefreshTokens.BodyTransportEnabled || r.Header.Get("Cookie") != "" {
-			return refresh.ErrDenied
+			return tokenrefresh.ErrDenied
 		}
 		for _, name := range []string{"Origin", "Sec-Fetch-Site", "Sec-Fetch-Mode", "Sec-Fetch-Dest"} {
 			if len(r.Header.Values(name)) != 0 {
-				return refresh.ErrDenied
+				return tokenrefresh.ErrDenied
 			}
 		}
 	default:
-		return refresh.ErrDenied
+		return tokenrefresh.ErrDenied
 	}
 	return nil
 }
@@ -88,25 +88,25 @@ func parseRefreshBody(w http.ResponseWriter, r *http.Request) (string, bool, err
 	d := json.NewDecoder(r.Body)
 	start, err := d.Token()
 	if err != nil || start != json.Delim('{') {
-		return "", false, refresh.ErrInvalid
+		return "", false, tokenrefresh.ErrInvalid
 	}
 	token, present := "", false
 	for d.More() {
 		key, err := d.Token()
 		if err != nil || key != "refresh_token" || present {
-			return "", false, refresh.ErrInvalid
+			return "", false, tokenrefresh.ErrInvalid
 		}
 		present = true
 		if err := d.Decode(&token); err != nil || token == "" {
-			return "", false, refresh.ErrInvalid
+			return "", false, tokenrefresh.ErrInvalid
 		}
 	}
 	end, err := d.Token()
 	if err != nil || end != json.Delim('}') {
-		return "", false, refresh.ErrInvalid
+		return "", false, tokenrefresh.ErrInvalid
 	}
 	if _, err := d.Token(); err != io.EOF {
-		return "", false, refresh.ErrInvalid
+		return "", false, tokenrefresh.ErrInvalid
 	}
 	return token, present, nil
 }
@@ -141,10 +141,10 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 	if err != nil {
 		return p.handleJSONError(ctx, w, http.StatusBadRequest, "Invalid refresh request")
 	}
-	cookies := r.CookiesNamed(p.config.RefreshTokens.CookieName)
-	transport := refresh.CookieTransport
+	cookies := r.CookiesNamed(p.cookie.RefreshTokenCookieName)
+	transport := tokenrefresh.CookieTransport
 	if body {
-		transport = refresh.BodyTransport
+		transport = tokenrefresh.BodyTransport
 	}
 	if len(cookies) > 1 || (body && len(cookies) != 0) {
 		return p.handleJSONError(ctx, w, http.StatusBadRequest, "Ambiguous refresh credential")
@@ -152,7 +152,7 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 	if err := p.validateRefreshLogin(r, transport); err != nil {
 		return p.handleJSONError(ctx, w, http.StatusForbidden, "Invalid refresh transport")
 	}
-	if transport == refresh.CookieTransport {
+	if transport == tokenrefresh.CookieTransport {
 		if len(r.Header.Values("Origin")) != 1 || r.Header.Get("Origin") != p.config.RefreshTokens.PublicOrigin || len(r.Header.Values(refreshRequestHeader)) != 1 || r.Header.Get(refreshRequestHeader) != "1" {
 			return p.handleJSONError(ctx, w, http.StatusForbidden, "Invalid browser refresh request")
 		}
@@ -176,7 +176,7 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 				return p.refreshError(ctx, w, err)
 			}
 		}
-		if transport == refresh.CookieTransport {
+		if transport == tokenrefresh.CookieTransport {
 			p.revokeOIDCBrowser(w, r)
 			p.deleteRefreshCookies(w, r)
 		}
@@ -187,7 +187,7 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 	if err != nil {
 		return p.refreshError(ctx, w, err)
 	}
-	if transport == refresh.CookieTransport {
+	if transport == tokenrefresh.CookieTransport {
 		u, err := p.userFromRefresh(tokens)
 		if err != nil {
 			return p.refreshError(ctx, w, err)
@@ -202,22 +202,22 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 }
 
 func (p *Portal) refreshError(ctx context.Context, w http.ResponseWriter, err error) error {
-	if errors.Is(err, refresh.ErrInvalid) || errors.Is(err, refresh.ErrDenied) {
+	if errors.Is(err, tokenrefresh.ErrInvalid) || errors.Is(err, tokenrefresh.ErrDenied) {
 		return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Reauthentication required")
 	}
 	return p.handleJSONError(ctx, w, http.StatusServiceUnavailable, "Refresh temporarily unavailable")
 }
 
-func (p *Portal) refreshResponse(tokens *refresh.Result, transport string) *apiauth.AuthResponse {
+func (p *Portal) refreshResponse(tokens *tokenrefresh.Result, transport string) *apiauth.AuthResponse {
 	response := &apiauth.AuthResponse{Authenticated: true, SessionID: tokens.SessionID, AccessExpiresAt: tokens.AccessExpiresAt, RefreshExpiresAt: tokens.RefreshExpiresAt, SessionExpiresAt: tokens.AbsoluteExpiresAt}
-	if transport == refresh.BodyTransport {
+	if transport == tokenrefresh.BodyTransport {
 		response.AccessToken, response.AccessTokenName = tokens.AccessToken, p.cookie.AccessTokenCookieName
-		response.RefreshToken, response.RefreshTokenName = tokens.RefreshToken, p.config.RefreshTokens.CookieName
+		response.RefreshToken, response.RefreshTokenName = tokens.RefreshToken, p.cookie.RefreshTokenCookieName
 	}
 	return response
 }
 
-func (p *Portal) deliverRefreshCookies(w http.ResponseWriter, r *http.Request, tokens *refresh.Result) {
+func (p *Portal) deliverRefreshCookies(w http.ResponseWriter, r *http.Request, tokens *tokenrefresh.Result) {
 	// Retain the access cookie's configured domain/path, but bound its lifetime to
 	// this signed JWT and enforce browser credential protection for refresh mode.
 	access, err := http.ParseSetCookie(p.cookie.GetAccessTokenCookie(addrutil.GetSourceHost(r), tokens.AccessToken))
@@ -233,14 +233,14 @@ func (p *Portal) deliverRefreshCookies(w http.ResponseWriter, r *http.Request, t
 		w.Header().Del("Set-Cookie")
 		for _, raw := range previous {
 			c, err := http.ParseSetCookie(raw)
-			if err != nil || (c.Name != access.Name && c.Name != p.config.RefreshTokens.CookieName) {
+			if err != nil || (c.Name != access.Name && c.Name != p.cookie.RefreshTokenCookieName) {
 				w.Header().Add("Set-Cookie", raw)
 			}
 		}
 		http.SetCookie(w, access)
 	}
 	c := p.config.RefreshTokens
-	http.SetCookie(w, &http.Cookie{Name: c.CookieName, Value: tokens.RefreshToken, Path: c.BasePath, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: time.Unix(tokens.RefreshExpiresAt, 0).UTC(), MaxAge: max(1, int(tokens.RefreshExpiresAt-time.Now().Unix()))})
+	http.SetCookie(w, &http.Cookie{Name: p.cookie.RefreshTokenCookieName, Value: tokens.RefreshToken, Path: c.BasePath, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: time.Unix(tokens.RefreshExpiresAt, 0).UTC(), MaxAge: max(1, int(tokens.RefreshExpiresAt-time.Now().Unix()))})
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie(c.BasePath))
 	w.Header().Del("Authorization")
 	w.Header().Set("Cache-Control", "no-store")
@@ -248,7 +248,7 @@ func (p *Portal) deliverRefreshCookies(w http.ResponseWriter, r *http.Request, t
 
 func (p *Portal) deleteRefreshCookies(w http.ResponseWriter, r *http.Request) {
 	c := p.config.RefreshTokens
-	http.SetCookie(w, &http.Cookie{Name: c.CookieName, Path: c.BasePath, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: time.Unix(0, 0).UTC(), MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: p.cookie.RefreshTokenCookieName, Path: c.BasePath, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: time.Unix(0, 0).UTC(), MaxAge: -1})
 	h := addrutil.GetSourceHost(r)
 	for _, raw := range []string{p.cookie.GetDeleteAccessTokenCookie(h), p.cookie.GetDeleteRefreshTokenCookie(c.BasePath), p.cookie.GetDeleteSessionIDCookie(h), p.cookie.GetDeleteSandboxIDCookie(c.BasePath), p.cookie.GetDeleteRefererCookie(c.BasePath), p.cookie.GetDeleteIdentityTokenCookie(p.cookie.IdentityTokenCookieName, c.BasePath)} {
 		if cookie, err := http.ParseSetCookie(raw); err == nil {
@@ -265,12 +265,12 @@ func (p *Portal) revokeRefreshOnLogin(ctx context.Context, w http.ResponseWriter
 	if p.refresh == nil {
 		return nil
 	}
-	for _, c := range r.CookiesNamed(p.config.RefreshTokens.CookieName) {
-		if err := p.refresh.Logout(ctx, c.Value, refresh.CookieTransport); err != nil && !errors.Is(err, refresh.ErrInvalid) {
+	for _, c := range r.CookiesNamed(p.cookie.RefreshTokenCookieName) {
+		if err := p.refresh.Logout(ctx, c.Value, tokenrefresh.CookieTransport); err != nil && !errors.Is(err, tokenrefresh.ErrInvalid) {
 			return err
 		}
 	}
 	c := p.config.RefreshTokens
-	http.SetCookie(w, &http.Cookie{Name: c.CookieName, Path: c.BasePath, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: time.Unix(0, 0).UTC(), MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: p.cookie.RefreshTokenCookieName, Path: c.BasePath, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: time.Unix(0, 0).UTC(), MaxAge: -1})
 	return nil
 }

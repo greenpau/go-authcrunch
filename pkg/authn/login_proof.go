@@ -17,7 +17,7 @@ package authn
 import (
 	"time"
 
-	"github.com/greenpau/go-authcrunch/pkg/authn/refresh"
+	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
@@ -39,11 +39,11 @@ func (p *Portal) recordLoginEvidence(u *user.User, rr *requests.Request, before 
 		return nil
 	}
 	if u.LoginEvidence.UserID == "" {
-		return refresh.ErrDenied
+		return tokenrefresh.ErrDenied
 	}
 	if evidence := rr.Authentication; evidence.UserID != "" {
 		if evidence.UserID != u.LoginEvidence.UserID || evidence.CredentialVersion != u.LoginEvidence.CredentialVersion || evidence.BackendVersion != u.LoginEvidence.BackendVersion {
-			return refresh.ErrDenied
+			return tokenrefresh.ErrDenied
 		}
 	}
 	if passedCheckpointCount(u) <= before {
@@ -60,7 +60,7 @@ func (p *Portal) recordLoginEvidence(u *user.User, rr *requests.Request, before 
 	}
 	// Enrollment alone is not proof of possession for a renewable session.
 	if method == "" {
-		return refresh.ErrDenied
+		return tokenrefresh.ErrDenied
 	}
 	if u.LoginEvidence.AuthenticatedAt == 0 {
 		u.LoginEvidence.AuthenticatedAt = time.Now().Unix()

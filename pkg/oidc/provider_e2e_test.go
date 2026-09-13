@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
+	oidcparser "github.com/greenpau/go-authcrunch/pkg/oidc/parser"
 )
 
 // This host has its own authentication and identity implementation. It imports
@@ -97,7 +98,7 @@ func TestE2EStandaloneProvider(t *testing.T) {
 			origin := "https://" + server.Listener.Addr().String()
 			issuer := origin + mount
 			verifier := &standaloneIdentityVerifier{}
-			registration, err := oidc.NewClientConfigFromDirectives("Standalone application", []string{
+			registration, err := oidcparser.NewOIDCClientConfigFromDirectives("Standalone application", []string{
 				"token_endpoint_auth_method " + tc.method,
 				"redirect_uris https://rp.example.test/callback",
 				"scopes openid profile email",

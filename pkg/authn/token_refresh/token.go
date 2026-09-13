@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package refresh manages rotating credentials independently of access JWTs.
-package refresh
+// Package tokenrefresh manages rotating credentials independently of access JWTs.
+package tokenrefresh
 
 import (
 	"crypto/rand"

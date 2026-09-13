@@ -139,7 +139,7 @@ func TestE2EPortalSigningAndRefreshCompatibility(t *testing.T) {
 		{"generated Ed25519", "Ed25519", []string{"crypto default autogenerate algorithm Ed25519"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			f := newJWKSE2EPortalWithRefresh(t, db, "/xauth", &authn.APIConfig{AdminEnabled: true, AdminFetchPrivateKeysEnabled: true}, true, tc.keys...)
+			f := newJWKSE2EPortalWithRefresh(t, db, "/xauth", &authn.APIConfig{AdminEnabled: true, AdminFetchPrivateKeysEnabled: true}, []string{"body transport enabled"}, tc.keys...)
 			begin := f.postCredentials(t, "/login", apiauth.AuthRequest{Username: "keyadmin", Realm: "local", RefreshTransport: "body"}, 200)
 			login := f.postCredentials(t, "/login", apiauth.AuthRequest{Username: "keyadmin", Realm: "local", RefreshTransport: "body", SandboxID: begin.SandboxID, SandboxSecret: begin.SandboxSecret, ChallengeKind: "password", ChallengeResponse: tests.TestPwd1}, 200)
 			if !login.Authenticated || login.AccessToken == "" || login.RefreshToken == "" {

@@ -313,7 +313,7 @@ func newE2EPortal(t *testing.T, opts e2ePortalOptions) *e2ePortal {
 		API: &authn.APIConfig{AdminEnabled: false, ProfileEnabled: false},
 	}
 	if opts.refresh {
-		cfg.RefreshTokens = &authn.RefreshConfig{Enabled: true, Realms: []string{"local"}, PublicOrigin: "https://" + f.server.Listener.Addr().String(), BasePath: opts.basePath, BodyTransportEnabled: true}
+		cfg.RefreshTokens = &authn.TokenRefreshConfig{Enabled: true, Realms: []string{"local"}, PublicOrigin: "https://" + f.server.Listener.Addr().String(), BasePath: opts.basePath, BodyTransportEnabled: true}
 	}
 	portal, err := authn.NewPortal(authn.PortalParameters{
 		Config: cfg,

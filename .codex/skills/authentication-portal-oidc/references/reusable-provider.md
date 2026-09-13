@@ -61,10 +61,12 @@ oauth application myapp {
 }
 ```
 
-Call the public parser with the nickname and body statements:
+Import `github.com/greenpau/go-authcrunch/pkg/oidc/parser` as `oidcparser` and
+call its public `NewOIDCClientConfigFromDirectives` constructor with the nickname
+and body statements:
 
 ```go
-client, err := oidc.NewClientConfigFromDirectives("myapp", []string{
+client, err := oidcparser.NewOIDCClientConfigFromDirectives("myapp", []string{
     "client_id myapp",
     `client_name "My application"`,
     "redirect_uris https://app.example.com/oidc/callback https://app.example.com/other/callback",
@@ -81,9 +83,9 @@ if err := config.AddClient(client); err != nil {
 
 The Go example omits the secret for initial generation. A Caddy adapter collects
 each line with `cfgutil.EncodeArgs(append([]string{key}, args...))`, just as the
-crypto adapter does. `NewClientConfigFromDirectives` decodes each statement with
-`cfgutil.DecodeArgs`; pass the body without the header or braces. Preserve token
-boundaries with the encoder rather than joining arguments with spaces. Resolve
+crypto adapter does. `oidcparser.NewOIDCClientConfigFromDirectives` decodes each
+statement with `cfgutil.DecodeArgs`; pass the body without the header or braces.
+Preserve token boundaries with the encoder rather than joining arguments with spaces. Resolve
 host-specific placeholders before encoding. The library has no Caddy dependency
 and this change does not install the outer `oauth application` Caddyfile grammar.
 
@@ -114,8 +116,9 @@ also honors an explicit `require_pkce false` for confidential clients.
 ### Typed configuration and keys
 
 Embedders such as `caddy-security` can provision a confidential application with
-only its name and exact callback URI. All helpers belong to the public `oidc`
-package; no portal runtime is needed to create configuration.
+only its name and exact callback URI. Typed provisioning helpers belong to the
+public `oidc` package; directive parsing belongs to `oidc/parser`. No portal
+runtime is needed to create configuration.
 
 ```go
 func provisionProvider(issuer, keyFile string) (*oidc.Config, error) {

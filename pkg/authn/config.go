@@ -85,7 +85,7 @@ type PortalConfig struct {
 	// API holds the configuration for API endpoints.
 	API *APIConfig `json:"api,omitempty" xml:"api,omitempty" yaml:"api,omitempty"`
 	// RefreshTokens configures optional rotating portal sessions.
-	RefreshTokens *RefreshConfig `json:"refresh_tokens,omitempty" xml:"refresh_tokens,omitempty" yaml:"refresh_tokens,omitempty"`
+	RefreshTokens *TokenRefreshConfig `json:"refresh_tokens,omitempty" xml:"refresh_tokens,omitempty" yaml:"refresh_tokens,omitempty"`
 	// OIDCProvider configures the optional downstream OpenID Provider.
 	OIDCProvider *OIDCProviderConfig `json:"oidc_provider,omitempty" xml:"oidc_provider,omitempty" yaml:"oidc_provider,omitempty"`
 	// Indicated that the config was successfully validated.

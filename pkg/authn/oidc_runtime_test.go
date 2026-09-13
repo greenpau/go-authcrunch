@@ -20,6 +20,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -55,23 +56,26 @@ func TestOIDCCookieConfiguration(t *testing.T) {
 		{name: "optional host prefix at root", sessionName: "__Host-session", requestName: "__Host-request"},
 		{name: "host session at nested mount", mount: "/auth", sessionName: "__Host-session", wantError: "root issuer path"},
 		{name: "host request at nested mount", mount: "/auth", requestName: "__Host-request", wantError: "root issuer path"},
-		{name: "refresh session collision", mount: "/auth", sessionName: "refresh", refresh: true, wantError: "collides with the refresh cookie"},
-		{name: "refresh request collision", mount: "/auth", requestName: "refresh", refresh: true, wantError: "collides with the refresh cookie"},
+		{name: "refresh session collision", mount: "/auth", sessionName: "refresh", refresh: true, wantError: "duplicate cookie name"},
+		{name: "refresh request collision", mount: "/auth", requestName: "refresh", refresh: true, wantError: "duplicate cookie name"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newRefreshPortal(t, tc.refresh, false)
 			c := &cookie.Config{OIDCSessionIDCookieName: tc.sessionName, OIDCRequestIDCookieName: tc.requestName}
 			if tc.refresh {
 				if tc.sessionName == "refresh" {
-					c.OIDCSessionIDCookieName = f.portal.config.RefreshTokens.CookieName
+					c.OIDCSessionIDCookieName = f.portal.cookie.RefreshTokenCookieName
 				} else {
-					c.OIDCRequestIDCookieName = f.portal.config.RefreshTokens.CookieName
+					c.OIDCRequestIDCookieName = f.portal.cookie.RefreshTokenCookieName
 				}
 			}
 			var err error
 			f.portal.cookie, err = cookie.NewFactory(c)
 			if err != nil {
-				t.Fatal(err)
+				if tc.wantError == "" || !strings.Contains(err.Error(), tc.wantError) {
+					t.Fatal(err)
+				}
+				return
 			}
 			config := oidcTestConfig()
 			config.Issuer = refreshTestOrigin + tc.mount
@@ -137,13 +141,13 @@ func TestOIDCLogoutTransport(t *testing.T) {
 				}
 				return
 			}
-			var cookies []*http.Cookie
-			for _, cookie := range login.Result().Cookies() {
-				if cookie.MaxAge >= 0 && cookie.Value != "" {
-					cookies = append(cookies, cookie)
-				}
+			jar, err := cookiejar.New(nil)
+			if err != nil {
+				t.Fatal(err)
 			}
 			request := httptest.NewRequest("GET", refreshTestOrigin+"/auth/logout", nil)
+			jar.SetCookies(request.URL, login.Result().Cookies())
+			cookies := jar.Cookies(request.URL)
 			for _, cookie := range cookies {
 				request.AddCookie(cookie)
 			}

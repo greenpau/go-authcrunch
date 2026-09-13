@@ -1,4 +1,4 @@
-# Authentication portal refresh sessions
+# Authentication portal token refresh
 
 Portal refresh is opt-in. It retains JWT access tokens and adds a separate,
 opaque credential for renewing a completed local authentication. It does not
@@ -15,7 +15,6 @@ Add `refresh_tokens` to the authentication portal configuration:
     "realms": ["local"],
     "public_origin": "https://auth.example.com",
     "base_path": "/auth",
-    "cookie_name": "__Secure-authcrunch_refresh_main",
     "access_lifetime_seconds": 300,
     "idle_timeout_seconds": 1800,
     "absolute_timeout_seconds": 28800,
@@ -27,7 +26,14 @@ Add `refresh_tokens` to the authentication portal configuration:
 ```
 
 The example shows defaults except for the required realm, origin, and mount.
-Omitting `cookie_name` derives a stable name from the origin and mount.
+Omitting `cookie_name` inherits `cookie_config.refresh_token_cookie_name` from
+the portal cookie factory, defaulting to `AUTHP_REFRESH_TOKEN`. Setting
+`cookie_config.cookie_name_prefix` to `TENANT` gives `TENANT_REFRESH_TOKEN`
+unless an explicit cookie name is supplied. A token refresh `cookie_name`
+override takes precedence over that shared setting when the feature is enabled.
+It is applied before factory construction and collision checks. Disabled refresh
+does not apply the override. `authn.TokenRefreshConfig.Validate` leaves an omitted
+name empty so independently parsed configuration can inherit its portal's names.
 Durations are integer seconds. The maximum absolute timeout is 30 days.
 The access lifetime is also capped by the existing access signing key's token
 lifetime. Refresh cookies have an independent idle deadline and never inherit
@@ -35,8 +41,10 @@ the ordinary access cookie lifetime or Domain setting.
 
 The origin must be an exact HTTPS origin without a path, query, or fragment.
 The mount must be a canonical absolute path (`/` is supported). Use a unique
-cookie name for each portal. `__Host-` names require the root mount; the default
-`__Secure-` cookie is host-only and scoped to the portal mount.
+cookie name or prefix for portals with overlapping mounts on the same host.
+Names do not require browser security prefixes or hashes. All refresh cookies
+remain host-only and scoped to the portal mount, with Secure, HttpOnly, and
+SameSite=Lax. Explicit `__Host-` names are supported only at the root mount.
 
 Only explicitly listed realms participate. The local identity store implements
 the required capability. Configuring an unsupported realm fails construction.
@@ -44,10 +52,72 @@ LDAP, OAuth, SAML, basic-auth, and API key login remain access-only; no refresh 
 is minted from an existing access JWT. An absent or disabled block retains
 existing access-token lifetimes and allocates no refresh store.
 
-`caddy-security` is unchanged. This library field does **not** introduce a
-Caddyfile directive. A companion parser change would need to map a portal
-refresh block to `authn.RefreshConfig`, reject malformed or duplicate settings,
-and include adaptation tests before Caddyfile support can be advertised.
+## Encoded directives for embedding applications
+
+Import `github.com/greenpau/go-authcrunch/pkg/authn/token_refresh/parser`, usually
+as `refreshparser`, and call
+`refreshparser.NewTokenRefreshConfigFromDirectives(statements []string)`. It returns
+`(*authn.TokenRefreshConfig, error)` for direct assignment to `PortalConfig.RefreshTokens`.
+Pass individual directive lines encoded with `cfgutil.EncodeArgs`; omit the block
+header and braces. Encode each keyword as its own argument, for example
+`[]string{"public", "origin", "https://auth.example.com"}`. Quoted values retain
+spaces. The constructor enables token refresh, calls the existing
+`TokenRefreshConfig.Validate`, and returns a normalized config or an error with no
+partial result. Assign its result to `PortalConfig.RefreshTokens`.
+
+The following illustrates the intended block syntax for an embedding parser.
+The constructor accepts encoded statements from its body; it does not parse the
+outer block or register a Caddyfile directive:
+
+```text
+token refresh {
+    realms local
+    public origin https://auth.example.com
+    base path /auth
+    access lifetime 300
+    idle timeout 1800
+    absolute timeout 28800
+    body transport disabled
+    max sessions 10000
+    max rotations 1024
+}
+```
+
+Only `realms`, `public origin`, and `base path` are required for enabled
+configurations. `realms` accepts multiple values on one line; the other value
+settings each accept one value. Optional `cookie name CUSTOM_REFRESH_TOKEN`
+overrides the portal factory's refresh-cookie name. Numeric settings are decimal
+integers; durations are seconds, and zero
+selects the existing default. The JSON/XML/YAML configuration keys retain their
+existing snake_case names.
+
+State is expressed through keywords: `enabled` or `disabled` as a standalone
+line selects token refresh, and `body transport enabled` or
+`body transport disabled` selects native body transport. Token refresh defaults
+to enabled when the block is present; native body transport defaults to disabled.
+Each setting may appear once, so repeated or conflicting states are errors.
+Boolean literals such as true/false, on/off, and 1/0 are not directive syntax.
+Underscore directive keys are rejected.
+
+Unknown directives, duplicates, empty values, malformed quoting, embedded
+newlines, noninteger numeric values, and integer overflow fail parsing. An empty
+statement list is invalid. Leave `PortalConfig.RefreshTokens` nil when token
+refresh is absent; a `disabled` directive explicitly disables it. Disabled
+configs still check directive grammar and retain the validator's existing
+semantic opt-out.
+
+The embedding application owns block-header validation, duplicate block
+detection, and rejection of additional block arguments or nested blocks. Reject
+empty argument values before encoding: `cfgutil.EncodeArgs` trims trailing
+whitespace and can discard a final empty field. Resolve environment variables
+and secrets before encoding statements and calling the constructor; the library
+does not expand placeholders. The portal mount and HTTPS origin must match the
+actual HTTP route; validation does not create routes or configure TLS.
+
+This repository supplies the library constructor and runtime. Consumer adapters,
+block parsing, wiring, and tests will be updated separately.
+Never modify sibling directories to provide that integration or to repair
+consumer compatibility; all changes for this work remain in `go-authcrunch`.
 
 ## Authentication and issuance
 
@@ -228,7 +298,7 @@ expiry so replay stays recognizable. Capacity exhaustion fails closed; exceeding
 a family's rotation limit requires login. Configure capacity for expected load.
 No refresh cleanup goroutine is created.
 
-This is a single-process implementation. The `refresh.Store` contract describes
+This is a single-process implementation. The `tokenrefresh.Store` contract describes
 atomic creation, lookup, rotation, and revocation for future adapters, but the
 portal currently constructs its own memory store. Shared/distributed storage,
 external-provider refresh capabilities, and persistent reload continuity need
@@ -239,7 +309,7 @@ separate integration and transaction tests.
 ```sh
 make test
 make test-ui
-go test ./pkg/authn/refresh -run '^$' -fuzz FuzzRefreshToken -fuzztime 5s
+go test ./pkg/authn/token_refresh -run '^$' -fuzz FuzzRefreshToken -fuzztime 5s
 ```
 
 Tests cover real local/KMS issuance through browser and native login, MFA and
@@ -249,3 +319,15 @@ concurrent rotation, logout during signing, deadlines, capacity, strict HTTP
 parsing, origin/transport checks, cookies, disposal, security-version persistence,
 and browser coordination. Browser tests use a simulated DOM/Web Locks environment;
 real browser deployment and hardware-backed WebAuthn are separate validation.
+`pkg/authn/token_refresh/parser/parser_test.go` has external-package grammar,
+defaults, validation, JSON round-trip, concurrent reuse, and executable example
+tests. Preserve explicit empty quoted fields in grammar tests; passing them
+through `EncodeArgs` can turn them into missing fields instead.
+`pkg/authn/token_refresh_config_parser_e2e_test.go` verifies directive-configured root
+and nested mounts, browser cookie policy, native transport opt-in, signed token
+lifetimes, session/rotation capacity, and disabled behavior over local TLS.
+`TestE2EPortalSigningAndRefreshCompatibility` in `pkg/authn`
+constructs its refresh config through the public parser and verifies real local
+login, signed credentials, rotation, and replay rejection over local TLS. Its
+external test package exercises the library's supported consumer entry point
+without requiring a sibling-repository adapter or test changes.

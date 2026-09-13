@@ -44,6 +44,20 @@ client that cannot access portal internals. For CLI behavior, run the built
 executable. For library or automation behavior, exercise the owning public
 workflow with real temporary files or local processes as appropriate.
 
+For external consumers, exercise the reusable library API from
+E2E fixtures in this module. Never create, change, or run tests in sibling
+project checkouts to validate work here. Consumer test fixes and integration
+updates are separate work, even when this library changes their expected output.
+Follow the
+[repository scope](../coding-directives/SKILL.md#repository-scope) when selecting
+validation commands.
+
+For configuration parser extraction, keep unit tests in the public parser's
+external test package and exercise its exported entry point in executable Go
+examples. Have consumer E2E fixtures import that parser directly and pass its
+typed result to the production configuration API. Verify the configured behavior
+through the real consumer workflow; a build-only import check is insufficient.
+
 Cover the main successful journey and relevant rejection or persistence
 boundaries. Extend an existing E2E scenario when it can verify the new behavior;
 do not relabel an isolated mock or add an unrelated smoke test. Use independent
@@ -69,7 +83,7 @@ or go-test-report into the lifecycle.
 make test
 make test TEST_DIR='./pkg/authn/...' TEST='TestPortalRefresh'
 make test TEST_DIR='./pkg/authn' TEST='^TestE2EPortalJWKS' COVERAGE_DIR='.coverage/jwks-e2e'
-make qtest QUICK_TEST_DIR='./pkg/authn/refresh'
+make qtest QUICK_TEST_DIR='./pkg/authn/token_refresh/...'
 make test-ui
 make test-automation
 make ci-check

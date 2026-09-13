@@ -65,24 +65,3 @@ func ExampleConfig_AddClient() {
 	fmt.Println(len(config.Clients), client.RequirePKCE, client.ClientSecret == "")
 	// Output: 1 true true
 }
-
-func ExampleNewClientConfigFromDirectives() {
-	client, err := oidc.NewClientConfigFromDirectives("myapp", []string{
-		"client_id myapp",
-		`client_name "My application"`,
-		"redirect_uris https://app.example.com/oidc/callback https://app.example.com/other/callback",
-		"scopes openid profile email",
-		"require_pkce yes",
-	})
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	// Initial provisioning generated the omitted secret. Persist the result
-	// before using it in the provider or adapting the directives again.
-	fmt.Println(client.ClientID, client.ClientName)
-	fmt.Println(len(client.RedirectURIs), client.RequirePKCE)
-	// Output:
-	// myapp My application
-	// 2 true
-}

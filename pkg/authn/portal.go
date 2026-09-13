@@ -23,7 +23,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
-	"github.com/greenpau/go-authcrunch/pkg/authn/refresh"
+	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
@@ -54,8 +54,8 @@ const (
 // Portal is an authentication portal.
 type Portal struct {
 	oidc              oidc.OpenIDProvider
-	refresh           *refresh.Manager
-	refreshStore      *refresh.MemoryStore
+	refresh           *tokenrefresh.Manager
+	refreshStore      *tokenrefresh.MemoryStore
 	id                string
 	config            *PortalConfig
 	userRegistries    map[string]registry.Provider
@@ -255,6 +255,15 @@ func (p *Portal) configureEssentials() error {
 	p.sandboxes = cache.NewSandboxCache()
 	p.sandboxes.Run()
 
+	// A token refresh directive is an explicit override of the shared cookie
+	// setting. Resolve it before factory defaults and collision checks so every
+	// consumer uses the same effective name, including legacy cookie cleanup.
+	if p.config.CookieConfig == nil {
+		p.config.CookieConfig = cookie.NewConfig()
+	}
+	if refresh := p.config.RefreshTokens; refresh != nil && refresh.Enabled && refresh.CookieName != "" {
+		p.config.CookieConfig.RefreshTokenCookieName = refresh.CookieName
+	}
 	c, err := cookie.NewFactory(p.config.CookieConfig)
 	if err != nil {
 		return err

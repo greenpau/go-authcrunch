@@ -79,7 +79,7 @@ func newRefreshPortal(t *testing.T, enabled, mfa bool) *refreshPortalFixture {
 	}
 	cfg := &PortalConfig{Name: "refresh-test", IdentityStores: []string{"localdb"}, CookieConfig: cookie.NewConfig(), API: &APIConfig{ProfileEnabled: true}}
 	if enabled {
-		cfg.RefreshTokens = &RefreshConfig{Enabled: true, Realms: []string{"local"}, PublicOrigin: refreshTestOrigin, BasePath: "/auth", BodyTransportEnabled: true}
+		cfg.RefreshTokens = &TokenRefreshConfig{Enabled: true, Realms: []string{"local"}, PublicOrigin: refreshTestOrigin, BasePath: "/auth", BodyTransportEnabled: true}
 	}
 	p, err := NewPortal(PortalParameters{Config: cfg, Logger: zap.NewNop(), IdentityStores: []ids.IdentityStore{store}})
 	if err != nil {
@@ -135,7 +135,7 @@ func (f *refreshPortalFixture) login(t *testing.T, transport string) *httptest.R
 func responseCookie(t *testing.T, w *httptest.ResponseRecorder, name string) *http.Cookie {
 	t.Helper()
 	for _, c := range w.Result().Cookies() {
-		if c.Name == name && c.MaxAge >= 0 {
+		if c.Name == name && c.MaxAge >= 0 && (c.Expires.IsZero() || c.Expires.After(time.Now())) {
 			return c
 		}
 	}
@@ -177,7 +177,7 @@ func TestPortalRefreshBrowserAndExpiredAccess(t *testing.T) {
 	if !meta.Authenticated || meta.AccessToken != "" || meta.RefreshToken != "" || meta.SessionID == "" {
 		t.Fatal("browser response exposed tokens or omitted metadata")
 	}
-	oldRefresh := responseCookie(t, login, p.config.RefreshTokens.CookieName)
+	oldRefresh := responseCookie(t, login, p.cookie.RefreshTokenCookieName)
 	access := responseCookie(t, login, p.cookie.AccessTokenCookieName)
 	if !oldRefresh.Secure || !oldRefresh.HttpOnly || oldRefresh.SameSite != http.SameSiteLaxMode || oldRefresh.Domain != "" || oldRefresh.Path != "/auth" || oldRefresh.MaxAge <= access.MaxAge {
 		t.Fatal("incorrect independent refresh cookie policy")
@@ -196,7 +196,7 @@ func TestPortalRefreshBrowserAndExpiredAccess(t *testing.T) {
 	stale := &http.Cookie{Name: p.cookie.AccessTokenCookieName, Value: expired.Token}
 	refreshed := f.request(t, "POST", "/auth/api/refresh_token", "{}", true, oldRefresh, stale)
 	nextMeta := decodeAuth(t, refreshed)
-	next := responseCookie(t, refreshed, p.config.RefreshTokens.CookieName)
+	next := responseCookie(t, refreshed, p.cookie.RefreshTokenCookieName)
 	if next.Value == oldRefresh.Value || nextMeta.SessionID != meta.SessionID {
 		t.Fatal("rotation failed")
 	}
@@ -248,7 +248,7 @@ func TestPortalRefreshRequestValidation(t *testing.T) {
 	p := f.portal
 	login := f.login(t, "cookie")
 	decodeAuth(t, login)
-	credential := responseCookie(t, login, p.config.RefreshTokens.CookieName)
+	credential := responseCookie(t, login, p.cookie.RefreshTokenCookieName)
 	cases := []struct {
 		name   string
 		status int
@@ -426,7 +426,7 @@ func TestPortalRefreshDisabledAndBrowserLogout(t *testing.T) {
 	f = newRefreshPortal(t, true, false)
 	login := f.login(t, "cookie")
 	decodeAuth(t, login)
-	credential := responseCookie(t, login, f.portal.config.RefreshTokens.CookieName)
+	credential := responseCookie(t, login, f.portal.cookie.RefreshTokenCookieName)
 	r := httptest.NewRequest("GET", refreshTestOrigin+"/auth/logout", nil)
 	r.AddCookie(credential)
 	w := httptest.NewRecorder()
@@ -445,14 +445,20 @@ func TestPortalRefreshDisabledAndBrowserLogout(t *testing.T) {
 	if logout.Code != 200 {
 		t.Fatal("browser logout failed")
 	}
-	deleted := false
+	deleted, legacyDeleted := false, false
 	for _, c := range logout.Result().Cookies() {
-		if c.Name == credential.Name {
-			deleted = c.Path == "/auth" && c.Domain == "" && c.MaxAge < 0 && c.Secure && c.HttpOnly
+		if c.Name != credential.Name || c.Domain != credential.Domain {
+			continue
+		}
+		switch c.Path {
+		case credential.Path:
+			deleted = c.MaxAge < 0 && c.Secure && c.HttpOnly
+		case "/auth/api/refresh_token":
+			legacyDeleted = c.MaxAge < 0 && c.Secure && c.HttpOnly
 		}
 	}
-	if !deleted {
-		t.Fatal("refresh cookie deletion mismatches issuance")
+	if !deleted || !legacyDeleted {
+		t.Fatal("refresh cookie deletion did not clear both the active and legacy paths")
 	}
 	if w := f.request(t, "POST", "/auth/api/refresh_token", "{}", true, credential); w.Code != 401 {
 		t.Fatal("copied credential survived logout")
@@ -494,7 +500,7 @@ func TestPortalRefreshBrowserFormLogin(t *testing.T) {
 	if completed.Code != 303 {
 		t.Fatalf("completed form failed: %d", completed.Code)
 	}
-	responseCookie(t, completed, p.config.RefreshTokens.CookieName)
+	responseCookie(t, completed, p.cookie.RefreshTokenCookieName)
 	if retry := request("GET", location.Path, nil, sandbox); retry.Code == 303 {
 		t.Fatal("completed sandbox issued again")
 	}
@@ -518,12 +524,12 @@ func TestPortalNewLoginReplacesRefreshFamily(t *testing.T) {
 	f := newRefreshPortal(t, true, false)
 	first := f.login(t, "cookie")
 	decodeAuth(t, first)
-	old := responseCookie(t, first, f.portal.config.RefreshTokens.CookieName)
+	old := responseCookie(t, first, f.portal.cookie.RefreshTokenCookieName)
 	start := f.begin(t, "cookie")
 	body, _ := json.Marshal(apiauth.AuthRequest{Username: tests.TestUser1, Realm: "local", SandboxID: start.SandboxID, SandboxSecret: start.SandboxSecret, ChallengeKind: "password", ChallengeResponse: tests.TestPwd1})
 	second := f.request(t, "POST", "/auth/login", string(body), true, old)
 	decodeAuth(t, second)
-	next := responseCookie(t, second, f.portal.config.RefreshTokens.CookieName)
+	next := responseCookie(t, second, f.portal.cookie.RefreshTokenCookieName)
 	if w := f.request(t, "POST", "/auth/api/refresh_token", "{}", true, old); w.Code != 401 {
 		t.Fatal("previous login family survived replacement")
 	}
@@ -534,7 +540,7 @@ func TestPortalRefreshContinuationAndFreshLogin(t *testing.T) {
 	f := newRefreshPortal(t, true, false)
 	login := f.login(t, "cookie")
 	decodeAuth(t, login)
-	credential := responseCookie(t, login, f.portal.config.RefreshTokens.CookieName)
+	credential := responseCookie(t, login, f.portal.cookie.RefreshTokenCookieName)
 	for _, endpoint := range []string{"/auth/portal", "/auth/login", "/auth/login?fresh=1"} {
 		t.Run(endpoint, func(t *testing.T) {
 			r := httptest.NewRequest("GET", refreshTestOrigin+endpoint, nil)

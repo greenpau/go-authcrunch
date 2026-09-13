@@ -31,7 +31,7 @@ import (
 	authncache "github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
-	"github.com/greenpau/go-authcrunch/pkg/authn/refresh"
+	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
@@ -103,17 +103,17 @@ func TestTagCompliance(t *testing.T) {
 		{name: "test authclient.Options struct", entry: &authclient.Options{}, opts: &Options{}},
 		{name: "test authclient.FileTokenStore struct", entry: &authclient.FileTokenStore{}, opts: &Options{}},
 		{name: "test authclient.HTTPError struct", entry: &authclient.HTTPError{}, opts: &Options{}},
-		{name: "test refresh.Result struct", entry: &refresh.Result{}, opts: &Options{}},
-		{name: "test refresh.Principal struct", entry: &refresh.Principal{}, opts: &Options{}},
-		{name: "test refresh.Binding struct", entry: &refresh.Binding{}, opts: &Options{}},
-		{name: "test refresh.Policy struct", entry: &refresh.Policy{}, opts: &Options{}},
-		{name: "test refresh.Session struct", entry: &refresh.Session{}, opts: &Options{}},
-		{name: "test refresh.Manager struct", entry: &refresh.Manager{}, opts: &Options{}},
-		{name: "test refresh.MemoryStore struct", entry: &refresh.MemoryStore{}, opts: &Options{}},
+		{name: "test tokenrefresh.Result struct", entry: &tokenrefresh.Result{}, opts: &Options{}},
+		{name: "test tokenrefresh.Principal struct", entry: &tokenrefresh.Principal{}, opts: &Options{}},
+		{name: "test tokenrefresh.Binding struct", entry: &tokenrefresh.Binding{}, opts: &Options{}},
+		{name: "test tokenrefresh.Policy struct", entry: &tokenrefresh.Policy{}, opts: &Options{}},
+		{name: "test tokenrefresh.Session struct", entry: &tokenrefresh.Session{}, opts: &Options{}},
+		{name: "test tokenrefresh.Manager struct", entry: &tokenrefresh.Manager{}, opts: &Options{}},
+		{name: "test tokenrefresh.MemoryStore struct", entry: &tokenrefresh.MemoryStore{}, opts: &Options{}},
 		{name: "test authncache.SandboxLease struct", entry: &authncache.SandboxLease{}, opts: &Options{}},
 		{name: "test identity.RefreshIdentity struct", entry: &identity.RefreshIdentity{}, opts: &Options{}},
 		{name: "test requests.AuthenticationEvidence struct", entry: &requests.AuthenticationEvidence{}, opts: &Options{}},
-		{name: "test authn.RefreshConfig struct", entry: &authn.RefreshConfig{}, opts: &Options{}},
+		{name: "test authn.TokenRefreshConfig struct", entry: &authn.TokenRefreshConfig{}, opts: &Options{}},
 		{
 			name:  "test sso.KeyInfo struct",
 			entry: &sso.KeyInfo{},

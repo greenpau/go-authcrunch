@@ -13,13 +13,19 @@ synchronization, artifact identity, and patch/minor publication. Use
 
 ## Command Selection
 
+Run this module's automation for work here. Never run sibling-repository build,
+test, formatting, license, dependency, or cleanup commands, or invoke tools that
+write into sibling directories. Those projects are updated separately. The
+[repository scope](../coding-directives/SKILL.md#repository-scope) is an absolute
+boundary for these workflows.
+
 | Command | Behavior |
 | --- | --- |
 | `make` / `make build` | Check version projections, compile `bin/authdbctl`, print version/help |
 | `make dep` | Download/verify modules and resolve pinned `go tool` commands |
 | `make test` | Race-enabled, uncached Go tests and complete tested reports |
 | `make test TEST_DIR='./pkg/authn/...' TEST='TestPortalRefresh'` | Same lifecycle with selected packages/test pattern |
-| `make qtest QUICK_TEST_DIR='./pkg/authn/refresh'` | Focused lifecycle under `.coverage/quick`; default scope is `./pkg/system` |
+| `make qtest QUICK_TEST_DIR='./pkg/authn/token_refresh/...'` | Token engine and public parser lifecycle under `.coverage/quick`; default scope is `./pkg/system` |
 | `make run-reports` | Rebuild presentations from the existing tested evidence bundle |
 | `make test-ui` | Node spec-reported embedded refresh-client tests |
 | `make test-automation` | Verbose Python automation/version/release fixture tests |

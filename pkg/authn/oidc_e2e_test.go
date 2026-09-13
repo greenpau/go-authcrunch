@@ -98,7 +98,7 @@ func newOIDCE2EFixture(t *testing.T, mount string, refresh bool, cookieConfigs .
 		portalConfig.CookieConfig = cookieConfigs[0]
 	}
 	if refresh {
-		portalConfig.RefreshTokens = &authn.RefreshConfig{Enabled: true, PublicOrigin: "https://" + server.Listener.Addr().String(), BasePath: mount, Realms: []string{"local"}, BodyTransportEnabled: true}
+		portalConfig.RefreshTokens = &authn.TokenRefreshConfig{Enabled: true, PublicOrigin: "https://" + server.Listener.Addr().String(), BasePath: mount, Realms: []string{"local"}, BodyTransportEnabled: true}
 	}
 	config := &authcrunch.Config{IdentityStores: []*ids.IdentityStoreConfig{{Name: "oidc-local", Kind: "local", Params: map[string]any{"path": dbPath, "realm": "local"}}}, AuthenticationPortals: []*authn.PortalConfig{portalConfig}}
 	encoded, err := json.Marshal(config)

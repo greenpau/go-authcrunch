@@ -15,7 +15,6 @@
 package authn
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -32,24 +31,26 @@ const (
 	maxRefreshTimeout             = 30 * 24 * 60 * 60
 )
 
-// RefreshConfig enables portal refresh for explicitly supported realms. All
+// TokenRefreshConfig enables portal refresh for explicitly supported realms. All
 // durations are seconds. Nil or disabled configurations preserve access lifetimes.
-type RefreshConfig struct {
-	Enabled                bool     `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
-	Realms                 []string `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
-	PublicOrigin           string   `json:"public_origin,omitempty" xml:"public_origin,omitempty" yaml:"public_origin,omitempty"`
-	BasePath               string   `json:"base_path,omitempty" xml:"base_path,omitempty" yaml:"base_path,omitempty"`
-	CookieName             string   `json:"cookie_name,omitempty" xml:"cookie_name,omitempty" yaml:"cookie_name,omitempty"`
-	AccessLifetimeSeconds  int      `json:"access_lifetime_seconds,omitempty" xml:"access_lifetime_seconds,omitempty" yaml:"access_lifetime_seconds,omitempty"`
-	IdleTimeoutSeconds     int      `json:"idle_timeout_seconds,omitempty" xml:"idle_timeout_seconds,omitempty" yaml:"idle_timeout_seconds,omitempty"`
-	AbsoluteTimeoutSeconds int      `json:"absolute_timeout_seconds,omitempty" xml:"absolute_timeout_seconds,omitempty" yaml:"absolute_timeout_seconds,omitempty"`
-	BodyTransportEnabled   bool     `json:"body_transport_enabled,omitempty" xml:"body_transport_enabled,omitempty" yaml:"body_transport_enabled,omitempty"`
-	MaxSessions            int      `json:"max_sessions,omitempty" xml:"max_sessions,omitempty" yaml:"max_sessions,omitempty"`
-	MaxRotations           int      `json:"max_rotations,omitempty" xml:"max_rotations,omitempty" yaml:"max_rotations,omitempty"`
+type TokenRefreshConfig struct {
+	Enabled      bool     `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Realms       []string `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
+	PublicOrigin string   `json:"public_origin,omitempty" xml:"public_origin,omitempty" yaml:"public_origin,omitempty"`
+	BasePath     string   `json:"base_path,omitempty" xml:"base_path,omitempty" yaml:"base_path,omitempty"`
+	// CookieName overrides cookie_config.refresh_token_cookie_name when enabled.
+	// An empty name inherits the portal cookie factory's prefix and name settings.
+	CookieName             string `json:"cookie_name,omitempty" xml:"cookie_name,omitempty" yaml:"cookie_name,omitempty"`
+	AccessLifetimeSeconds  int    `json:"access_lifetime_seconds,omitempty" xml:"access_lifetime_seconds,omitempty" yaml:"access_lifetime_seconds,omitempty"`
+	IdleTimeoutSeconds     int    `json:"idle_timeout_seconds,omitempty" xml:"idle_timeout_seconds,omitempty" yaml:"idle_timeout_seconds,omitempty"`
+	AbsoluteTimeoutSeconds int    `json:"absolute_timeout_seconds,omitempty" xml:"absolute_timeout_seconds,omitempty" yaml:"absolute_timeout_seconds,omitempty"`
+	BodyTransportEnabled   bool   `json:"body_transport_enabled,omitempty" xml:"body_transport_enabled,omitempty" yaml:"body_transport_enabled,omitempty"`
+	MaxSessions            int    `json:"max_sessions,omitempty" xml:"max_sessions,omitempty" yaml:"max_sessions,omitempty"`
+	MaxRotations           int    `json:"max_rotations,omitempty" xml:"max_rotations,omitempty" yaml:"max_rotations,omitempty"`
 }
 
 // Validate normalizes enabled refresh configuration and rejects ambiguous mounts.
-func (c *RefreshConfig) Validate() error {
+func (c *TokenRefreshConfig) Validate() error {
 	if c == nil || !c.Enabled {
 		return nil
 	}
@@ -60,15 +61,10 @@ func (c *RefreshConfig) Validate() error {
 	if !strings.HasPrefix(c.BasePath, "/") || path.Clean(c.BasePath) != c.BasePath || strings.ContainsAny(c.BasePath, "\\%?#;\r\n\t ") {
 		return fmt.Errorf("refresh base_path must be a canonical absolute path")
 	}
-	if c.CookieName == "" {
-		d := sha256.Sum256([]byte(c.PublicOrigin + c.BasePath))
-		c.CookieName = fmt.Sprintf("__Secure-authcrunch_refresh_%x", d[:8])
-	}
-	if !strings.HasPrefix(c.CookieName, "__Secure-") && !(strings.HasPrefix(c.CookieName, "__Host-") && c.BasePath == "/") {
-		return fmt.Errorf("refresh cookie requires __Secure- prefix, or __Host- at root")
-	}
-	if err := (&http.Cookie{Name: c.CookieName, Value: "test", Path: c.BasePath, Secure: true}).Valid(); err != nil {
-		return fmt.Errorf("invalid refresh cookie name: %w", err)
+	if c.CookieName != "" {
+		if err := c.validateCookieName(c.CookieName); err != nil {
+			return err
+		}
 	}
 	if len(c.Realms) == 0 {
 		return fmt.Errorf("refresh requires explicit realms")
@@ -100,6 +96,17 @@ func (c *RefreshConfig) Validate() error {
 	}
 	if c.MaxSessions < 1 || c.MaxRotations < 1 {
 		return fmt.Errorf("refresh capacity limits must be positive")
+	}
+	return nil
+}
+
+// Validate an explicit override or the effective name from the cookie factory.
+func (c *TokenRefreshConfig) validateCookieName(name string) error {
+	if err := (&http.Cookie{Name: name, Path: c.BasePath, Secure: true}).Valid(); err != nil {
+		return fmt.Errorf("invalid refresh cookie name: %w", err)
+	}
+	if strings.HasPrefix(name, "__Host-") && c.BasePath != "/" {
+		return fmt.Errorf("__Host- refresh cookies require a root path")
 	}
 	return nil
 }

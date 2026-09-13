@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/greenpau/go-authcrunch/pkg/authn/refresh"
+	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -61,10 +61,8 @@ func (p *Portal) configureRefresh() error {
 			return fmt.Errorf("ambiguous refresh realm %q", realm)
 		}
 	}
-	for _, name := range []string{p.cookie.AccessTokenCookieName, p.cookie.SessionIDCookieName, p.cookie.SandboxIDCookieName, p.cookie.IdentityTokenCookieName, p.cookie.RefererCookieName, p.cookie.RefreshTokenCookieName} {
-		if c.CookieName == name {
-			return fmt.Errorf("refresh cookie collides with an existing portal cookie")
-		}
+	if err := c.validateCookieName(p.cookie.RefreshTokenCookieName); err != nil {
+		return err
 	}
 	accessCookie, err := http.ParseSetCookie(p.cookie.GetAccessTokenCookie(strings.TrimPrefix(c.PublicOrigin, "https://"), "test"))
 	if err != nil {
@@ -77,18 +75,18 @@ func (p *Portal) configureRefresh() error {
 	if strings.HasPrefix(accessCookie.Name, "__Host-") && (accessCookie.Path != "/" || accessCookie.Domain != "") {
 		return fmt.Errorf("__Host- access cookies require root path and no domain")
 	}
-	store, err := refresh.NewMemoryStore(c.MaxSessions, c.MaxRotations)
+	store, err := tokenrefresh.NewMemoryStore(c.MaxSessions, c.MaxRotations)
 	if err != nil {
 		return err
 	}
 	p.refreshStore = store
 	adapter := &portalRefreshAdapter{portal: p}
-	policy := refresh.Policy{
+	policy := tokenrefresh.Policy{
 		AccessLifetime:  time.Duration(min(c.AccessLifetimeSeconds, p.keystore.GetTokenLifetime(nil, nil))) * time.Second,
 		IdleTimeout:     time.Duration(c.IdleTimeoutSeconds) * time.Second,
 		AbsoluteTimeout: time.Duration(c.AbsoluteTimeoutSeconds) * time.Second,
 	}
-	p.refresh, err = refresh.NewManager(store, adapter, adapter, policy, refresh.Binding{Portal: p.config.Name, Origin: c.PublicOrigin, BasePath: c.BasePath})
+	p.refresh, err = tokenrefresh.NewManager(store, adapter, adapter, policy, tokenrefresh.Binding{Portal: p.config.Name, Origin: c.PublicOrigin, BasePath: c.BasePath})
 	return err
 }
 
@@ -130,17 +128,17 @@ func (a *portalRefreshAdapter) Sign(ctx context.Context, claims map[string]any) 
 	return u.Token, nil
 }
 
-func (a *portalRefreshAdapter) WithIdentity(ctx context.Context, principal refresh.Principal, apply func(map[string]any) error) error {
+func (a *portalRefreshAdapter) WithIdentity(ctx context.Context, principal tokenrefresh.Principal, apply func(map[string]any) error) error {
 	p := a.portal
 	store := p.getIdentityStoreByRealm(principal.Realm)
 	backend, ok := store.(refreshIdentityStore)
 	if !ok || store.GetName() != principal.Backend || !p.refreshRealm(principal.Realm) {
-		return refresh.ErrDenied
+		return tokenrefresh.ErrDenied
 	}
 	proof := requests.AuthenticationEvidence{UserID: principal.UserID, CredentialVersion: principal.CredentialVersion, BackendVersion: principal.BackendVersion}
 	err := backend.WithRefreshIdentity(ctx, proof, func(current identity.RefreshIdentity) error {
 		if current.Username != principal.Subject {
-			return refresh.ErrDenied
+			return tokenrefresh.ErrDenied
 		}
 		rr := requests.NewRequest()
 		rr.Upstream.Realm = principal.Realm
@@ -151,24 +149,24 @@ func (a *portalRefreshAdapter) WithIdentity(ctx context.Context, principal refre
 		// Always transform fresh backend attributes, once per issuance.
 		if err := p.transformUser(ctx, rr, claims); err != nil {
 			if rr.Response.Code == 403 {
-				return refresh.ErrDenied
+				return tokenrefresh.ErrDenied
 			}
 			return err
 		}
 		injectPortalRoles(claims, p.config)
 		candidate := &user.User{}
 		if err := p.injectUserChallenges(candidate, claims, current.Challenges); err != nil {
-			return refresh.ErrDenied
+			return tokenrefresh.ErrDenied
 		}
 		for _, challenge := range candidate.Checkpoints {
 			if !satisfiedRefreshChallenge(challenge, principal.Challenges) {
-				return refresh.ErrDenied
+				return tokenrefresh.ErrDenied
 			}
 		}
 		return apply(claims)
 	})
 	if errors.Is(err, identity.ErrRefreshIdentityDenied) {
-		return refresh.ErrDenied
+		return tokenrefresh.ErrDenied
 	}
 	return err
 }

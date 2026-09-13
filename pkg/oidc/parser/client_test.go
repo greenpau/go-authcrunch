@@ -12,20 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oidc_test
+package parser_test
 
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
+	oidcparser "github.com/greenpau/go-authcrunch/pkg/oidc/parser"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-func TestOIDCClientConfigFromDirectives(t *testing.T) {
+func TestNewOIDCClientConfigFromDirectives(t *testing.T) {
 	const callback = "https://app.example.test/callback"
 	secret := strings.Repeat("s", 32) + ` +/:,"quoted" secret `
 	for _, tc := range []struct {
@@ -61,7 +63,7 @@ func TestOIDCClientConfigFromDirectives(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			original := slices.Clone(tc.statements)
-			client, err := oidc.NewClientConfigFromDirectives("myapp", tc.statements)
+			client, err := oidcparser.NewOIDCClientConfigFromDirectives("myapp", tc.statements)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -104,7 +106,7 @@ func TestOIDCClientConfigFromDirectives(t *testing.T) {
 			if client.SkipConsent {
 				statements = append(statements, "skip_consent true")
 			}
-			restored, err := oidc.NewClientConfigFromDirectives("myapp", statements)
+			restored, err := oidcparser.NewOIDCClientConfigFromDirectives("myapp", statements)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -116,7 +118,7 @@ func TestOIDCClientConfigFromDirectives(t *testing.T) {
 	}
 }
 
-func TestOIDCClientDirectiveErrors(t *testing.T) {
+func TestNewOIDCClientConfigFromDirectivesErrors(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		statements []string
@@ -147,20 +149,20 @@ func TestOIDCClientDirectiveErrors(t *testing.T) {
 		{"invalid scope", []string{"redirect_uris https://app.example.test/callback", "scopes openid admin"}, "unsupported oidc scope"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			client, err := oidc.NewClientConfigFromDirectives("app", tc.statements)
+			client, err := oidcparser.NewOIDCClientConfigFromDirectives("app", tc.statements)
 			if err == nil || err.Error() != tc.err || client != nil {
 				t.Fatal("directive was not rejected with expected error")
 			}
 		})
 	}
 	for _, nickname := range []string{"", " app", "app\n", "app\tname", strings.Repeat("a", 257)} {
-		if client, err := oidc.NewClientConfigFromDirectives(nickname, nil); err == nil || err.Error() != "invalid oidc application nickname" || client != nil {
+		if client, err := oidcparser.NewOIDCClientConfigFromDirectives(nickname, nil); err == nil || err.Error() != "invalid oidc application nickname" || client != nil {
 			t.Fatal("invalid application nickname accepted")
 		}
 	}
 }
 
-func TestOIDCClientDirectiveSecretRedaction(t *testing.T) {
+func TestNewOIDCClientConfigFromDirectivesSecretRedaction(t *testing.T) {
 	const secret = "unique-sensitive-value-never-in-errors"
 	for _, statement := range []string{
 		"client_secret " + secret + " extra",
@@ -169,13 +171,13 @@ func TestOIDCClientDirectiveSecretRedaction(t *testing.T) {
 		"token_endpoint_auth_method " + secret,
 		secret + " value",
 	} {
-		if _, err := oidc.NewClientConfigFromDirectives("app", []string{statement}); err == nil || strings.Contains(err.Error(), secret) {
+		if _, err := oidcparser.NewOIDCClientConfigFromDirectives("app", []string{statement}); err == nil || strings.Contains(err.Error(), secret) {
 			t.Fatal("invalid directive leaked sensitive content or succeeded")
 		}
 	}
 }
 
-func TestOIDCClientDirectiveBooleans(t *testing.T) {
+func TestNewOIDCClientConfigFromDirectivesBooleans(t *testing.T) {
 	for _, tc := range []struct {
 		value string
 		want  bool
@@ -184,9 +186,34 @@ func TestOIDCClientDirectiveBooleans(t *testing.T) {
 		{"false", false}, {"no", false}, {"off", false}, {"0", false}, {"FALSE", false},
 	} {
 		t.Run(tc.value, func(t *testing.T) {
-			client, err := oidc.NewClientConfigFromDirectives("app", []string{"redirect_uris https://app.example.test/callback", "require_pkce " + tc.value, "skip_consent " + tc.value})
+			client, err := oidcparser.NewOIDCClientConfigFromDirectives("app", []string{"redirect_uris https://app.example.test/callback", "require_pkce " + tc.value, "skip_consent " + tc.value})
 			if err != nil || client.RequirePKCE != tc.want || client.SkipConsent != tc.want {
 				t.Fatal("directive did not follow repository boolean syntax")
+			}
+		})
+	}
+}
+
+func TestNewOIDCClientConfigFromDirectivesIndependentRegistrations(t *testing.T) {
+	statements := []string{"redirect_uris https://app.example.test/callback"}
+	for i := range 16 {
+		t.Run(fmt.Sprintf("consumer %d", i), func(t *testing.T) {
+			t.Parallel()
+			first, err := oidcparser.NewOIDCClientConfigFromDirectives("application", statements)
+			if err != nil {
+				t.Fatal(err)
+			}
+			second, err := oidcparser.NewOIDCClientConfigFromDirectives("application", statements)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if first.ClientID == second.ClientID || first.ClientSecret == second.ClientSecret {
+				t.Fatal("independent registrations reused generated credentials")
+			}
+			first.RedirectURIs[0] = "https://other.example.test/callback"
+			first.Scopes[0] = "email"
+			if !slices.Equal(second.RedirectURIs, []string{"https://app.example.test/callback"}) || !slices.Equal(second.Scopes, []string{"openid", "profile", "email"}) || statements[0] != "redirect_uris https://app.example.test/callback" {
+				t.Fatal("independent consumers share mutable parser state")
 			}
 		})
 	}

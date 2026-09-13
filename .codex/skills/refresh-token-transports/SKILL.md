@@ -21,9 +21,17 @@ fields, trailing data, bodies over 1 KiB, duplicate refresh cookies, and mixed
 cookie/body credentials. Embedding servers still own forwarded-host/protocol
 normalization; never broaden trust merely to make a proxy setup pass.
 
-Cookie transport returns session/expiry metadata only. Refresh cookies are
-Secure, HttpOnly, host-only, SameSite=Lax, and mount-scoped; `__Host-` requires
-root scope. Access cookies retain configured domain/path with bounded access
+Cookie transport returns session/expiry metadata only. Cookie names come from
+the portal factory's `RefreshTokenCookieName`, defaulting to `AUTHP_REFRESH_TOKEN`.
+Honor the common prefix and explicit name settings. An enabled token refresh
+`cookie name` directive overrides the shared refresh-cookie setting before
+factory construction. Read that effective name for request extraction, browser
+session detection, issuance, native response metadata, revocation, and deletion.
+Never derive an independent name from the origin/mount or require a browser
+security prefix. Explicit `__Host-` names still require root scope.
+
+Refresh cookies are Secure, HttpOnly, host-only, SameSite=Lax, and mount-scoped.
+Access cookies retain configured domain/path with bounded access
 expiry. Refresh cookie lifetime is independent of access cookie configuration.
 Responses use `Cache-Control: no-store`.
 
@@ -69,8 +77,10 @@ GET logout shows confirmation when refresh state exists. The protected POST
 revokes the family before clearing cookies and following a trusted destination.
 A revocation failure returns 503 without claiming success. A completed new
 browser login revokes the previous family even when the new realm is
-access-only. Clear legacy refresh cookies, including secure-prefixed variants,
-without changing provider logout semantics.
+access-only. Clear legacy refresh cookies at `<mount>/api/refresh_token` without
+deleting the active credential at `<mount>`: the two cookies can share the same
+factory name. Keep explicit security-prefix compatibility without making those
+prefixes defaults. Provider logout retains its separate protocol behavior.
 
 ## Validation
 
@@ -82,3 +92,7 @@ and Web Locks. Keep concurrent refresh/logout, stored-pending failure,
 continuation, and fresh-login cases. This simulation does not prove real proxy,
 secure-cookie, browser, or hardware WebAuthn behavior; name those limits when
 reporting validation. Update UI asset inventories when adding embedded files.
+`TestE2ETokenRefreshCookieLifecycle` in
+`pkg/authn/token_refresh_config_parser_e2e_test.go` uses a real TLS client and
+cookie jar to check prefix/name overrides, legacy-path cleanup, rotation, logout,
+and revocation. Keep ordinary fixtures on the common portal cookie convention.

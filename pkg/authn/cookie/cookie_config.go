@@ -34,7 +34,7 @@ const DefaultIdentityTokenCookieName string = "ID_TOKEN"
 // DefaultAccessTokenCookieName is the default access token cookie name.
 const DefaultAccessTokenCookieName string = "ACCESS_TOKEN"
 
-// DefaultRefreshTokenCookieName is the default access token cookie name.
+// DefaultRefreshTokenCookieName is the default refresh token cookie name.
 const DefaultRefreshTokenCookieName string = "REFRESH_TOKEN"
 
 // DefaultOIDCSessionIDCookieName is the default OpenID Provider session cookie name.
