@@ -47,7 +47,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
-	oidcparser "github.com/greenpau/go-authcrunch/pkg/oidc/parser"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
@@ -111,12 +110,7 @@ func newOIDCE2EFixtureWithProviderDirectives(t *testing.T, mount string, refresh
 			"applications consenting-web trusted-web post-web browser-app",
 		}
 	}
-	providerConfig, err := oidcparser.NewOIDCProviderConfigFromDirectives(
-		append([]string{cfgutil.EncodeArgs([]string{"issuer", issuer})}, directives...), applications)
-	if err != nil {
-		t.Fatal(err)
-	}
-	portalConfig := &authn.PortalConfig{Name: "oidc-e2e", CookieConfig: cookie.NewConfig(), API: &authn.APIConfig{AdminEnabled: true, ProfileEnabled: true}, IdentityStores: []string{"oidc-local"}, OIDCProvider: providerConfig}
+	portalConfig := &authn.PortalConfig{Name: "oidc-e2e", CookieConfig: cookie.NewConfig(), API: &authn.APIConfig{AdminEnabled: true, ProfileEnabled: true}, IdentityStores: []string{"oidc-local"}}
 	if len(cookieConfigs) != 0 {
 		portalConfig.CookieConfig = cookieConfigs[0]
 	}
@@ -124,6 +118,18 @@ func newOIDCE2EFixtureWithProviderDirectives(t *testing.T, mount string, refresh
 		portalConfig.RefreshTokens = &authn.TokenRefreshConfig{Enabled: true, PublicOrigin: "https://" + server.Listener.Addr().String(), BasePath: mount, Realms: []string{"local"}, BodyTransportEnabled: true}
 	}
 	config := &authcrunch.Config{IdentityStores: []*ids.IdentityStoreConfig{{Name: "oidc-local", Kind: "local", Params: map[string]any{"path": dbPath, "realm": "local"}}}, AuthenticationPortals: []*authn.PortalConfig{portalConfig}}
+	for nickname, client := range applications {
+		application, err := oidc.NewOAuthApplicationConfig(nickname, client)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := config.AddOAuthApplication(application); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := config.ConfigureOIDCProvider(portalConfig, append([]string{cfgutil.EncodeArgs([]string{"issuer", issuer})}, directives...)); err != nil {
+		t.Fatal(err)
+	}
 	encoded, err := json.Marshal(config)
 	if err != nil {
 		t.Fatal(err)

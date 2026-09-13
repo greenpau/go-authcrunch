@@ -128,14 +128,129 @@ Application declarations can follow a provider block in the embedding syntax:
 collect all registrations before resolving any provider body, then run final
 portal/root validation. Never provision clients again just to resolve a reference.
 
-The library accepts encoded body statements; it does not parse enclosing braces
+The provider parser accepts encoded body statements; it does not parse enclosing braces
 or install an HTTP server's outer block grammar. Consumer adapter integration is
 separate work in its owning repository. All implementation and tests here remain
 inside this repository.
 
+## Named application registration and reloads
+
+`oidc.OAuthApplicationConfig` contains `Name` (the configuration nickname) and
+`Client` (the provisioned `*oidc.ClientConfig`). `oidc.NewOAuthApplicationConfig`
+validates and copies these values without generating credentials. The nickname
+does not replace the client's protocol identifier or display name.
+
+Use `oidcparser.NewOAuthApplicationConfigFromDirectives(header, body, persisted)`
+when adapting an `oauth application <nickname>` block. It recognizes the encoded
+header, reuses the existing client field decoder, and returns a named registration.
+Encode the header and each body line separately with `cfgutil.EncodeArgs`; omit
+braces, preserve argument boundaries, and expand host placeholders first. The
+embedding server owns token traversal and recognition of enclosing block scopes.
+
+The third argument is an optional previously saved `*oidc.OAuthApplicationConfig`:
+
+- Explicit `client_id` and `client_secret` take precedence. Empty values fail.
+- Omitted credentials are restored only from a valid, matching nickname.
+- Changing the client ID requires an explicit secret for a confidential client;
+  the previous identity's secret is never carried to a different ID.
+- Public clients never inherit secrets. Changing from public to confidential
+  requires supplying a secret. Switching Basic/POST preserves an omitted secret
+  when the client ID is unchanged.
+- All other fields come from current directives and normal defaults. Old callback
+  URIs, scopes, consent policy, display name, and PKCE policy are not inherited.
+- Missing or invalid persisted credentials cause an error; adaptation never
+  generates replacements. Header/body errors never echo supplied values.
+
+For first-time generation, call `NewOIDCClientConfigFromDirectives` or
+`oidc.NewClientConfig` as an explicit provisioning operation, wrap the result with
+`oidc.NewOAuthApplicationConfig`, and persist it before activation. On every
+reload, load the saved registration and pass it to the adaptation API. Explicit
+credential rotation must also be persisted before activation. Signing keys are
+provider-owned and must be retained independently of client registrations.
+
+Storage is owned by the embedding application. The library does not choose a
+filesystem path, write credentials while parsing, or keep a process-global cache.
+Use the host's secret store, or an owner-only credential file (0600) in a trusted
+private directory, with atomic publication/replacement and serialized writers.
+Treat a failed read, invalid registration, or failed write as an adaptation failure;
+do not bootstrap replacement credentials on a reload error. Do not use a generic
+configuration dump with broad file permissions as a credential store.
+
+Root `authcrunch.Config` provides the integration surface:
+
+| API | Contract |
+| --- | --- |
+| `OAuthApplications` | Serializable ordered registrations under `oauth_applications`; includes secrets. |
+| `AddOAuthApplication(application)` | Validate/copy one registration; reject duplicate nicknames, including identical definitions. |
+| `GetOAuthApplication(nickname)` | Return an independent named registration; exact lookup, error if missing or registry invalid. |
+| `GetOAuthApplications()` | Return a validated, independent `map[string]*oidc.ClientConfig` for standalone provider parsing. |
+| `ConfigureOIDCProvider(portal, statements)` | Resolve provider application references against this Config, validate, and attach a snapshot to the portal. |
+
+`Config.Validate` checks all declared applications, including unused entries.
+Duplicate client IDs are rejected when selected together by a provider; nicknames
+are unique across root configuration. Provider attachment rejects a second
+definition and ensures OIDC defaults run even if the portal was validated earlier.
+All mutation methods configure a new object graph before `NewServer`; they do not
+modify running providers. Selected client snapshots are serialized in the existing
+`oidc_provider.clients` field, so a normalized Config can be loaded directly.
+Changing a registry entry later does not change those snapshots; re-adapt the
+provider body on reload to apply changed application settings.
+
+An adapter collects all application blocks first, then resolves saved provider
+bodies. This permits application declarations after a provider in the source.
+Use a fresh root Config each time: the saved registry supplies credentials only;
+removed or undeclared applications must not become registered implicitly.
+
+```go
+// saved is the Config loaded from trusted credential storage.
+previous, err := saved.GetOAuthApplication("website")
+if err != nil {
+    return err
+}
+application, err := oidcparser.NewOAuthApplicationConfigFromDirectives(
+    cfgutil.EncodeArgs([]string{"oauth", "application", "website"}),
+    []string{
+        "redirect_uris https://app.example.com/callback",
+        "scopes openid profile email",
+    }, previous,
+)
+if err != nil {
+    return err
+}
+next := authcrunch.NewConfig()
+if err := next.AddOAuthApplication(application); err != nil {
+    return err
+}
+portal := &authn.PortalConfig{Name: "login", IdentityStores: []string{"localdb"}}
+if err := next.ConfigureOIDCProvider(portal, []string{
+    "issuer https://auth.example.com/auth",
+    "realms local",
+    "signing key files /etc/auth/oidc.pem",
+    "applications website",
+}); err != nil {
+    return err
+}
+if err := next.AddAuthenticationPortal(portal); err != nil {
+    return err
+}
+// Configure localdb, validate next, persist its registrations privately, and
+// construct authcrunch.NewServer. Handle storage failures before activation.
+```
+
+This library supplies reusable header handling and root configuration integration;
+it does not install an outer HTTP server's directive handler. Consumer adapter
+changes remain separate work. The executable examples live in
+`pkg/oidc/parser/application_example_test.go` and
+`config_oauth_applications_example_test.go`. The portal TLS reload/rotation test
+is `pkg/authn/oidc_application_e2e_test.go`.
+
 ## Provisioning clients and signing keys
 
 ### OAuth application directives
+
+This subsection describes explicit initial provisioning. For normal configuration
+adaptation, use [named application registration](#named-application-registration-and-reloads),
+which shares this grammar and requires explicit or saved credentials.
 
 For a block such as:
 
@@ -194,7 +309,9 @@ Booleans follow `cfgutil.ParseBoolArg`: true/yes/on/1 and false/no/off/0,
 case-insensitively. Each directive may occur once. Put multiple list values on
 one line. Unknown directives, wrong argument counts, empty supplied values,
 invalid quoting, and embedded newlines fail without echoing credential values.
-An explicit empty secret or ID is an error; omission requests generation.
+An explicit empty secret or ID is an error; omission requests generation only
+in the provisioning constructor. The named application adaptation API restores
+saved credentials or fails instead.
 
 The nickname is a host configuration label and supplies the default display
 name. The host owns nickname lookup and uniqueness; `Config.AddClient` checks

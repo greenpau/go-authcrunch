@@ -15,16 +15,27 @@ runtime `Options`. The package has no dependency on the `authn` portal runtime.
 - `config.go`: public `Config`, `ClientConfig`, and validation.
 - `provisioning.go`: public client constructors, credential generation,
   `Config.AddClient`, and dedicated signing-key generation in PEM or a new file.
+- `application.go`: serializable `OAuthApplicationConfig`, associating an exact
+  nickname with a validated client; `NewOAuthApplicationConfig` snapshots it
+  without generating credentials. Root `Config.OAuthApplications` owns named
+  registrations, with copying add/lookup methods in `config_oauth_applications.go`.
 - `pkg/oidc/parser`: public
   `NewOIDCClientConfigFromDirectives(nickname, statements)` parses an OAuth
   application block body with `cfgutil.DecodeArgs` and returns `*oidc.ClientConfig`.
   This separate package owns the parser and its external-package unit tests;
   it delegates provisioning to `oidc.NewClientConfig`.
+  `NewOAuthApplicationConfigFromDirectives(header, statements, persisted)`
+  recognizes the encoded `oauth application <nickname>` header and reuses the
+  same client field decoder for adaptation without credential generation.
   `NewOIDCProviderConfigFromDirectives(statements, applications)` parses provider
   settings, resolves selected application nicknames through a caller-owned
   `map[string]*oidc.ClientConfig`, and returns `*oidc.Config` for `NewProvider`
   or `PortalConfig.OIDCProvider`. Embedding adapters collect statements using
   `cfgutil.EncodeArgs` and import the parser directly.
+- Root `Config.ConfigureOIDCProvider(portal, statements)` supplies registered
+  applications to the provider parser, then calls
+  `PortalConfig.ConfigureOIDCProvider` to attach a validated snapshot. A second
+  definition fails; prior portal validation is invalidated so OIDC defaults run.
 - `identity.go`: public `Authentication`, `Identity`, `IdentityVerifier`, and
   `OpenIDProvider` contracts.
 - `options.go`: construction, configurable login URL, cookie names, and excluded
@@ -48,6 +59,8 @@ Read [configuration and clients](references/configuration-and-clients.md) for
 setup and operational constraints. Read [conformance](references/conformance.md)
 for the targeted certification profiles, supported features, test evidence,
 and the OpenID Foundation test-plan configuration.
+Read [named application integration](references/reusable-provider.md#named-application-registration-and-reloads)
+for directive adapter ordering, registration persistence, and secret rotation.
 
 Upstream OAuth/OIDC login belongs to `oauth-identity-provider`. Existing portal
 JWT JWKS and admin key export belong to `authentication-portal-jwks`. Provider
@@ -103,6 +116,19 @@ the registration, rejects duplicate IDs, and does not mutate running providers.
 omitted credentials are generated. It accepts single-value fields, multi-value
 `redirect_uris`/`scopes`, and `cfgutil.ParseBoolArg` booleans. It rejects duplicate or
 unknown directives and never includes raw statements or values in errors.
+For repeated configuration adaptation, use
+`NewOAuthApplicationConfigFromDirectives`: credentials must be explicit or
+restored from a valid registration with the same nickname. Only credentials are
+inherited; current directives define redirect/scopes/consent/PKCE and other policy.
+A different client ID cannot inherit the previous secret, and public clients
+never inherit secrets. No fallback generation occurs when persisted state is
+missing or invalid. Provision once, persist privately, and build a fresh Config
+on reload. The host owns durable storage and must persist successful credential
+changes before activation; the library performs no automatic credential IO.
+Root `Config.AddOAuthApplication` rejects duplicate nicknames even if identical;
+lookup returns independent copies. Root validation checks every declared
+registration, including unselected ones, without provisioning. Configuration
+mutation methods are for assembly before construction, not runtime updates.
 Provider settings use readable keywords (`signing key files`, `session lifetime`,
 `max pending requests`) and standalone `enabled`/`disabled`; keep that grammar
 separate from individual application fields. Collect all application registrations
@@ -177,6 +203,13 @@ duplicate rejection, private-key format, file permissions, and concurrent creati
 `parser/client_test.go` and `parser/example_test.go` cover the separate public
 parser, quoting, arity, boolean compatibility, error redaction, concurrent reuse,
 and stable adaptation with persisted credentials.
+`application_test.go` covers named registration snapshots and JSON/XML/YAML
+roundtrips. `parser/application_test.go` and `parser/application_example_test.go`
+cover header recognition, shared field parsing, restored/explicit credentials,
+rotation, authentication-method changes, malformed inputs, and concurrent reloads.
+Root `config_oauth_applications_test.go` and its executable example cover the
+registry, serialization, ordered assembly, independent portal bindings, validation,
+and duplicate rejection. `pkg/authn/oidc_config_test.go` checks provider attachment.
 `parser/provider_test.go` and `parser/provider_example_test.go` cover provider
 settings, registration resolution and copying, disabled state, limits, malformed
 arguments, error redaction, concurrent reuse, and serialized roundtrips.
@@ -189,7 +222,15 @@ RSA verification, UserInfo, fresh login, account disablement, and logout without
 provisions and persists generated clients/keys, exercises all three client
 authentication methods, and repeats login/exchange after restoring the provider.
 
-Both standalone and portal E2E fixtures import the provider parser directly.
+The standalone E2E fixture imports the provider parser directly; the shared
+portal fixture uses root named registration and provider integration.
+`pkg/authn/oidc_application_e2e_test.go` imports the application parser directly
+and exercises all three client authentication methods through root configuration,
+real TLS local-user login, PKCE exchange, independently verified ID tokens, and
+UserInfo. It persists credentials and dedicated keys in temporary files, repeats
+adaptation after reopening storage, rejects old secrets after explicit rotation,
+reloads the rotated secret, and rejects unselected applications. Runtime sessions
+and grants remain process-local even when client credentials survive reloads.
 `pkg/authn/oidc_config_parser_e2e_test.go` checks discovery, selected clients,
 session/token lifetimes, all three capacity limits, and disabled routing through
 a real TLS portal. Root `server_oidc_config_test.go` checks parsed configuration

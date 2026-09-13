@@ -14,10 +14,47 @@
 
 package authn
 
-import "github.com/greenpau/go-authcrunch/pkg/oidc"
+import (
+	"fmt"
+	"slices"
+
+	"github.com/greenpau/go-authcrunch/pkg/oidc"
+)
 
 // OIDCProviderConfig configures the portal's reusable OpenID Provider.
 type OIDCProviderConfig = oidc.Config
 
 // OIDCClientConfig registers a relying party with the OpenID Provider.
 type OIDCClientConfig = oidc.ClientConfig
+
+// ConfigureOIDCProvider attaches a validated, independent provider configuration
+// before portal construction. A second provider definition is rejected. If the
+// portal was previously validated, its defaults are revalidated at construction.
+// This changes configuration only, never a running portal. Calls must not race
+// with other accesses to this PortalConfig.
+func (cfg *PortalConfig) ConfigureOIDCProvider(provider *OIDCProviderConfig) error {
+	if cfg == nil {
+		return fmt.Errorf("portal config is nil")
+	}
+	if cfg.OIDCProvider != nil {
+		return fmt.Errorf("oidc provider is already configured for portal")
+	}
+	if provider == nil {
+		return fmt.Errorf("oidc provider config is nil")
+	}
+	candidate := *provider
+	candidate.Realms = slices.Clone(provider.Realms)
+	candidate.SigningKeyFiles = slices.Clone(provider.SigningKeyFiles)
+	candidate.Clients = nil
+	for _, client := range provider.Clients {
+		if err := candidate.AddClient(client); err != nil {
+			return err
+		}
+	}
+	if err := validateOIDCPortalConfig(&candidate); err != nil {
+		return err
+	}
+	cfg.OIDCProvider = &candidate
+	cfg.validated = false
+	return nil
+}

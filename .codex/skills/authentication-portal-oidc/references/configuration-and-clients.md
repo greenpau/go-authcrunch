@@ -11,6 +11,13 @@ They generate credentials, apply client defaults, and build the same serializabl
 configuration shown below. Persist generated values before serving the provider;
 configuration validation and reload do not generate or rotate credentials.
 
+For named `oauth application <nickname>` blocks, use
+[application registration and reload integration](reusable-provider.md#named-application-registration-and-reloads).
+The public application adapter reuses the existing client field parser and
+requires explicit or persisted credentials. Root `Config.OAuthApplications`
+stores named registrations; `Config.ConfigureOIDCProvider` resolves their
+provider references before attaching a validated portal configuration.
+
 For encoded provider settings, use
 [`NewOIDCProviderConfigFromDirectives`](reusable-provider.md#provider-settings-directives).
 It resolves registered application nicknames before final provider validation and

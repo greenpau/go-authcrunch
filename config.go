@@ -27,20 +27,24 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
+	"github.com/greenpau/go-authcrunch/pkg/oidc"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
 )
 
 // Config is a configuration of Server.
 type Config struct {
-	Credentials               *credentials.Config               `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
-	Messaging                 *messaging.Config                 `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
-	UserRegistration          *registry.Config                  `json:"user_registration,omitempty" xml:"user_registration,omitempty" yaml:"user_registration,omitempty"`
-	AuthenticationPortals     []*authn.PortalConfig             `json:"authentication_portals,omitempty" xml:"authentication_portals,omitempty" yaml:"authentication_portals,omitempty"`
-	AuthorizationPolicies     []*authz.PolicyConfig             `json:"authorization_policies,omitempty" xml:"authorization_policies,omitempty" yaml:"authorization_policies,omitempty"`
-	IdentityStores            []*ids.IdentityStoreConfig        `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
-	IdentityProviders         []*idp.IdentityProviderConfig     `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
-	SingleSignOnProviders     []*sso.SingleSignOnProviderConfig `json:"sso_providers,omitempty" xml:"sso_providers,omitempty" yaml:"sso_providers,omitempty"`
+	Credentials           *credentials.Config               `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
+	Messaging             *messaging.Config                 `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
+	UserRegistration      *registry.Config                  `json:"user_registration,omitempty" xml:"user_registration,omitempty" yaml:"user_registration,omitempty"`
+	AuthenticationPortals []*authn.PortalConfig             `json:"authentication_portals,omitempty" xml:"authentication_portals,omitempty" yaml:"authentication_portals,omitempty"`
+	AuthorizationPolicies []*authz.PolicyConfig             `json:"authorization_policies,omitempty" xml:"authorization_policies,omitempty" yaml:"authorization_policies,omitempty"`
+	IdentityStores        []*ids.IdentityStoreConfig        `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
+	IdentityProviders     []*idp.IdentityProviderConfig     `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
+	SingleSignOnProviders []*sso.SingleSignOnProviderConfig `json:"sso_providers,omitempty" xml:"sso_providers,omitempty" yaml:"sso_providers,omitempty"`
+	// OAuthApplications stores named, provisioned registrations for provider
+	// configuration. It contains credentials; persist it only in private storage.
+	OAuthApplications         []*oidc.OAuthApplicationConfig `json:"oauth_applications,omitempty" xml:"oauth_applications,omitempty" yaml:"oauth_applications,omitempty"`
 	disabledIdentityStores    map[string]interface{}
 	disabledIdentityProviders map[string]interface{}
 }
@@ -118,6 +122,9 @@ func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
 func (cfg *Config) Validate() error {
 	if cfg == nil {
 		return fmt.Errorf("config is nil")
+	}
+	if _, err := cfg.GetOAuthApplications(); err != nil {
+		return err
 	}
 	if cfg.Credentials == nil {
 		cfg.Credentials = &credentials.Config{}

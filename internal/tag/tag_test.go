@@ -82,6 +82,7 @@ func TestTagCompliance(t *testing.T) {
 		{name: "test oidc.Authentication struct", entry: &oidc.Authentication{}, opts: &Options{}},
 		{name: "test oidc.Identity struct", entry: &oidc.Identity{}, opts: &Options{}},
 		{name: "test oidc.Config struct", entry: &oidc.Config{}, opts: &Options{}},
+		{name: "test oidc.OAuthApplicationConfig struct", entry: &oidc.OAuthApplicationConfig{}, opts: &Options{}},
 		{
 			name: "test oidc.ClientConfig struct", entry: &oidc.ClientConfig{},
 			opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{
@@ -793,10 +794,11 @@ func TestTagCompliance(t *testing.T) {
 			entry: &authcrunch.Config{},
 			opts: &Options{
 				AllowFieldMismatch: true,
-				AllowedFields: map[string]interface{}{
+				AllowedFields: map[string]any{
 					"auth_portal_configs":  true,
 					"authz_policy_configs": true,
 					"sso_providers":        true,
+					"oauth_applications":   true, // OAuth is one protocol name.
 				},
 			},
 		},

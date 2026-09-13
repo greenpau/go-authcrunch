@@ -44,6 +44,21 @@ import (
 // with missing credentials every time creates a new registration every time.
 // This does not update a running provider or create its signing keys.
 func NewOIDCClientConfigFromDirectives(nickname string, statements []string) (*oidc.ClientConfig, error) {
+	config, err := parseOIDCClientConfigFromDirectives(nickname, statements)
+	if err != nil {
+		return nil, err
+	}
+	client, err := oidc.NewClientConfig(*config)
+	if err != nil {
+		return nil, err
+	}
+	client.RequirePKCE = config.RequirePKCE
+	return client, nil
+}
+
+// Keep application field decoding in one place for explicit provisioning and
+// adaptation with persisted credentials. Neither path may bypass syntax checks.
+func parseOIDCClientConfigFromDirectives(nickname string, statements []string) (*oidc.ClientConfig, error) {
 	if nickname == "" || len(nickname) > 256 || strings.TrimSpace(nickname) != nickname || strings.ContainsAny(nickname, "\r\n\t") {
 		return nil, fmt.Errorf("invalid oidc application nickname")
 	}
@@ -105,10 +120,5 @@ func NewOIDCClientConfigFromDirectives(nickname string, statements []string) (*o
 	if config.TokenEndpointAuthMethod == "none" && !config.RequirePKCE {
 		return nil, fmt.Errorf("public oidc clients require PKCE")
 	}
-	client, err := oidc.NewClientConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	client.RequirePKCE = config.RequirePKCE
-	return client, nil
+	return &config, nil
 }
