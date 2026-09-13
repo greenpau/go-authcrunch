@@ -280,8 +280,9 @@ Add focused table-driven tests beside the package being changed. Use
 normalized config or exact errors.
 
 Cover both success normalization and meaningful malformed inputs for config and
-parser changes. For cross-package wiring, update top-level `config_test.go` or
-`server_test.go`. For authn/authz HTTP behavior, prefer `httptest` and
+parser changes. Follow [test placement and filenames](../testing-and-ci/SKILL.md#test-placement-and-filenames)
+when choosing a test's owning package and filename, including root configuration
+and server integration tests. For authn/authz HTTP behavior, prefer `httptest` and
 `internal/testutils` token, user, ACL, and crypto helpers.
 
 Keep fixture paths package-relative when the surrounding tests use that style.

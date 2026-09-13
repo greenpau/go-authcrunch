@@ -217,10 +217,26 @@ Use `t.TempDir()` for new isolated temporary filesystem tests unless the code
 under test already follows `tests.TempDir`, which writes below
 `/tmp/testdata/go-authcrunch/<test-name>/`.
 
+## Test Placement and Filenames
+
+Choose test directories and filenames by the production surface and behavior
+being verified. Parser unit tests belong in the public parser package's external
+test package. Tests of root `authcrunch.Config` assembly or `NewServer` wiring
+belong at the module root, including when they use a parser to prepare inputs.
+Portal HTTP and browser E2E tests belong with the portal's test suite.
+
+Use existing `config_test.go` or `server_test.go` when appropriate. When adding
+or renaming a focused test file, identify the owning surface and feature:
+`server_oidc_config_test.go` describes OIDC configuration through `NewServer`;
+`config_<feature>_test.go` describes root configuration behavior. A setup helper
+such as a parser should not determine the filename of a server integration test.
+Update maintained code, automation, and skill references when renaming files.
+Keep assertions and package boundaries intact for a naming-only change.
+
 ## Test Surfaces
 
-Top-level `config_test.go` and `server_test.go` exercise composed AuthCrunch
-config and server construction across credentials, messaging, identity stores,
+Root configuration and server tests exercise composed AuthCrunch configuration
+and server construction across credentials, messaging, identity stores,
 identity providers, authentication portals, authorization policies, OAuth keys,
 and validation phases. Use these when a change affects cross-package wiring.
 
@@ -289,9 +305,9 @@ When changing config parsing or validation, add table-driven cases in the
 nearest `*_test.go` file. Include the successful normalized config shape and a
 malformed input when the parser has a meaningful error path.
 
-When changing cross-package config or server wiring, add or update top-level
-`config_test.go` or `server_test.go` so the full AuthCrunch object graph is
-covered.
+When changing cross-package config or server wiring, add or update the root
+package's tests so the full AuthCrunch object graph is covered. Follow
+[test placement and filenames](#test-placement-and-filenames) for focused files.
 
 When changing authn/authz HTTP behavior, use `httptest.NewRecorder`,
 `httptest.NewRequest`, or `httptest.NewTLSServer` instead of live services.

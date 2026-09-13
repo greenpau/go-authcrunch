@@ -19,8 +19,12 @@ runtime `Options`. The package has no dependency on the `authn` portal runtime.
   `NewOIDCClientConfigFromDirectives(nickname, statements)` parses an OAuth
   application block body with `cfgutil.DecodeArgs` and returns `*oidc.ClientConfig`.
   This separate package owns the parser and its external-package unit tests;
-  it delegates provisioning to `oidc.NewClientConfig`. Embedding adapters collect
-  statements using `cfgutil.EncodeArgs` and import the parser directly.
+  it delegates provisioning to `oidc.NewClientConfig`.
+  `NewOIDCProviderConfigFromDirectives(statements, applications)` parses provider
+  settings, resolves selected application nicknames through a caller-owned
+  `map[string]*oidc.ClientConfig`, and returns `*oidc.Config` for `NewProvider`
+  or `PortalConfig.OIDCProvider`. Embedding adapters collect statements using
+  `cfgutil.EncodeArgs` and import the parser directly.
 - `identity.go`: public `Authentication`, `Identity`, `IdentityVerifier`, and
   `OpenIDProvider` contracts.
 - `options.go`: construction, configurable login URL, cookie names, and excluded
@@ -99,6 +103,18 @@ the registration, rejects duplicate IDs, and does not mutate running providers.
 omitted credentials are generated. It accepts single-value fields, multi-value
 `redirect_uris`/`scopes`, and `cfgutil.ParseBoolArg` booleans. It rejects duplicate or
 unknown directives and never includes raw statements or values in errors.
+Provider settings use readable keywords (`signing key files`, `session lifetime`,
+`max pending requests`) and standalone `enabled`/`disabled`; keep that grammar
+separate from individual application fields. Collect all application registrations
+before provider parsing, regardless of block order. Provider parsing selects only
+explicit `applications` references, copies them with `Config.AddClient`, and then
+calls `Config.Validate`. Never generate missing credentials, implicitly register
+the whole application map, mutate its entries, or defer unresolved references to
+runtime. Unknown/nil references, repeated nicknames, and duplicate client IDs fail
+even for disabled configurations. Keep reference labels out of errors, and preserve
+key-file order for signing/rotation. Parsing performs no key-file IO; construction
+owns key loading and portal-specific realm/mount checks.
+
 `GenerateSigningKeyFile` publishes a complete owner-only file with a hard link;
 it never overwrites existing paths or follows a destination symlink.
 
@@ -161,6 +177,9 @@ duplicate rejection, private-key format, file permissions, and concurrent creati
 `parser/client_test.go` and `parser/example_test.go` cover the separate public
 parser, quoting, arity, boolean compatibility, error redaction, concurrent reuse,
 and stable adaptation with persisted credentials.
+`parser/provider_test.go` and `parser/provider_example_test.go` cover provider
+settings, registration resolution and copying, disabled state, limits, malformed
+arguments, error redaction, concurrent reuse, and serialized roundtrips.
 `provider_test.go` and `options_test.go` cover keys, hints, identity, expiry,
 capacity, construction, public methods, lifecycle, lock release, and parser
 fuzzing. `request_object_test.go` covers strict request assembly and fuzzing.
@@ -170,6 +189,11 @@ RSA verification, UserInfo, fresh login, account disablement, and logout without
 provisions and persists generated clients/keys, exercises all three client
 authentication methods, and repeats login/exchange after restoring the provider.
 
+Both standalone and portal E2E fixtures import the provider parser directly.
+`pkg/authn/oidc_config_parser_e2e_test.go` checks discovery, selected clients,
+session/token lifetimes, all three capacity limits, and disabled routing through
+a real TLS portal. Root `server_oidc_config_test.go` checks parsed configuration
+through server dispatch, including realm, key-file, and reserved-mount failures.
 `pkg/authn/oidc_e2e_test.go` keeps the real portal/local-database password and
 MFA E2E flows. `pkg/authn/oidc_runtime_test.go` checks adapter configuration and
 browser/native logout. Root `config_test.go` covers server dispatch and the

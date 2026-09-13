@@ -46,7 +46,10 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"github.com/greenpau/go-authcrunch/pkg/oidc"
+	oidcparser "github.com/greenpau/go-authcrunch/pkg/oidc/parser"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 const oidcE2ESecret = "oidc-test-client-secret-at-least-32-bytes"
@@ -68,6 +71,13 @@ type oidcE2EResponse struct {
 
 func newOIDCE2EFixture(t *testing.T, mount string, refresh bool, cookieConfigs ...*cookie.Config) *oidcE2EFixture {
 	t.Helper()
+	return newOIDCE2EFixtureWithProviderDirectives(t, mount, refresh, nil, cookieConfigs...)
+}
+
+// The fixture supplies its dynamic TLS issuer; directives contain the remaining
+// provider body. Nil uses the standard registrations shared by the protocol tests.
+func newOIDCE2EFixtureWithProviderDirectives(t *testing.T, mount string, refresh bool, directives []string, cookieConfigs ...*cookie.Config) *oidcE2EFixture {
+	t.Helper()
 	server := httptest.NewUnstartedServer(nil)
 	t.Cleanup(server.Close)
 	issuer := "https://" + server.Listener.Addr().String() + mount
@@ -88,12 +98,25 @@ func newOIDCE2EFixture(t *testing.T, mount string, refresh bool, cookieConfigs .
 	if err := db.AddMfaToken(&requests.Request{User: requests.User{Username: "mfauser", Email: "mfa@example.test"}, MfaToken: requests.MfaToken{Type: "totp", Comment: "E2E", Secret: "0123456789abcdef0123456789abcdef", Algorithm: "sha1", Digits: 6, Period: 30, SkipVerification: true}}); err != nil {
 		t.Fatal("could not provision MFA factor")
 	}
-	portalConfig := &authn.PortalConfig{Name: "oidc-e2e", CookieConfig: cookie.NewConfig(), API: &authn.APIConfig{AdminEnabled: true, ProfileEnabled: true}, IdentityStores: []string{"oidc-local"}, OIDCProvider: &authn.OIDCProviderConfig{Enabled: true, Issuer: issuer, Realms: []string{"local"}, SigningKeyFiles: []string{"../../testdata/rskeys/test_2_pri.pem"}, Clients: []*authn.OIDCClientConfig{
-		{ClientID: "basic", ClientSecret: oidcE2ESecret, RedirectURIs: []string{"https://rp.example.test/callback?registered=yes"}},
-		{ClientID: "second", ClientSecret: oidcE2ESecret, RedirectURIs: []string{"https://rp.example.test/callback?registered=yes"}, SkipConsent: true},
-		{ClientID: "post", ClientSecret: oidcE2ESecret, TokenEndpointAuthMethod: "client_secret_post", RedirectURIs: []string{"https://rp.example.test/callback?registered=yes"}, SkipConsent: true},
-		{ClientID: "public", TokenEndpointAuthMethod: "none", RedirectURIs: []string{"https://rp.example.test/callback?registered=yes"}, SkipConsent: true},
-	}}}
+	applications := map[string]*oidc.ClientConfig{
+		"consenting-web": {ClientID: "basic", ClientSecret: oidcE2ESecret, RedirectURIs: []string{"https://rp.example.test/callback?registered=yes"}},
+		"trusted-web":    {ClientID: "second", ClientSecret: oidcE2ESecret, RedirectURIs: []string{"https://rp.example.test/callback?registered=yes"}, SkipConsent: true},
+		"post-web":       {ClientID: "post", ClientSecret: oidcE2ESecret, TokenEndpointAuthMethod: "client_secret_post", RedirectURIs: []string{"https://rp.example.test/callback?registered=yes"}, SkipConsent: true},
+		"browser-app":    {ClientID: "public", TokenEndpointAuthMethod: "none", RedirectURIs: []string{"https://rp.example.test/callback?registered=yes"}, SkipConsent: true},
+	}
+	if directives == nil {
+		directives = []string{
+			"realms local",
+			"signing key files ../../testdata/rskeys/test_2_pri.pem",
+			"applications consenting-web trusted-web post-web browser-app",
+		}
+	}
+	providerConfig, err := oidcparser.NewOIDCProviderConfigFromDirectives(
+		append([]string{cfgutil.EncodeArgs([]string{"issuer", issuer})}, directives...), applications)
+	if err != nil {
+		t.Fatal(err)
+	}
+	portalConfig := &authn.PortalConfig{Name: "oidc-e2e", CookieConfig: cookie.NewConfig(), API: &authn.APIConfig{AdminEnabled: true, ProfileEnabled: true}, IdentityStores: []string{"oidc-local"}, OIDCProvider: providerConfig}
 	if len(cookieConfigs) != 0 {
 		portalConfig.CookieConfig = cookieConfigs[0]
 	}

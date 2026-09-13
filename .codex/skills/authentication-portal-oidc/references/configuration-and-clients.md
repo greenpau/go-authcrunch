@@ -11,6 +11,12 @@ They generate credentials, apply client defaults, and build the same serializabl
 configuration shown below. Persist generated values before serving the provider;
 configuration validation and reload do not generate or rotate credentials.
 
+For encoded provider settings, use
+[`NewOIDCProviderConfigFromDirectives`](reusable-provider.md#provider-settings-directives).
+It resolves registered application nicknames before final provider validation and
+returns a config assignable to `PortalConfig.OIDCProvider`. This is independent of
+parsing or provisioning the individual application blocks.
+
 ## Example
 
 This is a complete root `authcrunch.Config` shape. Provision the local database

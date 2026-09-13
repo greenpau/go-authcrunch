@@ -87,6 +87,8 @@ type PortalConfig struct {
 	// RefreshTokens configures optional rotating portal sessions.
 	RefreshTokens *TokenRefreshConfig `json:"refresh_tokens,omitempty" xml:"refresh_tokens,omitempty" yaml:"refresh_tokens,omitempty"`
 	// OIDCProvider configures the optional downstream OpenID Provider.
+	// Assign the result of pkg/oidc/parser.NewOIDCProviderConfigFromDirectives
+	// after collecting the application registrations referenced by its directives.
 	OIDCProvider *OIDCProviderConfig `json:"oidc_provider,omitempty" xml:"oidc_provider,omitempty" yaml:"oidc_provider,omitempty"`
 	// Indicated that the config was successfully validated.
 	validated bool

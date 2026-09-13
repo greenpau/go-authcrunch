@@ -43,6 +43,96 @@ Supply `Options.ExcludedSigningKeys` with public keys trusted for other token
 purposes in the host. Construction rejects matching OIDC signing keys. The
 portal adapter supplies its access-token verification keys automatically.
 
+## Provider settings directives
+
+Import `github.com/greenpau/go-authcrunch/pkg/oidc/parser` as `oidcparser`.
+`NewOIDCProviderConfigFromDirectives(statements, applications)` accepts the body
+of a provider block, separately from each `oauth application <nickname>` block:
+
+```caddyfile
+oidc provider {
+    issuer https://auth.example.com/auth
+    realms local
+    signing key files /etc/auth/oidc-active.pem /etc/auth/oidc-previous.pem
+    applications website desktop
+    session lifetime 28800
+    token lifetime 300
+    max sessions 10000
+    max pending requests 1024
+    max grants 10000
+}
+```
+
+| Directive | Arguments and behavior |
+| --- | --- |
+| `enabled` / `disabled` | Standalone, mutually exclusive states; enabled by default. |
+| `issuer` | One canonical HTTPS issuer, including its mount. |
+| `realms` | One or more distinct identity realms. |
+| `signing key files` | One or more distinct dedicated RSA PEM paths; first signs, all publish. |
+| `applications` | One or more distinct registered application nicknames, in selection order. |
+| `session lifetime` / `token lifetime` | One integer in seconds; zero selects the validator default. |
+| `max sessions` / `max pending requests` / `max grants` | One integer capacity; zero selects the validator default. |
+
+The numeric defaults and bounds are in
+[configuration and clients](configuration-and-clients.md#lifetimes-reloads-and-deployment).
+Each setting occurs once; use one line for a list. Keywords are separate tokens,
+not underscore keys or one quoted multiword key. Boolean literals are not valid
+provider states. Unknown settings, duplicates, missing/empty values, extra scalar
+arguments, malformed quoting, embedded newlines, and overflowing integers fail.
+Errors do not include raw statements, values, registrations, or secrets.
+
+Collect application registrations first, then parse provider settings and assign
+the result to the portal before normal root configuration validation:
+
+```go
+// registrations is map[string]*oidc.ClientConfig, keyed by configuration nickname.
+// Build it from persisted registrations or the application parser before this call.
+provider, err := oidcparser.NewOIDCProviderConfigFromDirectives([]string{
+    cfgutil.EncodeArgs([]string{"issuer", "https://auth.example.com/auth"}),
+    cfgutil.EncodeArgs([]string{"realms", "local"}),
+    cfgutil.EncodeArgs([]string{"signing", "key", "files", "/etc/auth/oidc signer.pem"}),
+    cfgutil.EncodeArgs([]string{"applications", "website", "desktop"}),
+    cfgutil.EncodeArgs([]string{"token", "lifetime", "120"}),
+}, registrations)
+if err != nil {
+    return err
+}
+portal := &authn.PortalConfig{
+    Name: "login",
+    IdentityStores: []string{"localdb"},
+    OIDCProvider: provider,
+}
+// Include portal in authcrunch.Config.AuthenticationPortals before NewServer.
+```
+
+The same result is usable directly with `oidc.NewProvider` outside the portal.
+The parser package has no dependency on `authn` or any embedding server.
+
+Nicknames are exact host-owned labels, independent of the generated client ID
+and display name. Detect duplicate nicknames while collecting application blocks;
+a Go map cannot retain duplicate keys. The parser resolves only explicitly named
+applications, copies each registration through `Config.AddClient`, then performs
+final provider validation. Unselected registrations are ignored. Missing/nil
+registrations, repeated references, invalid clients, and duplicate client IDs
+fail without returning partial configuration or changing the supplied registry.
+These checks also apply to explicitly selected applications when disabled.
+Concurrent parsing may share the registry only while callers leave it unchanged.
+
+A standalone `disabled` body needs no other settings. Disabled scalar settings
+retain `Config.Validate`'s existing opt-out behavior, but directive syntax and
+explicit application references are always checked. An absent block should remain
+nil. No placeholder expansion, credential generation, key-file IO, or provider
+startup occurs during parsing. Persist provisioned clients and keys separately;
+server construction still validates local realms, portal mounts, and key material.
+Application declarations can follow a provider block in the embedding syntax:
+collect all registrations before resolving any provider body, then run final
+portal/root validation. Never provision clients again just to resolve a reference.
+
+The library accepts encoded body statements; it does not parse enclosing braces
+or install an HTTP server's outer block grammar. Consumer adapter integration is
+separate work in its owning repository. All implementation and tests here remain
+inside this repository.
+
 ## Provisioning clients and signing keys
 
 ### OAuth application directives

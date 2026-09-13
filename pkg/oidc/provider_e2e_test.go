@@ -39,6 +39,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
 	oidcparser "github.com/greenpau/go-authcrunch/pkg/oidc/parser"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 // This host has its own authentication and identity implementation. It imports
@@ -82,7 +83,7 @@ type standaloneResponse struct {
 }
 
 func TestE2EStandaloneProvider(t *testing.T) {
-	keyFile := filepath.Join(t.TempDir(), "oidc.pem")
+	keyFile := filepath.Join(t.TempDir(), "oidc signer.pem")
 	if err := oidc.GenerateSigningKeyFile(keyFile); err != nil {
 		t.Fatal(err)
 	}
@@ -106,8 +107,13 @@ func TestE2EStandaloneProvider(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			config := oidc.Config{Enabled: true, Issuer: issuer, Realms: []string{"employees"}, SigningKeyFiles: []string{keyFile}}
-			if err := config.AddClient(registration); err != nil {
+			config, err := oidcparser.NewOIDCProviderConfigFromDirectives([]string{
+				cfgutil.EncodeArgs([]string{"issuer", issuer}),
+				"realms employees",
+				cfgutil.EncodeArgs([]string{"signing", "key", "files", keyFile}),
+				"applications standalone",
+			}, map[string]*oidc.ClientConfig{"standalone": registration})
+			if err != nil {
 				t.Fatal(err)
 			}
 			configFile := filepath.Join(t.TempDir(), "provider.json")
