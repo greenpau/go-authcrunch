@@ -1,6 +1,6 @@
 ---
 name: coding-directives
-description: go-authcrunch repository coding standards and implementation directives for Go library, CLI, authentication, authorization, identity store/provider, SSO, KMS, registry, messaging, translation, embedded UI, and test code. Use when creating, modifying, or reviewing repository code; choosing package boundaries, config and validation patterns, constructors, errors, logging, serialization tags, security handling, or test structure; or deciding how a new feature should fit existing AuthCrunch packages.
+description: go-authcrunch repository coding standards and implementation directives for Go library, CLI, authentication, authorization, identity store/provider, SSO, KMS, registry, messaging, translation, embedded UI, and test code. Use when creating, modifying, or reviewing repository code; designing configuration and its required dedicated parser package; choosing package boundaries, constructors, validation, errors, logging, serialization tags, security handling, or tests; or deciding how a feature fits existing AuthCrunch packages.
 ---
 
 # Coding Directives
@@ -23,8 +23,8 @@ and their UI configuration and template contracts.
 Use [oauth-identity-provider](../oauth-identity-provider/SKILL.md) for upstream
 OAuth/OIDC token trust, key ingestion and refresh, and provider configuration.
 Use [authentication-portal-jwks](../authentication-portal-jwks/SKILL.md) for
-portal public signing-key discovery, opt-in admin private-key export, issuer
-selection, and JWK serialization.
+portal public signing-key discovery, reusable admin API directive configuration,
+opt-in private-key export, issuer selection, and JWK serialization.
 Use [local-password-authentication](../local-password-authentication/SKILL.md)
 for local-store password verification and bcrypt work equalization.
 Use [authentication-portal-oidc](../authentication-portal-oidc/SKILL.md) for the
@@ -156,10 +156,12 @@ return type, owning filenames, consumers, tests, examples, and skill references
 consistent when renaming a feature. Preserve established serialization keys and
 distinct protocol concepts; do not retain an ambiguous type as a new alias.
 
-Treat `Validate` methods as the repository's normalization boundary. Existing
-validators commonly fill defaults, compile regexps, parse raw directive
-strings, build derived config, and set `validated bool` to avoid repeat work.
-Follow that pattern when validation is intentionally mutating.
+Treat `Validate` methods as the repository's normalization boundary for typed
+configuration: defaults, compiled expressions, derived values, and semantic
+checks belong there. Some existing validators also decode raw directives; when
+working on that configuration, move decoding into its dedicated parser package
+under the contract below. Preserve intentional normalization and `validated`
+state handling without creating a runtime-to-parser import cycle.
 
 Keep constructors strict:
 
@@ -173,24 +175,47 @@ Keep constructors strict:
 
 ### Reusable Directive Parser Packages
 
-Put new or substantially revised configuration directive parsers in dedicated,
-public packages under their owning domain, separate from runtime implementation.
-Export a typed constructor that accepts ordinary Go values. Embedding
-applications must be able to import the parser directly;
-do not require a server-specific token iterator, HTTP handler, or running portal.
+Every configuration surface must have a dedicated public package named
+`parser` under its owning domain or feature. A typed config, serialization tags,
+validator, or embedding application's directive handler alone does not satisfy
+this requirement. It applies to small configurations and single boolean options
+as well as larger blocks. When adding or changing configuration, implement or
+extend its parser in the same feature change; the rule is not limited to parser
+extractions or substantial refactors.
+
+Use `pkg/<domain>/parser` or `pkg/<domain>/<feature>/parser` according to feature
+ownership. Related configuration subjects may share that feature's parser
+package, with separate files and public constructors. Nested settings are
+covered through the owning parser; do not create a package per field or a
+repository-wide parser containing unrelated features. A file named `parser.go`
+inside the runtime package or a wrapper around private runtime parsing is not
+a dedicated parser package.
+
+Read [configuration parser shape](references/configuration-parsers.md) when
+introducing configuration, exposing settings, or extracting a parser. It defines
+the package layout, API signatures, input grammar, typed result, composition,
+validation ownership, and migration boundaries. Existing configurations without
+this structure are implementation gaps to address within the authorized feature
+work; a skills-only update does not authorize a repository-wide code migration.
 
 Name directive constructors `New<Domain><Subject>ConfigFromDirectives`.
 Include the complete domain and subject, even when the package path supplies
-that context: use `NewTokenRefreshConfigFromDirectives` for token refresh and
+that context: use `NewTokenRefreshConfigFromDirectives` for token refresh,
+`NewAdminAPIConfigFromDirectives` for admin API settings, and
 `NewOIDCClientConfigFromDirectives` for OIDC clients. Preserve Go initialisms
-such as `OIDC`. Apply the same name to declarations, public comments, callers,
-unit tests, executable examples, and owning skill references whenever changing
-the API or extracting it into a package.
+such as `API` and `OIDC`. Apply the same name to declarations, public comments,
+callers, unit tests, executable examples, and owning skill references whenever
+changing the API or extracting it into a package.
 
 Keep argument encoding in `pkg/util/cfg` and use `cfgutil.DecodeArgs` for encoded
 statements. Keep semantic validation, defaults, and provisioning in the owning
 configuration API; the parser calls that API rather than duplicating its rules.
-Return the existing configuration type and an error without a partial result.
+Return the owning feature's typed configuration and an error without a partial
+result. In shared packages, use a dedicated feature type such as
+`authn.AdminAPIConfig`, rather than returning an aggregate containing unrelated
+settings. Reuse that model across typed and directive configuration; preserve
+established aggregate serialization through a typed application method when
+needed, as `PortalConfig.ConfigureAdminAPI` does for the existing `APIConfig`.
 Document credential generation or other intentional provisioning behavior.
 
 Keep dependencies acyclic: parser packages may import their domain's public
@@ -203,7 +228,8 @@ in the runtime package.
 
 Preserve unsupported-field checks in shared config dispatchers so malformed
 config fails early instead of being silently ignored. Use the external-package
-unit tests and consumer E2E requirements in `testing-and-ci` for parser changes.
+unit tests and consumer E2E requirements in `testing-and-ci` for every new or
+changed configuration parser.
 
 ### Cookie Configuration
 

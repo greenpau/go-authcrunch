@@ -52,11 +52,16 @@ Follow the
 [repository scope](../coding-directives/SKILL.md#repository-scope) when selecting
 validation commands.
 
-For configuration parser extraction, keep unit tests in the public parser's
-external test package and exercise its exported entry point in executable Go
-examples. Have consumer E2E fixtures import that parser directly and pass its
-typed result to the production configuration API. Verify the configured behavior
-through the real consumer workflow; a build-only import check is insufficient.
+For every new or changed configuration surface, verify its dedicated public
+`parser` package under the
+[configuration parser contract](../coding-directives/references/configuration-parsers.md).
+This applies to small settings and existing parsers as well as extractions.
+Keep unit tests in `package parser_test` and exercise each public constructor in
+an executable Go example. Have consumer E2E fixtures import that parser directly
+and pass its typed result to the production configuration API. Verify the
+configured behavior through the real consumer workflow; a build-only import
+check or a fixture which bypasses parsing with a manually built config is
+insufficient coverage for a parser change.
 
 Cover the main successful journey and relevant rejection or persistence
 boundaries. Extend an existing E2E scenario when it can verify the new behavior;
@@ -301,9 +306,22 @@ Register new exported structs in `internal/tag/tag_test.go`'s
 missing entries. Keep JSON/XML/YAML tags consistent; mark runtime-only fields
 with `-` and scope exceptions for intentionally preserved serialized fields.
 
-When changing config parsing or validation, add table-driven cases in the
-nearest `*_test.go` file. Include the successful normalized config shape and a
-malformed input when the parser has a meaningful error path.
+When changing configuration, pair the supported settings with corresponding
+public parser coverage. Keep typed validation/default tests with the config
+owner and directive grammar tests in its parser package. Cover success,
+omitted/empty/disabled semantics, quoted token boundaries, arity, empty values,
+unknown settings, duplicate/conflicting states, malformed records, and error
+redaction. Verify `nil` results on failure and unchanged caller inputs. Exercise
+named-reference resolution and persistence/reload behavior when the feature
+uses them. Check that new config fields are reachable through the parser and
+have observable consumer coverage; a struct tag or assignment test alone does
+not establish directive support.
+
+For typed application methods, test preservation of unrelated settings,
+independent snapshots, and failure without mutation. When a parser is extracted,
+run existing typed-config callers as well as the new parser's consumer E2E
+journey to verify compatibility. Serialization round trips belong in that
+journey when consumers persist the configuration.
 
 When changing cross-package config or server wiring, add or update the root
 package's tests so the full AuthCrunch object graph is covered. Follow

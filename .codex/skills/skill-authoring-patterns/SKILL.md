@@ -21,6 +21,13 @@ skills contain verified package paths, contracts, lifecycle invariants, and
 validation commands. Split a concern only when distinct behavior justifies it.
 Keep this graph one-way rather than making leaf skills reload their routers.
 
+For a configurable feature, identify its public config type, dedicated `parser`
+package, exported directive constructor, grammar/defaults, application API, and
+unit/example/E2E coverage in the owning skill. Use the shared
+[configuration parser shape](../coding-directives/references/configuration-parsers.md)
+for architecture; keep only the feature's concrete binding and contracts in
+its skill. Typed fields or an external handler alone are not parser support.
+
 Keep public API and security-contract reasoning beside Go declarations. Keep
 implementation rationale, local operations, and validation procedures in the
 narrow owning skill. Keep `AGENTS.md` to routing and repository-wide invariants

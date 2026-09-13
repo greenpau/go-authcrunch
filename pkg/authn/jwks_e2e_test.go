@@ -45,6 +45,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+	adminparser "github.com/greenpau/go-authcrunch/pkg/authn/admin_api/parser"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	refreshparser "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh/parser"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
@@ -580,38 +581,88 @@ func assertE2ENoPrivateKeys(t *testing.T, data []byte) {
 func TestE2EPortalJWKSAuthorization(t *testing.T) {
 	db := newJWKSE2EDatabase(t)
 	for _, tc := range []struct {
-		name string
-		api  *authn.APIConfig
+		name         string
+		directives   [][]string
+		adminEnabled bool
+		export       bool
 	}{
-		{"omitted", nil},
-		{"admin only", &authn.APIConfig{AdminEnabled: true}},
-		{"export only", &authn.APIConfig{AdminFetchPrivateKeysEnabled: true}},
-		{"enabled", &authn.APIConfig{AdminEnabled: true, AdminFetchPrivateKeysEnabled: true}},
+		{name: "omitted"},
+		{name: "defaults", directives: [][]string{}},
+		{name: "admin only", directives: [][]string{{"enable", "admin", "api"}}, adminEnabled: true},
+		{name: "export only", directives: [][]string{{"enable", "admin", "api", "private", "key", "export"}}},
+		{
+			name: "disabled", directives: [][]string{
+				{"disable", "admin", "api"}, {"disable", "admin", "api", "private", "key", "export"},
+			},
+		},
+		{
+			name: "admin disabled", directives: [][]string{
+				{"disable", "admin", "api"}, {"enable", "admin", "api", "private", "key", "export"},
+			},
+		},
+		{
+			name: "export disabled", directives: [][]string{
+				{"enable", "admin", "api"}, {"disable", "admin", "api", "private", "key", "export"},
+			}, adminEnabled: true,
+		},
+		{
+			name: "enabled", directives: [][]string{
+				{"enable", "admin", "api"}, {"enable", "admin", "api", "private", "key", "export"},
+			}, adminEnabled: true, export: true,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			f := newJWKSE2EPortal(t, db, "/xauth", tc.api)
+			config := &authn.PortalConfig{}
+			if tc.directives != nil {
+				var statements []string
+				for _, args := range tc.directives {
+					statements = append(statements, cfgutil.EncodeArgs(args))
+				}
+				admin, err := adminparser.NewAdminAPIConfigFromDirectives(statements)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := config.ConfigureAdminAPI(admin); err != nil {
+					t.Fatal(err)
+				}
+			}
+			// The fixture round-trips the API config through JSON before starting
+			// a real TLS portal, so directives must survive consumer persistence.
+			f := newJWKSE2EPortal(t, db, "/xauth", config.API)
 			admin, member := f.login(t, "keyadmin"), f.login(t, "keymember")
+			if tc.directives != nil {
+				status, deniedStatus := 400, 400
+				if tc.adminEnabled {
+					status, deniedStatus = 200, 403
+				}
+				f.request(t, "GET", "/api/server/metadata", admin, status)
+				for _, token := range []string{"", member} {
+					f.request(t, "GET", "/api/server/metadata", token, deniedStatus)
+				}
+			}
 			_, public := f.request(t, "GET", e2eJWKSPath, "", 200)
-			decodeE2EJWKS(t, public, 1)
+			publicKeys := decodeE2EJWKS(t, public, 1)
 			for _, query := range []string{"", "?format=jwk", "?format=pkcs8&encoding=der", "?admin_fetch_private_keys_enabled=true"} {
 				status := 404
-				if tc.name == "enabled" {
+				if tc.export {
 					status = 200
 				}
 				_, body := f.request(t, "GET", e2ePrivateKeysPath+query, admin, status)
 				if status != 200 {
 					assertE2ENoPrivateKeys(t, body)
+				} else {
+					decodeE2EPrivateKeys(t, body, publicKeys)
 				}
 				for _, token := range []string{"", member} {
 					deniedStatus := 404
-					if tc.name == "enabled" {
+					if tc.export {
 						deniedStatus = 403
 					}
 					_, denied := f.request(t, "GET", e2ePrivateKeysPath+query, token, deniedStatus)
 					assertE2ENoPrivateKeys(t, denied)
 				}
 			}
-			if tc.name != "enabled" {
+			if !tc.export {
 				return
 			}
 			parts := strings.Split(admin, ".")

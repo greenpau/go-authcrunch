@@ -241,6 +241,7 @@ func TestTagCompliance(t *testing.T) {
 			entry: &authn.APIConfig{},
 			opts:  &Options{},
 		},
+		{name: "test authn.AdminAPIConfig struct", entry: &authn.AdminAPIConfig{}, opts: &Options{}},
 		{
 			name:  "test cookie.DomainConfig struct",
 			entry: &cookie.DomainConfig{},

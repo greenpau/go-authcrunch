@@ -36,6 +36,11 @@ patterns, constructors, errors, logging, serialization tags, security handling,
 or test structure; or deciding how a new feature should fit existing
 AuthCrunch packages.
 
+Every configuration surface must have a dedicated, reusable `parser` package.
+Follow the `coding-directives` configuration parser contract for package shape,
+typed constructors, validation ownership, and modular integration, with unit
+and consumer E2E coverage from `testing-and-ci`.
+
 ## Testing and CI
 
 Use the repo-local `testing-and-ci` skill for every Go code change to enforce
@@ -108,7 +113,8 @@ UserInfo, revocation, and OP conformance testing. This covers the reusable
 
 Use `authentication-portal-jwks` for the portal `/.well-known/jwks.json`
 endpoint, public signing-key serialization, issuer selection, and base-path
-routing, plus opt-in admin private-key export.
+routing, plus reusable admin API directive configuration and opt-in private-key
+export.
 
 ## Authentication Clients
 

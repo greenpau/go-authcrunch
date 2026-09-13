@@ -36,6 +36,8 @@ directories for consumer integration; those repositories are updated separately.
   duplicate/unknown/malformed directives, and delegates normalization to
   `authn.TokenRefreshConfig.Validate`. This package owns the parser implementation and
   its external-package unit tests; the portal model remains in `pkg/authn`.
+  Additional `authn.TokenRefreshConfig` settings need corresponding grammar in
+  this constructor and consumer coverage through `PortalConfig.RefreshTokens`.
 - `pkg/authn/portal.go`: configured-realm capability checks, manager creation,
   failed-construction cleanup, and `Portal.Close()`.
 - `pkg/authn/token_issuer.go`: shared access/refresh issuance. HTTP and JSON

@@ -32,6 +32,10 @@ runtime `Options`. The package has no dependency on the `authn` portal runtime.
   `map[string]*oidc.ClientConfig`, and returns `*oidc.Config` for `NewProvider`
   or `PortalConfig.OIDCProvider`. Embedding adapters collect statements using
   `cfgutil.EncodeArgs` and import the parser directly.
+  Keep the client, application, and provider entry points in `client.go`,
+  `application.go`, and `provider.go` within this one parser package. Extend
+  the matching entry point when exposing additional settings on its config;
+  reuse the client decoder when adapting named applications.
 - Root `Config.ConfigureOIDCProvider(portal, statements)` supplies registered
   applications to the provider parser, then calls
   `PortalConfig.ConfigureOIDCProvider` to attach a validated snapshot. A second

@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-jwks
-description: Maintain portal public signing-key discovery at .well-known/jwks.json, opt-in admin private-key export, KMS key serialization, asymmetric issuer selection, base-path routing, and JWT verification tests. Excludes upstream OAuth provider JWKS consumption.
+description: Maintain portal public signing-key discovery at .well-known/jwks.json, reusable admin API directive parsing, opt-in admin private-key export, KMS key serialization, asymmetric issuer selection, base-path routing, and JWT verification tests. Excludes upstream OAuth provider JWKS consumption.
 ---
 
 # Authentication Portal JWKS
@@ -194,10 +194,60 @@ both API flags in portal configuration:
 }
 ```
 
-The Go field is `APIConfig.AdminFetchPrivateKeysEnabled`; it never implicitly
-enables `AdminEnabled`. Its JSON/XML/YAML tag is
-`admin_fetch_private_keys_enabled`. This library configuration does not add
-syntax to an embedding server's independent configuration parser.
+The persisted Go field is `APIConfig.AdminFetchPrivateKeysEnabled`; it never
+implicitly enables `AdminEnabled`. Its JSON/XML/YAML tag is
+`admin_fetch_private_keys_enabled`. Treat the two flags independently:
+
+| Admin API enabled | Private export opted in | Authorized admin GET |
+| --- | --- | --- |
+| false | false | 404 |
+| true | false | 404 |
+| false | true | 404 |
+| true | true | 200 when an asymmetric signing key is available |
+
+### Admin API Directive Configuration
+
+`pkg/authn/admin_api/parser.NewAdminAPIConfigFromDirectives` accepts a list of
+complete statements encoded with `cfgutil.EncodeArgs` and decodes them with
+`cfgutil.DecodeArgs`. Its result is `*authn.AdminAPIConfig`, which contains only
+`Enabled` and `FetchPrivateKeysEnabled`. Both default to false; an empty list
+does not enable either setting. Extend this parser whenever adding admin API
+configuration, keeping `authn.AdminAPIConfig` as its result and
+`PortalConfig.ConfigureAdminAPI` as the typed application boundary. The exact
+grammar is:
+
+```text
+enable admin api
+enable admin api private key export
+```
+
+Each directive also accepts `disable` in place of `enable`. Retain the existing
+`enable admin api` spelling; enabling private-key export is a separate explicit
+setting. Encode each keyword as a separate token. Boolean literals, underscore
+keys, grouped keywords, extra arguments, unknown directives, duplicate or
+conflicting settings, and multiline records are rejected without a partial
+configuration or input values in errors. Reject empty tokens before encoding,
+because `EncodeArgs` can trim a final empty field.
+
+Embedding adapters collect all admin API statements for one portal before
+calling the parser, so duplicates are detected across the whole configuration.
+Adapters own tokenization, placeholder expansion, and enclosing block traversal;
+pass no braces or unrelated directives. After successful parsing, call
+`PortalConfig.ConfigureAdminAPI(admin)`. It snapshots the admin settings into
+the portal's existing `APIConfig`, initializes it when absent, preserves
+`ProfileEnabled`, and retains the flat JSON/XML/YAML fields shown above. Nil
+input is rejected without mutation; a zero-value `AdminAPIConfig` clears both
+admin flags. Configure before serving requests. Do not replace the combined
+profile/admin config with an admin-only model or store competing admin settings.
+
+Keep the parser in its public package and the typed configuration/application
+method in `pkg/authn`, without a runtime-to-parser import. Consumer handler
+wiring remains separate work under the
+[repository scope](../coding-directives/SKILL.md#repository-scope); do not
+change sibling directories or claim to validate their directive handlers.
+Public JWKS discovery needs no directive and remains independent of both flags.
+
+### Export Authorization and Representation
 
 Keep the route inside `handleAPI`, after normal token authorization. The
 export handler checks both flags, requires `authorizedRole` with `role.Admin`
@@ -270,6 +320,7 @@ Run the focused report lifecycle, then the complete repository gate:
 
 ```sh
 make test TEST_DIR='./pkg/kms ./pkg/authn' TEST='JWKS|AdminFetchPrivateKeys' COVERAGE_DIR=.coverage/jwks
+make test TEST_DIR='./pkg/authn/admin_api/parser ./pkg/authn ./internal/tag' TEST='AdminAPI|AdminFetchPrivateKeys|TestE2EPortalJWKSAuthorization|TagCompliance' COVERAGE_DIR=.coverage/admin-api
 make test TEST_DIR='./pkg/authn' TEST='^TestE2EPortalJWKS' COVERAGE_DIR=.coverage/jwks-e2e
 go test -mod=readonly -race ./pkg/kms -run '^$' -fuzz '^FuzzJWKSAdminTokenParsing$' -fuzztime=20s -parallel=4
 make ci-check
@@ -297,6 +348,12 @@ It checks both HTTP endpoints with one key, multiple RSA keys, and mixed
 RSA/EC keys across mounts, preserving list shape and per-entry pairing.
 `pkg/authn/api_config_test.go`
 covers flag defaults and JSON/XML/YAML serialization.
+`pkg/authn/admin_api/parser/parser_test.go` covers the public directive grammar,
+independent flags, duplicates/conflicts, malformed input, error redaction, and
+an executable configuration example. `pkg/authn/admin_api_config_test.go`
+covers portal composition, profile preservation, independent snapshots, clearing
+previous opt-ins, nil errors, and JSON/XML/YAML compatibility. Register
+`authn.AdminAPIConfig` in the struct-tag compliance suite.
 
 `pkg/authn/jwks_e2e_test.go` uses the external `authn_test` package, a real TLS
 listener, a temporary local identity database, and `authclient` password login.
@@ -319,6 +376,12 @@ signers across portal instances and verifies both generations of tokens using
 the retained key list. It tests configuration replacement, not an automatic
 rotation service. Keep these tests in the default suite and extend them when
 changing either endpoint or key representation.
+
+`TestE2EPortalJWKSAuthorization` imports the public admin parser, applies its
+result with `PortalConfig.ConfigureAdminAPI`, and persists that config through
+JSON before real TLS login. Preserve coverage for omitted/default/disabled
+settings, admin-only access, export-only denial, both flags enabled, ordinary
+admin metadata access, role denials, and public JWKS independence.
 
 `pkg/authn/jwks_security_e2e_test.go` tests unsigned and tampered JWTs,
 RSA-to-HMAC algorithm confusion, malformed signed identity claims, encoded
