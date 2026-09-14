@@ -173,6 +173,12 @@ not on PATH or at the standard macOS Chrome location. Missing engines fail
 rather than substituting the VM simulation. The Go fixture owns the browser
 process and a temporary profile, trusts only its test certificate's SPKI, and
 uses mock/basic key storage without changing OS trust or browser profiles.
+The launcher waits up to 45 seconds for `DevToolsActivePort` within the existing
+90-second E2E deadline and detects process exit while waiting. Failed startup
+stops and reaps the process before reporting its output, so diagnostics cannot
+race with subprocess writes. `TestE2ERefreshBrowserStartup` exercises delayed
+partial readiness, early exits, deadline cleanup, and missing executables with
+local process fixtures; the bootstrap test retains the real Chrome journey.
 Its standard-library Node CDP driver is `ui/testdata/token_refresh_browser_e2e.cjs`.
 Two real tabs use actual cookies, storage events, and Web Locks while the server
 holds previously rendered HTML and truncates an already committed refresh

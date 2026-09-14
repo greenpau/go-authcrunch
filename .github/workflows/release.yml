@@ -31,9 +31,7 @@ jobs:
         with:
           go-version: '1.26.8'
       - name: Verify release version and annotated tag
-        run: |
-          python3 assets/scripts/version.py check --tag "$GITHUB_REF_NAME"
-          test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = tag
+        run: bash assets/scripts/verify_release.sh
       - uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # v6.3.0
         with:
           distribution: goreleaser

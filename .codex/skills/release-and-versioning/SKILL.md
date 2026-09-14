@@ -42,6 +42,14 @@ GoReleaser with write permission confined to that job. `.goreleaser.yaml` owns
 Linux/Windows/Darwin amd64/arm64 `authdbctl` builds, checksums, and linker
 metadata. Preserve immutable action pins and avoid publishing every local tag.
 
+`assets/scripts/verify_release.sh` fetches only the event's exact tag from origin
+before checking its annotation: `actions/checkout` can replace the runner's local
+tag with the event commit SHA. Verification requires both HEAD and the peeled
+remote tag to match `GITHUB_SHA`, as well as the version/tag contract. Restore
+only the runner's local tag; do not move remote release tags or change HEAD to
+make verification pass. Automation fixtures reproduce the checkout fallback
+with a real Git fetch and reject lightweight, missing, and mismatched tags.
+
 The library's minimum Go version and the final executable's build toolchain are
 separate contracts. Inspect both reusable-test and GoReleaser setup-go pins when
 qualifying a release; the current workflows explicitly select Go 1.26.8 with

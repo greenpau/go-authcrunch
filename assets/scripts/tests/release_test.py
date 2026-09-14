@@ -24,7 +24,8 @@ class ReleaseTests(unittest.TestCase):
                         GIT_AUTHOR_NAME='Release Fixture', GIT_AUTHOR_EMAIL='fixture@example.invalid',
                         GIT_COMMITTER_NAME='Release Fixture', GIT_COMMITTER_EMAIL='fixture@example.invalid',
                         PYTHONDONTWRITEBYTECODE='1')
-        for name in ('assets/scripts/version.py', 'assets/scripts/release.sh', 'go.mod', 'go.sum'):
+        for name in ('assets/scripts/version.py', 'assets/scripts/release.sh',
+                     'assets/scripts/verify_release.sh', 'go.mod', 'go.sum'):
             dest = self.root / name
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, dest)
@@ -72,6 +73,59 @@ class ReleaseTests(unittest.TestCase):
 
     def remote_head(self):
         return self.run_command('git', '--git-dir', str(self.remote), 'rev-parse', 'main').stdout.strip()
+
+    def verify_release(self, ok=True, **variables):
+        env = dict(self.env, GITHUB_REF_NAME='v1.1.41', GITHUB_SHA=self.initial)
+        env.update(variables)
+        return self.run_command('bash', 'assets/scripts/verify_release.sh', ok=ok, env=env)
+
+    def test_ci_verification_restores_annotation_after_checkout(self):
+        self.run_command('git', 'tag', '-a', 'v1.1.41', '-m', 'v1.1.41')
+        self.run_command('git', 'push', '-q', 'origin', 'refs/tags/v1.1.41')
+        annotation = self.run_command('git', 'rev-parse', 'refs/tags/v1.1.41').stdout.strip()
+        # Reproduce checkout's fallback fetch from the failed release log.
+        self.run_command('git', 'fetch', '--no-tags', 'origin',
+                         f'+{self.initial}:refs/tags/v1.1.41')
+        self.assertEqual(self.run_command('git', 'cat-file', '-t', 'refs/tags/v1.1.41').stdout.strip(),
+                         'commit')
+        self.run_command('git', 'checkout', '--detach', '-q', 'refs/tags/v1.1.41')
+        self.verify_release()
+        self.assertEqual(self.run_command('git', 'cat-file', '-t', 'refs/tags/v1.1.41').stdout.strip(), 'tag')
+        self.assertEqual(self.run_command('git', 'rev-parse', 'refs/tags/v1.1.41').stdout.strip(), annotation)
+        self.assertEqual(self.run_command('git', 'rev-parse', 'HEAD').stdout.strip(), self.initial)
+        self.assertEqual(self.remote_head(), self.initial)
+        self.assertEqual(self.run_command('git', '--git-dir', str(self.remote),
+                                          'rev-parse', 'refs/tags/v1.1.41').stdout.strip(), annotation)
+
+    def test_ci_verification_rejects_lightweight_remote_tag(self):
+        self.run_command('git', 'tag', 'v1.1.41')
+        self.run_command('git', 'push', '-q', 'origin', 'refs/tags/v1.1.41')
+        result = self.verify_release(ok=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('not annotated on origin', result.stdout)
+
+    def test_ci_verification_rejects_tag_at_another_commit(self):
+        self.run_command('git', 'commit', '--allow-empty', '-qm', 'ops: another commit')
+        self.run_command('git', 'tag', '-a', 'v1.1.41', '-m', 'v1.1.41')
+        self.run_command('git', 'push', '-q', 'origin', 'refs/tags/v1.1.41')
+        self.run_command('git', 'checkout', '--detach', '-q', self.initial)
+        result = self.verify_release(ok=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('does not point to the workflow commit', result.stdout)
+        self.assertEqual(self.run_command('git', 'rev-parse', 'HEAD').stdout.strip(), self.initial)
+
+    def test_ci_verification_rejects_wrong_checkout(self):
+        self.run_command('git', 'tag', '-a', 'v1.1.41', '-m', 'v1.1.41')
+        self.run_command('git', 'push', '-q', 'origin', 'refs/tags/v1.1.41')
+        self.run_command('git', 'commit', '--allow-empty', '-qm', 'ops: another checkout')
+        result = self.verify_release(ok=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('HEAD does not match the workflow commit', result.stdout)
+
+    def test_ci_verification_rejects_missing_remote_tag_and_wrong_version(self):
+        self.run_command('git', 'tag', '-a', 'v1.1.41', '-m', 'local only')
+        self.assertNotEqual(self.verify_release(ok=False).returncode, 0)
+        self.assertNotEqual(self.verify_release(ok=False, GITHUB_REF_NAME='v1.1.42').returncode, 0)
 
     def test_patch_release_publishes_only_exact_annotated_tag(self):
         self.run_command('git', 'tag', 'unrelated-local-tag')

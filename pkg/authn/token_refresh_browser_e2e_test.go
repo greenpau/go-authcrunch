@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -59,6 +60,66 @@ func refreshBrowserExecutable(t *testing.T) string {
 	}
 	t.Fatal("Chrome/Chromium is required for browser E2E; set AUTHCRUNCH_TEST_BROWSER to its executable")
 	return ""
+}
+
+// Start with a bounded readiness wait and reap the process before reading its
+// diagnostics. Chrome can exit before creating DevToolsActivePort; waiting only
+// for the file hides the actual startup failure behind a timeout.
+func startRefreshBrowser(ctx context.Context, chrome *exec.Cmd, profile string) (string, func(), error) {
+	var diagnostic bytes.Buffer
+	chrome.Stdout = &diagnostic
+	chrome.Stderr = &diagnostic
+	chrome.WaitDelay = time.Second
+	if err := chrome.Start(); err != nil {
+		return "", nil, fmt.Errorf("start browser %q: %w", chrome.Path, err)
+	}
+	done := make(chan struct{})
+	var waitErr error
+	go func() {
+		waitErr = chrome.Wait()
+		close(done)
+	}()
+	stop := func() {
+		select {
+		case <-done:
+		default:
+			_ = chrome.Process.Kill()
+			<-done
+		}
+	}
+	failure := func(err error) (string, func(), error) {
+		stop()
+		return "", nil, fmt.Errorf("browser %q startup failed: %w\n%s", chrome.Path, err, diagnostic.String())
+	}
+	// Keep this inside the overall E2E deadline, allowing loaded CI runners
+	// more time than the former 15-second startup window.
+	startup, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-done:
+			if startup.Err() != nil {
+				return failure(fmt.Errorf("waiting for debugging endpoint: %w", startup.Err()))
+			}
+			if waitErr != nil {
+				return failure(fmt.Errorf("exited before exposing a debugging endpoint: %w", waitErr))
+			}
+			return failure(fmt.Errorf("exited before exposing a debugging endpoint"))
+		case <-startup.Done():
+			return failure(fmt.Errorf("waiting for debugging endpoint: %w", startup.Err()))
+		case <-ticker.C:
+			data, err := os.ReadFile(filepath.Join(profile, "DevToolsActivePort"))
+			if err != nil {
+				continue
+			}
+			lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+			if len(lines) == 2 && lines[0] != "" && strings.HasPrefix(lines[1], "/devtools/browser/") {
+				return "ws://127.0.0.1:" + lines[0] + lines[1], stop, nil
+			}
+		}
+	}
 }
 
 // The fixture pauses already rendered old HTML and truncates one already
@@ -168,27 +229,11 @@ func TestE2ERefreshBrowserBootstrap(t *testing.T) {
 		"--no-first-run", "--no-default-browser-check", "--disable-background-networking",
 		"--disable-component-update", "--disable-default-apps", "--disable-sync", "--disable-breakpad",
 		"--disable-crash-reporter", "--no-proxy-server", "--password-store=basic", "--use-mock-keychain", "about:blank")
-	var diagnostic bytes.Buffer
-	chrome.Stderr = &diagnostic
-	if err := chrome.Start(); err != nil {
-		t.Fatal("could not start the browser")
+	endpoint, stop, err := startRefreshBrowser(ctx, chrome, profile)
+	if err != nil {
+		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = chrome.Process.Kill(); _ = chrome.Wait() })
-	var endpoint string
-	deadline := time.Now().Add(15 * time.Second)
-	for time.Now().Before(deadline) && ctx.Err() == nil {
-		if data, err := os.ReadFile(filepath.Join(profile, "DevToolsActivePort")); err == nil {
-			lines := strings.Split(strings.TrimSpace(string(data)), "\n")
-			if len(lines) == 2 {
-				endpoint = "ws://127.0.0.1:" + lines[0] + lines[1]
-				break
-			}
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	if endpoint == "" {
-		t.Fatal("browser did not expose a debugging endpoint before the deadline")
-	}
+	t.Cleanup(stop)
 	driver := exec.CommandContext(ctx, "node", "ui/testdata/token_refresh_browser_e2e.cjs", endpoint, server.URL)
 	driver.Stdin = strings.NewReader(tests.TestPwd1)
 	output, err := driver.CombinedOutput()
