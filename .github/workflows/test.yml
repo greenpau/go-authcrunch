@@ -16,8 +16,24 @@ concurrency:
   cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
+  selection:
+    name: Select test run
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      run_tests: ${{ steps.selection.outputs.run_tests }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Check whether the release tag owns validation
+        id: selection
+        run: python3 assets/scripts/select_ci_tests.py
   core:
     name: Tests and coverage
+    needs: selection
+    if: ${{ needs.selection.outputs.run_tests == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:

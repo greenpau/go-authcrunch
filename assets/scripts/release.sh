@@ -26,12 +26,12 @@ tag="v${version}"
 if git show-ref --verify --quiet "refs/tags/${tag}"; then fail "tag ${tag} already exists locally"; fi
 remote_tag=$(git ls-remote --tags origin "refs/tags/${tag}")
 [ -z "$remote_tag" ] || fail "tag ${tag} already exists on origin"
-make ci-check
 clean_tree
 
 go tool versioned "-${kind}"
 make version-sync
 [ "$(cat VERSION)" = "$version" ] || fail "versioned produced an unexpected version"
+# Run the full gate once against the synchronized release contents.
 make ci-check
 
 # Stage only the version authority and its two declared projections.

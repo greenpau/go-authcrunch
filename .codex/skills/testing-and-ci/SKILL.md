@@ -391,7 +391,9 @@ iteration. Use `make test-ui` for embedded refresh-client JavaScript.
 ## CI Workflow
 
 `.github/workflows/test.yml` runs on pushes/PRs to main, manual dispatch, and
-reusable workflow calls. It selects Ubuntu 24.04, Go 1.26.8, Node 24, Python 3,
+reusable workflow calls. Its selection job avoids duplicate branch tests for an
+exact annotated release tag; `release-and-versioning` owns that decision and
+its fallback rules. It selects Ubuntu 24.04, Go 1.26.8, Node 24, Python 3,
 and the existing NSS test utilities. It resolves versioned artifact identity,
 runs `make dep` and `make ci-check`, checks that tracked source did not change,
 and always uploads `.coverage/` after the gate was attempted, including hidden

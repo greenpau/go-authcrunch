@@ -48,10 +48,10 @@ class ReleaseTests(unittest.TestCase):
             'ci-check: version-check\n\t@python3 gate.py\n')
         (self.root / 'gate.py').write_text(
             'import os\nfrom pathlib import Path\n'
-            'p=Path(".fixture/gates")\nn=int(p.read_text())+1 if p.exists() else 1\n'
-            'p.write_text(str(n))\n'
-            'if os.environ.get("DIRTY_GATE") == str(n): Path("unexpected").write_text("change")\n'
-            'if os.environ.get("FAIL_GATE") == str(n): raise SystemExit(1)\n')
+            'with Path(".fixture/gates").open("a") as log:\n'
+            '    log.write(Path("VERSION").read_text().strip()+"\\n")\n'
+            'if os.environ.get("DIRTY_GATE") == "1": Path("unexpected").write_text("change")\n'
+            'if os.environ.get("FAIL_GATE") == "1": raise SystemExit(1)\n')
         self.run_command('git', 'init', '-q', '-b', 'main')
         self.run_command('git', 'add', '.')
         self.run_command('git', 'commit', '-qm', 'ops: fixture baseline')
@@ -131,7 +131,7 @@ class ReleaseTests(unittest.TestCase):
         self.run_command('git', 'tag', 'unrelated-local-tag')
         self.release()
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.42')
-        self.assertEqual((self.root / '.fixture/gates').read_text(), '2')
+        self.assertEqual((self.root / '.fixture/gates').read_text(), '1.1.42\n')
         self.assertEqual(self.run_command('git', 'status', '--porcelain').stdout, '')
         head = self.run_command('git', 'rev-parse', 'HEAD').stdout.strip()
         self.assertEqual(self.remote_head(), head)
@@ -143,7 +143,16 @@ class ReleaseTests(unittest.TestCase):
     def test_minor_release_resets_patch(self):
         self.release('minor')
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.2.0')
+        self.assertEqual((self.root / '.fixture/gates').read_text(), '1.2.0\n')
         self.assertEqual(self.run_command('git', '--git-dir', str(self.remote), 'tag').stdout.strip(), 'v1.2.0')
+
+    def test_release_check_does_not_bump_or_run_gate(self):
+        self.release('check')
+        self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.41')
+        self.assertFalse((self.root / '.fixture/gates').exists())
+        self.assertEqual(self.run_command('git', 'status', '--porcelain').stdout, '')
+        self.assertEqual(self.run_command('git', 'rev-parse', 'HEAD').stdout.strip(), self.initial)
+        self.assertEqual(self.remote_head(), self.initial)
 
     def test_dirty_staged_untracked_and_wrong_branch_are_rejected(self):
         for mode in ('untracked', 'staged', 'tracked', 'branch', 'detached'):
@@ -161,25 +170,41 @@ class ReleaseTests(unittest.TestCase):
                     self.run_command('git', 'checkout', '--detach', '-q')
                 self.assertNotEqual(self.release(ok=False).returncode, 0)
                 self.assertEqual(self.remote_head(), self.initial)
+                self.assertFalse((self.root / '.fixture/gates').exists())
                 # Fixture-only cleanup; no command here targets the working repository.
                 self.run_command('git', 'reset', '--hard', '-q', self.initial)
                 (self.root / 'extra').unlink(missing_ok=True)
                 self.run_command('git', 'checkout', '-q', 'main')
 
-    def test_first_gate_failure_does_not_bump(self):
-        self.assertNotEqual(self.release(ok=False, FAIL_GATE='1').returncode, 0)
-        self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.41')
+    def test_version_drift_fails_before_bump(self):
+        (self.root / 'VERSION').write_text('1.1.40\n')
+        self.run_command('git', 'add', 'VERSION')
+        self.run_command('git', 'commit', '-qm', 'ops: fixture version drift')
+        head = self.run_command('git', 'rev-parse', 'HEAD').stdout.strip()
+        self.assertNotEqual(self.release(ok=False).returncode, 0)
+        self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.40')
+        self.assertFalse((self.root / '.fixture/gates').exists())
+        self.assertEqual(self.run_command('git', 'rev-parse', 'HEAD').stdout.strip(), head)
         self.assertEqual(self.remote_head(), self.initial)
 
-    def test_second_gate_failure_keeps_reviewable_changes_unpublished(self):
-        self.assertNotEqual(self.release(ok=False, FAIL_GATE='2').returncode, 0)
+    def test_gate_failure_keeps_reviewable_changes_unpublished(self):
+        self.assertNotEqual(self.release(ok=False, FAIL_GATE='1').returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.42')
+        self.assertEqual((self.root / '.fixture/gates').read_text(), '1.1.42\n')
+        self.assertEqual(self.run_command('git', 'rev-parse', 'HEAD').stdout.strip(), self.initial)
         self.assertEqual(self.remote_head(), self.initial)
         self.assertEqual(self.run_command('git', 'tag').stdout, '')
+        self.assertEqual(self.run_command('git', '--git-dir', str(self.remote), 'tag').stdout, '')
         self.assertEqual(self.run_command('git', 'diff', '--cached', '--name-only').stdout, '')
+        self.assertEqual(self.run_command('git', 'diff', '--name-only').stdout.splitlines(),
+                         ['VERSION', 'cmd/authdbctl/main.go', 'pkg/identity/database.go'])
+        # A blind retry must not increment again or publish the failed candidate.
+        self.assertNotEqual(self.release(ok=False).returncode, 0)
+        self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.42')
+        self.assertEqual((self.root / '.fixture/gates').read_text(), '1.1.42\n')
 
     def test_unexpected_gate_output_is_not_committed(self):
-        self.assertNotEqual(self.release(ok=False, DIRTY_GATE='2').returncode, 0)
+        self.assertNotEqual(self.release(ok=False, DIRTY_GATE='1').returncode, 0)
         self.assertEqual(self.run_command('git', 'rev-parse', 'HEAD').stdout.strip(), self.initial)
         self.assertEqual(self.remote_head(), self.initial)
 
@@ -190,6 +215,7 @@ class ReleaseTests(unittest.TestCase):
         self.run_command('git', 'tag', '-d', 'v1.1.42')
         self.assertNotEqual(self.release(ok=False).returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.41')
+        self.assertFalse((self.root / '.fixture/gates').exists())
         self.assertEqual(self.remote_head(), self.initial)
 
     def test_stale_main_is_rejected_before_bump(self):
@@ -201,6 +227,7 @@ class ReleaseTests(unittest.TestCase):
         self.run_command('git', 'reset', '--hard', '-q', self.initial)
         self.assertNotEqual(self.release(ok=False).returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.41')
+        self.assertFalse((self.root / '.fixture/gates').exists())
         self.assertEqual(self.remote_head(), remote)
 
     def test_atomic_push_cannot_publish_main_without_tag(self):

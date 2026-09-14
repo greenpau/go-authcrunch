@@ -36,6 +36,19 @@ tag fails. `GITHUB_SHA` binds the identity to the actual checked commit, and
 failure evidence, as `go-authcrunch_coverage_<artifact-id>`. Coverage is a
 workflow diagnostic artifact, separate from published distributions.
 
+The test workflow first runs `assets/scripts/select_ci_tests.py`. A `push` to
+`refs/heads/main` skips its full test job only when version projections are
+synchronized, HEAD matches `GITHUB_SHA`, and origin has the exact annotated
+`v<VERSION>` tag peeled to that same commit. The atomic release push therefore
+gets one full Actions gate, owned by the tag's release workflow. Missing,
+lightweight, mismatched, or unconfirmed remote tags retain branch testing;
+commit messages do not authorize skipping tests. PR, manual, and tag-triggered
+runs always retain their full gate. The selection job runs for every invocation
+and emits `run_tests` through `GITHUB_OUTPUT`; `core` depends on that successful
+selection. Its Git queries are read-only and bounded. Local Git/process fixtures
+in `assets/scripts/tests/ci_test_selection_test.py` cover both release events
+and conservative fallback behavior.
+
 `.github/workflows/release.yml` requires the reusable test job before publishing,
 checks the exact annotated tag and synchronized version, then runs pinned
 GoReleaser with write permission confined to that job. `.goreleaser.yaml` owns
@@ -70,13 +83,21 @@ Only execute a publishing command when the user requests an actual release:
 - `make release-git-check`: read-only local branch/clean-tree/version checks.
 
 Both publish paths invoke `assets/scripts/release.sh` sequentially, including
-under `make -j`. They require `main`, a clean worktree/index including untracked
-files, and local main containing `origin/main`; run `make ci-check` before and
-after the bump; synchronize only declared projections; commit with
-`ops: released v<VERSION>`; create one annotated tag; and atomically push main
+under `make -j`. Before bumping, they check `main`, a clean worktree/index
+including untracked files, synchronized versions, local main containing
+`origin/main`, and absence of the next tag locally and on origin. They bump and
+synchronize only declared projections, then run `make ci-check` exactly once
+against the release contents. Only a passing gate permits the
+`ops: released v<VERSION>` commit, one annotated tag, and the atomic push of main
 and that exact tag to origin. No force push or broad `git push --tags` belongs
 in this workflow. Partial legacy release targets deliberately fail with a
 pointer to the complete workflow.
+
+A gate failure leaves the bumped, synchronized version files uncommitted and
+unstaged, with no new local commit/tag or remote update. Automation fixtures
+record the version seen by every gate invocation and assert a single invocation
+at the new patch/minor version. They also verify preflight rejection before the
+gate and preservation of the failed candidate without another bump on retry.
 
 If a gate or push fails, inspect the worktree, local tag/commit, and remote refs
 before taking another step. Leave diagnostic state for review. Do not reset,
