@@ -129,7 +129,14 @@ func (b *IdentityProvider) refreshKeys(ctx context.Context, version *uint64) err
 
 // authoritative distinguishes an empty/unsupported replacement from a failed
 // transport or malformed document. Only a complete keys array replaces trust.
-func (b *IdentityProvider) fetchRemoteKeys(ctx context.Context) ([]*JwksKey, bool, error) {
+func (b *IdentityProvider) fetchRemoteKeys(ctx context.Context) (keys []*JwksKey, authoritative bool, err error) {
+	defer func() {
+		// Cancellation can race a transport error or a completed response.
+		// Preserve the context result and never publish a canceled fetch.
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			keys, authoritative, err = nil, false, ctxErr
+		}
+	}()
 	client, err := b.newBrowser()
 	if err != nil {
 		return nil, false, err

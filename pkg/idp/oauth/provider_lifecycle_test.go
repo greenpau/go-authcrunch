@@ -100,32 +100,73 @@ func TestOAuthDelayedDiscoveryReadiness(t *testing.T) {
 }
 
 func TestOAuthJwksRequestCancellation(t *testing.T) {
-	entered := make(chan struct{})
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { close(entered); <-r.Context().Done() }))
-	defer server.Close()
-	b := oauthEdProvider(t)
-	b.keysURL = server.URL
-	b.browserConfig = &browserConfig{TLSInsecureSkipVerify: true}
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	done := make(chan error, 1)
-	go func() { _, _, err := b.fetchRemoteKeys(ctx); done <- err }()
-	select {
-	case <-entered:
-	case <-time.After(3 * time.Second):
-		t.Fatal("JWKS request did not start")
-	}
-	cancel()
-	select {
-	case err := <-done:
-		if !errors.Is(err, context.Canceled) {
-			t.Fatal("JWKS request ignored cancellation")
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("canceled JWKS request did not finish")
-	}
-	if _, err := b.parseOAuthJWT(ctx, "id_token", "unused"); !errors.Is(err, context.Canceled) {
-		t.Fatal("canceled validation continued")
+	for _, tc := range []struct {
+		name  string
+		body  bool
+		cause error
+	}{
+		{name: "before headers"},
+		{name: "during body", body: true},
+		{name: "custom cause", cause: errors.New("caller stopped authentication")},
+		{name: "body with custom cause", body: true, cause: errors.New("caller stopped authentication")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			entered, canceled, release := make(chan struct{}), make(chan struct{}), make(chan struct{})
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if tc.body {
+					w.Write([]byte(`{"keys":[`))
+					w.(http.Flusher).Flush()
+				}
+				close(entered)
+				select {
+				case <-r.Context().Done():
+					close(canceled)
+				case <-release:
+					return
+				}
+				// Keep handler completion from racing the cancellation result.
+				<-release
+			}))
+			defer server.Close()
+			defer close(release)
+			b := oauthEdProvider(t)
+			b.keysURL = server.URL
+			b.browserConfig = &browserConfig{TLSInsecureSkipVerify: true}
+			ctx, cancel := context.WithCancelCause(t.Context())
+			defer cancel(nil)
+			type result struct {
+				keys          []*JwksKey
+				authoritative bool
+				err           error
+			}
+			done := make(chan result, 1)
+			go func() {
+				keys, authoritative, err := b.fetchRemoteKeys(ctx)
+				done <- result{keys, authoritative, err}
+			}()
+			awaitOAuthLifecycle(t, entered, "JWKS request")
+			select {
+			case got := <-done:
+				t.Fatalf("JWKS request completed before cancellation: %v", got.err)
+			default:
+			}
+			cancel(tc.cause)
+			select {
+			case got := <-done:
+				if !errors.Is(got.err, context.Canceled) {
+					t.Fatalf("JWKS request ignored cancellation: %v", got.err)
+				}
+				if got.authoritative || len(got.keys) != 0 {
+					t.Fatal("canceled JWKS request returned replacement keys")
+				}
+			case <-time.After(3 * time.Second):
+				t.Fatal("canceled JWKS request did not finish")
+			}
+			awaitOAuthLifecycle(t, canceled, "upstream JWKS cancellation")
+			if _, err := b.parseOAuthJWT(ctx, "id_token", "unused"); !errors.Is(err, context.Canceled) {
+				t.Fatalf("canceled validation continued: %v", err)
+			}
+		})
 	}
 }
 
