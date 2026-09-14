@@ -328,7 +328,9 @@ type cliE2EPortal struct {
 	routes         []string
 }
 
-func newCLIE2EPortal(t *testing.T, method string, admin bool) *cliE2EPortal {
+// An optional refresh config enables a TLS fixture. The fixture supplies its
+// dynamic public origin and mount; the caller selects realms and body opt-in.
+func newCLIE2EPortal(t *testing.T, method string, admin bool, refresh ...*authn.TokenRefreshConfig) *cliE2EPortal {
 	t.Helper()
 	f := &cliE2EPortal{dbPath: filepath.Join(t.TempDir(), "users.json"), method: method}
 	db, err := identity.NewDatabase(f.dbPath)
@@ -370,19 +372,34 @@ func newCLIE2EPortal(t *testing.T, method string, admin bool) *cliE2EPortal {
 		t.Fatal(err)
 	}
 	cookies := cookie.NewConfig()
-	cookies.Insecure = true // The standalone CLI connects only to a loopback HTTP listener.
-	portal, err := authn.NewPortal(authn.PortalParameters{Config: &authn.PortalConfig{Name: "cli-e2e", IdentityStores: []string{"localdb"}, CookieConfig: cookies, API: &authn.APIConfig{AdminEnabled: admin}}, Logger: zap.NewNop(), IdentityStores: []ids.IdentityStore{store}})
+	cookies.Insecure = len(refresh) == 0 // Legacy fixtures use loopback HTTP.
+	f.server = httptest.NewUnstartedServer(nil)
+	t.Cleanup(f.server.Close)
+	config := &authn.PortalConfig{Name: "cli-e2e", IdentityStores: []string{"localdb"}, CookieConfig: cookies, API: &authn.APIConfig{AdminEnabled: admin}}
+	if len(refresh) != 0 {
+		copy := *refresh[0]
+		copy.PublicOrigin = "https://" + f.server.Listener.Addr().String()
+		copy.BasePath = "/auth"
+		config.RefreshTokens = &copy
+	}
+	portal, err := authn.NewPortal(authn.PortalParameters{Config: config, Logger: zap.NewNop(), IdentityStores: []ids.IdentityStore{store}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	f.server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		f.routes = append(f.routes, r.Method+" "+r.URL.Path)
 		f.mu.Unlock()
 		if err := portal.ServeHTTP(r.Context(), w, r, requests.NewRequest()); err != nil {
 			t.Error("real portal handler failed")
 		}
-	}))
+	})
+	if len(refresh) == 0 {
+		f.server.Start()
+	} else {
+		f.server.StartTLS()
+	}
+	f.server.Client().Timeout = 10 * time.Second
 	t.Cleanup(func() { f.server.Close(); portal.Close() })
 	return f
 }

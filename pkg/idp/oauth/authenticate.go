@@ -39,7 +39,7 @@ import (
 func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	// Delayed discovery publishes endpoints and issuer together. Do not read
 	// partially configured metadata while its background initialization runs.
-	if b.configured && !b.ready.Load() {
+	if b.closed.Load() || (b.configured.Load() && !b.ready.Load()) {
 		return errors.ErrIdentityProviderConfig.WithArgs("OAuth provider is not ready")
 	}
 	b.setupMu.RLock()

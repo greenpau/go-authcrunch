@@ -87,7 +87,7 @@ func (b *IdentityProvider) canFetchKeys() bool {
 	return !b.disableKeyVerification && b.keysURL != ""
 }
 
-func (b *IdentityProvider) fetchKeysURL() error { return b.refreshKeys(context.Background(), nil) }
+func (b *IdentityProvider) fetchKeysURL() error { return b.refreshKeys(b.discoveryContext(), nil) }
 
 // A request retries at most once against a fresh snapshot. A version includes
 // failed fetches so waiters share both success and failure, not another request.

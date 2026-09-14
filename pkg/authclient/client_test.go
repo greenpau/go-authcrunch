@@ -392,7 +392,9 @@ func TestAuthenticateRedirectAndCancellation(t *testing.T) {
 	var targetCalls atomic.Int32
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { targetCalls.Add(1) }))
 	defer target.Close()
-	redirect := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, target.URL, 307) }))
+	redirect := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target.URL, http.StatusTemporaryRedirect)
+	}))
 	defer redirect.Close()
 	var redirectChecks atomic.Int32
 	hc := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { redirectChecks.Add(1); return nil }}

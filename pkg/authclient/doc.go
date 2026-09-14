@@ -21,6 +21,14 @@
 // FileTokenStore. Configuration discovery, application directories, terminal
 // interaction, logging, and command dispatch belong to the calling application.
 //
+// Config.RefreshTransport explicitly selects native JSON credential delivery
+// with RefreshTransportBody. The portal must enable body transport for the realm.
+// Native logins use no cookie jar and do not establish a browser OIDC session.
+// The default cookie mode preserves access-only portal compatibility; a refresh
+// realm's metadata-only success returns ErrNativeTransportRequired without retry.
+// Package parser exposes NewAuthenticationClientConfigFromDirectives for hosts
+// collecting cfgutil.EncodeArgs statements; runtime callers use Config directly.
+//
 // Credentials are opaque: this package neither validates JWT claims nor renews
 // refresh tokens. Authenticate performs a fresh login and returns only credentials
 // issued by that login. U2F/WebAuthn challenges are currently unsupported.

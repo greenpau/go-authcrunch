@@ -1,6 +1,6 @@
 ---
 name: authentication-client
-description: Maintain pkg/authclient portal login, password/TOTP challenges, API key authentication, real-portal E2E tests, opaque credential files, and cmd/authdbctl authentication wiring. Use when embedding authentication in another CLI such as caddy-authenticator; this client does not use the admin API.
+description: Maintain pkg/authclient portal login, its reusable configuration parser, native login transport, password/TOTP challenges, API key authentication, real-portal E2E tests, opaque credential files, and cmd/authdbctl authentication wiring. Use when embedding authentication in another CLI such as caddy-authenticator; this client does not use the admin API.
 ---
 
 # Authentication Client
@@ -69,9 +69,48 @@ folders and 0600 files on Unix. Do not truncate the destination before success.
 
 Legacy files have no portal/identity binding. The application must choose the
 correct store per portal and identity. File replacement is not cross-process
-refresh rotation coordination. The client does not request native refresh
-transport or implement renewal/logout; changes to those contracts belong with
-`refresh-token-transports` and `refresh-token-implementation`.
+refresh rotation coordination. Renewal/logout remain separate features; this
+client performs only initial/fresh login and credential persistence.
+
+## Login Transport and Configuration
+
+`Config.RefreshTransport` selects `RefreshTransportCookie` (`cookie`, the
+omitted default) or `RefreshTransportBody` (`body`). Carry it through the initial
+request and every sandbox/password/TOTP checkpoint. Cookie mode preserves the
+legacy access-only JSON login contract and browser jar behavior. Omit
+`refresh_transport` from the wire in cookie/default mode: v1.1.41's strict
+request decoder rejects this newer field. Body mode sends it explicitly on
+every exchange. Keep the legacy-schema unit test and real TLS password/TOTP
+wire-envelope E2E alongside native-mode tests. In a refresh
+realm its metadata-only success returns `ErrNativeTransportRequired`, with no
+credentials and no automatic retry. The server may already have authenticated
+the browser; do not retry ambiguously completed logins on the caller's behalf.
+
+Body mode opts into native access plus refresh credentials. The portal must
+select the realm and enable `body transport enabled`; otherwise initial login
+returns `HTTPError` with status 400. A successful body response must contain an
+access token, refresh token, and session ID. This is not a separate native
+access-only mode. API key login remains access-only and rejects body mode.
+Refresh-disabled password/TOTP portals continue to use the default mode.
+
+`NewClient` copies the supplied HTTP client and sets its Jar to nil in body
+mode, without reading or updating a shared browser jar. Each request is fresh
+and carries no Cookie, Origin, or Fetch Metadata. Injected transports remain
+trusted application dependencies; they must not inject browser headers. Native
+responses do not establish OIDC/browser sessions or expose browser cookies.
+Keep cookie-mode responses credential-free in JSON for refresh realms.
+
+`pkg/authclient/parser.NewAuthenticationClientConfigFromDirectives` returns
+`*authclient.Config`. It takes encoded block-body statements without braces or
+a header, uses `cfgutil.DecodeArgs`, and calls `Config.Validate`. Single-value
+settings are `base url`, `username`, `realm`, `password`, `api key`, `totp secret`,
+`totp code length`, `totp code lifetime` (seconds), `access token name`, and
+`refresh transport`. Each occurs once. Empty configuration fails required
+URL/identity checks; unknown, duplicate, malformed, multiline, empty, and
+invalid settings return nil and redacted errors. Host adapters own tokenization
+and placeholder expansion and reject empty tokens before encoding. Parsing
+performs no filesystem/network work. Callers pass the result to `NewClient`;
+JSON/XML/YAML field names and existing credential-file fields remain stable.
 
 `cmd/authdbctl/Config` embeds the authentication config with YAML inline fields.
 Keep `token_path`, legacy `cookie_name`, `AUTHDBCTL_*` flags/env names, and the
@@ -108,9 +147,12 @@ separate client without login cookies to call `/whoami`. Check identity, roles,
 and remaining lifetime, plus rejection of missing tokens and tampered signatures.
 Preserve this real portal test boundary when changing the public client contract;
 scripted HTTP response tests alone do not establish portal compatibility.
-Password/TOTP fixtures use the default login transport with refresh disabled.
-API key fixtures also check refresh-enabled realms without minting refresh tokens;
-these tests do not establish native refresh or renewal support.
+`transport_e2e_test.go` exercises the public parser and serialization before
+real TLS password/TOTP/combined-MFA logins in body mode, repeated authentication,
+custom names, supplied browser jars, unavailable transport, and the intentional
+default-mode error in a refresh realm. Reopen each credential file and authorize
+through a separate client. API key fixtures check refresh-enabled realms without
+minting refresh tokens. These tests establish initial native login, not renewal.
 
 `pkg/authn/handle_json_api_key_login_test.go` checks the server's mixed-credential
 and refresh-transport rejection, cookie-free response, and no-store policy.
@@ -137,7 +179,7 @@ dependencies change instead of adding synthetic failures for impossible states.
 go test -race ./pkg/authclient ./cmd/authdbctl
 make test TEST_DIR='./pkg/authclient' TEST='^TestE2E' COVERAGE_DIR='.coverage/authclient-e2e'
 make test TEST_DIR='./pkg/authclient' COVERAGE_DIR='.coverage/authclient' MINIMUM_COVERAGE=100
-make test TEST_DIR='./pkg/authclient ./cmd/authdbctl'
+make test TEST_DIR='./pkg/authclient/... ./cmd/authdbctl'
 make ci-check
 ```
 

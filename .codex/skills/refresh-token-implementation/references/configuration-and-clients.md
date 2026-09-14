@@ -293,10 +293,28 @@ identity-store reload requires reauthentication. Call `Portal.Close()` after
 quiescing requests when disposing of a portal; it stops cache workers and clears
 its refresh state. Failed portal construction also cleans up workers.
 
-Cleanup occurs during new session creation. Spent digests remain until absolute
-expiry so replay stays recognizable. Capacity exhaustion fails closed; exceeding
-a family's rotation limit requires login. Configure capacity for expected load.
-No refresh cleanup goroutine is created.
+`max sessions` bounds live families. Logout, replay, definitive identity denial,
+and rotation exhaustion retire an entire family and free its slot. Admission
+also reclaims idle- and absolutely expired families. Every spent digest remains
+recognizable while a descendant is live; once the whole family is terminal,
+its digests can be removed together. An old credential then stays invalid without
+an unbounded tombstone history. Storage retains at most `max sessions` families
+and `max sessions * (max rotations + 1)` digests. No cleanup worker is created.
+
+A freshly authenticated browser can atomically replace its presented family at
+full capacity, after successful signing. Failed admission/signing preserves all
+live families. Separate native or browser clients still fail closed when all
+slots are live; having an access JWT alone cannot free a slot. Security-version
+changes are observed during refresh, so an unpresented invalidated family's slot
+can remain occupied until expiry. Size capacity for concurrent independent
+sessions, and set idle/absolute limits deliberately.
+
+Reusable consumers can use `Manager.IssueReplacing` with an optional
+`ReplacementStore` adapter. The unchanged `Store` interface supports ordinary
+issuance/rotation. Replacement requires the optional atomic method when a valid
+old credential is supplied; unsupported adapters return `ErrUnavailable`.
+Never recreate old session snapshots or reuse old IDs/credential material.
+The portal constructs `MemoryStore`, which implements both interfaces.
 
 This is a single-process implementation. The `tokenrefresh.Store` contract describes
 atomic creation, lookup, rotation, and revocation for future adapters, but the
@@ -317,8 +335,9 @@ password-reset races, single-use sandbox redemption, current roles/challenges,
 expired-access refresh with unchanged API authorization, replay isolation,
 concurrent rotation, logout during signing, deadlines, capacity, strict HTTP
 parsing, origin/transport checks, cookies, disposal, security-version persistence,
-and browser coordination. Browser tests use a simulated DOM/Web Locks environment;
-real browser deployment and hardware-backed WebAuthn are separate validation.
+and browser coordination. Deterministic Node tests complement the real Chrome
+TLS two-tab bootstrap E2E described in `refresh-token-transports`. Hardware-backed
+WebAuthn remains separate validation.
 `pkg/authn/token_refresh/parser/parser_test.go` has external-package grammar,
 defaults, validation, JSON round-trip, concurrent reuse, and executable example
 tests. Preserve explicit empty quoted fields in grammar tests; passing them

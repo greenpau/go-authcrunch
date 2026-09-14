@@ -1,0 +1,4 @@
+interface:
+  display_name: "Identity Public Keys"
+  short_description: "Maintain user public keys and OpenPGP compatibility"
+  default_prompt: "Use $identity-public-keys to maintain public-key parsing, authenticated profile registration, persisted identity compatibility, and OpenPGP dependencies with unit and real TLS E2E tests."

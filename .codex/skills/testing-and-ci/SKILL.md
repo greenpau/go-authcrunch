@@ -94,7 +94,13 @@ make test-automation
 make ci-check
 ```
 
-Go lifecycle runs use `-mod=readonly -race -count=1 -v`. `TEST` is a test regex
+Go lifecycle runs use `-mod=readonly -race -count=1 -timeout 20m -v`.
+`TEST_TIMEOUT` overrides the per-package limit through the quoted Go flag.
+The expanded real-login suite exceeds Go's implicit ten-minute limit under race
+instrumentation; the explicit limit remains below the CI job's thirty-minute
+bound. Keep individual network/browser timeouts and diagnose timed-out stacks
+before changing the package limit. Never disable deadlines or skip E2E to clear
+a timeout. `TEST` is a test regex
 (default `.`); `TEST_DIR` accepts package patterns (default `./...`). Reports
 land in `.coverage`, or `.coverage/quick` for `qtest`. Use `COVERAGE_DIR` to
 separate independent concurrent runs. `MINIMUM_COVERAGE` defaults to 1 percent
@@ -103,9 +109,15 @@ claim of a substantial coverage target. Raise it only with an intentional
 coverage policy and measured baseline.
 
 Direct `go test` is appropriate for a narrow debugging iteration, compile-only
-check, or fuzzing; it is not the report lifecycle. Browser tests use Node's spec
-reporter, and automation uses verbose Python unittest discovery. Both use only
-standard-library facilities. Loopback `httptest` listeners are expected.
+check, or fuzzing; it is not the report lifecycle. Deterministic browser-client
+simulations use Node's spec reporter; automation uses verbose Python unittest
+discovery. Both use standard-library facilities. The default Go suite also runs
+`TestE2ERefreshBrowserBootstrap` with Node 24 and Chrome/Chromium, using a temporary
+profile and actual TLS portal. Supply `AUTHCRUNCH_TEST_BROWSER` when the executable
+is not discoverable. Missing browsers are a validation failure; the Node VM
+suite does not substitute for this E2E. Use `refresh-token-transports` for the
+fixture, process/trust isolation, and exact consumer assertions. Loopback
+`httptest` listeners are expected.
 
 ## Diagnostics in Agent Changes
 
@@ -147,6 +159,13 @@ Passing tests or one analysis tool does not clear findings from another;
 the current `make ci-check` does not run gopls. Do not silently substitute a
 regex search or a linter that lacks the relevant analysis. If a required check
 cannot run, report the blocker and leave that validation explicitly incomplete.
+
+Do not assume that a separate analyzer honors a compiler `-overlay`. Verify
+that its locations and source match the candidate being checked. If an overlay
+experiment leaves stale Staticcheck results, preserve the output and rerun the
+applied source with a fresh absolute `STATICCHECK_CACHE` path inside `.coverage`.
+Keep all checks enabled; this isolates cached analysis rather than suppressing
+findings. Do not clear unrelated global caches to obtain a clean result.
 
 Fix the cause within the agent's code and the minimal supporting changes it
 requires, preserving behavior unless the task calls for a behavior change.
@@ -237,6 +256,9 @@ or renaming a focused test file, identify the owning surface and feature:
 such as a parser should not determine the filename of a server integration test.
 Update maintained code, automation, and skill references when renaming files.
 Keep assertions and package boundaries intact for a naming-only change.
+Follow the [feature filename rule](../coding-directives/SKILL.md#package-boundaries)
+for tests and shared fixture drivers too: portal token-refresh tests use
+`token_refresh_<behavior>_test.go`, with `_e2e_test.go` for E2E coverage.
 
 ## Test Surfaces
 
@@ -335,6 +357,14 @@ When changing cross-package config or server wiring, add or update the root
 package's tests so the full AuthCrunch object graph is covered. Follow
 [test placement and filenames](#test-placement-and-filenames) for focused files.
 
+For shared login/session changes, add composition coverage beyond feature-local
+fixtures: access-only behavior with features disabled, claim transformations,
+selected and unselected realms, browser JSON account replacement, and public
+login-client compatibility. Exercise small capacity limits through logout and
+relogin. Test cross-tab initialization with a stale session ID as well as two
+tabs from the same session. A passing aggregate suite does not establish these
+cross-feature contracts when all fixtures use the same happy-path setup.
+
 When changing authn/authz HTTP behavior, use `httptest.NewRecorder`,
 `httptest.NewRequest`, or `httptest.NewTLSServer` instead of live services.
 Use `internal/testutils` token, user, ACL, and crypto helpers.
@@ -361,7 +391,7 @@ iteration. Use `make test-ui` for embedded refresh-client JavaScript.
 ## CI Workflow
 
 `.github/workflows/test.yml` runs on pushes/PRs to main, manual dispatch, and
-reusable workflow calls. It selects Ubuntu 24.04, Go 1.26.0, Node 24, Python 3,
+reusable workflow calls. It selects Ubuntu 24.04, Go 1.26.8, Node 24, Python 3,
 and the existing NSS test utilities. It resolves versioned artifact identity,
 runs `make dep` and `make ci-check`, checks that tracked source did not change,
 and always uploads `.coverage/` after the gate was attempted, including hidden
@@ -379,7 +409,8 @@ release tests use isolated fixture repositories and local bare remotes to
 verify patch/minor bumps, failure gates, exact tags, and atomic push behavior.
 Never test publishing against this checkout's remote. When changing tested
 or its invocation, also exercise an intentional Go test failure and build
-failure in an isolated fixture and verify a nonzero status with fresh evidence.
+failure and an intentional short test timeout in an isolated fixture; verify
+nonzero status, fresh evidence, and failed offline reports.
 
 Skill changes use `skill-authoring-patterns` and the default skill-creator quick
 validator. Inspect routing, exact code names, and links as well as frontmatter.

@@ -9,10 +9,11 @@ BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 PYTHON ?= python3
 TEST ?= .
 TEST_DIR ?= ./...
+TEST_TIMEOUT ?= 20m
 QUICK_TEST_DIR ?= ./pkg/system
 COVERAGE_DIR ?= .coverage
 MINIMUM_COVERAGE ?= 1
-export TEST TEST_DIR QUICK_TEST_DIR COVERAGE_DIR MINIMUM_COVERAGE
+export TEST TEST_DIR TEST_TIMEOUT QUICK_TEST_DIR COVERAGE_DIR MINIMUM_COVERAGE
 export APP_VERSION GIT_COMMIT GIT_BRANCH BUILD_USER BUILD_DATE
 export PYTHONDONTWRITEBYTECODE := 1
 
@@ -56,7 +57,7 @@ test: run-tests
 run-tests:
 	@go tool tested run --output-dir "$$COVERAGE_DIR" \
 		--title "AuthCrunch Go tests" --minimum-coverage "$$MINIMUM_COVERAGE" \
-		-- -mod=readonly -race -count=1 -v -run "$$TEST" $$TEST_DIR
+		-- -mod=readonly -race -count=1 -timeout "$$TEST_TIMEOUT" -v -run "$$TEST" $$TEST_DIR
 
 qtest: run-quick-tests
 
@@ -67,7 +68,7 @@ run-reports:
 	@go tool tested report --output-dir "$$COVERAGE_DIR" --title "AuthCrunch Go tests"
 
 test-ui:
-	@node --test --test-reporter=spec pkg/authn/ui/testdata/refresh_client_test.cjs
+	@node --test --test-reporter=spec pkg/authn/ui/testdata/token_refresh_client_test.cjs
 
 test-automation:
 	@$(PYTHON) -m unittest discover -s assets/scripts/tests -p '*_test.py' -v

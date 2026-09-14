@@ -52,7 +52,11 @@ type Config struct {
 
 // ClientConfig registers a relying party. Public clients use "none" and
 // must use S256 PKCE. Confidential clients default to client_secret_basic.
-// SkipConsent is an explicit administrator grant for the registered scopes.
+// Public HTTP callbacks at literal 127.0.0.1 or [::1] identify supported native
+// loopback clients. Authorization may vary only their valid TCP port; every
+// other URI byte must match. Code redemption requires the actual authorized URI.
+// HTTPS and confidential-client redirects remain exact. Private-use schemes are
+// not supported. SkipConsent explicitly grants the registered scopes.
 type ClientConfig struct {
 	ClientID                string   `json:"client_id,omitempty" xml:"client_id,omitempty" yaml:"client_id,omitempty"`
 	ClientName              string   `json:"client_name,omitempty" xml:"client_name,omitempty" yaml:"client_name,omitempty"`
@@ -149,16 +153,13 @@ func (c *ClientConfig) Validate() error {
 		return fmt.Errorf("oidc requires distinct redirect_uris")
 	}
 	for _, raw := range c.RedirectURIs {
-		u, err := url.Parse(raw)
-		if err != nil || u.Host == "" || u.Hostname() == "" || u.User != nil || u.Opaque != "" || strings.ContainsAny(raw, "#\\\r\n\t ") || len(raw) > 2048 {
-			return fmt.Errorf("invalid oidc redirect_uri")
+		u, err := parseOIDCRedirectURI(raw)
+		if err != nil {
+			return err
 		}
-		loopback := c.TokenEndpointAuthMethod == "none" && u.Scheme == "http" && (u.Hostname() == "127.0.0.1" || u.Hostname() == "::1")
+		loopback := c.TokenEndpointAuthMethod == "none" && loopbackRedirectHost(u) != ""
 		if u.Scheme != "https" && !loopback {
 			return fmt.Errorf("oidc redirect_uri requires HTTPS or a public client's literal loopback address")
-		}
-		if _, err := url.ParseQuery(u.RawQuery); err != nil {
-			return fmt.Errorf("invalid oidc redirect_uri query")
 		}
 	}
 	if len(c.Scopes) == 0 {

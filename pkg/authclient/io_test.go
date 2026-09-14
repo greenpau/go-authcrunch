@@ -70,7 +70,7 @@ func TestAuthenticateReadFailure(t *testing.T) {
 	}
 }
 
-func TestExchangeInvalidContext(t *testing.T) {
+func TestExchangeInvalidURL(t *testing.T) {
 	calls := 0
 	client, err := NewClient(&Config{BaseURL: "https://portal.test", Username: "user", Realm: "local"}, Options{
 		HTTPClient: &http.Client{Transport: authRoundTripper(func(*http.Request) (*http.Response, error) {
@@ -81,8 +81,10 @@ func TestExchangeInvalidContext(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The exchange helper preserves errors from HTTP request construction.
-	response, err := client.exchange(nil, &apiauth.AuthRequest{Username: "user", Realm: "local"})
+	// Exercise request construction failure after validated configuration,
+	// without violating the context.Context contract.
+	client.config.BaseURL = "https://%zz.invalid"
+	response, err := client.exchange(t.Context(), &apiauth.AuthRequest{Username: "user", Realm: "local"})
 	if response != nil || err == nil || !strings.Contains(err.Error(), "create authentication request") {
 		t.Fatalf("expected request construction failure, got %v", err)
 	}

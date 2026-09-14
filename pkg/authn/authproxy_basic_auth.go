@@ -30,6 +30,9 @@ import (
 
 // BasicAuth performs API key authentication.
 func (p *Portal) BasicAuth(r *authproxy.Request) error {
+	if p.closed.Load() {
+		return errors.ErrBasicAuthFailed
+	}
 	if r.Realm == "" {
 		return errors.ErrBasicAuthFailedRealmNotSet
 	}

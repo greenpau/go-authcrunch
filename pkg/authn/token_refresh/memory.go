@@ -23,13 +23,14 @@ import (
 
 type family struct {
 	session Session
-	revoked bool
 	digests [][32]byte
 }
 
 // MemoryStore is bounded, volatile, and safe for concurrent use in one process.
 // Cleanup is opportunistic; it starts no background goroutines. Restarts require
-// reauthentication unless an embedding application retains this store.
+// reauthentication unless an embedding application retains this store. Terminal
+// families are removed in full; live families retain every spent digest. Memory
+// is bounded by capacity families and capacity * (maxRotations + 1) digests.
 type MemoryStore struct {
 	closed                 bool
 	mu                     sync.Mutex
@@ -47,19 +48,33 @@ func NewMemoryStore(capacity, maxRotations int) (*MemoryStore, error) {
 	return &MemoryStore{families: make(map[string]*family), tokens: make(map[[32]byte]*family), capacity: capacity, maxRotations: maxRotations, now: time.Now}, nil
 }
 
+// remove retires a terminal family and all of its replay evidence together.
+// A live descendant can never survive without its spent credential history.
+func (s *MemoryStore) remove(f *family) {
+	for _, d := range f.digests {
+		delete(s.tokens, d)
+	}
+	delete(s.families, f.session.ID)
+}
+
 func (s *MemoryStore) cleanup(now int64) {
-	for id, f := range s.families {
-		if now >= f.session.AbsoluteExpiresAt {
-			for _, d := range f.digests {
-				delete(s.tokens, d)
-			}
-			delete(s.families, id)
+	for _, f := range s.families {
+		if now >= f.session.IdleExpiresAt || now >= f.session.AbsoluteExpiresAt {
+			s.remove(f)
 		}
 	}
 }
 
 // Create commits a staged initial issuance, including its access deadline.
 func (s *MemoryStore) Create(ctx context.Context, v Session, accessExpiry int64) error {
+	return s.CreateReplacing(ctx, v, accessExpiry, nil)
+}
+
+// CreateReplacing atomically retires presented families with the new session's
+// exact binding and commits the staged fresh login. Unknown credentials and
+// other bindings are ignored. Validation or capacity failure preserves every
+// live family. Expired families are reclaimed during admission.
+func (s *MemoryStore) CreateReplacing(ctx context.Context, v Session, accessExpiry int64, previous [][32]byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closed {
@@ -70,8 +85,8 @@ func (s *MemoryStore) Create(ctx context.Context, v Session, accessExpiry int64)
 	}
 	now := s.now().Unix()
 	s.cleanup(now)
-	if len(s.families) >= s.capacity {
-		return ErrUnavailable
+	if v.ID == "" || v.Revision != 0 || now >= v.IdleExpiresAt || v.IdleExpiresAt > v.AbsoluteExpiresAt || accessExpiry <= now || accessExpiry > v.AbsoluteExpiresAt {
+		return ErrInvalid
 	}
 	if _, ok := s.families[v.ID]; ok {
 		return ErrUnavailable
@@ -79,10 +94,19 @@ func (s *MemoryStore) Create(ctx context.Context, v Session, accessExpiry int64)
 	if _, ok := s.tokens[v.Current]; ok {
 		return ErrUnavailable
 	}
-	if v.ID == "" || v.Revision != 0 || now >= v.IdleExpiresAt || v.IdleExpiresAt > v.AbsoluteExpiresAt || accessExpiry <= now || accessExpiry > v.AbsoluteExpiresAt {
-		return ErrInvalid
+	retired := make(map[*family]struct{})
+	for _, d := range previous {
+		if f, ok := s.tokens[d]; ok && f.session.Binding == v.Binding {
+			retired[f] = struct{}{}
+		}
+	}
+	if len(s.families)-len(retired) >= s.capacity {
+		return ErrUnavailable
 	}
 	f := &family{session: cloneSession(v), digests: [][32]byte{v.Current}}
+	for old := range retired {
+		s.remove(old)
+	}
 	s.families[v.ID], s.tokens[v.Current] = f, f
 	return nil
 }
@@ -92,16 +116,13 @@ func (s *MemoryStore) lookup(d [32]byte, b Binding) (*family, error) {
 	if !ok || f.session.Binding != b {
 		return nil, ErrInvalid
 	}
-	if f.revoked {
-		return nil, ErrInvalid
-	}
 	if f.session.Current != d {
-		f.revoked = true
+		s.remove(f)
 		return nil, ErrInvalid
 	}
 	now := s.now().Unix()
 	if now >= f.session.IdleExpiresAt || now >= f.session.AbsoluteExpiresAt {
-		f.revoked = true
+		s.remove(f)
 		return nil, ErrInvalid
 	}
 	return f, nil
@@ -149,7 +170,7 @@ func (s *MemoryStore) Rotate(ctx context.Context, previous Session, next [32]byt
 		return ErrInvalid
 	}
 	if len(f.digests) > s.maxRotations {
-		f.revoked = true
+		s.remove(f)
 		return ErrInvalid
 	}
 	if _, ok := s.tokens[next]; ok {
@@ -174,7 +195,7 @@ func (s *MemoryStore) Revoke(ctx context.Context, d [32]byte, b Binding) error {
 		return err
 	}
 	if f, ok := s.tokens[d]; ok && f.session.Binding == b {
-		f.revoked = true
+		s.remove(f)
 	}
 	return nil
 }

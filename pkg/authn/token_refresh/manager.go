@@ -85,9 +85,40 @@ func (m *Manager) transportBinding(transport string) (Binding, error) {
 // Issue consumes trusted, already redeemed login evidence. It does not accept
 // access tokens or request-supplied claims as proof of authentication.
 func (m *Manager) Issue(ctx context.Context, p Principal, transport string) (*Result, error) {
+	return m.issue(ctx, p, transport, nil)
+}
+
+// IssueReplacing consumes independently completed, redeemed login evidence and
+// atomically replaces presented families with the same binding. Signing and
+// identity checks precede the store transaction. It requires ReplacementStore
+// when a syntactically valid previous credential is present; unsupported stores
+// fail with ErrUnavailable. Malformed/unknown credentials do not authorize
+// eviction. An empty list is equivalent to Issue. Never use this to retry an
+// ambiguous login or refresh response.
+func (m *Manager) IssueReplacing(ctx context.Context, p Principal, transport string, previousTokens []string) (*Result, error) {
+	previous := make([][32]byte, 0, len(previousTokens))
+	for _, token := range previousTokens {
+		if d, err := digest(token); err == nil {
+			previous = append(previous, d)
+		}
+	}
+	return m.issue(ctx, p, transport, previous)
+}
+
+func (m *Manager) issue(ctx context.Context, p Principal, transport string, previous [][32]byte) (*Result, error) {
 	b, err := m.transportBinding(transport)
 	if err != nil {
 		return nil, err
+	}
+	create := m.store.Create
+	if len(previous) != 0 {
+		store, ok := m.store.(ReplacementStore)
+		if !ok {
+			return nil, ErrUnavailable
+		}
+		create = func(ctx context.Context, s Session, accessExpiry int64) error {
+			return store.CreateReplacing(ctx, s, accessExpiry, previous)
+		}
 	}
 	now := m.now().Unix()
 	if p.UserID == "" || p.Backend == "" || p.Realm == "" || p.Subject == "" || p.AuthTime <= 0 || p.AuthTime > now || len(p.Methods) == 0 {
@@ -118,7 +149,7 @@ func (m *Manager) Issue(ctx context.Context, p Principal, transport string) (*Re
 			return err
 		}
 		s.IdleExpiresAt = result.RefreshExpiresAt
-		return m.store.Create(ctx, s, result.AccessExpiresAt)
+		return create(ctx, s, result.AccessExpiresAt)
 	})
 	if err != nil {
 		return nil, err
@@ -133,6 +164,44 @@ func (m *Manager) Issue(ctx context.Context, p Principal, transport string) (*Re
 // directory failures do not consume the credential. A lost response after commit
 // cannot safely be retried: strict replay detection revokes the family.
 func (m *Manager) Refresh(ctx context.Context, token, transport string) (*Result, error) {
+	return m.refresh(ctx, token, transport, "")
+}
+
+// RefreshForSession rotates only a credential from the expected session. This
+// precondition lets browser coordinators bind an uncertain request to the
+// session recorded in their pending marker, even if a concurrent login changes
+// the browser's cookies. An empty session ID is invalid. A valid credential
+// belonging to another session is left unspent. Known spent credentials retain
+// Store.Lookup's ordinary replay-revocation behavior.
+func (m *Manager) RefreshForSession(ctx context.Context, token, transport, sessionID string) (*Result, error) {
+	if sessionID == "" {
+		return nil, ErrInvalid
+	}
+	return m.refresh(ctx, token, transport, sessionID)
+}
+
+// GetSessionID identifies a current credential without rotating it or issuing
+// access credentials. It does not revalidate identity attributes. Callers must
+// not use it to recover an ambiguous rotation: Store.Lookup still revokes a
+// family when presented with a known spent credential. Browser coordinators
+// use it only when there is no pending/blocked exchange to resolve.
+func (m *Manager) GetSessionID(ctx context.Context, token, transport string) (string, error) {
+	d, err := digest(token)
+	if err != nil {
+		return "", err
+	}
+	b, err := m.transportBinding(transport)
+	if err != nil {
+		return "", err
+	}
+	s, err := m.store.Lookup(ctx, d, b)
+	if err != nil {
+		return "", err
+	}
+	return s.ID, nil
+}
+
+func (m *Manager) refresh(ctx context.Context, token, transport, sessionID string) (*Result, error) {
 	d, err := digest(token)
 	if err != nil {
 		return nil, err
@@ -144,6 +213,9 @@ func (m *Manager) Refresh(ctx context.Context, token, transport string) (*Result
 	s, err := m.store.Lookup(ctx, d, b)
 	if err != nil {
 		return nil, err
+	}
+	if sessionID != "" && s.ID != sessionID {
+		return nil, ErrDenied
 	}
 	var result *Result
 	err = m.identity.WithIdentity(ctx, s.Principal, func(claims map[string]any) error {

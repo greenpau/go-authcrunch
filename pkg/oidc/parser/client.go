@@ -36,6 +36,9 @@ import (
 // token_endpoint_auth_method take one value; redirect_uris and scopes take one
 // or more. require_pkce and skip_consent each take one cfgutil.ParseBoolArg value.
 // PKCE defaults to true; only confidential clients may explicitly disable it.
+// A none client with an HTTP literal-loopback callback registers the supported
+// native subset: authorization may vary its valid TCP port only. Token exchange
+// must send the actual authorized URI. HTTPS callbacks remain exact.
 // Unknown directives, duplicates, empty values, and malformed lines fail without
 // echoing credentials. Quoted values retain their contents after decoding.
 //

@@ -16,8 +16,11 @@ package authcrunch
 
 import (
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"slices"
+	"sync"
+	"sync/atomic"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
@@ -41,6 +44,10 @@ type refMap struct {
 
 // Server represents AAA SF server.
 type Server struct {
+	closeOnce         sync.Once
+	closed            atomic.Bool
+	closeErr          error
+	owned             []func() error
 	config            *Config
 	portals           []*authn.Portal
 	gatekeepers       []*authz.Gatekeeper
@@ -63,8 +70,14 @@ func newRefMap() refMap {
 	}
 }
 
-// NewServer returns an instance of Server.
-func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
+// NewServer constructs a runtime and owns its providers, stores, registries,
+// portals, and gatekeepers. On failure it disposes completed and partially
+// configured components in reverse construction order. Supply a fresh config
+// graph for each runtime; do not mutate it while the runtime is in use.
+func NewServer(config *Config, logger *zap.Logger) (_ *Server, err error) {
+	if logger == nil {
+		return nil, fmt.Errorf("server logger is nil")
+	}
 	var authenticators []authproxy.Authenticator
 	if err := config.Validate(); err != nil {
 		return nil, err
@@ -75,12 +88,18 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		logger:   logger,
 		nameRefs: newRefMap(),
 	}
+	defer func() {
+		if err != nil {
+			err = stderrors.Join(err, srv.Close())
+		}
+	}()
 
 	for _, cfg := range config.IdentityProviders {
 		provider, err := idp.NewIdentityProvider(cfg, logger)
 		if err != nil {
 			return nil, errors.ErrNewServer.WithArgs("failed initializing identity provider", err)
 		}
+		srv.own(provider)
 		if _, exists := srv.nameRefs.identityProviders[provider.GetName()]; exists {
 			return nil, errors.ErrNewServer.WithArgs("duplicate identity provider name", provider.GetName())
 		}
@@ -96,6 +115,7 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		if err != nil {
 			return nil, errors.ErrNewServer.WithArgs("failed initializing identity store", err)
 		}
+		srv.own(store)
 		if _, exists := srv.nameRefs.identityStores[store.GetName()]; exists {
 			return nil, errors.ErrNewServer.WithArgs("duplicate identity store name", store.GetName())
 		}
@@ -111,6 +131,7 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		if err != nil {
 			return nil, errors.ErrNewServer.WithArgs("failed initializing sso provider", err)
 		}
+		srv.own(provider)
 		if _, exists := srv.nameRefs.ssoProviders[provider.GetName()]; exists {
 			return nil, errors.ErrNewServer.WithArgs("duplicate sso provider name", provider.GetName())
 		}
@@ -121,12 +142,14 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 		srv.ssoProviders = append(srv.ssoProviders, provider)
 	}
 
-	for _, userRegistry := range config.UserRegistration.GetProviders() {
+	for _, cfg := range config.UserRegistration.LocalProviders {
+		userRegistry, err := cfg.NewRuntime(srv.logger)
+		if err != nil {
+			return nil, errors.ErrNewServer.WithArgs("failed configuring user registry", err)
+		}
+		srv.own(userRegistry)
 		if _, exists := srv.nameRefs.userRegistries[userRegistry.GetName()]; exists {
 			return nil, errors.ErrNewServer.WithArgs("duplicate user registry name", userRegistry.GetName())
-		}
-		if err := userRegistry.Activate(srv.logger); err != nil {
-			return nil, errors.ErrNewServer.WithArgs("failed configuring user registry", err)
 		}
 		srv.nameRefs.userRegistries[userRegistry.GetName()] = userRegistry
 		srv.userRegistries = append(srv.userRegistries, userRegistry)
@@ -146,6 +169,7 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 			return nil, err
 		}
 
+		srv.own(portal)
 		if _, exists := srv.nameRefs.portals[cfg.Name]; exists {
 			return nil, errors.ErrNewServer.WithArgs("duplicate authentication portal name", cfg.Name)
 		}
@@ -176,6 +200,7 @@ func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
 			return nil, err
 		}
 
+		srv.own(gatekeeper)
 		if _, exists := srv.nameRefs.gatekeepers[cfg.Name]; exists {
 			return nil, errors.ErrNewServer.WithArgs("duplicate authorization policy name", cfg.Name)
 		}
@@ -220,6 +245,9 @@ func (srv *Server) GetConfig() map[string]interface{} {
 
 // GetPortalByName returns an instance of authn.Portal based on its name.
 func (srv *Server) GetPortalByName(s string) (*authn.Portal, error) {
+	if srv.closed.Load() {
+		return nil, ErrServerClosed
+	}
 	if portal, exists := srv.nameRefs.portals[s]; exists {
 		return portal, nil
 	}
@@ -228,8 +256,46 @@ func (srv *Server) GetPortalByName(s string) (*authn.Portal, error) {
 
 // GetGatekeeperByName returns an instance of authz.Gatekeeper based on its name.
 func (srv *Server) GetGatekeeperByName(s string) (*authz.Gatekeeper, error) {
+	if srv.closed.Load() {
+		return nil, ErrServerClosed
+	}
 	if gatekeeper, exists := srv.nameRefs.gatekeepers[s]; exists {
 		return gatekeeper, nil
 	}
 	return nil, fmt.Errorf("gatekeeper not found")
+}
+
+// ErrServerClosed reports an attempted runtime lookup after disposal started.
+var ErrServerClosed = stderrors.New("authcrunch server is closed")
+
+// own records one construction, not every reference to a shared component.
+// Optional close methods preserve the existing dispatcher interfaces.
+func (srv *Server) own(component any) {
+	switch c := component.(type) {
+	case interface{ Close() error }:
+		srv.owned = append(srv.owned, c.Close)
+	case interface{ Close() }:
+		srv.owned = append(srv.owned, func() error { c.Close(); return nil })
+	}
+}
+
+// Close disposes owned components in reverse construction order and joins any
+// disposal errors. Repeated or concurrent calls wait for and return the same
+// result. Shared upstream providers are closed once, after their portals.
+//
+// The host must remove this runtime from routing and drain its requests before
+// Close. It owns HTTP listeners and request draining. Lookups fail once disposal
+// starts; retained portal/gatekeeper pointers reject new requests after Close.
+// Persistent databases, client registrations, and key files are not deleted.
+func (srv *Server) Close() error {
+	if srv == nil {
+		return nil
+	}
+	srv.closeOnce.Do(func() {
+		srv.closed.Store(true)
+		for _, dispose := range slices.Backward(srv.owned) {
+			srv.closeErr = stderrors.Join(srv.closeErr, dispose())
+		}
+	})
+	return srv.closeErr
 }

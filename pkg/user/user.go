@@ -46,6 +46,10 @@ type User struct {
 	LoginEvidence    requests.AuthenticationEvidence `json:"-" xml:"-" yaml:"-"`
 	RefreshTransport string                          `json:"-" xml:"-" yaml:"-"`
 	LoginMethods     []string                        `json:"-" xml:"-" yaml:"-"`
+	// LoginUsername and LoginEmail are captured from the backend before claim
+	// transformations. Checkpoints must never select an account from Claims.
+	LoginUsername string `json:"-" xml:"-" yaml:"-"`
+	LoginEmail    string `json:"-" xml:"-" yaml:"-"`
 
 	Claims          *Claims       `json:"claims,omitempty" xml:"claims,omitempty" yaml:"claims,omitempty"`
 	Token           string        `json:"token,omitempty" xml:"token,omitempty" yaml:"token,omitempty"`

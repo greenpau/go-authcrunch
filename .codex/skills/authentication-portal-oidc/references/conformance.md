@@ -175,3 +175,86 @@ configuration; error-page capture is needed for the unregistered redirect test.
 Hosted testing, review of every non-PASSED result, and certification submission
 remain unperformed steps. Local developer-mode evidence does not establish that
 this library or any downstream deployment is OpenID Certified.
+
+## Reproducible repository harness
+
+`server_oidc_conformance_e2e_test.go` contains
+`TestE2EServerOIDCFoundationPlans`, an opt-in external root consumer. It provisions
+three independent confidential registrations with explicit `require_pkce off`,
+a synthetic password user, a separate OIDC signing key, and a real local portal.
+Ordinary directive parsing defaults to requiring PKCE; do not accidentally apply
+that provisioning default to Basic OP conformance clients. The existing static
+registration unit test verifies this profile-specific choice and persistence.
+Public/native client policy is unchanged.
+
+The harness launches an unmodified suite and disposable MongoDB on loopback,
+puts a local TLS proxy in front of the suite, and drives real password/consent
+forms with the official HtmlUnit browser commands. The browser records actual
+login and rejection page source for visual-review placeholders. Those captures
+remain REVIEW results; they are not approvals or screenshots from a certified
+production deployment. It runs all three plans without expected-failure lists
+or validator modifications. An optional Config-only preflight is explicitly
+marked in execution metadata and is never full qualification.
+
+Prepare the suite inside this repository, at the pinned revision
+`e3b5558d6d5e0c17ab578a47b955fd3b405f902b` (v5.2.4). Its source checkout must be
+unmodified. Build its `target/fapi-test-suite.jar` with Java 21 and Maven using
+`mvn -B -Dmaven.test.skip -Dpmd.skip package`, following the suite's own build
+instructions. Put generated suite sources in a hidden directory so this
+repository's legacy recursive lint command does not traverse them. Do not use
+or build a sibling checkout.
+
+Verified local prerequisites were Temurin 21.0.12.1+1, Maven 3.9.16, MongoDB
+Community 7.0.43, Python 3.14.6, and runner dependencies httpx 0.28.1 and
+pyparsing 3.3.2 in a private virtual environment. Keep module/tool caches and
+MongoDB data isolated, and verify official download checksums. Docker is not
+required by this harness. No production identities, database, publishing token,
+public listener, or certification submission is involved.
+
+With the prerequisites already installed, supply their actual executable paths
+and a new result directory whose parent exists inside this repository:
+
+```sh
+AUTHCRUNCH_CONFORMANCE_SUITE="$PWD/tmp/oidc-conformance/.suite" \
+AUTHCRUNCH_CONFORMANCE_JAVA="$JAVA_HOME/bin/java" \
+AUTHCRUNCH_CONFORMANCE_MONGOD="$PWD/tmp/oidc-conformance/.tools/bin/mongod" \
+AUTHCRUNCH_CONFORMANCE_PYTHON="$PWD/tmp/oidc-conformance/.venv/bin/python" \
+AUTHCRUNCH_CONFORMANCE_RESULTS="$PWD/tmp/oidc-conformance/run-1" \
+go test -mod=readonly . -run '^TestE2EServerOIDCFoundationPlans$' -count=1 -timeout=30m -v
+```
+
+The directory is created with mode 0700; private configuration and logs use
+0600. It contains the deployment, a redacted deployment copy, discovery,
+candidate revision/build metadata and a source manifest including untracked
+additions, exact runner configuration, process logs,
+execution status, and the official signed plan export ZIPs. Preserve the entire
+bundle privately: registrations, user credentials, grants, and request logs are
+sensitive even though they are synthetic. A redacted deployment alone is not
+complete test evidence. The runner has its own bounded execution context, and
+owned processes are stopped and awaited on fixture completion.
+
+Without the explicit suite environment, the external prerequisite test is
+SKIPPED in ordinary CI; the local unit, TLS, browser, and standalone provider
+regressions still run. The official runner's nonzero exit remains a failed
+opt-in Go run, including when all modules finish with warnings, skips, or
+review outcomes. Always inspect and retain those outcomes rather than changing
+exit handling to make the certification run appear green.
+
+A local rehearsal of the new harness on 2026-09-13 completed all 71 modules:
+Basic OP and Form Post OP each had 24 PASSED, 3 WARNING, 4 SKIPPED, and 4 REVIEW;
+Config OP had 1 WARNING. There were zero FAILED or INTERRUPTED modules. The
+additional REVIEW compared with the September 12 record was the Request Object
+redirect case; retain that result as reported by the suite. The same warning
+categories described above remain applicable. This is local developer-mode
+candidate evidence, not Foundation certification or hosted deployment testing.
+
+For the September 13 rehearsal, the four REVIEW modules in each code-flow plan
+were `oidcc-prompt-login`, `oidcc-max-age-1`,
+`oidcc-ensure-registered-redirect-uri`, and
+`oidcc-ensure-request-object-with-redirect-uri`. The first two request evidence
+of reauthentication; the latter two request redirect-error-page evidence.
+The official exports record each browser placeholder being filled, but its
+REVIEW status remains. Address, phone, all-scopes, and OIDC refresh-token modules
+were SKIPPED because those optional capabilities are not advertised. Portal
+token refresh is a separate protocol and does not implement the OIDC refresh
+grant.

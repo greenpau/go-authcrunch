@@ -146,7 +146,7 @@ func (p *Portal) finishOIDCLogin(ctx context.Context, w http.ResponseWriter, r *
 	if p.oidc == nil || proof.RefreshTransport == tokenrefresh.BodyTransport {
 		return nil
 	}
-	authentication := oidc.Authentication{Realm: proof.Authenticator.Realm, Backend: proof.Authenticator.Name, Username: proof.Claims.Subject, Evidence: proof.LoginEvidence, Methods: proof.LoginMethods}
+	authentication := oidc.Authentication{Realm: proof.Authenticator.Realm, Backend: proof.Authenticator.Name, Username: proof.LoginUsername, Evidence: proof.LoginEvidence, Methods: proof.LoginMethods}
 	for _, checkpoint := range proof.Checkpoints {
 		if !checkpoint.Passed {
 			return oidc.ErrIdentityDenied

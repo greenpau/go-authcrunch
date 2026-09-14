@@ -132,14 +132,19 @@ func (k *CryptoKey) publicJWK() (publicJSONWebKey, error) {
 		default:
 			return publicJSONWebKey{}, fmt.Errorf("kms: unsupported ECDSA curve for JWKS")
 		}
-		if key.Algorithm != method || !secret.Curve.IsOnCurve(secret.X, secret.Y) {
+		if key.Algorithm != method {
+			return publicJSONWebKey{}, fmt.Errorf("kms: invalid ECDSA signing key for JWKS")
+		}
+		// SEC 1 encoding validates the point and retains fixed-width coordinates.
+		// The nil checks above remain necessary for manually constructed keys.
+		point, err := secret.PublicKey.Bytes()
+		if err != nil {
 			return publicJSONWebKey{}, fmt.Errorf("kms: invalid ECDSA signing key for JWKS")
 		}
 		key.KeyType = "EC"
-		// RFC 7518 requires fixed-width coordinates, including leading zeroes.
-		size := (secret.Curve.Params().BitSize + 7) / 8
-		key.X = base64.RawURLEncoding.EncodeToString(secret.X.FillBytes(make([]byte, size)))
-		key.Y = base64.RawURLEncoding.EncodeToString(secret.Y.FillBytes(make([]byte, size)))
+		size := (len(point) - 1) / 2
+		key.X = base64.RawURLEncoding.EncodeToString(point[1 : 1+size])
+		key.Y = base64.RawURLEncoding.EncodeToString(point[1+size:])
 	case ed25519.PrivateKey:
 		if signingMethods[key.Algorithm] != "ed25519" || validateEd25519PrivateKey(secret) != nil {
 			return publicJSONWebKey{}, fmt.Errorf("kms: invalid Ed25519 signing key for JWKS")

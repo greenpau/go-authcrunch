@@ -267,7 +267,19 @@ func verifyPortalJWKSToken(t *testing.T, data []byte, token string) {
 		public = &rsa.PublicKey{N: decode(key["n"]), E: int(decode(key["e"]).Int64())}
 	case "EC":
 		curves := map[string]elliptic.Curve{"P-256": elliptic.P256(), "P-384": elliptic.P384(), "P-521": elliptic.P521()}
-		public = &ecdsa.PublicKey{Curve: curves[key["crv"]], X: decode(key["x"]), Y: decode(key["y"])}
+		x, err := base64.RawURLEncoding.DecodeString(key["x"])
+		if err != nil {
+			t.Fatal(err)
+		}
+		y, err := base64.RawURLEncoding.DecodeString(key["y"])
+		if err != nil {
+			t.Fatal(err)
+		}
+		parsed, err := ecdsa.ParseUncompressedPublicKey(curves[key["crv"]], append(append([]byte{4}, x...), y...))
+		if err != nil {
+			t.Fatal("invalid public EC JWK")
+		}
+		public = parsed
 	default:
 		t.Fatal("unexpected signing key type")
 	}

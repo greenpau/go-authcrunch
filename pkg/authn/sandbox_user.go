@@ -27,6 +27,7 @@ import (
 )
 
 func (p *Portal) createSandboxUser(ctx context.Context, _ http.ResponseWriter, r *http.Request, rr *requests.Request) (*user.User, error) {
+	username, email := rr.User.Username, rr.User.Email
 	m := make(map[string]interface{})
 	m["sub"] = rr.User.Username
 	m["email"] = rr.User.Email
@@ -90,6 +91,7 @@ func (p *Portal) createSandboxUser(ctx context.Context, _ http.ResponseWriter, r
 	}
 
 	usr.LoginEvidence = rr.Authentication
+	usr.LoginUsername, usr.LoginEmail = username, email
 	usr.RefreshTransport = "cookie"
 	usr.Authenticator.Name = rr.Upstream.Name
 	usr.Authenticator.Realm = rr.Upstream.Realm

@@ -15,6 +15,7 @@
 package cache
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -25,6 +26,9 @@ import (
 // TokenCache contains cached tokens
 type TokenCache struct {
 	mu      sync.RWMutex
+	closed  bool
+	stop    chan struct{}
+	done    chan struct{}
 	Entries map[string]*user.User `json:"entries,omitempty" xml:"entries,omitempty" yaml:"entries,omitempty"`
 }
 
@@ -32,32 +36,54 @@ type TokenCache struct {
 func NewTokenCache(i int) *TokenCache {
 	c := &TokenCache{
 		Entries: make(map[string]*user.User),
+		stop:    make(chan struct{}),
+		done:    make(chan struct{}),
 	}
 	go manageTokenCache(i, c)
 	return c
 }
 
 func manageTokenCache(i int, cache *TokenCache) {
-	if i == 0 {
+	defer close(cache.done)
+	if i <= 0 {
 		i = 300000
 	}
-	// intervals := time.NewTicker(time.Minute * time.Duration(5))
-	intervals := time.NewTicker(time.Millisecond * time.Duration(i))
-	for range intervals.C {
-		// if cache == nil {
-		//	break
-		// }
-		cache.mu.Lock()
-		if cache.Entries == nil {
-			cache.mu.Unlock()
-			continue
-		}
-		for k, usr := range cache.Entries {
-			if err := usr.Claims.Valid(); err != nil {
-				delete(cache.Entries, k)
+	ticker := time.NewTicker(time.Millisecond * time.Duration(i))
+	defer ticker.Stop()
+	for {
+		select {
+		case <-cache.stop:
+			return
+		case <-ticker.C:
+			cache.mu.Lock()
+			for k, usr := range cache.Entries {
+				if err := usr.Claims.Valid(); err != nil {
+					delete(cache.Entries, k)
+				}
 			}
+			cache.mu.Unlock()
 		}
-		cache.mu.Unlock()
+	}
+}
+
+// Close clears cached credentials and waits for the maintenance worker to stop.
+// A closed cache rejects Add; repeated or concurrent Close calls are safe.
+func (c *TokenCache) Close() {
+	if c == nil {
+		return
+	}
+	c.mu.Lock()
+	if !c.closed {
+		c.closed = true
+		clear(c.Entries)
+		if c.stop != nil {
+			close(c.stop)
+		}
+	}
+	done := c.done
+	c.mu.Unlock()
+	if done != nil {
+		<-done
 	}
 }
 
@@ -82,6 +108,9 @@ func (c *TokenCache) Add(usr *user.User) error {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.closed {
+		return fmt.Errorf("token cache is closed")
+	}
 	if c.Entries == nil {
 		c.Entries = make(map[string]*user.User)
 	}

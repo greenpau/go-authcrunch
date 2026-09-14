@@ -25,6 +25,11 @@ import (
 
 // ServeHTTP is a gateway for the authentication portal.
 func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
+	if p.closed.Load() {
+		rr.Response.Authenticated = false
+		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
+		return nil
+	}
 	if p.oidc != nil && p.oidc.HandleHTTP(w, r) {
 		return nil
 	}

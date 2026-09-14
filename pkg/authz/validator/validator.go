@@ -21,6 +21,8 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
@@ -71,6 +73,8 @@ type guardianWithMethodPathSrcAddrPathClaim struct {
 
 // TokenValidator validates tokens in http requests.
 type TokenValidator struct {
+	closeOnce           sync.Once
+	closed              atomic.Bool
 	keystore            *kms.CryptoKeyStore
 	authHeaders         map[string]interface{}
 	authCookies         map[string]interface{}
@@ -497,4 +501,16 @@ func (v *TokenValidator) RegisterRemoteAuthProxies(cfg *authproxy.Config) ([]aut
 	}
 
 	return authenticators, nil
+}
+
+// Close clears cached credentials and waits for the owned cache worker. Drain
+// requests first. A closed validator cannot authorize new requests.
+func (v *TokenValidator) Close() {
+	if v == nil {
+		return
+	}
+	v.closeOnce.Do(func() {
+		v.closed.Store(true)
+		v.cache.Close()
+	})
 }

@@ -61,7 +61,7 @@ strings, and fragments are rejected. Use HTTPS for remote credentials.
 
 The application can load the same authentication YAML keys as authdbctl:
 `base_url`, `username`, `realm`, `password`, `totp_secret`, `totp_code_length`,
-and `totp_code_lifetime`. `access_token_name` is an optional fallback; by default
+`totp_code_lifetime`, and `refresh_transport`. `access_token_name` is an optional fallback; by default
 it is `authp_access_token`. A portal-supplied name is lowercased and takes priority
 for the new result. Config-file discovery, env names, flags, and YAML parsing
 remain application concerns. `Config` includes secrets and must not be logged.
@@ -96,7 +96,10 @@ JWTs retain their normal lifetime when a key is subsequently revoked.
 
 An optional `Options.HTTPClient` permits application transport settings such as
 a custom CA pool. The client is copied, with transport and any supplied jar
-shared. Redirects remain disabled; a cookie jar is created if missing. With no
+shared in cookie mode. Redirects remain disabled; a cookie jar is created if
+missing in that mode. Native body mode uses no jar, leaving the supplied browser
+jar untouched. Each native request omits Cookie, Origin, and Fetch Metadata;
+a custom transport must not inject those headers. With no
 injected client, requests use a ten-second timeout and the standard transport.
 A supplied client's timeout remains the caller's choice. Each client represents
 one identity; serialize interactive logins when sharing a terminal prompt.
@@ -139,10 +142,33 @@ directory permissions remain unchanged. Atomic visibility depends on platform
 rename guarantees; Windows uses filesystem ACLs. This is not an OS keychain or
 a refresh-token rotation lock. The application must select a private directory.
 
-Refresh-related response fields are retained when returned by the portal. The
-client preserves the existing default login transport: it does not opt into
-native refresh-token delivery or call refresh/logout endpoints. Read the owning
-refresh skills before extending this behavior.
+Choose `Config.RefreshTransport = authclient.RefreshTransportBody` for a native
+password/TOTP login to a refresh-enabled realm. The portal must opt into body
+transport and accept secure requests at its configured origin. The result has
+access and refresh credentials, their names, session ID, and expiry metadata.
+Repeated `Authenticate` calls create independent native sessions; they do not
+replace a browser session. The package does not call refresh/logout endpoints.
+
+The omitted/default `RefreshTransportCookie` preserves legacy access-only
+password/TOTP portals. Cookie/default mode omits `refresh_transport` on the wire
+so older strict portal request decoders accept it. Body mode includes the field
+at every checkpoint and requires a portal implementing that extension.
+For a refresh realm, browser metadata cannot be used as
+`Credentials`; the client returns `ErrNativeTransportRequired` without retrying.
+Body mode on a realm without refresh, or with body delivery disabled, returns
+`HTTPError` status 400 before a challenge. API-key login is always access-only
+and rejects body mode. There is no native password access-only override for a
+refresh-enabled realm. Do not read secrets out of browser cookies to bypass
+these transport choices.
+
+Hosts may import `pkg/authclient/parser` and call
+`NewAuthenticationClientConfigFromDirectives` with one `cfgutil.EncodeArgs`
+statement per block-body setting. Use readable keys such as `base url`,
+`refresh transport body`, `totp code lifetime`, and `access token name`; no
+header or braces are included. The owning skill lists the complete grammar.
+The parser returns a validated `*authclient.Config`, performs no IO, and never
+logs or echoes credentials. Apply it directly through `NewClient` or serialize
+the config using its established field names.
 
 ## authdbctl adapter
 
@@ -157,3 +183,9 @@ token path. Database commands reuse loaded credentials; when a management
 response says `access denied` and another attempt remains, the command wrapper
 performs a fresh login before retrying. These admin endpoints and retry rules
 remain entirely in `cmd/authdbctl/requests.go` and its command handlers.
+
+The CLI's embedded config accepts YAML `refresh_transport: body` explicitly;
+no default or existing flag/environment precedence changes. `connect` saves the
+whole new native credential bundle, and failure preserves the previous file.
+Native initial login is supported; management retries still perform fresh
+login and do not rotate saved refresh tokens automatically.

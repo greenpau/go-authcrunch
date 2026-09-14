@@ -86,7 +86,7 @@ func TestOAuthProviderClose(t *testing.T) {
 
 func TestOAuthDelayedDiscoveryReadiness(t *testing.T) {
 	b := oauthEdProvider(t)
-	b.configured = true
+	b.configured.Store(true)
 	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://portal.example/oauth2/test", nil)
 	if err != nil {
 		t.Fatal(err)

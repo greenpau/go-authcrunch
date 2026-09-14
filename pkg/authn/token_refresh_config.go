@@ -45,8 +45,10 @@ type TokenRefreshConfig struct {
 	IdleTimeoutSeconds     int    `json:"idle_timeout_seconds,omitempty" xml:"idle_timeout_seconds,omitempty" yaml:"idle_timeout_seconds,omitempty"`
 	AbsoluteTimeoutSeconds int    `json:"absolute_timeout_seconds,omitempty" xml:"absolute_timeout_seconds,omitempty" yaml:"absolute_timeout_seconds,omitempty"`
 	BodyTransportEnabled   bool   `json:"body_transport_enabled,omitempty" xml:"body_transport_enabled,omitempty" yaml:"body_transport_enabled,omitempty"`
-	MaxSessions            int    `json:"max_sessions,omitempty" xml:"max_sessions,omitempty" yaml:"max_sessions,omitempty"`
-	MaxRotations           int    `json:"max_rotations,omitempty" xml:"max_rotations,omitempty" yaml:"max_rotations,omitempty"`
+	// MaxSessions bounds live families; terminal families are reclaimed.
+	MaxSessions int `json:"max_sessions,omitempty" xml:"max_sessions,omitempty" yaml:"max_sessions,omitempty"`
+	// MaxRotations bounds rotations and retained spent credentials per live family.
+	MaxRotations int `json:"max_rotations,omitempty" xml:"max_rotations,omitempty" yaml:"max_rotations,omitempty"`
 }
 
 // Validate normalizes enabled refresh configuration and rejects ambiguous mounts.

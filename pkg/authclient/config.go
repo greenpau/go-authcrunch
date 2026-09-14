@@ -24,12 +24,22 @@ import (
 // DefaultAccessTokenName is the fallback key in an AuthCrunch Authorization header.
 const DefaultAccessTokenName = "authp_access_token"
 
+// RefreshTransportCookie preserves the portal's browser/default login behavior.
+// Access-only realms return credentials in JSON; refresh realms return browser
+// session metadata and cannot supply Credentials to this client in this mode.
+const RefreshTransportCookie = "cookie"
+
+// RefreshTransportBody requests native access and refresh credentials in JSON.
+// The portal must enable token refresh for the realm and opt into body transport.
+const RefreshTransportBody = "body"
+
 // Config contains portal authentication settings, independent of any CLI or file
 // layout. Password and TOTPSecret are optional when Options.Prompt supplies them.
 // APIKey selects a separate access-only login and replaces Username, Password,
 // and TOTPSecret. Realm is required for both authentication methods.
 // This type contains secrets and must not be logged.
 type Config struct {
+	RefreshTransport string `json:"refresh_transport,omitempty" xml:"refresh_transport,omitempty" yaml:"refresh_transport,omitempty"`
 	BaseURL          string `json:"base_url,omitempty" xml:"base_url,omitempty" yaml:"base_url,omitempty"`
 	Username         string `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
 	Realm            string `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
@@ -62,6 +72,15 @@ func (cfg *Config) Validate() error {
 	}
 	if cfg.APIKey != "" && (cfg.Username != "" || cfg.Password != "" || cfg.TOTPSecret != "") {
 		return fmt.Errorf("api_key cannot be combined with username, password, or totp_secret")
+	}
+	if cfg.RefreshTransport == "" {
+		cfg.RefreshTransport = RefreshTransportCookie
+	}
+	if cfg.RefreshTransport != RefreshTransportCookie && cfg.RefreshTransport != RefreshTransportBody {
+		return fmt.Errorf("refresh_transport must be cookie or body")
+	}
+	if cfg.APIKey != "" && cfg.RefreshTransport == RefreshTransportBody {
+		return fmt.Errorf("api_key login does not support native refresh transport")
 	}
 	if cfg.TOTPCodeLength == 0 {
 		cfg.TOTPCodeLength = 6

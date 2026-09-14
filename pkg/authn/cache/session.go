@@ -35,7 +35,9 @@ type SessionCacheEntry struct {
 
 // SessionCache contains cached tokens
 type SessionCache struct {
-	mu sync.RWMutex
+	lifecycleMu sync.Mutex
+	done        chan struct{}
+	mu          sync.RWMutex
 	// The interval (in seconds) at which cache maintenance task are being triggered.
 	// The default is 5 minutes (300 seconds)
 	cleanupInternal int
@@ -89,6 +91,8 @@ func manageSessionCache(c *SessionCache, exit <-chan bool, interval time.Duratio
 
 // Run starts management of SessionCache instance.
 func (c *SessionCache) Run() {
+	c.lifecycleMu.Lock()
+	defer c.lifecycleMu.Unlock()
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.managed {
@@ -96,18 +100,33 @@ func (c *SessionCache) Run() {
 	}
 	c.managed = true
 	c.exit = make(chan bool)
-	go manageSessionCache(c, c.exit, time.Duration(c.cleanupInternal)*time.Second)
+	c.done = make(chan struct{})
+	exit, done := c.exit, c.done
+	interval := time.Duration(c.cleanupInternal) * time.Second
+	go func() {
+		defer close(done)
+		manageSessionCache(c, exit, interval)
+	}()
 }
 
-// Stop stops management of SessionCache instance and releases its ticker.
+// Stop stops management of SessionCache, waits for its worker, and releases
+// the ticker. Repeated or concurrent calls are safe; Run can start it again.
 func (c *SessionCache) Stop() {
+	if c == nil {
+		return
+	}
+	c.lifecycleMu.Lock()
+	defer c.lifecycleMu.Unlock()
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	if !c.managed {
+		c.mu.Unlock()
 		return
 	}
 	c.managed = false
 	close(c.exit)
+	done := c.done
+	c.mu.Unlock()
+	<-done
 }
 
 // GetCleanupInterval returns cleanup interval.

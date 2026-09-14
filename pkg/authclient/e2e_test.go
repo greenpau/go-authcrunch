@@ -233,7 +233,7 @@ func TestE2EAPIKeyAuthentication(t *testing.T) {
 
 type e2ePortalOptions struct {
 	basePath, factor, tokenName, keyState string
-	disabledUser, refresh                 bool
+	disabledUser, refresh, disableBody    bool
 }
 
 type e2ePortal struct {
@@ -313,7 +313,7 @@ func newE2EPortal(t *testing.T, opts e2ePortalOptions) *e2ePortal {
 		API: &authn.APIConfig{AdminEnabled: false, ProfileEnabled: false},
 	}
 	if opts.refresh {
-		cfg.RefreshTokens = &authn.TokenRefreshConfig{Enabled: true, Realms: []string{"local"}, PublicOrigin: "https://" + f.server.Listener.Addr().String(), BasePath: opts.basePath, BodyTransportEnabled: true}
+		cfg.RefreshTokens = &authn.TokenRefreshConfig{Enabled: true, Realms: []string{"local"}, PublicOrigin: "https://" + f.server.Listener.Addr().String(), BasePath: opts.basePath, BodyTransportEnabled: !opts.disableBody}
 	}
 	portal, err := authn.NewPortal(authn.PortalParameters{
 		Config: cfg,

@@ -30,6 +30,8 @@ portal public signing-key discovery, reusable admin API directive configuration,
 opt-in private-key export, issuer selection, and JWK serialization.
 Use [local-password-authentication](../local-password-authentication/SKILL.md)
 for local-store password verification and bcrypt work equalization.
+Use [identity-public-keys](../identity-public-keys/SKILL.md) for user-owned public
+key parsing, profile registration, persisted formats, and OpenPGP dependencies.
 Use [authentication-portal-oidc](../authentication-portal-oidc/SKILL.md) for the
 portal acting as a downstream OpenID Provider, including client registration,
 authorization grants, consent, dedicated keys, and conformance.
@@ -54,6 +56,11 @@ Provide reusable APIs and test their public workflows in this repository.
 References to dependencies, consumer wiring, or compatible directive syntax
 are context only. Describe any remaining consumer integration as separate
 work; do not perform it or request to expand this task into sibling directories.
+
+For embedding-server configuration and reload work, read the
+[integration boundaries](references/embedding-integration.md). They identify
+the public parser/application APIs and distinguish persisted configuration
+from runtime state and resource ownership.
 
 ## Package Boundaries
 
@@ -88,6 +95,14 @@ Do not add cross-package shortcuts when an existing dispatcher, interface, or
 config object already models the boundary. When adding a provider/store kind,
 update the shared config validator, dispatch constructor, concrete package
 constructor, and package tests together.
+
+In shared packages, qualify feature filenames with the complete domain name.
+Portal token-refresh files use `token_refresh_`, including runtime adapters and
+browser, capacity, and session tests. Use the same feature prefix for their
+test drivers in shared fixture directories. Short filenames such as `manager.go`
+are appropriate inside the dedicated `pkg/authn/token_refresh` package. Rename
+maintained callers and skill references together; source-file cleanup does not
+rename established HTTP routes, serialized fields, or served asset URLs.
 
 ## Design
 

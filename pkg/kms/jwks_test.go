@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
@@ -115,7 +116,11 @@ func verifyJWKSToken(t *testing.T, key publicJSONWebKey, token string) {
 		if len(x) != width || len(y) != width {
 			t.Fatal("EC coordinates are not fixed width")
 		}
-		publicKey = &ecdsa.PublicKey{Curve: curve, X: new(big.Int).SetBytes(x), Y: new(big.Int).SetBytes(y)}
+		parsed, err := ecdsa.ParseUncompressedPublicKey(curve, append(append([]byte{4}, x...), y...))
+		if err != nil {
+			t.Fatal("invalid public EC JWK")
+		}
+		publicKey = parsed
 	}
 	parsed, err := jwtlib.Parse(token, func(token *jwtlib.Token) (any, error) {
 		kid, _ := token.Header["kid"].(string)
@@ -261,10 +266,17 @@ func TestCryptoKeyStoreJWKSECCoordinatePadding(t *testing.T) {
 			width := (curve.Params().BitSize + 7) / 8
 			var private *ecdsa.PrivateKey
 			for scalar := int64(1); scalar < 10000; scalar++ {
-				d := big.NewInt(scalar)
-				x, y := curve.ScalarBaseMult(d.Bytes())
-				if len(x.Bytes()) < width || len(y.Bytes()) < width {
-					private = &ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: curve, X: x, Y: y}, D: d}
+				raw := big.NewInt(scalar).FillBytes(make([]byte, width))
+				candidate, err := ecdsa.ParseRawPrivateKey(curve, raw)
+				if err != nil {
+					t.Fatal(err)
+				}
+				point, err := candidate.PublicKey.Bytes()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if point[1] == 0 || point[1+width] == 0 {
+					private = candidate
 					break
 				}
 			}
@@ -296,7 +308,18 @@ func TestCryptoKeyStoreJWKSECCoordinatePadding(t *testing.T) {
 
 func TestCryptoKeyStoreJWKSInvalidSigner(t *testing.T) {
 	p256 := elliptic.P256()
-	x, y := p256.ScalarBaseMult([]byte{1})
+	raw := make([]byte, 32)
+	raw[31] = 1
+	valid, err := ecdsa.ParseRawPrivateKey(p256, raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p224, err := ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Deliberately build nil/off-curve fields below: safe parsers cannot create
+	// these invalid legacy values, which the public KMS API must reject.
 	cases := []struct {
 		name, method string
 		secret       any
@@ -308,10 +331,10 @@ func TestCryptoKeyStoreJWKSInvalidSigner(t *testing.T) {
 		{"wrong RSA algorithm", "ES512", &rsa.PrivateKey{PublicKey: rsa.PublicKey{N: big.NewInt(17), E: 3}}},
 		{"nil EC", "ES256", (*ecdsa.PrivateKey)(nil)},
 		{"missing curve", "ES256", &ecdsa.PrivateKey{}},
-		{"missing coordinate", "ES256", &ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: p256, X: x}}},
-		{"unsupported curve", "ES256", &ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: elliptic.P224(), X: x, Y: y}}},
+		{"missing coordinate", "ES256", &ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: p256, X: big.NewInt(1)}}},
+		{"unsupported curve", "ES256", p224},
 		{"off curve", "ES256", &ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: p256, X: big.NewInt(0), Y: big.NewInt(0)}}},
-		{"wrong EC algorithm", "ES384", &ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: p256, X: x, Y: y}}},
+		{"wrong EC algorithm", "ES384", valid},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

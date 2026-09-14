@@ -46,8 +46,9 @@ func (o *Provider) authorize(w http.ResponseWriter, r *http.Request) {
 	if objectError == "" {
 		params = assembled
 	}
-	// Never redirect until BOTH the client and exact registered URI are known.
-	if !slices.Contains(client.RedirectURIs, params.Get("redirect_uri")) {
+	// Validate the effective redirect against this registration before any
+	// redirect. Native loopback clients may vary only the callback port.
+	if !client.allowsRedirectURI(params.Get("redirect_uri")) {
 		oidcError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}

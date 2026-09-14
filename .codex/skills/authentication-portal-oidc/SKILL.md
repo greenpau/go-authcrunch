@@ -57,6 +57,11 @@ the provider; `Portal.GetOIDCProvider` exposes its public interface.
 `pkg/authn/oidc_config.go` retains `OIDCProviderConfig` and `OIDCClientConfig` as
 aliases; `PortalConfig.OIDCProvider` keeps its `oidc_provider` serialization.
 
+Root `Server.Close()` owns portals and shared providers in reverse construction order, including constructor-error
+unwind; individual portals do not close shared upstream identity providers.
+Standalone consumers drain requests and close their own provider/portal.
+See the [embedding lifecycle](../coding-directives/references/embedding-integration.md).
+
 Read [reusing the Go provider](references/reusable-provider.md) when embedding
 `pkg/oidc` independently or changing its public API and identity boundary.
 Read [configuration and clients](references/configuration-and-clients.md) for
@@ -78,6 +83,11 @@ sandbox redemption. `finishOIDCLogin` accepts completed server-side evidence;
 portal access JWTs, ID tokens, API keys, JSON claims, and native refresh
 credentials cannot substitute for this proof. Native body transport must set
 no cookies during login, refresh, or logout, including error responses.
+`finishOIDCLogin` takes the canonical sandbox `LoginUsername`, not the
+transformed access-token subject. Follow
+[canonical identity and transformed claims](../refresh-token-identity/SKILL.md#canonical-identity-and-transformed-claims)
+when changing shared login; OIDC UserInfo still returns current backend
+attributes and its subject remains bound to the immutable local record.
 
 OIDC browser credentials use the portal cookie factory's configurable names:
 `AUTHP_OIDC_SESSION_ID` and `AUTHP_OIDC_REQUEST_ID` by default. They honor
@@ -150,7 +160,8 @@ owns key loading and portal-specific realm/mount checks.
 `GenerateSigningKeyFile` publishes a complete owner-only file with a hard link;
 it never overwrites existing paths or follows a destination symlink.
 
-Validate the client and exact registered redirect URI before any redirect.
+Validate the client and registered redirect URI before any redirect. Public
+HTTP literal-loopback clients may vary only the port, as described below.
 Never normalize an untrusted redirect into a registered value. Reject duplicate
 parameters across query/body, malformed escaping, oversized requests, unsupported
 methods, and multiple client authentication mechanisms. Decode HTTP Basic
@@ -183,7 +194,7 @@ rejects cross-origin submissions. Template output escapes all client/state data;
 form-post auto-submission is protected by a per-response CSP nonce.
 
 Authorization codes expire after 60 seconds. Redemption atomically checks
-client, exact redirect URI, PKCE, expiry, and current identity. Keep spent-code
+client, exact actually authorized redirect URI, PKCE, expiry, and current identity. Keep spent-code
 tombstones until the resulting access token expires. A replay revokes that token,
 including concurrent replays. All opaque credentials are stored by SHA-256 hash.
 Capacity exhaustion fails closed; active state is never evicted to admit a new
@@ -260,3 +271,32 @@ make ci-check
 Local tests establish implementation behavior, not OpenID certification. Never
 claim conformance-suite success or certification without the actual Foundation
 plan results and submission record for this deployment/version.
+
+For release qualification, record the Foundation suite revision, selected OP
+profile, configuration, and per-test results for the actual standalone host or
+portal adapter under test. Local TLS tests and parser fuzzing do not substitute
+for that plan.
+
+A public registration (`token_endpoint_auth_method none`, mandatory S256 PKCE)
+with an HTTP callback at literal `127.0.0.1` or `[::1]` declares the supported
+native-loopback subset. `redirect.go` implements the port exception from
+[RFC 8252 sections 7.3 and 8.4](https://www.rfc-editor.org/rfc/rfc8252#section-7.3).
+At authorization, only port bytes may differ; every other raw URI byte remains
+exact, including scheme case, encoded paths, query order/encoding, and empty
+query markers. An omitted port is allowed; an explicit TCP port must be decimal
+1–65535. Reject empty/zero/out-of-range/nonnumeric ports, userinfo, fragments,
+look-alike hosts, nonliteral localhost, IPv6 zones/mapped addresses, and private
+schemes. HTTPS and confidential-client registrations retain exact matching.
+The grant stores the actual authorized URI, and token redemption must match it
+exactly, including the selected port. Never apply the exception at redemption.
+CORS origins remain registered origins; this does not grant arbitrary loopback
+ports browser CORS access. Native apps redeem directly without browser Origin.
+Private-use mobile schemes remain unsupported; do not claim full native-app
+best-practice support or Foundation certification from this subset.
+
+Preserve typed/parser serialization of the original registration, the public
+parser loopback example, rejection matrices, GET/POST/Request Object/form-post
+coverage, and `FuzzOIDCLoopbackRedirect`. Standalone and portal E2E fixtures run
+real IPv4 and IPv6 callback listeners on ephemeral ports, perform PKCE exchanges,
+and independently verify ID-token signatures and UserInfo. They require both
+loopback stacks; report a listener failure as a validation blocker.

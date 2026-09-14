@@ -15,6 +15,7 @@
 package oauth
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -86,7 +87,13 @@ type IdentityProvider struct {
 	state         *stateManager
 	logger        *zap.Logger
 	browserConfig *browserConfig
-	configured    bool
+	configured    atomic.Bool
+	configureMu   sync.Mutex
+	lifecycleMu   sync.Mutex
+	setupWG       sync.WaitGroup
+	closed        atomic.Bool
+	setupContext  context.Context
+	cancelSetup   context.CancelFunc
 	stop          chan struct{}
 	stateDone     chan struct{}
 	stopOnce      sync.Once
@@ -108,6 +115,9 @@ func NewIdentityProvider(cfg *Config, logger *zap.Logger) (*IdentityProvider, er
 		logger:    logger,
 	}
 
+	if b.config == nil {
+		return nil, fmt.Errorf("OAuth provider configuration is nil")
+	}
 	if err := b.config.Validate(); err != nil {
 		return nil, err
 	}
@@ -124,22 +134,33 @@ func NewIdentityProvider(cfg *Config, logger *zap.Logger) (*IdentityProvider, er
 		}
 	}
 
+	b.setupContext, b.cancelSetup = context.WithCancel(context.Background())
 	go func() { defer close(b.stateDone); manageStateManager(b.state, b.stop) }()
 
 	return b, nil
 }
 
-// Close releases the OAuth state worker. Call after draining provider requests.
+// Close cancels and awaits owned discovery, retry, and state workers.
+// Call after draining provider requests. A closed provider cannot be configured
+// or used for authentication again.
 // It is safe to call Close repeatedly or concurrently.
 func (b *IdentityProvider) Close() {
 	if b == nil {
 		return
 	}
 	b.stopOnce.Do(func() {
+		b.lifecycleMu.Lock()
+		defer b.lifecycleMu.Unlock()
+		b.closed.Store(true)
+		if b.cancelSetup != nil {
+			b.cancelSetup()
+		}
 		if b.stop != nil {
 			close(b.stop)
 		}
 	})
+	b.setupWG.Wait()
+	b.ready.Store(false)
 	if b.stateDone != nil {
 		<-b.stateDone
 	}
@@ -162,7 +183,7 @@ func (b *IdentityProvider) GetKind() string {
 
 // Configured returns true if the identity provider was configured.
 func (b *IdentityProvider) Configured() bool {
-	return b.configured
+	return b.configured.Load() && !b.closed.Load()
 }
 
 // GetConfig returns IdentityProvider configuration.
@@ -196,6 +217,28 @@ func (b *IdentityProvider) Request(op operator.Type, r *requests.Request) error 
 
 // Configure configures IdentityProvider.
 func (b *IdentityProvider) Configure() error {
+	b.configureMu.Lock()
+	defer b.configureMu.Unlock()
+	b.lifecycleMu.Lock()
+	if b.closed.Load() {
+		b.lifecycleMu.Unlock()
+		return fmt.Errorf("OAuth provider is closed")
+	}
+	if b.configured.Load() {
+		b.lifecycleMu.Unlock()
+		return nil
+	}
+	// Register before Close can begin waiting; transfer this registration to
+	// delayed discovery only after synchronous configuration has completed.
+	b.setupWG.Add(1)
+	b.lifecycleMu.Unlock()
+	delayed := false
+	defer func() {
+		if !delayed {
+			b.setupWG.Done()
+		}
+	}()
+
 	if b.config.EmailClaimCheckDisabled {
 		b.disableEmailClaimCheck = true
 	}
@@ -304,9 +347,7 @@ func (b *IdentityProvider) Configure() error {
 		return err
 	}
 
-	if b.config.DelayStart > 0 {
-		go b.fetchConfig()
-	} else {
+	if b.config.DelayStart == 0 {
 		if err := b.fetchConfig(); err != nil {
 			return err
 		}
@@ -329,18 +370,31 @@ func (b *IdentityProvider) Configure() error {
 		zap.Bool("identity_token_cookie_enabled", b.config.IdentityTokenCookieEnabled),
 	)
 
-	b.configured = true
+	if b.closed.Load() {
+		return fmt.Errorf("OAuth provider is closed")
+	}
+	b.configured.Store(true)
+	if b.config.DelayStart > 0 {
+		delayed = true
+		go func() {
+			defer b.setupWG.Done()
+			_ = b.fetchConfig()
+		}()
+	}
 	return nil
 }
 
 func (b *IdentityProvider) fetchConfig() (err error) {
 	b.setupMu.Lock()
 	defer func() {
-		if err == nil {
+		if err == nil && !b.closed.Load() {
 			b.ready.Store(true)
 		}
 		b.setupMu.Unlock()
 	}()
+	if b.closed.Load() {
+		return fmt.Errorf("OAuth provider is closed")
+	}
 	if b.config.DelayStart > 0 {
 		b.logger.Debug(
 			"Delaying identity provider configuration",
@@ -372,7 +426,9 @@ func (b *IdentityProvider) fetchConfig() (err error) {
 					zap.Int("attempt_id", i),
 					zap.Error(errors.ErrIdentityProviderOauthMetadataFetchFailed.WithArgs(err)),
 				)
-				time.Sleep(time.Duration(b.config.RetryInterval) * time.Second)
+				if err := b.waitForSetup(time.Duration(b.config.RetryInterval) * time.Second); err != nil {
+					return err
+				}
 			}
 		} else {
 			if err := b.fetchMetadataURL(); err != nil {
@@ -408,7 +464,9 @@ func (b *IdentityProvider) fetchConfig() (err error) {
 					zap.Int("attempt_id", i),
 					zap.Error(errors.ErrIdentityProviderOauthKeyFetchFailed.WithArgs(err)),
 				)
-				time.Sleep(time.Duration(b.config.RetryInterval) * time.Second)
+				if err := b.waitForSetup(time.Duration(b.config.RetryInterval) * time.Second); err != nil {
+					return err
+				}
 			}
 		} else {
 			if err := b.fetchKeysURL(); err != nil {
@@ -425,7 +483,7 @@ func (b *IdentityProvider) fetchMetadataURL() error {
 		return err
 	}
 	defer cli.CloseIdleConnections()
-	req, err := http.NewRequest(http.MethodGet, b.config.MetadataURL, nil)
+	req, err := http.NewRequestWithContext(b.discoveryContext(), http.MethodGet, b.config.MetadataURL, nil)
 	if err != nil {
 		return err
 	}
@@ -491,7 +549,7 @@ func (b *IdentityProvider) GetLoginIcon() *icons.LoginIcon {
 
 // GetLogoutURL returns the logout URL associated with the provider.
 func (b *IdentityProvider) GetLogoutURL() string {
-	if b.configured && !b.ready.Load() {
+	if b.closed.Load() || (b.configured.Load() && !b.ready.Load()) {
 		return ""
 	}
 	b.setupMu.RLock()
@@ -519,4 +577,25 @@ func (b *IdentityProvider) GetIdentityTokenCookieName() string {
 		return b.config.IdentityTokenCookieName
 	}
 	return ""
+}
+
+// discoveryContext also supports package tests constructing an inactive provider.
+func (b *IdentityProvider) discoveryContext() context.Context {
+	if b.setupContext != nil {
+		return b.setupContext
+	}
+	return context.Background()
+}
+
+func (b *IdentityProvider) waitForSetup(delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-b.stop:
+		return fmt.Errorf("OAuth provider is closed")
+	case <-b.discoveryContext().Done():
+		return b.discoveryContext().Err()
+	case <-timer.C:
+		return nil
+	}
 }

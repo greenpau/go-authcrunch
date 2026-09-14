@@ -37,9 +37,16 @@ const (
 	defaultTimeout  = 10 * time.Second
 )
 
+// ErrNativeTransportRequired indicates a successful browser login that returned
+// session metadata instead of credentials. Configure RefreshTransportBody when
+// the portal permits native refresh. Authenticate never retries this login.
+var ErrNativeTransportRequired = errors.New("portal returned a browser session; native credentials require refresh_transport body and portal body transport enabled")
+
 // Options supplies application dependencies. A nil Prompt permits authentication
-// with configured credentials only. HTTPClient is copied; its Transport and Jar
-// remain shared. A missing Jar is created.
+// with configured credentials only. HTTPClient is copied; its Transport remains
+// shared. Cookie mode shares its Jar, creating one when missing. Native body
+// mode uses no Jar and never reads or updates a supplied browser Jar. Custom
+// transports are trusted application code and must not inject browser headers.
 // Redirects are always disabled to prevent forwarding login bodies. A nil
 // HTTPClient uses the standard transport and a ten-second request timeout.
 type Options struct {
@@ -49,9 +56,9 @@ type Options struct {
 }
 
 // Client performs portal logins and returns credentials to its caller. Its HTTP
-// cookie jar retains portal cookies across calls. Use one client per identity,
-// and serialize Authenticate calls when the supplied prompt interacts with a
-// terminal or another stateful input source.
+// cookie jar retains portal cookies across calls in cookie mode only. Use one
+// client per identity, and serialize Authenticate calls when the supplied prompt
+// interacts with a terminal or another stateful input source.
 type Client struct {
 	config    Config
 	http      *http.Client
@@ -76,7 +83,9 @@ func NewClient(cfg *Config, opts Options) (*Client, error) {
 		hc = *opts.HTTPClient
 	}
 	hc.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
-	if hc.Jar == nil {
+	if config.RefreshTransport == RefreshTransportBody {
+		hc.Jar = nil
+	} else if hc.Jar == nil {
 		// cookiejar.New always returns a nil error; options only set the suffix list.
 		hc.Jar, _ = cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	}
@@ -89,7 +98,12 @@ func NewClient(cfg *Config, opts Options) (*Client, error) {
 // Context cancellation applies to HTTP requests and is passed to the prompt.
 func (c *Client) Authenticate(ctx context.Context) (*Credentials, error) {
 	request := apiauth.AuthRequest{Username: c.config.Username, Realm: c.config.Realm, APIKey: c.config.APIKey}
-	for attempt := 0; attempt < maxAuthRequests; attempt++ {
+	if c.config.RefreshTransport == RefreshTransportBody {
+		request.RefreshTransport = RefreshTransportBody
+	}
+	// Cookie is the server default. Omit the extension in that mode so older
+	// portals with strict JSON decoders retain their password/TOTP wire contract.
+	for attempt := range maxAuthRequests {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
@@ -98,6 +112,12 @@ func (c *Client) Authenticate(ctx context.Context) (*Credentials, error) {
 			return nil, err
 		}
 		if response.Authenticated {
+			if c.config.RefreshTransport == RefreshTransportCookie && response.AccessToken == "" && response.SessionID != "" {
+				return nil, ErrNativeTransportRequired
+			}
+			if c.config.RefreshTransport == RefreshTransportBody && (response.RefreshToken == "" || response.SessionID == "") {
+				return nil, fmt.Errorf("incomplete native authentication credentials")
+			}
 			credentials := &Credentials{
 				AccessToken: response.AccessToken, AccessTokenName: c.config.AccessTokenName,
 				RefreshToken: response.RefreshToken, RefreshTokenName: response.RefreshTokenName,

@@ -136,9 +136,10 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		zap.Any("checkpoints", usr.Checkpoints),
 	)
 
-	// Populate username (sub) and email address (email)
-	rr.User.Username = usr.Claims.Subject
-	rr.User.Email = usr.Claims.Email
+	// Verify the backend account captured at identification, independently of
+	// the transformed claims used for display and access tokens.
+	rr.User.Username = usr.LoginUsername
+	rr.User.Email = usr.LoginEmail
 
 	completedBefore := passedCheckpointCount(usr)
 	data, err := p.nextSandboxCheckpoint(r, rr, usr, sandboxPartition)

@@ -17,6 +17,13 @@ Preserve `AUTHDBCTL_*` environment names and `~/.config/authdbctl` defaults.
 Explicit flags override environment; YAML `token_path` overrides the path flag.
 Freshly acquired credentials replace the in-memory cache only after a successful
 file save. A failed login/save must preserve previously usable credentials.
+The embedded `authclient.Config` accepts explicit YAML `refresh_transport: body`
+for native login to a refresh realm with body transport enabled. The omitted
+cookie mode and existing flags/env precedence remain unchanged. Save the whole
+new credential bundle, including refresh/session metadata, without merging an
+old refresh token. Initial native login does not imply automatic renewal.
+Unavailable transport fails without retrying or overwriting the cache; follow
+`authentication-client` for the public parser and transport/error contract.
 
 Keep one buffered reader per wrapper for plain identity input; creating readers
 for consecutive prompts can discard piped lines. Hidden prompts use a real
@@ -72,8 +79,14 @@ are in the default suite, with no external accounts or services:
   command exit status, token permissions, and authentication of saved tokens
   through `/whoami` using a separate client.
 
-Executable E2E uses loopback HTTP with explicitly insecure fixture cookies;
-`pkg/authclient` independently covers real TLS portal integration. Enable the
+Legacy executable E2E uses loopback HTTP with explicitly insecure fixture cookies.
+`transport_e2e_test.go` runs the actual executable with parser-produced YAML
+against a real refresh portal over a loopback relay. The relay's outbound TLS
+client trusts the test portal; this avoids OS trust-store mutations on macOS.
+It verifies password/TOTP native login, repeated connect, complete saved
+credentials, and cache preservation when body transport is unavailable. This
+fixture does not establish direct CLI custom-CA configuration. `pkg/authclient`
+independently covers direct real TLS and browser-jar isolation. Enable the
 admin API only for management cases. Assert authentication-only cases issue
 only login requests. Never use live credentials or a real user's config/cache.
 WebAuthn rejection tests do not establish hardware assertion support.

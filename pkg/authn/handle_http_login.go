@@ -140,7 +140,7 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 		rr.Response.Code = http.StatusBadRequest
 		return p.handleHTTPErrorWithLog(ctx, w, r, rr, rr.Response.Code, err.Error())
 	}
-	if p.refreshRealm(rr.Upstream.Realm) {
+	if p.refreshRealm(rr.Upstream.Realm) || p.hasRefreshCookie(r) {
 		if err := p.validateRefreshLogin(r, "cookie"); err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
 		}

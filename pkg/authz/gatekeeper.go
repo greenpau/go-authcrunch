@@ -16,6 +16,8 @@ package authz
 
 import (
 	"context"
+	"sync"
+	"sync/atomic"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
@@ -33,6 +35,8 @@ import (
 
 // Gatekeeper is an auth.
 type Gatekeeper struct {
+	closeOnce      sync.Once
+	closed         atomic.Bool
 	id             string
 	config         *PolicyConfig
 	tokenValidator *validator.TokenValidator
@@ -64,6 +68,7 @@ func NewGatekeeper(cfg *PolicyConfig, logger *zap.Logger) (*Gatekeeper, error) {
 		logger: logger,
 	}
 	if err := p.configure(); err != nil {
+		p.Close()
 		return nil, err
 	}
 	return p, nil
@@ -240,4 +245,17 @@ func (g *Gatekeeper) HasAuthProxies() error {
 	}
 
 	return nil
+}
+
+// Close releases the gatekeeper-owned validator and its cache worker. It does
+// not close shared authenticators. Drain requests before calling Close; further
+// Authenticate calls fail closed. Repeated or concurrent calls are safe.
+func (g *Gatekeeper) Close() {
+	if g == nil {
+		return
+	}
+	g.closeOnce.Do(func() {
+		g.closed.Store(true)
+		g.tokenValidator.Close()
+	})
 }

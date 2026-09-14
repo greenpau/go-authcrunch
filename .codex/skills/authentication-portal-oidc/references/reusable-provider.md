@@ -300,10 +300,17 @@ and this change does not install the outer `oauth application` Caddyfile grammar
 | `client_name` | One display name; defaults to the block nickname. |
 | `client_secret` | One secret; generated for confidential clients if omitted. |
 | `token_endpoint_auth_method` | One of `client_secret_basic` (default), `client_secret_post`, or `none`. |
-| `redirect_uris` | One or more exact callback URIs; required. |
+| `redirect_uris` | One or more callback URIs; required. Exact matching except the authorization port for public HTTP literal-loopback clients. |
 | `scopes` | One or more scopes; defaults to `openid profile email`. |
 | `require_pkce` | One boolean; defaults to true; public clients cannot disable it. |
 | `skip_consent` | One boolean; defaults to false. |
+
+A public native registration may use `http://127.0.0.1/callback` and/or
+`http://[::1]/callback`. Select `token_endpoint_auth_method none`; S256 PKCE
+remains mandatory. Bind a local ephemeral listener and include its actual port
+in authorization. Only that port may differ from registration; preserve all
+other URI bytes. Token exchange must repeat the actual authorized URI exactly.
+Use `configuration-and-clients.md` for the callback and CORS boundaries.
 
 Booleans follow `cfgutil.ParseBoolArg`: true/yes/on/1 and false/no/off/0,
 case-insensitively. Each directive may occur once. Put multiple list values on

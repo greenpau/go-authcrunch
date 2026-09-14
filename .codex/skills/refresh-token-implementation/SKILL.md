@@ -42,7 +42,7 @@ directories for consumer integration; those repositories are updated separately.
   failed-construction cleanup, and `Portal.Close()`.
 - `pkg/authn/token_issuer.go`: shared access/refresh issuance. HTTP and JSON
   sandbox login must call the same issuer; `grantAccess` only delivers signed output.
-- `pkg/authn/refresh_runtime.go`: portal adapters, current transformations,
+- `pkg/authn/token_refresh_runtime.go`: portal adapters, current transformations,
   challenge checks, and KMS signing.
 - `pkg/authn/token_refresh/{token,store,memory,manager}.go`: opaque encoding, store
   contract, bounded in-memory families, and staged issuance/rotation.
@@ -80,9 +80,19 @@ credential unspent; a definitive identity denial revokes the family.
 
 A known spent token with the correct binding revokes its entire family,
 including the current descendant. Unknown tokens or wrong bindings cannot
-revoke another family. Keep spent digests recognizable until absolute expiry.
+revoke another family. Keep every spent digest while a descendant remains live.
+A terminal family may be removed in full; never drop only its replay history.
 Strict concurrent reuse can return one success followed by family revocation;
 there is no grace period or transparent retry of an ambiguous exchange.
+
+`Manager.RefreshForSession` accepts a required expected SID and checks it after
+credential lookup, before signing or rotation. A valid credential for a different
+family is left unspent. `Manager.Refresh` remains the compatible unconditioned
+entry point. `Manager.GetSessionID` returns only the family ID without issuance
+or identity revalidation; it retains normal lookup replay checks. These methods
+do not relax the Store contract or turn a SID into authentication evidence.
+Use the transport owner for browser bootstrap, the session metadata endpoint,
+and rules against looking up an uncertain credential.
 
 ## Lifetime and Extension
 
@@ -90,7 +100,46 @@ The portal currently constructs its own bounded memory store. Capacity fails
 closed; exhausted rotation limits require login. Cleanup occurs on creation,
 not through an extra refresh goroutine. Restart, portal replacement, and local
 identity database reload require fresh authentication. Quiesce requests before
-`Portal.Close()`; failed construction must stop owned cache workers as well.
+`Portal.Close()`; failed construction must stop and await owned cache workers as
+well. `Server.Close()` owns portal disposal and reverse construction cleanup;
+standalone portal consumers still call Close themselves after draining requests.
+Closed portal HTTP/BasicAuth entry points reject new work. See the
+[embedding lifecycle](../coding-directives/references/embedding-integration.md)
+for host ownership and replacement boundaries.
+
+`MemoryStore` removes a whole family immediately on explicit/replay/identity
+revocation or rotation exhaustion. Creation reclaims idle- or absolutely expired
+families; lookup also removes an expired presented family. All digests disappear
+together because no usable descendant remains. Later old replay is an unknown
+credential and cannot affect a new family. Live families retain the initial plus
+at most `MaxRotations` descendant digests, bounding storage by `MaxSessions`
+families and `MaxSessions * (MaxRotations + 1)` digest entries. No tombstone map,
+live eviction, replay grace, or cleanup worker is needed. Trusted store callers
+must generate fresh unpredictable IDs/credentials, never resurrect snapshots.
+
+`Manager.IssueReplacing` stages identity checks/signing and uses the optional
+`ReplacementStore.CreateReplacing` transaction to retire presented families and
+admit a fresh login at full capacity. It matches the complete new binding,
+deduplicates presented families, rejects retained ID/digest collisions, and
+preserves every live family on failed commit. Current or spent old credentials
+may identify replacement targets only after independent fresh authentication.
+Malformed/unknown credentials cannot evict anything. With a syntactically valid
+previous token, an adapter lacking this optional interface returns
+`ErrUnavailable`; the original `Store` and `Manager.Issue` API remain supported.
+
+Portal browser issuance supplies the effective refresh-cookie values, including
+duplicate paths, to this transaction. Native/API-key login stays independent.
+Subsequent cookie deletion and OIDC completion are outside the store transaction.
+JSON completion discards a newly committed, undelivered refresh family on error,
+including OIDC capacity or identity failure. Cleanup uses a bounded context
+independent of request cancellation; cleanup failure remains an unavailable
+error. Previously replaced families remain revoked. This releases admission for
+a new login after the downstream failure recovers. An all-live full store rejects an
+independent login that does not present a family it can replace. Unobserved
+identity-version invalidation can retain a slot until a denial, logout, or
+expiry; backend mutations do not eagerly enumerate the store's families.
+Preserve deterministic capacity/replay/concurrency tests and actual parser-based
+TLS form/JSON logout/relogin/replacement coverage at capacity one.
 
 A distributed adapter must satisfy the `Store` atomicity contract across all
 instances and coordinate identity changes with issuance. Implementing an

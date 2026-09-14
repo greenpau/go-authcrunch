@@ -26,12 +26,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"golang.org/x/crypto/ssh"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/tagging"
 	"github.com/greenpau/go-authcrunch/pkg/util"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/ssh"
 )
 
 var supportedPublicKeyTypes = map[string]bool{

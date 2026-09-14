@@ -52,13 +52,31 @@ type Session struct {
 // Store operations are atomic across all users of an adapter. Lookup and Rotate
 // must revoke the family on a known spent credential with the matching binding.
 // Rotate must recheck digest, revision, revocation and deadlines at commit time.
-// Spent digests must survive until the family's absolute deadline. Unknown
-// credentials and wrong bindings must never revoke other sessions.
+// Spent digests must survive while any descendant remains usable. An adapter
+// may discard a whole family after revocation, idle/absolute expiry, or rotation
+// exhaustion; it must never discard only the spent history of a live family.
+// Unknown credentials and wrong bindings must never revoke other sessions.
+// Create callers must generate fresh unpredictable IDs and credentials, never
+// resurrect old Session snapshots. Stores need not retain terminal tombstones.
 type Store interface {
 	Create(context.Context, Session, int64) error
 	Lookup(context.Context, [32]byte, Binding) (Session, error)
 	Rotate(context.Context, Session, [32]byte, int64, int64) error
 	Revoke(context.Context, [32]byte, Binding) error
+}
+
+// ReplacementStore is an optional extension for fresh-login replacement at full
+// capacity. CreateReplacing must validate the new session and staged access
+// deadline, identify previous current or spent credentials with the new binding,
+// and atomically retire those families and create the new one. Every live family
+// must survive a failed commit. Unknown credentials and other bindings are
+// ignored. Duplicate credentials count only once. New IDs/digests must not
+// collide with retained families, including the families being replaced.
+// This is fresh issuance after independently completed authentication, not a
+// refresh exchange or a grace window for spent credentials.
+type ReplacementStore interface {
+	Store
+	CreateReplacing(context.Context, Session, int64, [][32]byte) error
 }
 
 func cloneSession(s Session) Session {

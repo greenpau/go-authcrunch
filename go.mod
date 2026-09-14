@@ -3,6 +3,7 @@ module github.com/greenpau/go-authcrunch
 go 1.26.0
 
 require (
+	github.com/ProtonMail/go-crypto v1.4.1
 	github.com/crewjam/saml v0.5.1
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 	github.com/emersion/go-smtp v0.25.0
@@ -30,6 +31,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8 // indirect

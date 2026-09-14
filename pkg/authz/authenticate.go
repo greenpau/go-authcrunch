@@ -40,6 +40,12 @@ var (
 
 // Authenticate authorizes HTTP requests.
 func (g *Gatekeeper) Authenticate(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
+	if g.closed.Load() {
+		ar.Response.Authorized = false
+		ar.Response.Bypassed = false
+		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
+		return nil
+	}
 	// Perform authorization bypass checks
 	if g.bypassEnabled && bypass.Match(r, g.config.BypassConfigs) {
 		ar.Response.Authorized = false

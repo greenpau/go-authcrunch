@@ -138,3 +138,10 @@ version synchronization, versioned CI artifacts, and patch/minor releases.
 `make test` uses pinned `tested`; `make ci-check` is the complete quality gate.
 `make release` and `make minor-release` publish commits and tags and are only
 run when an actual release is requested.
+
+## Identity Public Keys
+
+Use `identity-public-keys` for user-owned GPG/SSH public-key parsing, profile API
+registration, persisted identity compatibility, and OpenPGP dependency changes.
+Portal signing-key publication and admin private-key export belong to
+`authentication-portal-jwks`.

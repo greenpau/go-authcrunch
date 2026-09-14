@@ -31,6 +31,7 @@ import (
 )
 
 const refreshRequestHeader = "X-Authcrunch-Refresh"
+const refreshSessionHeader = "X-Authcrunch-Refresh-Session"
 
 func (p *Portal) refreshPath(operation string) string {
 	return strings.TrimSuffix(p.config.RefreshTokens.BasePath, "/") + "/api/" + operation
@@ -120,7 +121,8 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 		return p.handleJSONError(ctx, w, http.StatusNotFound, "Refresh is unavailable")
 	}
 	logout := r.URL.Path == p.refreshPath("logout")
-	if r.URL.RawPath != "" || (!logout && r.URL.Path != p.refreshPath("refresh_token")) {
+	inspect := r.URL.Path == p.refreshPath("refresh_session")
+	if r.URL.RawPath != "" || (!logout && !inspect && r.URL.Path != p.refreshPath("refresh_token")) {
 		return p.handleJSONError(ctx, w, http.StatusNotFound, "Unknown refresh endpoint")
 	}
 	if r.Method != http.MethodPost {
@@ -169,6 +171,24 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 			token = cookies[0].Value
 		}
 	}
+	sessionID := ""
+	if values := r.Header.Values(refreshSessionHeader); len(values) != 0 {
+		if inspect || logout || transport != tokenrefresh.CookieTransport || len(values) != 1 || strings.TrimSpace(values[0]) == "" {
+			return p.handleJSONError(ctx, w, http.StatusBadRequest, "Invalid refresh session precondition")
+		}
+		sessionID = values[0]
+	}
+	if inspect {
+		if transport != tokenrefresh.CookieTransport {
+			return p.handleJSONError(ctx, w, http.StatusForbidden, "Browser session required")
+		}
+		id, err := p.refresh.GetSessionID(ctx, token, transport)
+		if err != nil {
+			return p.refreshError(ctx, w, err)
+		}
+		rr.Response.Code = http.StatusOK
+		return json.NewEncoder(w).Encode(map[string]string{"session_id": id})
+	}
 	if logout {
 		if token != "" {
 			if err := p.refresh.Logout(ctx, token, transport); err != nil {
@@ -183,7 +203,13 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 		rr.Response.Code = http.StatusOK
 		return json.NewEncoder(w).Encode(map[string]bool{"logged_out": true})
 	}
-	tokens, err := p.refresh.Refresh(context.WithValue(ctx, refreshRequestContextKey{}, r), token, transport)
+	var tokens *tokenrefresh.Result
+	refreshContext := context.WithValue(ctx, refreshRequestContextKey{}, r)
+	if sessionID != "" {
+		tokens, err = p.refresh.RefreshForSession(refreshContext, token, transport, sessionID)
+	} else {
+		tokens, err = p.refresh.Refresh(refreshContext, token, transport)
+	}
 	if err != nil {
 		return p.refreshError(ctx, w, err)
 	}
@@ -272,5 +298,6 @@ func (p *Portal) revokeRefreshOnLogin(ctx context.Context, w http.ResponseWriter
 	}
 	c := p.config.RefreshTokens
 	http.SetCookie(w, &http.Cookie{Name: p.cookie.RefreshTokenCookieName, Path: c.BasePath, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: time.Unix(0, 0).UTC(), MaxAge: -1})
+	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie(c.BasePath))
 	return nil
 }

@@ -19,6 +19,7 @@ class TestedLifecycleTests(unittest.TestCase):
             root = Path(directory)
             env = {key: value for key, value in os.environ.items()
                    if not key.startswith('GIT_') and key not in ('MAKEFLAGS', 'MFLAGS', 'MAKELEVEL')}
+            env.pop('TEST_TIMEOUT', None)
             env.update(PYTHONDONTWRITEBYTECODE='1', TEST='.', TEST_DIR='./...',
                        COVERAGE_DIR='.coverage', MINIMUM_COVERAGE='1')
             shutil.copyfile(ROOT / 'Makefile', root / 'Makefile')
@@ -59,6 +60,8 @@ class TestedLifecycleTests(unittest.TestCase):
             for name, content in source.items():
                 self.assertEqual((root / name).read_bytes(), content, name)
             first_run = json.loads((report / 'run.json').read_text())
+            command = first_run['command']
+            self.assertEqual(command[command.index('-timeout') + 1], '20m')
             first_profile = (report / 'coverage.out').read_bytes()
             self.assertIn('TestSelected', (report / 'test_output.jsonl').read_text())
             self.assertNotIn('TestExcluded', (report / 'test_output.jsonl').read_text())
@@ -82,6 +85,20 @@ class TestedLifecycleTests(unittest.TestCase):
             events = [json.loads(line) for line in (report / 'test_output.jsonl').read_text().splitlines()]
             self.assertTrue(any(e.get('Action') == 'fail' and e.get('Test') == 'TestExcluded' for e in events))
             self.assertNotEqual(json.loads((report / 'run.json').read_text()), first_run)
+            self.assertNotEqual(make('run-reports').returncode, 0)
+
+            # Keep real timeout failures visible through Make and tested. The
+            # fixture finishes in two seconds even if timeout forwarding breaks.
+            test.write_text('package fixture\nimport ("testing"; "time")\n'
+                            'func TestTimeout(t *testing.T) { Value(); time.Sleep(2*time.Second) }\n')
+            timed_out = make('test', 'TEST=^TestTimeout$', 'TEST_TIMEOUT=100ms')
+            self.assertNotEqual(timed_out.returncode, 0, timed_out.stdout)
+            timeout_run = json.loads((report / 'run.json').read_text())
+            timeout_command = timeout_run['command']
+            self.assertEqual(timeout_command[timeout_command.index('-timeout') + 1], '100ms')
+            self.assertNotEqual(timeout_run['exit_code'], 0)
+            self.assertIn('test timed out after', (report / 'test_output.jsonl').read_text())
+            self.assertNotEqual(json.loads((report / 'summary.json').read_text())['outcome'], 'passed')
             self.assertNotEqual(make('run-reports').returncode, 0)
 
             test.write_text('package fixture\nfunc broken(\n')

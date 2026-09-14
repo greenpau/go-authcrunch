@@ -134,9 +134,14 @@ removal. There is no periodic refresh or instantaneous revocation promise.
 Upstream key removal does not revoke already-issued portal sessions.
 
 Delayed setup publishes metadata before admitting authentication; `setupMu`
-protects discovery changes and config reads. `IdentityProvider.Close` stops
-the OAuth state worker and is idempotent. Embedders should drain requests
-before disposal; the portal does not own shared provider lifetimes.
+protects discovery changes and config reads. `IdentityProvider.Close` cancels and awaits
+owned synchronous/delayed discovery, metadata/JWKS HTTP work, retry timers, and
+the OAuth state worker. Registration of setup work and shutdown are serialized;
+no worker may be added after shutdown begins or publish readiness after Close
+returns. Configure calls serialize and reuse successful setup; closed providers
+cannot be configured or authenticate again. Embedders drain requests before
+disposal. The root `Server.Close` owns shared providers once; individual portals
+do not own their lifetime. Direct provider consumers call Close themselves.
 
 ## Claims and Protocol Compatibility
 
@@ -156,7 +161,7 @@ OIDC at_hash/c_hash conformance upgrade are separate features.
 
 Follow the repository testing lifecycle. Focused coverage belongs in
 `internal/jwtutil/ed25519_test.go`, OAuth's `ed25519_test.go`,
-`jwks_store_test.go`, `provider_lifecycle_test.go`, and shared provider config
+`jwks_store_test.go`, `provider_lifecycle_test.go`, `shutdown_test.go`, and shared provider config
 tests. Keep the existing KMS signing/default/refresh/export tests passing when
 changing the shared adapter.
 

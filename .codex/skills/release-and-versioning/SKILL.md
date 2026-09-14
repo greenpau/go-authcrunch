@@ -42,6 +42,17 @@ GoReleaser with write permission confined to that job. `.goreleaser.yaml` owns
 Linux/Windows/Darwin amd64/arm64 `authdbctl` builds, checksums, and linker
 metadata. Preserve immutable action pins and avoid publishing every local tag.
 
+The library's minimum Go version and the final executable's build toolchain are
+separate contracts. Inspect both reusable-test and GoReleaser setup-go pins when
+qualifying a release; the current workflows explicitly select Go 1.26.8 with
+`GOTOOLCHAIN=local`. Check the official Go release history and vulnerability
+database for a supported patched toolchain before shipping binaries. A local
+upgrade does not update CI, and changing only `go.mod` does not update explicit
+workflow pins. Record `go version` for validation and `go version -m` for the
+packaged executable. Follow [threat-hunting](../threat-hunting/SKILL.md) for
+stdlib versus library findings and scanner precision for stripped binaries.
+Do not raise the module's minimum Go version solely to clear a local stdlib scan.
+
 ## Release Execution
 
 Only execute a publishing command when the user requests an actual release:
@@ -74,3 +85,10 @@ quality gate; they do not publish this repository. Use `make ci-check` for the
 actual repository gate. For packaging changes, run the pinned GoReleaser
 `check` and `build --snapshot --clean` without a GitHub token. Never run a real
 release as an automation test.
+
+For local qualification with an explicit patched toolchain, keep `GOROOT`, `PATH`,
+and `GOTOOLCHAIN=local` consistent in the child process. A shell-exported older
+`GOROOT` can make a newer compiler reject the standard library. Preserve the
+failed evidence and correct the invocation; do not alter module minimums or
+global Go configuration to mask that environment mismatch. Snapshot builds use
+a separate ignored distribution directory and never receive publishing tokens.

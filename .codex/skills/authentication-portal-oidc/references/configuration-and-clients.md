@@ -105,15 +105,22 @@ secret/authentication method, exact callback URI, and `openid` scope. Prefer
 S256 PKCE for every client. Confidential clients can explicitly omit PKCE for
 compatibility; public clients cannot. A public registration sets
 `token_endpoint_auth_method` to `none`, omits `client_secret`, and always
-requires S256. Public native clients may register an exact HTTP callback on
-literal `127.0.0.1` or `::1`; dynamic loopback ports and custom URI schemes are
-not implemented. All other callbacks require HTTPS.
+requires S256. Public native clients may register an HTTP callback on literal
+`127.0.0.1` or `[::1]`, for example `http://127.0.0.1/callback`. They bind an
+ephemeral local listener and supply its actual port in the authorization URI.
+Only the port may vary; the remaining URI bytes, including encoded path, query,
+and case, must match exactly. Explicit ports must be decimal 1–65535; an omitted
+port denotes the HTTP default. Retain the actual authorization URI and send that
+exact value at token exchange. The registered placeholder port cannot redeem a
+code issued for another port. Custom URI schemes remain unsupported.
 
-Redirects match registered strings exactly, including path, query, case, and
-port. Multiple distinct redirect URIs may be registered. No wildcards or
-prefix matching is performed. Browser public clients may call the token endpoint
-from their registered origins; bearer-only UserInfo and public discovery support
-CORS without credentialed cookies.
+All other callbacks require HTTPS and match registered strings exactly,
+including port. Multiple distinct redirect URIs may be registered. No wildcards
+or prefix matching is performed. Browser public clients may call the token
+endpoint from their registered origins; the native callback port exception does
+not expand CORS origins. Native apps redeem directly without a browser Origin.
+Bearer-only UserInfo and public discovery support CORS without credentialed
+cookies.
 
 Clients obtain an opaque access token and signed ID token using the authorization
 code. Verify the ID token's signature, issuer, audience, expiration, and nonce

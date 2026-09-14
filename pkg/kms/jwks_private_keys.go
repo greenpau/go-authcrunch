@@ -114,15 +114,21 @@ func (key jwksSigningKey) privateSigningKey() (any, error) {
 		}
 		return &copy, nil
 	case *ecdsa.PrivateKey:
-		// x509 assumes a non-nil scalar. Check bounds and public-key pairing.
-		if secret.D == nil || secret.D.Sign() <= 0 || secret.D.Cmp(secret.Curve.Params().N) >= 0 {
+		// Bytes assumes an initialized scalar even though legacy callers can
+		// construct a malformed key directly. Retain this defensive nil check.
+		if secret.D == nil {
 			return nil, fmt.Errorf("kms: invalid private signing key")
 		}
-		x, y := secret.Curve.ScalarBaseMult(secret.D.Bytes())
-		if x.Cmp(secret.X) != 0 || y.Cmp(secret.Y) != 0 {
+		raw, err := secret.Bytes()
+		if err != nil {
+			return nil, fmt.Errorf("kms: invalid private signing key")
+		}
+		// Bytes validates scalar and point, but does not verify their pairing.
+		copy, err := ecdsa.ParseRawPrivateKey(secret.Curve, raw)
+		if err != nil || !copy.PublicKey.Equal(&secret.PublicKey) {
 			return nil, fmt.Errorf("kms: private signing key does not match its public key")
 		}
-		return secret, nil
+		return copy, nil
 	case ed25519.PrivateKey:
 		if err := validateEd25519PrivateKey(secret); err != nil {
 			return nil, fmt.Errorf("kms: invalid private signing key")
@@ -188,14 +194,20 @@ func marshalPrivateJWK(public publicJSONWebKey, secret any) ([]byte, error) {
 		key.DP = encode(private.Precomputed.Dp.Bytes())
 		key.DQ = encode(private.Precomputed.Dq.Bytes())
 		key.QI = encode(private.Precomputed.Qinv.Bytes())
+		// Go retains these precomputed values for compatibility. RFC 7518
+		// requires them for supported multiprime RSA export; this is not a
+		// private RSA operation or a newly introduced multiprime capability.
 		for i, prime := range private.Precomputed.CRTValues {
 			key.OtherPrimes = append(key.OtherPrimes, privateJWKPrime{
 				R: encode(private.Primes[i+2].Bytes()), D: encode(prime.Exp.Bytes()), T: encode(prime.Coeff.Bytes()),
 			})
 		}
 	case *ecdsa.PrivateKey:
-		size := (private.Curve.Params().N.BitLen() + 7) / 8
-		key.D = encode(private.D.FillBytes(make([]byte, size)))
+		raw, err := private.Bytes()
+		if err != nil {
+			return nil, fmt.Errorf("kms: invalid ECDSA private key for JWK")
+		}
+		key.D = encode(raw)
 	case ed25519.PrivateKey:
 		// RFC 8037 encodes the 32-byte seed, not Go's 64-byte private key.
 		key.D = encode(private.Seed())

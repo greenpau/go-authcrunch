@@ -38,7 +38,13 @@ boundary for these workflows.
 module tidy, or version synchronization. `run-tests` aliases the same tested
 lifecycle. `run-quick-tests` underlies `qtest`. There is no `ctest` target.
 `COVERAGE_DIR` selects output; concurrent independent invocations must use
-separate directories. `TEST` is a regex, not a fragment of Go flags.
+separate directories. `TEST` is a regex, not a fragment of Go flags. `TEST_TIMEOUT` is a quoted
+Go per-package duration (default `20m`) forwarded through tested; use it instead
+of embedding flags in `TEST`. The expanded race-enabled TLS suite can exceed
+Go's implicit ten-minute limit. Preserve individual request/process deadlines;
+inspect timeout stacks before adjusting the aggregate limit. The real automation
+fixture verifies both default forwarding and a short timeout that remains a
+failed run in live and offline reports.
 
 Let pinned `tested` clean up its managed artifacts inside the selected
 `COVERAGE_DIR`. Do not recursively delete `.coverage` or the selected directory
@@ -49,7 +55,7 @@ The lifecycle fixture in `assets/scripts/tests/tested_test.py` checks this
 isolation alongside fresh evidence and nonzero exits after test/build failures.
 Whole-directory cleanup belongs to the explicitly requested `make clean`.
 
-The Go module minimum is `1.26.0`; CI selects Go `1.26.0`, Node 24, and Python
+The Go module minimum is `1.26.0`; CI and release builds select Go `1.26.8`, Node 24, and Python
 3. Use Python 3.9+ locally. `go.mod` and `go.sum` pin `tested`, `versioned`, and
 `golint`; never replace the pinned lifecycle with global tools installed at
 `@latest`. `make install-test-tools` resolves `go tool tested` without modifying
@@ -92,3 +98,10 @@ only when their explicit maintenance operation is in scope. CLA automation owns
 
 This repository has no general `docs/` directory. Keep durable instructions in
 the owning skill and its linked references, with README links for onboarding.
+
+For local qualification with an explicit patched toolchain, keep `GOROOT`, `PATH`,
+and `GOTOOLCHAIN=local` consistent in the child process. A shell-exported older
+`GOROOT` can make a newer compiler reject the standard library. Preserve the
+failed evidence and correct the invocation; do not alter module minimums or
+global Go configuration to mask that environment mismatch. Snapshot builds use
+a separate ignored distribution directory and never receive publishing tokens.

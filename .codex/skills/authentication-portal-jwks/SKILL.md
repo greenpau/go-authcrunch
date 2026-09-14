@@ -82,7 +82,11 @@ and [RFC 7518 section 6](https://www.rfc-editor.org/rfc/rfc7518.html#section-6):
 | Ed25519 | `kty: OKP`, `crv: Ed25519`, 32-byte `x`; no `y` |
 
 Encode integers/coordinates with unpadded base64url. EC coordinates require
-leading zero padding; `big.Int.Bytes()` alone is insufficient. Advertise
+leading zero padding; `big.Int.Bytes()` alone is insufficient. Use
+`ecdsa.PublicKey.Bytes` for validated SEC 1 points and split its fixed-width
+coordinates. Consumer tests reconstruct points with
+`ecdsa.ParseUncompressedPublicKey` and verify real signatures. Do not replace
+point validation with unchecked coordinate construction. Advertise
 `use: sig` and the operator's actual default signing `alg`. Emit `kid` exactly
 when signing injects it. The default key ID `0` is omitted in both JWT and
 JWK; do not invent a discovery-only ID or change existing JWT headers.
@@ -308,7 +312,15 @@ and `nosniff`.
 Never log the private response or include encoder details in error responses.
 
 Validate ECDSA scalar bounds and its correspondence to the public point before
-marshaling. Go's x509 encoder assumes a non-nil scalar. Marshal RSA from a
+marshaling. `PrivateKey.Bytes` validates scalar and point separately; reconstruct
+with `ecdsa.ParseRawPrivateKey` and compare the derived public key before export.
+Do not assume that encoding validates their pairing. Retain nil-coordinate and
+nil-scalar guards for manually constructed legacy keys: the standard encoders
+assume those fields are initialized. A defensive nil-scalar read and malformed
+legacy-key test construction deliberately retain deprecated raw fields.
+Safe parsers cannot construct those negative fixtures. Multiprime RSA `oth`
+export retains Go's compatibility CRT values and independent precomputation
+checks; do not remove a supported format merely to silence a diagnostic. Marshal RSA from a
 struct copy with separate precomputation state: x509 can modify RSA
 precomputation, and export must not mutate a key used by concurrent signers.
 Encode the complete response before writing it; an invalid later key must not

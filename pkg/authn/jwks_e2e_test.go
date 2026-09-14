@@ -287,11 +287,16 @@ func e2eJWKPublicKey(t *testing.T, key map[string]string) crypto.PublicKey {
 	case "EC":
 		curves := map[string]elliptic.Curve{"P-256": elliptic.P256(), "P-384": elliptic.P384(), "P-521": elliptic.P521()}
 		curve := curves[key["crv"]]
-		x, y := e2eJWKInteger(t, key["x"]), e2eJWKInteger(t, key["y"])
-		if curve == nil || !curve.IsOnCurve(x, y) {
+		x, xerr := base64.RawURLEncoding.DecodeString(key["x"])
+		y, yerr := base64.RawURLEncoding.DecodeString(key["y"])
+		if curve == nil || xerr != nil || yerr != nil || len(x) != (curve.Params().BitSize+7)/8 || len(y) != len(x) {
+			t.Fatal("invalid JWK coordinate width")
+		}
+		public, err := ecdsa.ParseUncompressedPublicKey(curve, append(append([]byte{4}, x...), y...))
+		if err != nil {
 			t.Fatal("invalid JWK public point")
 		}
-		return &ecdsa.PublicKey{Curve: curve, X: x, Y: y}
+		return public
 	case "OKP":
 		public, err := base64.RawURLEncoding.DecodeString(key["x"])
 		if err != nil || key["crv"] != "Ed25519" || len(public) != ed25519.PublicKeySize || key["y"] != "" {
@@ -392,7 +397,11 @@ func parseE2EPrivateKey(t *testing.T, pair e2ePrivateKeyPair, format, encoding s
 			if err != nil || len(d) != (public.Curve.Params().N.BitLen()+7)/8 {
 				t.Fatal("private EC scalar has incorrect padding")
 			}
-			secret = &ecdsa.PrivateKey{PublicKey: *public, D: new(big.Int).SetBytes(d)}
+			private, err := ecdsa.ParseRawPrivateKey(public.Curve, d)
+			if err != nil || !private.PublicKey.Equal(public) {
+				t.Fatal("private EC JWK does not match public point")
+			}
+			secret = private
 		case ed25519.PublicKey:
 			seed, err := base64.RawURLEncoding.DecodeString(key["d"])
 			if err != nil || len(seed) != ed25519.SeedSize {

@@ -41,6 +41,8 @@ import (
 	"fmt"
 	"path"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -53,6 +55,8 @@ const (
 
 // Portal is an authentication portal.
 type Portal struct {
+	closeOnce         sync.Once
+	closed            atomic.Bool
 	oidc              oidc.OpenIDProvider
 	refresh           *tokenrefresh.Manager
 	refreshStore      *tokenrefresh.MemoryStore
@@ -176,22 +180,30 @@ func NewPortal(params PortalParameters) (*Portal, error) {
 	return p, nil
 }
 
-// Close releases portal-owned cache workers and revokes its volatile refresh
-// sessions. Embedding applications should quiesce requests before disposal.
-// Calling Close more than once is safe.
+// Close releases portal-owned cache workers and volatile refresh/OIDC state.
+// It does not close shared identity providers, stores, or user registries.
+// Drain requests before disposal. Further HTTP and BasicAuth requests fail
+// closed. Repeated or concurrent Close calls wait for the same disposal.
 func (p *Portal) Close() {
-	if p.oidc != nil {
-		p.oidc.Close()
+	if p == nil {
+		return
 	}
-	if p.sessions != nil {
-		p.sessions.Stop()
-	}
-	if p.sandboxes != nil {
-		p.sandboxes.Stop()
-	}
-	if p.refreshStore != nil {
-		p.refreshStore.Close()
-	}
+	p.closeOnce.Do(func() {
+		p.closed.Store(true)
+		if p.oidc != nil {
+			p.oidc.Close()
+		}
+		if p.sessions != nil {
+			p.sessions.Stop()
+		}
+		if p.sandboxes != nil {
+			p.sandboxes.Stop()
+		}
+		if p.refreshStore != nil {
+			p.refreshStore.Close()
+		}
+		p.validator.Close()
+	})
 }
 
 // GetName returns the configuration name of the Portal.

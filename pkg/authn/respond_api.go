@@ -28,7 +28,7 @@ import (
 func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
 	p.disableClientCache(w)
 	// Refresh authenticates its own credential, including after access expiry.
-	if strings.HasSuffix(r.URL.Path, "/api/refresh_token") || strings.HasSuffix(r.URL.Path, "/api/logout") {
+	if strings.HasSuffix(r.URL.Path, "/api/refresh_token") || strings.HasSuffix(r.URL.Path, "/api/refresh_session") || strings.HasSuffix(r.URL.Path, "/api/logout") {
 		return p.handleAPIRefreshToken(ctx, w, r, rr)
 	}
 	p.injectSessionID(ctx, w, r, rr)

@@ -16,8 +16,11 @@ package registry
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"mime/quotedprintable"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
@@ -34,7 +37,10 @@ const LocalUserRegistryProviderKindLabel = "local"
 
 // LocalUserRegistryProvider represents local user registry provider.
 type LocalUserRegistryProvider struct {
-	Name string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	lifecycleMu sync.Mutex
+	closed      bool
+	activated   bool
+	Name        string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	// The title of the registration page
 	Title string `json:"title,omitempty" xml:"title,omitempty" yaml:"title,omitempty"`
 	// The mandatory registration code. It is possible adding multiple
@@ -204,6 +210,14 @@ func (p *LocalUserRegistryProvider) Validate() error {
 
 // Activate starts LocalUserRegistryProvider.
 func (p *LocalUserRegistryProvider) Activate(logger *zap.Logger) error {
+	p.lifecycleMu.Lock()
+	defer p.lifecycleMu.Unlock()
+	if p.closed {
+		return fmt.Errorf("user registry is closed")
+	}
+	if p.activated {
+		return nil
+	}
 	if err := p.Validate(); err != nil {
 		return err
 	}
@@ -218,6 +232,7 @@ func (p *LocalUserRegistryProvider) Activate(logger *zap.Logger) error {
 	p.db = db
 	p.cache = NewRegistrationCache()
 	p.cache.Run()
+	p.activated = true
 	return nil
 }
 
@@ -571,4 +586,49 @@ func quotedPrintableBody(s string) (string, error) {
 		return "", err
 	}
 	return b.String(), nil
+}
+
+// NewRuntime creates an independently owned, activated copy of this registry's
+// settings. Credential and messaging configurations are shared read-only;
+// database handles, registration caches, and shutdown state are never shared.
+// Do not mutate configuration while constructing or using a runtime.
+func (p *LocalUserRegistryProvider) NewRuntime(logger *zap.Logger) (*LocalUserRegistryProvider, error) {
+	if p == nil {
+		return nil, fmt.Errorf("user registry configuration is nil")
+	}
+	data, err := json.Marshal(p)
+	if err != nil {
+		return nil, fmt.Errorf("copy user registry configuration: %w", err)
+	}
+	var runtime LocalUserRegistryProvider
+	if err := json.Unmarshal(data, &runtime); err != nil {
+		return nil, fmt.Errorf("restore user registry configuration: %w", err)
+	}
+	runtime.credentials, runtime.messaging = p.credentials, p.messaging
+	if err := runtime.Activate(logger); err != nil {
+		runtime.Close()
+		return nil, err
+	}
+	return &runtime, nil
+}
+
+// Close waits for the registry's worker and discards volatile registrations.
+// Drain requests before disposal; further activation is rejected. Repeated or
+// concurrent Close calls are safe. The identity database has no owned worker.
+func (p *LocalUserRegistryProvider) Close() {
+	if p == nil {
+		return
+	}
+	p.lifecycleMu.Lock()
+	defer p.lifecycleMu.Unlock()
+	if p.closed {
+		return
+	}
+	p.closed = true
+	if p.cache != nil {
+		p.cache.Stop()
+		p.cache.mu.Lock()
+		p.cache.Entries = nil
+		p.cache.mu.Unlock()
+	}
 }

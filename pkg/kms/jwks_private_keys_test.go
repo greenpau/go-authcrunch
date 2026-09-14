@@ -124,6 +124,8 @@ func TestJWKSPrivateKeys(t *testing.T) {
 	}
 }
 
+// Raw scalar mutation deliberately creates malformed legacy keys that the
+// safe parsers reject before KMS can receive them. Keep these negative cases.
 func TestJWKSPrivateKeysInvalidMaterial(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
@@ -227,6 +229,8 @@ func verifyPrivateKeyExport(t *testing.T, data []byte, format, encoding string) 
 				if rsaKey.Precomputed.Dp.Cmp(decode(jwk.DP)) != 0 || rsaKey.Precomputed.Dq.Cmp(decode(jwk.DQ)) != 0 || rsaKey.Precomputed.Qinv.Cmp(decode(jwk.QI)) != 0 {
 					t.Fatal("invalid RSA JWK CRT parameters")
 				}
+				// Precompute remains an independent standard-library oracle for
+				// RFC 7518 multiprime CRT values, despite the field deprecation.
 				for i, prime := range jwk.OtherPrimes {
 					if rsaKey.Precomputed.CRTValues[i].Exp.Cmp(decode(prime.D)) != 0 || rsaKey.Precomputed.CRTValues[i].Coeff.Cmp(decode(prime.T)) != 0 {
 						t.Fatal("invalid additional-prime CRT parameters")
@@ -240,7 +244,17 @@ func verifyPrivateKeyExport(t *testing.T, data []byte, format, encoding string) 
 				if curve == nil || err != nil || len(b) != (curve.Params().N.BitLen()+7)/8 {
 					t.Fatal("EC private scalar is not fixed width")
 				}
-				private = &ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: curve, X: decode(jwk.X), Y: decode(jwk.Y)}, D: decode(jwk.D)}
+				ec, err := ecdsa.ParseRawPrivateKey(curve, b)
+				if err != nil {
+					t.Fatal("invalid private EC JWK")
+				}
+				point, err := ec.PublicKey.Bytes()
+				x, xerr := base64.RawURLEncoding.DecodeString(jwk.X)
+				y, yerr := base64.RawURLEncoding.DecodeString(jwk.Y)
+				if err != nil || xerr != nil || yerr != nil || !bytes.Equal(point, append(append([]byte{4}, x...), y...)) {
+					t.Fatal("private EC JWK does not match public point")
+				}
+				private = ec
 			}
 		} else {
 			var value string
@@ -320,9 +334,14 @@ func TestJWKSPrivateKeyFormats(t *testing.T) {
 	for _, curve := range []elliptic.Curve{elliptic.P256(), elliptic.P384(), elliptic.P521()} {
 		t.Run(curve.Params().Name, func(t *testing.T) {
 			ks := newJWKSStore(t)
-			x, y := curve.ScalarBaseMult([]byte{1})
+			raw := make([]byte, (curve.Params().N.BitLen()+7)/8)
+			raw[len(raw)-1] = 1
+			private, err := ecdsa.ParseRawPrivateKey(curve, raw)
+			if err != nil {
+				t.Fatal(err)
+			}
 			key := ks.GetSignKeys()[0]
-			key.Sign.Secret = &ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: curve, X: x, Y: y}, D: big.NewInt(1)}
+			key.Sign.Secret = private
 			key.Sign.Token.DefaultMethod = map[string]string{"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}[curve.Params().Name]
 			data, err := ks.GetJWKSPrivateKeys("jwk", "")
 			if err != nil {

@@ -16,6 +16,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -153,6 +154,9 @@ func (v *TokenValidator) parseCookies(_ context.Context, r *http.Request, ar *re
 // Authorize authorizes HTTP requests based on the presence and the content of
 // the tokens in the requests.
 func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) (usr *user.User, err error) {
+	if v.closed.Load() {
+		return nil, fmt.Errorf("token validator is closed")
+	}
 	for _, sourceName := range v.tokenSources {
 		switch sourceName {
 		case tokenSourceHeader:

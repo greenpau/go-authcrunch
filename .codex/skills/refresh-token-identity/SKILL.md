@@ -5,6 +5,35 @@ description: Maintain refresh-token login evidence, MFA completion, sandbox rede
 
 # Refresh Token Identity
 
+## Canonical Identity and Transformed Claims
+
+Keep backend identity independent of output claim transformations.
+`createSandboxUser` captures `user.User.LoginUsername` and `LoginEmail` from
+the identified backend before transformation, alongside `LoginEvidence`.
+These fields are excluded from JSON/XML/YAML and retained by `User.Clone` and
+single-use sandbox redemption. HTML and JSON checkpoints use this canonical
+identity; neither transformed `sub`/`email` nor a caller-supplied alias may select
+another account. JSON continuation compares the newly identified canonical
+username with the sandbox, so username, email, and case aliases can refer to
+the same record across checkpoints.
+
+`token_issuer.go` revalidates local access-only proofs through
+`WithRefreshIdentity`, holding the backend transaction through current claim
+transformation, challenge-policy checks, and signing. Compare current username
+and email with the canonical sandbox fields, never transformed claims. Security
+version changes, reloads, deleted/recreated accounts, or newly required factors
+deny issuance. Credential mutation during an outstanding login, including MFA
+enrollment, requires a new completed login. Other stores retain their
+`IdentifyUser` contract and canonical username/email comparison; this fallback
+does not promise transactional credential-version verification.
+
+HTML and JSON access-only login both support email claim transformations.
+Access-only token claims are transformed anew
+from current attributes and retain the configured access lifetime. Renewable
+access keeps its canonical `sub`; OIDC keeps its immutable derived subject and
+backend UserInfo attributes. A transformed subject never becomes a backend
+lookup key or an OIDC/refresh proof username.
+
 ## Ownership and Evidence
 
 `pkg/authn/login_proof.go`, `sandbox_user.go`, `handle_http_sandbox.go`, and
@@ -65,3 +94,13 @@ serialization exclusion, and mutation/signing serialization.
 MFA/reset races, current roles and challenge policy, account lifecycle, and
 single-use login. Add regression coverage at the mutation entry point and the
 refresh boundary when introducing another security-relevant account operation.
+`pkg/authn/token_issuer_test.go` covers canonical snapshots, identity/version
+denial, current challenge requirements, and the nontransactional store fallback.
+`pkg/user/login_identity_test.go` checks independent cloning and serialization
+exclusion. `pkg/authn/login_identity_e2e_test.go` uses public APIs, temporary
+local stores, a real TLS portal and cookie jar, and independent JWKS signature
+verification. Its matrix covers HTML/JSON, username/email aliases, password/TOTP,
+refresh/OIDC off and on, excluded realms, renewal, single-use redemption, and
+credential revocation between checkpoints. Keep the transformed-subject case
+with two distinct accounts and passwords so a claim rewrite cannot change
+whose credentials authenticate or whose roles are issued.

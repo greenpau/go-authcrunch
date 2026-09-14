@@ -93,7 +93,9 @@ func (l *SandboxLease) Redeem() (*user.User, error) {
 
 // SandboxCache contains cached tokens
 type SandboxCache struct {
-	mu sync.RWMutex
+	lifecycleMu sync.Mutex
+	done        chan struct{}
+	mu          sync.RWMutex
 	// The interval (in seconds) at which cache maintenance task are being triggered.
 	// The default is 5 minutes (300 seconds)
 	cleanupInternal int
@@ -155,6 +157,8 @@ func manageSandboxCache(c *SandboxCache, exit <-chan bool, interval time.Duratio
 
 // Run starts management of SandboxCache instance.
 func (c *SandboxCache) Run() {
+	c.lifecycleMu.Lock()
+	defer c.lifecycleMu.Unlock()
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.managed {
@@ -162,18 +166,33 @@ func (c *SandboxCache) Run() {
 	}
 	c.managed = true
 	c.exit = make(chan bool)
-	go manageSandboxCache(c, c.exit, time.Duration(c.cleanupInternal)*time.Second)
+	c.done = make(chan struct{})
+	exit, done := c.exit, c.done
+	interval := time.Duration(c.cleanupInternal) * time.Second
+	go func() {
+		defer close(done)
+		manageSandboxCache(c, exit, interval)
+	}()
 }
 
-// Stop stops management of SandboxCache instance and releases its ticker.
+// Stop stops management of SandboxCache, waits for its worker, and releases
+// the ticker. Repeated or concurrent calls are safe; Run can start it again.
 func (c *SandboxCache) Stop() {
+	if c == nil {
+		return
+	}
+	c.lifecycleMu.Lock()
+	defer c.lifecycleMu.Unlock()
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	if !c.managed {
+		c.mu.Unlock()
 		return
 	}
 	c.managed = false
 	close(c.exit)
+	done := c.done
+	c.mu.Unlock()
+	<-done
 }
 
 // GetCleanupInterval returns cleanup interval.

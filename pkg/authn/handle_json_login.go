@@ -18,13 +18,16 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -33,21 +36,48 @@ import (
 	"go.uber.org/zap"
 )
 
-func (p *Portal) handleIssueTokens(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, proof *user.User) (*apiauth.AuthResponse, error) {
+const tokenRefreshDiscardTimeout = 5 * time.Second
+
+func (p *Portal) handleIssueTokens(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, proof *user.User) (_ *apiauth.AuthResponse, err error) {
 	u, tokens, err := p.issueSandboxTokens(ctx, r, rr, proof)
+	defer func() {
+		if err == nil || tokens == nil {
+			return
+		}
+		// Issuance has committed, but JSON completion has not delivered this
+		// credential. Release its family even if a later step canceled the
+		// request. Previously replaced families remain revoked.
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), tokenRefreshDiscardTimeout)
+		defer cancel()
+		if cleanupErr := p.refresh.Logout(cleanupCtx, tokens.RefreshToken, proof.RefreshTransport); cleanupErr != nil {
+			err = errors.Join(err, fmt.Errorf("discard undelivered refresh token: %w: %w", tokenrefresh.ErrUnavailable, cleanupErr))
+		}
+	}()
 	if err != nil {
 		return nil, err
+	}
+	browserReplacement := proof.RefreshTransport == tokenrefresh.CookieTransport && p.hasRefreshCookie(r)
+	if proof.RefreshTransport == tokenrefresh.CookieTransport {
+		// Retire the old identity before publishing any new browser credentials,
+		// including when this realm does not issue a refresh family.
+		if err := p.revokeRefreshOnLogin(ctx, w, r); err != nil {
+			return nil, fmt.Errorf("%w: %w", tokenrefresh.ErrUnavailable, err)
+		}
 	}
 	if err := p.finishOIDCLogin(ctx, w, r, proof); err != nil {
 		return nil, err
 	}
 	if tokens == nil {
+		if browserReplacement {
+			u.Authorized = true
+			if err := p.sessions.Add(u.Claims.ID, u); err != nil {
+				return nil, err
+			}
+			w.Header().Add("Set-Cookie", p.cookie.GetAccessTokenCookie(addrutil.GetSourceHost(r), u.Token))
+		}
 		return &apiauth.AuthResponse{Authenticated: true, AccessToken: u.Token, AccessTokenName: p.config.TokenGrantorOptions.AccessTokenCookieName}, nil
 	}
-	if proof.RefreshTransport == "cookie" {
-		if err := p.revokeRefreshOnLogin(ctx, w, r); err != nil {
-			return nil, err
-		}
+	if proof.RefreshTransport == tokenrefresh.CookieTransport {
 		if err := p.sessions.Add(u.Claims.ID, u); err != nil {
 			return nil, err
 		}
@@ -91,7 +121,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			rr.Flags.Enabled = true
 			// Keep the canonical identity established before acquiring the sandbox,
 			// including when the caller supplied an email address or mixed case.
-			rr.User.Username = usr.Claims.Subject
+			rr.User.Username = usr.LoginUsername
 			rr.User.Password = authRequest.ChallengeResponse
 			if err := backend.Request(operator.Authenticate, rr); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
@@ -131,7 +161,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				return fmt.Errorf("account temporarily locked due to too many failed MFA attempts")
 			}
 			rr.Flags.Enabled = true
-			rr.User.Username = usr.Claims.Subject
+			rr.User.Username = usr.LoginUsername
 			rr.MfaToken.Passcode = authRequest.ChallengeResponse
 			if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
@@ -194,7 +224,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			prevCheckpointPassed = true
 		case (checkpoint.Type == "u2f" || checkpoint.Type == "mfa") && authRequest.ChallengeResponse == "webauthn":
 			rr.Flags.Enabled = true
-			rr.User.Username = usr.Claims.Subject
+			rr.User.Username = usr.LoginUsername
 			if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
 				checkpoint.FailedAttempts++
@@ -272,7 +302,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				return fmt.Errorf("account temporarily locked due to too many failed MFA attempts")
 			}
 			rr.Flags.Enabled = true
-			rr.User.Username = usr.Claims.Subject
+			rr.User.Username = usr.LoginUsername
 			rr.WebAuthn.Challenge = usr.Authenticator.TempChallenge
 			if err := backend.Request(operator.Authenticate, rr); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
@@ -340,7 +370,7 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 	if authRequest.RefreshTransport == "body" && (!p.refreshRealm(authRequest.Realm) || !p.config.RefreshTokens.BodyTransportEnabled) {
 		return p.handleJSONError(ctx, w, http.StatusBadRequest, "Native refresh is unavailable")
 	}
-	if p.refreshRealm(authRequest.Realm) {
+	if p.refreshRealm(authRequest.Realm) || p.hasRefreshCookie(r) {
 		if err := p.validateRefreshLogin(r, authRequest.RefreshTransport); err != nil {
 			return p.handleJSONError(ctx, w, http.StatusForbidden, "Invalid refresh transport")
 		}
@@ -376,7 +406,7 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 
 		defer lease.Release()
 		usr := lease.User
-		if usr.Authenticator.Realm != authRequest.Realm || usr.Claims.Subject != rr.User.Username || usr.RefreshTransport != authRequest.RefreshTransport {
+		if usr.Authenticator.Realm != authRequest.Realm || usr.LoginUsername != rr.User.Username || usr.RefreshTransport != authRequest.RefreshTransport {
 			return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Invalid authentication context")
 		}
 
@@ -410,16 +440,12 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 		}
 
 		if usr.Authorized {
-			if rr.User.Username != usr.Claims.Subject || rr.User.Email != usr.Claims.Email {
+			if rr.User.Username != usr.LoginUsername || rr.User.Email != usr.LoginEmail {
 				p.logger.Warn(
-					"username or email mismatch between sandbox and claims",
+					"backend identity changed during sandbox authentication",
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 					zap.String("authentication_flow", "api"),
-					zap.String("claims_username", rr.User.Username),
-					zap.String("sandbox_username", usr.Claims.Subject),
-					zap.String("claims_email", rr.User.Email),
-					zap.String("sandbox_email", usr.Claims.Email),
 				)
 				return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 			}
@@ -430,7 +456,10 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 			}
 			authResp, err = p.handleIssueTokens(ctx, w, r, rr, proof)
 			if err != nil {
-				if p.refreshRealm(proof.Authenticator.Realm) {
+				if errors.Is(err, tokenrefresh.ErrDenied) {
+					return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Reauthentication required")
+				}
+				if p.refreshRealm(proof.Authenticator.Realm) || errors.Is(err, tokenrefresh.ErrUnavailable) {
 					return p.refreshError(ctx, w, err)
 				}
 				p.logger.Warn(

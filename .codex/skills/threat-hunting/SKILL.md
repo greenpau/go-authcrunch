@@ -103,6 +103,9 @@ Follow the call chain from input → decision → sink. Do not stop at a grep hi
 
 Use `rg` as the starting point. Inspect surrounding code and tests — do not
 treat a grep hit as a confirmed finding.
+Resolve dependency source paths with `go env GOMODCACHE` and `go env GOROOT`,
+then inspect the exact package directory. Do not search a home directory or
+sibling checkouts to locate cached tooling or dependencies.
 
 **URL, path, redirect, and matching:**
 ```bash
@@ -154,6 +157,27 @@ library, do not report stdlib CVEs as library-code findings or recommend
 raising the `go` directive solely to clear them. Document the scanning
 toolchain, the downstream/final binary build toolchain, and whether consumers
 need a patched Go release on their supported Go line.
+
+Record the scanner version, source/binary mode, build metadata, stripping flags,
+and output precision. Govulncheck JSON is a stream of JSON values, not necessarily
+one compact object per line; decode the stream and distinguish OSV records from
+actual findings. JSON-mode exit zero alone does not mean no findings. Separate
+module matches, imported affected packages, and reported call/symbol evidence.
+
+For stripped binaries, the scanner may fall back to module-level precision and
+emit wildcard package/symbol entries from an advisory. Those placeholders do not
+prove that the affected package or function is linked. Preserve the exact
+shipping-artifact assessment and supplement it with source analysis and a
+matching build retaining symbols when needed; do not remove findings or change
+release stripping solely to produce a green scan. Govulncheck v1.8.0 documents
+this fallback in its
+[official binary analyzer](https://github.com/golang/vuln/blob/v1.8.0/internal/vulncheck/binary.go).
+A retained module can still match an advisory for a package no longer imported.
+State that boundary instead of claiming the module itself is advisory-free.
+
+Use [identity-public-keys](../identity-public-keys/SKILL.md) for user-owned GPG/SSH
+key import, authenticated profile input, and OpenPGP compatibility. Trace actual
+operations before equating dependency maintenance debt with an exploit.
 
 ---
 

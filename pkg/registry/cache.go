@@ -42,7 +42,9 @@ type RegistrationCacheEntry struct {
 
 // RegistrationCache contains cached tokens
 type RegistrationCache struct {
-	mu sync.RWMutex
+	lifecycleMu sync.Mutex
+	done        chan struct{}
+	mu          sync.RWMutex
 	// The interval (in seconds) at which cache maintenance task are being triggered.
 	// The default is 5 minutes (300 seconds)
 	cleanupInternal int
@@ -83,58 +85,63 @@ func (c *RegistrationCache) SetMaxEntryLifetime(i int) error {
 	return nil
 }
 
-func manageRegistrationCache(c *RegistrationCache) {
-	c.managed = true
-	intervals := time.NewTicker(time.Second * time.Duration(c.cleanupInternal))
-	for range intervals.C {
-		if c == nil {
-			continue
-		}
-		c.mu.Lock()
+func manageRegistrationCache(c *RegistrationCache, exit <-chan bool, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
 		select {
-		case <-c.exit:
-			c.managed = false
-			// break
-		default:
-			// 	break
-		}
-		if !c.managed {
-			c.mu.Unlock()
-			break
-		}
-		if c.Entries == nil {
-			c.mu.Unlock()
-			continue
-		}
-		deleteList := []string{}
-		for registrationID, entry := range c.Entries {
-			if err := entry.Valid(c.maxEntryLifetime); err != nil {
-				deleteList = append(deleteList, registrationID)
-				continue
+		case <-exit:
+			return
+		case <-ticker.C:
+			c.mu.Lock()
+			for id, entry := range c.Entries {
+				if entry.Valid(c.maxEntryLifetime) != nil {
+					delete(c.Entries, id)
+				}
 			}
+			c.mu.Unlock()
 		}
-		if len(deleteList) > 0 {
-			for _, registrationID := range deleteList {
-				delete(c.Entries, registrationID)
-			}
-		}
-		c.mu.Unlock()
 	}
 }
 
 // Run starts management of RegistrationCache instance.
 func (c *RegistrationCache) Run() {
+	c.lifecycleMu.Lock()
+	defer c.lifecycleMu.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if c.managed {
 		return
 	}
-	go manageRegistrationCache(c)
+	c.managed = true
+	c.exit = make(chan bool)
+	c.done = make(chan struct{})
+	exit, done := c.exit, c.done
+	interval := time.Duration(c.cleanupInternal) * time.Second
+	go func() {
+		defer close(done)
+		manageRegistrationCache(c, exit, interval)
+	}()
 }
 
-// Stop stops management of RegistrationCache instance.
+// Stop stops management of RegistrationCache, waits for its worker, and releases
+// the ticker. Repeated or concurrent calls are safe; Run can start it again.
 func (c *RegistrationCache) Stop() {
+	if c == nil {
+		return
+	}
+	c.lifecycleMu.Lock()
+	defer c.lifecycleMu.Unlock()
 	c.mu.Lock()
-	defer c.mu.Unlock()
+	if !c.managed {
+		c.mu.Unlock()
+		return
+	}
 	c.managed = false
+	close(c.exit)
+	done := c.done
+	c.mu.Unlock()
+	<-done
 }
 
 // GetCleanupInterval returns cleanup interval.
