@@ -373,7 +373,9 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	}
 
 	// Remove the legacy JWT-valued refresh cookie.
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie(rr.Upstream.BasePath))
+	if legacy := p.cookie.GetDeleteRefreshTokenCookie(rr.Upstream.BasePath); legacy != "" {
+		w.Header().Add("Set-Cookie", legacy)
+	}
 
 	// Delete sandbox cookie, if present.
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteSandboxIDCookie(rr.Upstream.BasePath))

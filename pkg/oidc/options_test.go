@@ -35,6 +35,7 @@ func TestNewProvider(t *testing.T) {
 		{name: "invalid session cookie", change: func(_ *Config, o *Options) { o.SessionCookieName = "invalid name" }, wantError: "invalid oidc cookie name"},
 		{name: "invalid request cookie", change: func(_ *Config, o *Options) { o.RequestCookieName = "invalid;name" }, wantError: "invalid oidc cookie name"},
 		{name: "cookie collision", change: func(_ *Config, o *Options) { o.SessionCookieName = "REQUEST"; o.RequestCookieName = "REQUEST" }, wantError: "distinct names"},
+		{name: "mixed-case host cookie scoped path", change: func(_ *Config, o *Options) { o.RequestCookieName = "__hOsT-request" }, wantError: "root issuer path"},
 		{name: "host cookie scoped path", change: func(_ *Config, o *Options) { o.SessionCookieName = "__Host-session" }, wantError: "root issuer path"},
 		{name: "custom login", change: func(_ *Config, o *Options) { o.LoginURL = "https://auth.example.test/auth/sign-in?fresh=true" }},
 		{name: "external login", change: func(_ *Config, o *Options) { o.LoginURL = "https://other.test/auth/login" }, wantError: "within the issuer"},

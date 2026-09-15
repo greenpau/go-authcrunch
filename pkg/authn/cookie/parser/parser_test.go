@@ -145,3 +145,65 @@ func ExampleNewCookieConfigFromDirectives() {
 	fmt.Println(config.AccessTokenCookieName, config.OIDCSessionIDCookieName, config.OIDCRequestIDCookieName)
 	// Output: PORTAL_ACCESS_TOKEN LOGIN_SESSION PORTAL_OIDC_REQUEST_ID
 }
+
+func TestCookieReservedPrefixValidation(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		directives []string
+		invalid    bool
+	}{
+		{"ordinary insecure", []string{"cookie prefix PORTAL", "cookie insecure enabled"}, false},
+		{"secure prefix", []string{"cookie prefix __Secure-PORTAL"}, false},
+		{"secure prefix insecure", []string{"cookie prefix __sEcUrE-PORTAL", "cookie insecure enabled"}, true},
+		{"host access session", []string{"cookie access token name __Host-ACCESS", "cookie session id name __hOsT-SESSION"}, false},
+		{"host access path", []string{"cookie access token name __Host-ACCESS", "cookie path /auth"}, true},
+		{"host session domain", []string{"cookie session id name __Host-SESSION", "cookie domain example.test"}, true},
+		{"host access domain path", []string{"cookie access token name __Host-ACCESS", "cookie domain example.test strip domain enabled", "cookie domain example.test path /auth"}, true},
+		{"host stripped domain", []string{"cookie access token name __Host-ACCESS", "cookie domain example.test strip domain enabled"}, false},
+		{"host guessed domain", []string{"cookie access token name __Host-ACCESS", "cookie guess domain enabled"}, true},
+		{"host stripped guess", []string{"cookie access token name __Host-ACCESS", "cookie guess domain enabled", "cookie strip domain enabled"}, false},
+		{"host provider fallback", []string{"cookie identity token name __Host-ID"}, true},
+		{"feature-owned host names", []string{"cookie refresh token name __Host-REFRESH", "cookie oidc session id name __Host-OIDC"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, err := cookieparser.NewCookieConfigFromDirectives(tc.directives)
+			if tc.invalid {
+				if err == nil || c != nil {
+					t.Fatal("invalid reserved-prefix configuration returned a snapshot")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			raw, err := json.Marshal(c)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var restored cookie.Config
+			if json.Unmarshal(raw, &restored) != nil {
+				t.Fatal("cookie JSON roundtrip failed")
+			}
+			if _, err := cookie.NewFactory(&restored); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+	// Typed and JSON consumers must enforce the same validation as directives.
+	for _, raw := range []string{
+		`{"access_token_cookie_name":"__Host-ACCESS","path":"/auth"}`,
+		`{"session_id_cookie_name":"__Secure-SESSION","insecure":true}`,
+		`{"identity_token_cookie_name":"__Host-ID"}`,
+	} {
+		var c cookie.Config
+		if json.Unmarshal([]byte(raw), &c) != nil {
+			t.Fatal("malformed fixture")
+		}
+		if c.Validate() == nil {
+			t.Fatal("typed configuration bypassed prefix validation")
+		}
+		if _, err := cookie.NewFactory(&c); err == nil {
+			t.Fatal("factory bypassed prefix validation")
+		}
+	}
+}

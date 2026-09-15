@@ -92,8 +92,8 @@ func (c *Config) Clone() *Config {
 }
 
 // Validate applies defaults and validates names, collisions, paths, domains,
-// and SameSite attributes. Cookie lifetimes and feature-specific scope/security
-// requirements remain with the issuing runtime. Explicit names need not start
+// SameSite attributes, and reserved prefixes. Lifetimes and feature-specific
+// scope/security requirements remain with the issuing runtime. Explicit names need not start
 // with AUTHP. Validation does not create a factory or start a runtime.
 func (c *Config) Validate() error {
 	if c == nil {
@@ -129,7 +129,7 @@ func (c *Config) Validate() error {
 			return err
 		}
 	}
-	return nil
+	return c.validatePrefixes()
 }
 
 func (c *Config) validateNames() error {

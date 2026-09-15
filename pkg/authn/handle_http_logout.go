@@ -43,7 +43,9 @@ func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r 
 	h := addrutil.GetSourceHost(r)
 
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteAccessTokenCookie(h))
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie(rr.Upstream.BasePath))
+	if legacy := p.cookie.GetDeleteRefreshTokenCookie(rr.Upstream.BasePath); legacy != "" {
+		w.Header().Add("Set-Cookie", legacy)
+	}
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteSessionIDCookie(h))
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(p.cookie.IdentityTokenCookieName, rr.Upstream.BasePath))

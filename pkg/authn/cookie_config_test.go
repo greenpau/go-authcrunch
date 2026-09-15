@@ -44,7 +44,7 @@ func TestPortalConfigureCookies(t *testing.T) {
 		t.Fatal("portal retained caller-owned cookie settings")
 	}
 	previous := portal.CookieConfig
-	for _, invalid := range []*cookie.Config{nil, {OIDCSessionIDCookieName: "invalid name"}, {Domains: map[string]*cookie.DomainConfig{"example.test": nil}}} {
+	for _, invalid := range []*cookie.Config{nil, {AccessTokenCookieName: "__Host-ACCESS", Path: "/auth"}, {SessionIDCookieName: "__Secure-SESSION", Insecure: true}, {OIDCSessionIDCookieName: "invalid name"}, {Domains: map[string]*cookie.DomainConfig{"example.test": nil}}} {
 		if portal.ConfigureCookies(invalid) == nil || portal.CookieConfig != previous {
 			t.Fatal("failed application changed the portal")
 		}

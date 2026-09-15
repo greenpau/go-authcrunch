@@ -594,6 +594,9 @@ func (p *Portal) configureIdentityProviderLogin() error {
 	)
 
 	for _, provider := range p.identityProviders {
+		if err := p.cookie.ValidateIdentityTokenCookieName(provider.GetIdentityTokenCookieName()); err != nil {
+			return fmt.Errorf("identity provider cookie: %w", err)
+		}
 		icon := provider.GetLoginIcon()
 		icon.SetRealm(provider.GetRealm())
 		switch provider.GetKind() {

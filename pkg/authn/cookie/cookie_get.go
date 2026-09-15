@@ -95,7 +95,7 @@ func (f *Factory) GetRefererCookie(basePath string, v string) string {
 	sb.WriteString("=")
 	sb.WriteString(v)
 	sb.WriteString(";")
-	basePath = strings.TrimSuffix(basePath, "/")
+	basePath = portalCookiePath(basePath)
 	sb.WriteString(" Path=")
 	sb.WriteString(basePath)
 	sb.WriteString(";")
@@ -109,8 +109,13 @@ func (f *Factory) GetRefererCookie(basePath string, v string) string {
 	return sb.String()
 }
 
-// GetRefreshTokenCookie returns raw refresh token cookie string from key-value input.
+// GetRefreshTokenCookie returns a legacy refresh cookie at api/refresh_token.
+// It returns an empty string for __Host- names, which cannot use this path.
+// Active opaque refresh cookies are issued separately at their configured mount.
 func (f *Factory) GetRefreshTokenCookie(basePath string, v string) string {
+	if strings.HasPrefix(strings.ToLower(f.RefreshTokenCookieName), "__host-") {
+		return ""
+	}
 	var sb strings.Builder
 	sb.WriteString(f.RefreshTokenCookieName)
 	sb.WriteString("=")
@@ -139,7 +144,7 @@ func (f *Factory) GetSandboxIDCookie(basePath string, v string) string {
 	sb.WriteString("=")
 	sb.WriteString(v)
 	sb.WriteString(";")
-	basePath = strings.TrimSuffix(basePath, "/")
+	basePath = portalCookiePath(basePath)
 	sb.WriteString(" Path=")
 	sb.WriteString(basePath)
 	sb.WriteString(";")

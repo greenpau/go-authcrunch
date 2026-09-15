@@ -267,7 +267,9 @@ func (p *Portal) deliverRefreshCookies(w http.ResponseWriter, r *http.Request, t
 	}
 	c := p.config.RefreshTokens
 	http.SetCookie(w, &http.Cookie{Name: p.cookie.RefreshTokenCookieName, Value: tokens.RefreshToken, Path: c.BasePath, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: time.Unix(tokens.RefreshExpiresAt, 0).UTC(), MaxAge: max(1, int(tokens.RefreshExpiresAt-time.Now().Unix()))})
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie(c.BasePath))
+	if legacy := p.cookie.GetDeleteRefreshTokenCookie(c.BasePath); legacy != "" {
+		w.Header().Add("Set-Cookie", legacy)
+	}
 	w.Header().Del("Authorization")
 	w.Header().Set("Cache-Control", "no-store")
 }
@@ -298,6 +300,8 @@ func (p *Portal) revokeRefreshOnLogin(ctx context.Context, w http.ResponseWriter
 	}
 	c := p.config.RefreshTokens
 	http.SetCookie(w, &http.Cookie{Name: p.cookie.RefreshTokenCookieName, Path: c.BasePath, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: time.Unix(0, 0).UTC(), MaxAge: -1})
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie(c.BasePath))
+	if legacy := p.cookie.GetDeleteRefreshTokenCookie(c.BasePath); legacy != "" {
+		w.Header().Add("Set-Cookie", legacy)
+	}
 	return nil
 }

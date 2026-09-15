@@ -72,7 +72,7 @@ func (p *Portal) configureRefresh() error {
 	if err := accessCookie.Valid(); err != nil {
 		return fmt.Errorf("invalid refresh access cookie configuration: %w", err)
 	}
-	if strings.HasPrefix(accessCookie.Name, "__Host-") && (accessCookie.Path != "/" || accessCookie.Domain != "") {
+	if strings.HasPrefix(strings.ToLower(accessCookie.Name), "__host-") && (accessCookie.Path != "/" || accessCookie.Domain != "") {
 		return fmt.Errorf("__Host- access cookies require root path and no domain")
 	}
 	store, err := tokenrefresh.NewMemoryStore(c.MaxSessions, c.MaxRotations)

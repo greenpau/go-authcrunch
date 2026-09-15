@@ -82,7 +82,7 @@ func NewProvider(config *Config, verifier IdentityVerifier, options Options) (*P
 		if err := (&http.Cookie{Name: name}).Valid(); err != nil {
 			return nil, fmt.Errorf("invalid oidc cookie name: %w", err)
 		}
-		if strings.HasPrefix(name, "__Host-") && o.mount != "" {
+		if strings.HasPrefix(strings.ToLower(name), "__host-") && o.mount != "" {
 			return nil, fmt.Errorf("__Host- oidc cookies require a root issuer path")
 		}
 	}

@@ -61,6 +61,12 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 	case r.URL.Path == "/auth":
 		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
 		rr.Upstream.BasePath = "/auth/"
+	case strings.Contains(r.URL.Path, "/api/"):
+		// Match ServeHTTP's dispatch order before endpoint suffixes such as
+		// /logout or /profile can be mistaken for the portal mount.
+		extractBaseURLPath(ctx, r, rr, "/api/")
+	case strings.Contains(r.URL.Path, "/qrcode/"):
+		extractBaseURLPath(ctx, r, rr, "/qrcode/")
 	case strings.Contains(r.URL.Path, "/profile/"):
 		extractBaseURLPath(ctx, r, rr, "/profile")
 	case strings.HasSuffix(r.URL.Path, "/portal"):
@@ -69,20 +75,30 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 		extractBaseURLPath(ctx, r, rr, "/sandbox/")
 	case strings.HasSuffix(r.URL.Path, "/recover"), strings.HasSuffix(r.URL.Path, "/forgot"):
 		extractBaseURLPath(ctx, r, rr, "/recover,/forgot")
-	case strings.HasSuffix(r.URL.Path, "/register"):
+	case strings.HasSuffix(r.URL.Path, "/register"), strings.Contains(r.URL.Path, "/register/"):
 		extractBaseURLPath(ctx, r, rr, "/register")
 	case strings.HasSuffix(r.URL.Path, "/whoami"):
 		extractBaseURLPath(ctx, r, rr, "/whoami")
+	case strings.Contains(r.URL.Path, "/apps/sso"), strings.Contains(r.URL.Path, "/apps/mobile-access"):
+		extractBaseURLPath(ctx, r, rr, "/apps/")
+	case strings.Contains(r.URL.Path, "/barcode/mfa/"):
+		extractBaseURLPath(ctx, r, rr, "/barcode/mfa/")
 	case strings.Contains(r.URL.Path, "/saml/"):
 		extractBaseURLPath(ctx, r, rr, "/saml/")
 	case strings.Contains(r.URL.Path, "/oauth2/"):
 		extractBaseURLPath(ctx, r, rr, "/oauth2/")
-	case strings.HasSuffix(r.URL.Path, "/basic/login"):
+	case strings.HasSuffix(r.URL.Path, "/basic/login"), strings.Contains(r.URL.Path, "/basic/login/"):
 		extractBaseURLPath(ctx, r, rr, "/basic/login")
 	case strings.HasSuffix(r.URL.Path, "/logout"):
 		extractBaseURLPath(ctx, r, rr, "/logout")
-	case strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon"):
+	case strings.Contains(r.URL.Path, "/assets/"):
 		extractBaseURLPath(ctx, r, rr, "/assets/")
+	case strings.Contains(r.URL.Path, "/favicon"):
+		extractBaseURLPath(ctx, r, rr, "/favicon")
+	case strings.HasSuffix(r.URL.Path, "/beacon"):
+		// Route namespaces take precedence: beacon can be a provider realm
+		// or resource name rather than the portal's beacon endpoint.
+		extractBaseURLPath(ctx, r, rr, "/beacon")
 	case strings.HasSuffix(r.URL.Path, "/login"):
 		extractBaseURLPath(ctx, r, rr, "/login")
 	case strings.HasPrefix(r.URL.Path, "/auth/"):

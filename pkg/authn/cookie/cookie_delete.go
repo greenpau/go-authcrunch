@@ -15,103 +15,63 @@
 package cookie
 
 import (
-	"fmt"
+	"net/http"
 	"strings"
+	"time"
 )
 
-// GetDeleteAccessTokenCookie returns raw cookie with attributes for delete action.
+// deletionCookie expires an issued cookie without changing its scope or security
+// attributes. Max-Age takes precedence over Expires, so both must expire it.
+func deletionCookie(raw string) string {
+	c, err := http.ParseSetCookie(raw)
+	if err != nil {
+		return ""
+	}
+	c.Value = "delete"
+	c.MaxAge = -1
+	c.Expires = time.Unix(0, 0).UTC()
+	return c.String()
+}
+
+// GetDeleteAccessTokenCookie expires the access cookie for the selected host.
 func (f *Factory) GetDeleteAccessTokenCookie(h string) string {
-	var sb strings.Builder
-	sb.WriteString(f.AccessTokenCookieName)
-	sb.WriteString("=delete;")
-	entry := f.evalHost(h)
-	if entry != nil && entry.Domain != "" {
-		sb.WriteString(fmt.Sprintf(" Domain=%s;", entry.Domain))
-	}
-
-	switch {
-	case entry != nil && entry.Path != "":
-		sb.WriteString(fmt.Sprintf(" Path=%s;", entry.Path))
-	case f.config.Path != "":
-		sb.WriteString(fmt.Sprintf(" Path=%s;", f.config.Path))
-	default:
-		sb.WriteString(" Path=/;")
-	}
-
-	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
-	return sb.String()
+	return deletionCookie(f.GetAccessTokenCookie(h, "delete"))
 }
 
-// GetDeleteSessionIDCookie returns raw cookie with attributes for delete action
-// for session id cookie.
+// GetDeleteSessionIDCookie expires the session cookie for the selected host.
 func (f *Factory) GetDeleteSessionIDCookie(h string) string {
-	var sb strings.Builder
-	sb.WriteString(f.SessionIDCookieName)
-	sb.WriteString("=delete;")
-	entry := f.evalHost(h)
-	if entry != nil && entry.Domain != "" {
-		sb.WriteString(fmt.Sprintf(" Domain=%s;", entry.Domain))
-	}
-	sb.WriteString(" Path=/;")
-	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
-	return sb.String()
+	return deletionCookie(f.GetSessionIDCookie(h, "delete"))
 }
 
-// GetDeleteIdentityTokenCookie returns raw identity token cookie with attributes for delete action.
-func (f *Factory) GetDeleteIdentityTokenCookie(s, basePath string) string {
-	var sb strings.Builder
-	sb.WriteString(s)
-	sb.WriteString("=delete;")
-	if !strings.HasSuffix(basePath, "/") {
-		basePath = basePath + "/"
-	}
-	sb.WriteString(" Path=")
-	sb.WriteString(basePath)
-	sb.WriteString("whoami;")
-	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
-	return sb.String()
+// GetDeleteIdentityTokenCookie expires the provider-owned identity cookie name
+// at the same whoami path used by GetIdentityTokenCookie.
+func (f *Factory) GetDeleteIdentityTokenCookie(name, basePath string) string {
+	return deletionCookie(f.GetIdentityTokenCookie(basePath, name, "delete"))
 }
 
-// GetDeleteRefreshTokenCookie returns raw refresh token cookie with attributes for delete action.
+// GetDeleteRefreshTokenCookie expires the legacy refresh cookie. An empty result
+// means no compatible legacy scope exists: __Host- cookies cannot have the
+// legacy api/refresh_token path. Callers must omit empty headers and separately
+// expire the active refresh cookie at its configured mount.
 func (f *Factory) GetDeleteRefreshTokenCookie(basePath string) string {
-	var sb strings.Builder
-	sb.WriteString(f.RefreshTokenCookieName)
-	sb.WriteString("=delete;")
-	if !strings.HasSuffix(basePath, "/") {
-		basePath = basePath + "/"
+	if strings.HasPrefix(strings.ToLower(f.RefreshTokenCookieName), "__host-") {
+		return ""
 	}
-	sb.WriteString(" Path=")
-	sb.WriteString(basePath)
-	sb.WriteString("api/refresh_token;")
-	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
-	if strings.HasPrefix(f.RefreshTokenCookieName, "__Secure-") || strings.HasPrefix(f.RefreshTokenCookieName, "__Host-") {
-		sb.WriteString(" Secure; HttpOnly;")
+	raw := f.GetRefreshTokenCookie(basePath, "delete")
+	// Active refresh cookies always require Secure, even when ordinary portal
+	// cookies use insecure mode. Preserve the existing legacy prefix cleanup.
+	if strings.HasPrefix(strings.ToLower(f.RefreshTokenCookieName), "__secure-") && f.config.Insecure {
+		raw += " Secure; HttpOnly;"
 	}
-	return sb.String()
+	return deletionCookie(raw)
 }
 
-// GetDeleteSandboxIDCookie returns raw sandbox ID cookie with attributes for delete action.
+// GetDeleteSandboxIDCookie expires the sandbox cookie at the portal path.
 func (f *Factory) GetDeleteSandboxIDCookie(basePath string) string {
-	var sb strings.Builder
-	sb.WriteString(f.SandboxIDCookieName)
-	sb.WriteString("=delete;")
-	basePath = strings.TrimSuffix(basePath, "/")
-	sb.WriteString(" Path=")
-	sb.WriteString(basePath)
-	sb.WriteString(";")
-	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
-	return sb.String()
+	return deletionCookie(f.GetSandboxIDCookie(basePath, "delete"))
 }
 
-// GetDeleteRefererCookie returns raw sandbox ID cookie with attributes for delete action.
+// GetDeleteRefererCookie expires the referer cookie at the portal path.
 func (f *Factory) GetDeleteRefererCookie(basePath string) string {
-	var sb strings.Builder
-	sb.WriteString(f.RefererCookieName)
-	sb.WriteString("=delete;")
-	basePath = strings.TrimSuffix(basePath, "/")
-	sb.WriteString(" Path=")
-	sb.WriteString(basePath)
-	sb.WriteString(";")
-	sb.WriteString(" Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
-	return sb.String()
+	return deletionCookie(f.GetRefererCookie(basePath, "delete"))
 }

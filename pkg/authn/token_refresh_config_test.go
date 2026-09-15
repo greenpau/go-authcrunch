@@ -59,6 +59,7 @@ func TestTokenRefreshConfig(t *testing.T) {
 		{"backslash mount", func(c *TokenRefreshConfig) { c.BasePath = "/auth\\other" }},
 		{"cookie name", func(c *TokenRefreshConfig) { c.CookieName = "invalid name" }},
 		{"cookie injection", func(c *TokenRefreshConfig) { c.CookieName = "INVALID;domain=example.test" }},
+		{"mixed-case host prefix scoped path", func(c *TokenRefreshConfig) { c.CookieName = "__hOsT-refresh" }},
 		{"host prefix scoped path", func(c *TokenRefreshConfig) { c.CookieName = "__Host-refresh" }},
 		{"negative lifetime", func(c *TokenRefreshConfig) { c.AccessLifetimeSeconds = -1 }},
 		{"access exceeds absolute", func(c *TokenRefreshConfig) { c.AccessLifetimeSeconds = 40000 }},

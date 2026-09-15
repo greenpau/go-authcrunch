@@ -46,7 +46,9 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(p.cookie.IdentityTokenCookieName, rr.Upstream.BasePath))
 	}
 
-	w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefreshTokenCookie(rr.Upstream.BasePath))
+	if legacy := p.cookie.GetDeleteRefreshTokenCookie(rr.Upstream.BasePath); legacy != "" {
+		w.Header().Add("Set-Cookie", legacy)
+	}
 
 	h := addrutil.GetSourceHost(r)
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteAccessTokenCookie(h))

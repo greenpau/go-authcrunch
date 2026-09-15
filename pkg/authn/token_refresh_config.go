@@ -107,7 +107,7 @@ func (c *TokenRefreshConfig) validateCookieName(name string) error {
 	if err := (&http.Cookie{Name: name, Path: c.BasePath, Secure: true}).Valid(); err != nil {
 		return fmt.Errorf("invalid refresh cookie name: %w", err)
 	}
-	if strings.HasPrefix(name, "__Host-") && c.BasePath != "/" {
+	if strings.HasPrefix(strings.ToLower(name), "__host-") && c.BasePath != "/" {
 		return fmt.Errorf("__Host- refresh cookies require a root path")
 	}
 	return nil

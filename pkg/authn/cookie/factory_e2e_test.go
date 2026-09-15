@@ -108,7 +108,7 @@ func TestE2ECookieDomainPolicy(t *testing.T) {
 			}
 			request("app.example.test", "/auth/read", siblingStatus)
 			deleted := request("login.example.test", "/auth/delete", http.StatusOK).Cookies()
-			if len(deleted) != 1 || deleted[0].Name != issued[0].Name || deleted[0].Domain != issued[0].Domain || deleted[0].Path != issued[0].Path {
+			if len(deleted) != 1 || deleted[0].Name != issued[0].Name || deleted[0].Domain != issued[0].Domain || deleted[0].Path != issued[0].Path || deleted[0].Secure != issued[0].Secure || deleted[0].HttpOnly != issued[0].HttpOnly || deleted[0].SameSite != issued[0].SameSite || deleted[0].MaxAge != -1 {
 				t.Fatal("deletion changed cookie scope")
 			}
 			request("login.example.test", "/auth/read", http.StatusUnauthorized)

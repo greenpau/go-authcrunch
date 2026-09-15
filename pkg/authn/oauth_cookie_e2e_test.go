@@ -23,8 +23,31 @@ import (
 	"testing"
 )
 
+func TestE2EOAuthBeaconRealmCookieMount(t *testing.T) {
+	for _, tc := range []struct{ name, mount, sandboxCookie string }{
+		{name: "root"},
+		{name: "root host cookie", sandboxCookie: "__Host-SANDBOX"},
+		{name: "nested", mount: "/tenant/auth"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			issuer := newOIDCE2EIssuer(t, "Ed25519", "opaque", "", false)
+			portal := newOIDCE2EPortal(t, issuer, tc.mount, "HS512", "discovery", oidcE2ETrustConfig{realm: "beacon", sandboxCookie: tc.sandboxCookie})
+			if status, _ := portal.get(t, "/protected", ""); status != http.StatusFound {
+				t.Fatalf("unauthenticated resource returned HTTP %d", status)
+			}
+			token, _ := portal.login(t, http.StatusSeeOther)
+			if token == "" {
+				t.Fatal("OAuth login omitted the portal token")
+			}
+			if status, body := portal.get(t, "/protected", token); status != http.StatusOK || string(body) != "protected-resource" {
+				t.Fatalf("authenticated resource returned HTTP %d, matching body %t", status, string(body) == "protected-resource")
+			}
+		})
+	}
+}
+
 func TestE2EOAuthIdentityCookieNames(t *testing.T) {
-	for _, tc := range []struct{ setting, name string }{{"default", "AUTHP_ID_TOKEN"}, {"UPSTREAM_IDENTITY", "UPSTREAM_IDENTITY"}} {
+	for _, tc := range []struct{ setting, name string }{{"default", "AUTHP_ID_TOKEN"}, {"UPSTREAM_IDENTITY", "UPSTREAM_IDENTITY"}, {"__Secure-UPSTREAM_IDENTITY", "__Secure-UPSTREAM_IDENTITY"}} {
 		t.Run(tc.setting, func(t *testing.T) {
 			issuer := newOIDCE2EIssuer(t, "Ed25519", "opaque", "", false)
 			portal := newOIDCE2EPortal(t, issuer, "/auth", "HS512", "discovery", oidcE2ETrustConfig{identityCookie: tc.setting})
@@ -82,7 +105,7 @@ func TestE2EOAuthIdentityCookieNames(t *testing.T) {
 			response.Body.Close()
 			deleted := false
 			for _, c := range response.Cookies() {
-				if c.Name == tc.name && c.Path == identityCookie.Path && c.Expires.Year() == 1970 {
+				if c.Name == tc.name && c.Path == identityCookie.Path && c.Expires.Year() == 1970 && c.Secure == identityCookie.Secure && c.HttpOnly == identityCookie.HttpOnly && c.Domain == identityCookie.Domain && c.MaxAge == -1 {
 					deleted = true
 				}
 			}

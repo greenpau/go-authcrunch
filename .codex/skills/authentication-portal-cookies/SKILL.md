@@ -44,10 +44,34 @@ Do not introduce feature-specific hashed names or mandatory `__Host-` or
 `__Secure-` prefixes. Such names are explicit compatibility configurations;
 required attributes remain enforced independently of naming.
 
-`Config.Validate` applies defaults, validates names/collisions and paths/domains,
-and normalizes SameSite. Invalid common configuration fails before feature
+`Config.Validate` applies defaults, validates names/collisions, paths/domains,
+and reserved-prefix compatibility, and normalizes SameSite. Invalid common configuration fails before feature
 runtime creation. Domain-level `strip domain enabled` keeps domain selection
 but emits host-only attributes; issuance and deletion must use matching scope.
+
+## Issuance and Deletion
+
+Deletion helpers derive scope and security attributes from their matching issuance
+helpers, then set a past `Expires` and `Max-Age=0` (`http.Cookie.MaxAge = -1`).
+Keep name, host-only/Domain, Path, Secure, HttpOnly, and SameSite consistent.
+Deletion strings now use Go's standard cookie serialization; consumers should
+parse attributes instead of depending on attribute order or trailing semicolons.
+
+Reserved prefixes remain optional and are matched case-insensitively.
+`__Secure-` requires Secure; `__Host-` also requires no Domain and explicit
+`Path=/`. Validate configured scopes through `Config.Validate`; portal mounts
+through `Factory.ValidatePortalPath`; and provider-owned names through
+`Factory.ValidateIdentityTokenCookieName`. `Portal.ServeHTTP` validates the
+inferred portal mount before issuing ordinary portal cookies. A conflicting dynamic mount fails
+with HTTP 500 and no cookies, without silently widening paths or domains.
+The portal checks enabled upstream identity-cookie names during construction
+without changing the provider. See [reserved-prefix compatibility and logout](references/reserved-prefixes.md).
+
+`GetRefreshTokenCookie` and `GetDeleteRefreshTokenCookie` describe the retired
+`api/refresh_token` scope. They return an empty string for `__Host-` names;
+callers must omit empty headers. The active refresh runtime issues and deletes
+its cookie separately at its configured mount, including `/`. Do not emit an
+impossible legacy `__Host-` cookie or suppress active root-cookie deletion.
 
 ## Consumer Boundaries
 
@@ -60,6 +84,10 @@ Gatekeepers default to `AUTHP_SESSION_ID` and accept `AUTHP_ACCESS_TOKEN` along
 with the existing `access_token` and `jwt_access_token` token-source aliases.
 Set `PolicyConfig.SessionIDCookieName` and `AccessTokenCookieNames` to match a
 portal using overrides. Header/query aliases are not emitted cookie names.
+The aggregate `authcrunch.NewServer` discovers portal access-cookie names when
+a policy leaves `AccessTokenCookieNames` empty. Supply an explicit list, including
+an explicit default name when appropriate, to prevent cross-portal discovery.
+The cookie parser itself does not rewrite policies or other portals.
 
 Upstream OAuth identity cookies default to `AUTHP_ID_TOKEN`. A configured
 `oauth.Config.IdentityTokenCookieName` governs issuance, Whoami, and external
@@ -86,6 +114,12 @@ accepted by a gatekeeper in `pkg/authz/cookie_names_test.go`.
 `pkg/authn/cookie/factory_e2e_test.go` verifies configured domain stripping,
 path boundaries, sharing between subdomains, and matching deletion with a TLS
 listener and a public-suffix-aware cookie jar.
+`pkg/authn/cookie_browser_e2e_test.go` and its dependency-free CDP driver run
+actual Chrome with a temporary profile and a TLS test-certificate SPKI allowlist.
+They prove old deletion headers fail in a browser, then verify real local login,
+sandbox cleanup, gatekeeper access, path isolation, logout, and subsequent denial
+with default, custom, secure-prefixed, and host-prefixed names. Go's cookie jar
+alone does not enforce reserved prefixes and cannot establish that regression.
 
 ```sh
 make test TEST_DIR='./pkg/authn/cookie/... ./pkg/authn ./pkg/authz ./pkg/idp/oauth/parser' TEST='Cookie|TestFactory|TestPortalConfigureCookies|TestE2EOIDCProviderBrowserConsent|TestE2EOAuth|TestE2ETokenRefreshCookieLifecycle|ExampleNewCookie' COVERAGE_DIR='.coverage/cookie-directives'

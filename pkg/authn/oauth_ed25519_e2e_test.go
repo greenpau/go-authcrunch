@@ -236,10 +236,11 @@ type oidcE2EPortal struct {
 	server *httptest.Server
 	client *http.Client
 	base   string
+	realm  string
 	issuer *oidcE2EIssuer
 }
 
-type oidcE2ETrustConfig struct{ issuer, audience, identityCookie string }
+type oidcE2ETrustConfig struct{ issuer, audience, identityCookie, realm, sandboxCookie string }
 
 func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode string, trust ...oidcE2ETrustConfig) *oidcE2EPortal {
 	t.Helper()
@@ -248,7 +249,6 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 	t.Cleanup(server.Close)
 	var directives []string
 	add := func(args ...string) { directives = append(directives, cfgutil.EncodeArgs(args)) }
-	add("realm", "upstream")
 	add("driver", "generic")
 	add("client_id", oidcE2EClientID)
 	add("client_secret", oidcE2EClientSecret)
@@ -295,6 +295,10 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 		// Empty fields intentionally omit the corresponding directive.
 		settings = trust[0]
 	}
+	if settings.realm == "" {
+		settings.realm = "upstream"
+	}
+	add("realm", settings.realm)
 	if settings.issuer != "" {
 		add("issuer", settings.issuer)
 	}
@@ -350,6 +354,9 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 	}
 	cookies := cookie.NewConfig()
 	cookies.AccessTokenCookieName = "oauth_portal_token"
+	if settings.sandboxCookie != "" {
+		cookies.SandboxIDCookieName = settings.sandboxCookie
+	}
 	portalConfig := &authn.PortalConfig{Name: "oauth-e2e", IdentityStores: []string{"local"}, IdentityProviders: []string{"upstream"}, RawCryptoKeyStoreConfig: keys, CookieConfig: cookies}
 	if settings.identityCookie != "" {
 		// Identity-cookie consumers need permission to call the portal's Whoami.
@@ -393,7 +400,7 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 	// earlier cleanup also covers construction failures before the listener starts.
 	t.Cleanup(server.Close)
 	issuer.mu.Lock()
-	issuer.callback = server.URL + base + "/oauth2/upstream/authorization-code-callback"
+	issuer.callback = server.URL + base + "/oauth2/" + settings.realm + "/authorization-code-callback"
 	issuer.mu.Unlock()
 	pool := x509.NewCertPool()
 	pool.AddCert(server.Certificate())
@@ -401,7 +408,7 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 	transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}}
 	t.Cleanup(transport.CloseIdleConnections)
 	client := &http.Client{Transport: transport, Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return &oidcE2EPortal{server: server, client: client, base: base, issuer: issuer}
+	return &oidcE2EPortal{server: server, client: client, base: base, realm: settings.realm, issuer: issuer}
 }
 
 func (p *oidcE2EPortal) login(t *testing.T, want int) (string, http.Header) {
@@ -412,7 +419,7 @@ func (p *oidcE2EPortal) login(t *testing.T, want int) (string, http.Header) {
 		t.Fatal(err)
 	}
 	client.Jar = jar
-	location := p.server.URL + p.base + "/oauth2/upstream"
+	location := p.server.URL + p.base + "/oauth2/" + p.realm
 	for step := 0; step < 3; step++ {
 		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, location, nil)
 		if err != nil {

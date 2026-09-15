@@ -49,11 +49,17 @@ func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.R
 		rr.Response.Title = p.config.UI.Title
 	}
 	rr.Response.RedirectTokenName = p.cookie.RefererCookieName
-	switch {
-	case strings.HasSuffix(r.URL.Path, jwksPath):
+	if strings.HasSuffix(r.URL.Path, jwksPath) {
 		// Public discovery must precede session authorization, API routing,
 		// and content negotiation, including at nested portal mounts.
 		return p.handleHTTPJWKS(w, r)
+	}
+	extractBasePath(ctx, r, rr)
+	if err := p.cookie.ValidatePortalPath(rr.Upstream.BasePath); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return nil
+	}
+	switch {
 	case strings.Contains(r.URL.Path, "/api/"):
 		return p.handleAPI(ctx, w, r, rr)
 	case strings.Contains(r.URL.Path, "/qrcode/"):

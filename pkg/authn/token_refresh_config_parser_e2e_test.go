@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -211,6 +212,10 @@ func TestE2ETokenRefreshCookieLifecycle(t *testing.T) {
 		name, base, want, override string
 		directives                 []string
 	}{
+		{name: "host portal cookies at root", directives: []string{"cookie access token name __Host-ACCESS", "cookie session id name __Host-SESSION", "cookie referer name __Host-REFERER", "cookie sandbox id name __hOsT-SANDBOX", "cookie refresh token name __Host-REFRESH"}, want: "__Host-REFRESH"},
+		{name: "host root", directives: []string{"cookie refresh token name __Host-REFRESH"}, want: "__Host-REFRESH"},
+		{name: "mixed-case host root", directives: []string{"cookie refresh token name __hOsT-REFRESH"}, want: "__hOsT-REFRESH"},
+		{name: "secure nested", base: "/auth", directives: []string{"cookie refresh token name __Secure-REFRESH"}, want: "__Secure-REFRESH"},
 		{name: "default root", want: "AUTHP_REFRESH_TOKEN"},
 		{name: "default nested", base: "/auth", want: "AUTHP_REFRESH_TOKEN"},
 		{name: "custom prefix", base: "/tenant/auth", directives: []string{"cookie prefix TENANT"}, want: "TENANT_REFRESH_TOKEN"},
@@ -243,7 +248,9 @@ func TestE2ETokenRefreshCookieLifecycle(t *testing.T) {
 			}
 			// Existing route-scoped JWT cookies must be removed during login
 			// without deleting the new mount-scoped opaque credential.
-			jar.SetCookies(refreshURL, []*http.Cookie{{Name: tc.want, Value: "legacy-credential", Path: tc.base + "/api/refresh_token", Secure: true}})
+			if !strings.HasPrefix(strings.ToLower(tc.want), "__host-") {
+				jar.SetCookies(refreshURL, []*http.Cookie{{Name: tc.want, Value: "legacy-credential", Path: tc.base + "/api/refresh_token", Secure: true}})
+			}
 			begin, _ := f.browserRefreshRequest(t, "/login", apiauth.AuthRequest{Username: "keyadmin", Realm: "local"}, 200)
 			login, cookies := f.browserRefreshRequest(t, "/login", apiauth.AuthRequest{
 				Username: "keyadmin", Realm: "local", SandboxID: begin.SandboxID, SandboxSecret: begin.SandboxSecret,
