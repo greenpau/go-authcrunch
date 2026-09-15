@@ -37,7 +37,7 @@ func TestNewOIDCClientConfigFromDirectives(t *testing.T) {
 	}{
 		{
 			name:       "minimal block",
-			statements: []string{"redirect_uris " + callback},
+			statements: []string{"redirect_uri " + callback},
 			want:       oidc.ClientConfig{ClientName: "myapp", TokenEndpointAuthMethod: "client_secret_basic", RedirectURIs: []string{callback}, Scopes: []string{"openid", "profile", "email"}, RequirePKCE: true},
 		},
 		{
@@ -47,7 +47,8 @@ func TestNewOIDCClientConfigFromDirectives(t *testing.T) {
 				cfgutil.EncodeArgs([]string{"client_name", `My "quoted" application`}),
 				cfgutil.EncodeArgs([]string{"client_secret", secret}),
 				"token_endpoint_auth_method client_secret_post",
-				"redirect_uris " + callback + " https://app.example.test/other?registered=yes",
+				"redirect_uri " + callback,
+				"redirect_uri https://app.example.test/other?registered=yes",
 				"scopes openid email", "require_pkce off", "skip_consent on",
 			},
 			want: oidc.ClientConfig{ClientID: "stable-application-id", ClientName: `My "quoted" application`, ClientSecret: secret, TokenEndpointAuthMethod: "client_secret_post", RedirectURIs: []string{callback, "https://app.example.test/other?registered=yes"}, Scopes: []string{"openid", "email"}, SkipConsent: true},
@@ -56,7 +57,7 @@ func TestNewOIDCClientConfigFromDirectives(t *testing.T) {
 			name: "public client",
 			statements: []string{
 				"client_id desktop", "token_endpoint_auth_method none",
-				"redirect_uris http://127.0.0.1:8400/callback", "scopes openid", "require_pkce true", "skip_consent false",
+				"redirect_uri http://127.0.0.1:8400/callback", "scopes openid", "require_pkce true", "skip_consent false",
 			},
 			want: oidc.ClientConfig{ClientID: "desktop", ClientName: "myapp", TokenEndpointAuthMethod: "none", RedirectURIs: []string{"http://127.0.0.1:8400/callback"}, Scopes: []string{"openid"}, RequirePKCE: true},
 		},
@@ -94,8 +95,10 @@ func TestNewOIDCClientConfigFromDirectives(t *testing.T) {
 				cfgutil.EncodeArgs([]string{"client_id", client.ClientID}),
 				cfgutil.EncodeArgs([]string{"client_name", client.ClientName}),
 				cfgutil.EncodeArgs([]string{"token_endpoint_auth_method", client.TokenEndpointAuthMethod}),
-				cfgutil.EncodeArgs(append([]string{"redirect_uris"}, client.RedirectURIs...)),
 				cfgutil.EncodeArgs(append([]string{"scopes"}, client.Scopes...)),
+			}
+			for _, uri := range client.RedirectURIs {
+				statements = append(statements, cfgutil.EncodeArgs([]string{"redirect_uri", uri}))
 			}
 			if client.ClientSecret != "" {
 				statements = append(statements, cfgutil.EncodeArgs([]string{"client_secret", client.ClientSecret}))
@@ -144,9 +147,9 @@ func TestNewOIDCClientConfigFromDirectivesErrors(t *testing.T) {
 		{"short secret", []string{"client_secret short"}, "oidc client secrets require 32 to 1024 bytes"},
 		{"unsupported method", []string{"token_endpoint_auth_method private_key_jwt"}, "unsupported oidc token endpoint authentication method"},
 		{"public secret", []string{"token_endpoint_auth_method none", "client_secret value"}, "public oidc clients cannot have a secret"},
-		{"invalid redirect", []string{"redirect_uris http://app.example.test/callback"}, "oidc redirect_uri requires HTTPS or a public client's literal loopback address"},
-		{"duplicate redirect", []string{"redirect_uris https://app.example.test/callback https://app.example.test/callback"}, "oidc requires distinct redirect_uris"},
-		{"invalid scope", []string{"redirect_uris https://app.example.test/callback", "scopes openid admin"}, "unsupported oidc scope"},
+		{"invalid redirect", []string{"redirect_uri http://app.example.test/callback"}, "oidc redirect_uri requires HTTPS or a public client's literal loopback address"},
+		{"duplicate redirect", []string{"redirect_uri https://app.example.test/callback", "redirect_uri https://app.example.test/callback"}, "oidc requires distinct redirect_uris"},
+		{"invalid scope", []string{"redirect_uri https://app.example.test/callback", "scopes openid admin"}, "unsupported oidc scope"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			client, err := oidcparser.NewOIDCClientConfigFromDirectives("app", tc.statements)
@@ -186,7 +189,7 @@ func TestNewOIDCClientConfigFromDirectivesBooleans(t *testing.T) {
 		{"false", false}, {"no", false}, {"off", false}, {"0", false}, {"FALSE", false},
 	} {
 		t.Run(tc.value, func(t *testing.T) {
-			client, err := oidcparser.NewOIDCClientConfigFromDirectives("app", []string{"redirect_uris https://app.example.test/callback", "require_pkce " + tc.value, "skip_consent " + tc.value})
+			client, err := oidcparser.NewOIDCClientConfigFromDirectives("app", []string{"redirect_uri https://app.example.test/callback", "require_pkce " + tc.value, "skip_consent " + tc.value})
 			if err != nil || client.RequirePKCE != tc.want || client.SkipConsent != tc.want {
 				t.Fatal("directive did not follow repository boolean syntax")
 			}
@@ -195,7 +198,7 @@ func TestNewOIDCClientConfigFromDirectivesBooleans(t *testing.T) {
 }
 
 func TestNewOIDCClientConfigFromDirectivesIndependentRegistrations(t *testing.T) {
-	statements := []string{"redirect_uris https://app.example.test/callback"}
+	statements := []string{"redirect_uri https://app.example.test/callback"}
 	for i := range 16 {
 		t.Run(fmt.Sprintf("consumer %d", i), func(t *testing.T) {
 			t.Parallel()
@@ -212,7 +215,7 @@ func TestNewOIDCClientConfigFromDirectivesIndependentRegistrations(t *testing.T)
 			}
 			first.RedirectURIs[0] = "https://other.example.test/callback"
 			first.Scopes[0] = "email"
-			if !slices.Equal(second.RedirectURIs, []string{"https://app.example.test/callback"}) || !slices.Equal(second.Scopes, []string{"openid", "profile", "email"}) || statements[0] != "redirect_uris https://app.example.test/callback" {
+			if !slices.Equal(second.RedirectURIs, []string{"https://app.example.test/callback"}) || !slices.Equal(second.Scopes, []string{"openid", "profile", "email"}) || statements[0] != "redirect_uri https://app.example.test/callback" {
 				t.Fatal("independent consumers share mutable parser state")
 			}
 		})

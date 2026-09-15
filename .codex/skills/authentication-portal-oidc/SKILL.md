@@ -129,9 +129,16 @@ credentials. Embedders persist generated registrations and signing keys before
 starting the provider, then reuse them on reload. `AddClient` validates and copies
 the registration, rejects duplicate IDs, and does not mutate running providers.
 `parser.NewOIDCClientConfigFromDirectives` is also a provisioning entry point:
-omitted credentials are generated. It accepts single-value fields, multi-value
-`redirect_uris`/`scopes`, and `cfgutil.ParseBoolArg` booleans. It rejects duplicate or
-unknown directives and never includes raw statements or values in errors.
+omitted credentials are generated. It accepts repeatable `redirect_uri <uri>`
+statements, single-value scalar fields, a single multi-value `scopes` statement,
+and `cfgutil.ParseBoolArg` booleans. Each callback statement has exactly one URI
+and appends in declaration order. The `redirect_uris` directive is rejected,
+including mixed singular/plural input; the native JSON/XML/YAML collection keeps
+that plural name. One callback per statement makes individual registrations
+easier to review, add, and remove without rewriting a packed list. This grammar
+is owned by the shared parser so embedders do not implement competing list
+semantics. Duplicate callback values and duplicate nonrepeatable settings still
+fail. Errors never include raw statements or values.
 For repeated configuration adaptation, use
 `NewOAuthApplicationConfigFromDirectives`: credentials must be explicit or
 restored from a valid registration with the same nickname. Only credentials are
@@ -219,7 +226,11 @@ access tokens authorize UserInfo. No OIDC refresh tokens are issued.
 duplicate rejection, private-key format, file permissions, and concurrent creation.
 `parser/client_test.go` and `parser/example_test.go` cover the separate public
 parser, quoting, arity, boolean compatibility, error redaction, concurrent reuse,
-and stable adaptation with persisted credentials.
+and stable adaptation with persisted credentials. `parser/redirect_test.go`
+checks repeated single-URI statements through both public constructors, rejects
+plural/mixed forms and malformed later statements, and preserves exact callback
+order and serialized arrays. Reloads replace the callback list without mutating
+persisted registrations or inheriting removed callbacks.
 `application_test.go` covers named registration snapshots and JSON/XML/YAML
 roundtrips. `parser/application_test.go` and `parser/application_example_test.go`
 cover header recognition, shared field parsing, restored/explicit credentials,
@@ -246,7 +257,12 @@ and exercises all three client authentication methods through root configuration
 real TLS local-user login, PKCE exchange, independently verified ID tokens, and
 UserInfo. It persists credentials and dedicated keys in temporary files, repeats
 adaptation after reopening storage, rejects old secrets after explicit rotation,
-reloads the rotated secret, and rejects unselected applications. Runtime sessions
+reloads the rotated secret, and rejects unselected applications. It exchanges
+through both separately declared callbacks after each reload and rejects an
+unregistered callback variation before redirecting, including equivalent host,
+port, and path/query encodings. It checks the response destination and query
+values, binds each code to its authorized callback, and tests unselected clients
+with their own registered callback on every reload. Runtime sessions
 and grants remain process-local even when client credentials survive reloads.
 `pkg/authn/oidc_config_parser_e2e_test.go` checks discovery, selected clients,
 session/token lifetimes, all three capacity limits, and disabled routing through

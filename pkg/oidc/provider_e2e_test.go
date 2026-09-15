@@ -101,7 +101,7 @@ func TestE2EStandaloneProvider(t *testing.T) {
 			verifier := &standaloneIdentityVerifier{}
 			registration, err := oidcparser.NewOIDCClientConfigFromDirectives("Standalone application", []string{
 				"token_endpoint_auth_method " + tc.method,
-				"redirect_uris https://rp.example.test/callback",
+				"redirect_uri https://rp.example.test/callback",
 				"scopes openid profile email",
 			})
 			if err != nil {

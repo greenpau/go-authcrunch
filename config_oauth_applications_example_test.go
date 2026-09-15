@@ -28,7 +28,7 @@ func ExampleConfig_ConfigureOIDCProvider() {
 	application, err := oidcparser.NewOAuthApplicationConfigFromDirectives(
 		cfgutil.EncodeArgs([]string{"oauth", "application", "desktop"}), []string{
 			"client_id desktop-client", "token_endpoint_auth_method none",
-			"redirect_uris http://127.0.0.1:8400/callback",
+			"redirect_uri http://127.0.0.1:8400/callback",
 		}, nil)
 	if err != nil {
 		panic(err)

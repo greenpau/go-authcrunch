@@ -33,7 +33,7 @@ import (
 func oauthApplicationTestConfig(t *testing.T) *oidc.OAuthApplicationConfig {
 	t.Helper()
 	application, err := oidcparser.NewOAuthApplicationConfigFromDirectives("oauth application web", []string{
-		"client_id protocol-id", "client_secret " + strings.Repeat("s", 32), "redirect_uris https://app.example.test/callback",
+		"client_id protocol-id", "client_secret " + strings.Repeat("s", 32), "redirect_uri https://app.example.test/callback",
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +114,7 @@ func TestConfigOAuthApplicationSerialization(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			adapted, err := oidcparser.NewOAuthApplicationConfigFromDirectives("oauth application web", []string{"redirect_uris https://app.example.test/callback"}, previous)
+			adapted, err := oidcparser.NewOAuthApplicationConfigFromDirectives("oauth application web", []string{"redirect_uri https://app.example.test/callback"}, previous)
 			if err != nil {
 				t.Fatal(err)
 			}

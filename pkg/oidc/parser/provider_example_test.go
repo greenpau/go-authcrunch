@@ -26,7 +26,7 @@ func ExampleNewOIDCProviderConfigFromDirectives() {
 	application, err := oidcparser.NewOIDCClientConfigFromDirectives("desktop", []string{
 		"client_id desktop-app",
 		"token_endpoint_auth_method none",
-		"redirect_uris http://127.0.0.1:8400/callback",
+		"redirect_uri http://127.0.0.1:8400/callback",
 	})
 	if err != nil {
 		fmt.Println(err)

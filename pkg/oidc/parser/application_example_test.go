@@ -23,7 +23,10 @@ import (
 )
 
 func ExampleNewOAuthApplicationConfigFromDirectives() {
-	body := []string{cfgutil.EncodeArgs([]string{"redirect_uris", "https://app.example.com/callback"})}
+	body := []string{
+		cfgutil.EncodeArgs([]string{"redirect_uri", "https://app.example.com/callback"}),
+		cfgutil.EncodeArgs([]string{"redirect_uri", "https://app.example.com/other/callback"}),
+	}
 	// Provision once. Store this registration privately before using the provider;
 	// a later adaptation loads it from the embedding application's secret store.
 	client, err := oidcparser.NewOIDCClientConfigFromDirectives("website", body)

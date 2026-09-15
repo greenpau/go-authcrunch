@@ -59,7 +59,7 @@ func TestOIDCProviderDirectiveConfigurationDispatch(t *testing.T) {
 				statements = append(statements, tc.state)
 			}
 			registration, err := oidcparser.NewOIDCClientConfigFromDirectives("desktop", []string{
-				"client_id desktop-client", "token_endpoint_auth_method none", "redirect_uris http://127.0.0.1:8400/callback",
+				"client_id desktop-client", "token_endpoint_auth_method none", "redirect_uri http://127.0.0.1:8400/callback",
 			})
 			if err != nil {
 				t.Fatal(err)

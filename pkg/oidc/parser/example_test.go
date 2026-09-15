@@ -24,7 +24,8 @@ func ExampleNewOIDCClientConfigFromDirectives() {
 	client, err := oidcparser.NewOIDCClientConfigFromDirectives("myapp", []string{
 		"client_id myapp",
 		`client_name "My application"`,
-		"redirect_uris https://app.example.com/oidc/callback https://app.example.com/other/callback",
+		"redirect_uri https://app.example.com/oidc/callback",
+		"redirect_uri https://app.example.com/other/callback",
 		"scopes openid profile email",
 		"require_pkce yes",
 	})

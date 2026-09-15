@@ -29,7 +29,7 @@ import (
 func TestOIDCNativeLoopbackRegistration(t *testing.T) {
 	for _, raw := range []string{"http://127.0.0.1/callback?q=a%20b", "http://[::1]:1/callback?", "http://127.0.0.1:65535/c%61llback"} {
 		t.Run(raw, func(t *testing.T) {
-			statements := []string{"client_id native", "token_endpoint_auth_method none", cfgutil.EncodeArgs([]string{"redirect_uris", raw})}
+			statements := []string{"client_id native", "token_endpoint_auth_method none", cfgutil.EncodeArgs([]string{"redirect_uri", raw})}
 			original := slices.Clone(statements)
 			client, err := oidcparser.NewOIDCClientConfigFromDirectives("desktop", statements)
 			if err != nil {
@@ -50,7 +50,7 @@ func TestOIDCNativeLoopbackRegistration(t *testing.T) {
 	}
 	for _, raw := range []string{"http://127.0.0.1:/callback", "http://127.0.0.1:0/callback", "http://[::1]:65536/callback", "http://127.0.0.1:abc/callback", "http://localhost:43111/callback", "http://[::1%25zone]:43111/callback", "http://user@127.0.0.1:43111/callback", "http://127.0.0.1:43111/callback#"} {
 		t.Run(raw, func(t *testing.T) {
-			client, err := oidcparser.NewOIDCClientConfigFromDirectives("desktop", []string{"token_endpoint_auth_method none", cfgutil.EncodeArgs([]string{"redirect_uris", raw})})
+			client, err := oidcparser.NewOIDCClientConfigFromDirectives("desktop", []string{"token_endpoint_auth_method none", cfgutil.EncodeArgs([]string{"redirect_uri", raw})})
 			if err == nil || client != nil {
 				t.Fatal("invalid callback registration returned a partial client")
 			}
@@ -61,7 +61,8 @@ func TestOIDCNativeLoopbackRegistration(t *testing.T) {
 func ExampleNewOIDCClientConfigFromDirectives_loopback() {
 	client, err := oidcparser.NewOIDCClientConfigFromDirectives("Desktop app", []string{
 		"client_id desktop", "token_endpoint_auth_method none",
-		"redirect_uris http://127.0.0.1/callback http://[::1]/callback",
+		"redirect_uri http://127.0.0.1/callback",
+		"redirect_uri http://[::1]/callback",
 	})
 	if err != nil {
 		panic(err)

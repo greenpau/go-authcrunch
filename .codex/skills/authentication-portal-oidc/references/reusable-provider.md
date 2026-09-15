@@ -210,7 +210,7 @@ if err != nil {
 application, err := oidcparser.NewOAuthApplicationConfigFromDirectives(
     cfgutil.EncodeArgs([]string{"oauth", "application", "website"}),
     []string{
-        "redirect_uris https://app.example.com/callback",
+        "redirect_uri https://app.example.com/callback",
         "scopes openid profile email",
     }, previous,
 )
@@ -259,7 +259,8 @@ oauth application myapp {
     client_id myapp
     client_name "My application"
     client_secret <persisted-client-secret>
-    redirect_uris https://app.example.com/oidc/callback https://app.example.com/other/callback
+    redirect_uri https://app.example.com/oidc/callback
+    redirect_uri https://app.example.com/other/callback
     scopes openid profile email
     require_pkce yes
     skip_consent no
@@ -274,7 +275,8 @@ and body statements:
 client, err := oidcparser.NewOIDCClientConfigFromDirectives("myapp", []string{
     "client_id myapp",
     `client_name "My application"`,
-    "redirect_uris https://app.example.com/oidc/callback https://app.example.com/other/callback",
+    "redirect_uri https://app.example.com/oidc/callback",
+    "redirect_uri https://app.example.com/other/callback",
     "scopes openid profile email",
     "require_pkce yes",
 })
@@ -300,7 +302,7 @@ and this change does not install the outer `oauth application` Caddyfile grammar
 | `client_name` | One display name; defaults to the block nickname. |
 | `client_secret` | One secret; generated for confidential clients if omitted. |
 | `token_endpoint_auth_method` | One of `client_secret_basic` (default), `client_secret_post`, or `none`. |
-| `redirect_uris` | One or more callback URIs; required. Exact matching except the authorization port for public HTTP literal-loopback clients. |
+| `redirect_uri` | Exactly one callback URI per statement; repeat to append in declaration order. At least one is required. Exact matching except the authorization port for public HTTP literal-loopback clients. |
 | `scopes` | One or more scopes; defaults to `openid profile email`. |
 | `require_pkce` | One boolean; defaults to true; public clients cannot disable it. |
 | `skip_consent` | One boolean; defaults to false. |
@@ -313,8 +315,15 @@ other URI bytes. Token exchange must repeat the actual authorized URI exactly.
 Use `configuration-and-clients.md` for the callback and CORS boundaries.
 
 Booleans follow `cfgutil.ParseBoolArg`: true/yes/on/1 and false/no/off/0,
-case-insensitively. Each directive may occur once. Put multiple list values on
-one line. Unknown directives, wrong argument counts, empty supplied values,
+case-insensitively. Only `redirect_uri` may repeat; each occurrence takes exactly
+one URI. `scopes` takes multiple values on one line and may occur once.
+`redirect_uris` is not an alias: reject it even when mixed with singular
+statements. The JSON/XML/YAML `redirect_uris` array and typed `RedirectURIs`
+field remain unchanged, preserving stored registrations. One callback per
+statement lets reviewers inspect, add, or remove one registration independently;
+keep that append behavior in this reusable parser, not in each embedding host.
+Do not trim, normalize, deduplicate, or reorder callback values. Duplicate URIs
+remain typed-validation errors. Unknown directives, wrong argument counts, empty supplied values,
 invalid quoting, and embedded newlines fail without echoing credential values.
 An explicit empty secret or ID is an error; omission requests generation only
 in the provisioning constructor. The named application adaptation API restores

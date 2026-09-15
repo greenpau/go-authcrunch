@@ -62,7 +62,7 @@ func TestE2EStandaloneNativeLoopback(t *testing.T) {
 			t.Cleanup(server.Close)
 			origin := "https://" + server.Listener.Addr().String()
 			issuer := origin + "/auth"
-			registration, err := oidcparser.NewOIDCClientConfigFromDirectives("native", []string{"client_id native", "token_endpoint_auth_method none", "skip_consent true", cfgutil.EncodeArgs([]string{"redirect_uris", registered})})
+			registration, err := oidcparser.NewOIDCClientConfigFromDirectives("native", []string{"client_id native", "token_endpoint_auth_method none", "skip_consent true", cfgutil.EncodeArgs([]string{"redirect_uri", registered})})
 			if err != nil {
 				t.Fatal(err)
 			}

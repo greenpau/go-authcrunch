@@ -128,7 +128,7 @@ func newServerCompositionFixture(t *testing.T, custom bool, configure ...func(*a
 	if custom {
 		f.cookies = []string{"cookie prefix COMPANY", "cookie oidc session id name WEB_OIDC_SESSION", "cookie refresh token name WEB_REFRESH"}
 	}
-	f.body = []string{"redirect_uris https://application.example.test/callback", "scopes openid profile email", "require_pkce on", "skip_consent on"}
+	f.body = []string{"redirect_uri https://application.example.test/callback", "scopes openid profile email", "require_pkce on", "skip_consent on"}
 	provisioned, err := oidcparser.NewOIDCClientConfigFromDirectives("website", f.body)
 	if err != nil {
 		t.Fatal(err)

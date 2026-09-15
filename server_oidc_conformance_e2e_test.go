@@ -69,7 +69,7 @@ func foundationApplications(t *testing.T, callback string) ([]*oidc.OAuthApplica
 		if name == "client_secret_post" {
 			method = name
 		}
-		client, err := oidcparser.NewOIDCClientConfigFromDirectives(name, []string{cfgutil.EncodeArgs([]string{"redirect_uris", callback}), "token_endpoint_auth_method " + method, "scopes openid profile email", "require_pkce off"})
+		client, err := oidcparser.NewOIDCClientConfigFromDirectives(name, []string{cfgutil.EncodeArgs([]string{"redirect_uri", callback}), "token_endpoint_auth_method " + method, "scopes openid profile email", "require_pkce off"})
 		if err != nil {
 			t.Fatal(err)
 		}

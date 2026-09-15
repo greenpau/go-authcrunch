@@ -52,7 +52,7 @@ func TestNewOAuthApplicationConfigFromDirectives(t *testing.T) {
 		{"change to public", []string{"token_endpoint_auth_method none"}, previous, "protocol-id", "", "none", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			statements := append([]string{"redirect_uris " + callback}, tc.statements...)
+			statements := append([]string{"redirect_uri " + callback}, tc.statements...)
 			application, err := oidcparser.NewOAuthApplicationConfigFromDirectives(header, statements, tc.persisted)
 			if err != nil {
 				t.Fatal(err)
@@ -106,7 +106,7 @@ func TestOAuthApplicationDirectiveRejections(t *testing.T) {
 		{"missing current redirects", "oauth application web", []string{"scopes openid"}, previous, "redirect_uris"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			body := append([]string{"redirect_uris https://app.example.test/callback"}, tc.body...)
+			body := append([]string{"redirect_uri https://app.example.test/callback"}, tc.body...)
 			if tc.name == "missing current redirects" {
 				body = tc.body
 			}
@@ -122,7 +122,7 @@ func TestOAuthApplicationDirectiveRejections(t *testing.T) {
 }
 
 func TestOAuthApplicationDirectivesConcurrentReload(t *testing.T) {
-	client, err := oidcparser.NewOIDCClientConfigFromDirectives("web", []string{"redirect_uris https://app.example.test/callback"})
+	client, err := oidcparser.NewOIDCClientConfigFromDirectives("web", []string{"redirect_uri https://app.example.test/callback"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestOAuthApplicationDirectivesConcurrentReload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	statements := []string{"redirect_uris https://changed.example.test/callback", "scopes openid"}
+	statements := []string{"redirect_uri https://changed.example.test/callback", "scopes openid"}
 	var workers sync.WaitGroup
 	for range 16 {
 		workers.Go(func() {
@@ -153,7 +153,7 @@ func TestOAuthApplicationDirectivesConcurrentReload(t *testing.T) {
 		})
 	}
 	workers.Wait()
-	if !reflect.DeepEqual(persisted, original) || statements[0] != "redirect_uris https://changed.example.test/callback" {
+	if !reflect.DeepEqual(persisted, original) || statements[0] != "redirect_uri https://changed.example.test/callback" {
 		t.Fatal("adaptation changed immutable inputs")
 	}
 }

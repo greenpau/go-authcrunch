@@ -27,6 +27,8 @@ import (
 // OIDC client field parser. Encode the header and each statement separately with
 // cfgutil.EncodeArgs; pass no braces. The embedding adapter owns block traversal
 // and placeholder expansion. Unknown headers and malformed bodies fail closed.
+// Repeat redirect_uri with exactly one callback per statement; the plural
+// redirect_uris directive is unsupported. Other fields occur at most once.
 //
 // Adaptation never generates credentials. Supply explicit client_id and, for a
 // confidential client, client_secret, or provide a persisted registration with
