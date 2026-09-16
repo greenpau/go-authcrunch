@@ -17,49 +17,51 @@ package acl
 import (
 	"regexp"
 	"strings"
+	"sync"
+	"unicode/utf8"
 )
 
-var pathACLPatterns map[string]*regexp.Regexp
+// Bound retained patterns across users and tokens. Patterns beyond the cache
+// capacity still receive the same authorization checks.
+const maxCachedPathACLPatterns = 1024
 
-func init() {
-	pathACLPatterns = make(map[string]*regexp.Regexp)
-}
+var pathACLPatterns = struct {
+	sync.RWMutex
+	entries map[string]*regexp.Regexp
+}{entries: make(map[string]*regexp.Regexp)}
 
-// MatchPathBasedACL matches pattern in a URI.
+// MatchPathBasedACL matches a literal path pattern with * and ** wildcards.
+// A wildcard matches one or more ASCII letters, digits, underscore, dot, tilde,
+// or hyphen; ** also spans slashes. All other pattern characters are literal.
+// Patterns and paths must be valid UTF-8: regexp treats malformed bytes as
+// U+FFFD, which would otherwise grant access to a different literal path.
 func MatchPathBasedACL(pattern, uri string) bool {
-	// First, handle the case where there are no wildcards
-	if pattern == "" {
+	if pattern == "" || !utf8.ValidString(pattern) || !utf8.ValidString(uri) {
 		return false
 	}
 	if !strings.Contains(pattern, "*") {
-		if pattern == uri {
-			return true
-		}
-		return false
+		return pattern == uri
 	}
 
-	// Next, handle the case where wildcards are present
-	var regex *regexp.Regexp
-	var found bool
-
-	// Check cached entries
-	regex, found = pathACLPatterns[pattern]
+	pathACLPatterns.RLock()
+	regex, found := pathACLPatterns.entries[pattern]
+	pathACLPatterns.RUnlock()
 	if !found {
-		// advPattern = strings.ReplaceAll(pattern, "/", "\\/")
-		advPattern := strings.ReplaceAll(pattern, "**", "[a-zA-Z0-9_/.~-]+")
-		advPattern = strings.ReplaceAll(advPattern, "*", "[a-zA-Z0-9_.~-]+")
-		advPattern = "^" + advPattern + "$"
-		r, err := regexp.Compile(advPattern)
+		// Quote before expanding wildcards. Regex punctuation in a path must
+		// never expand a token's grant to a different resource or tenant.
+		expression := regexp.QuoteMeta(pattern)
+		expression = strings.ReplaceAll(expression, `\*\*`, "[a-zA-Z0-9_/.~-]+")
+		expression = strings.ReplaceAll(expression, `\*`, "[a-zA-Z0-9_.~-]+")
+		var err error
+		regex, err = regexp.Compile("^" + expression + "$")
 		if err != nil {
-			pathACLPatterns[pattern] = nil
 			return false
 		}
-		pathACLPatterns[pattern] = r
-		regex = r
+		pathACLPatterns.Lock()
+		if len(pathACLPatterns.entries) < maxCachedPathACLPatterns {
+			pathACLPatterns.entries[pattern] = regex
+		}
+		pathACLPatterns.Unlock()
 	}
-	if regex == nil {
-		return false
-	}
-
 	return regex.MatchString(uri)
 }

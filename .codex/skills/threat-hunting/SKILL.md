@@ -183,6 +183,11 @@ operations before equating dependency maintenance debt with an exploit.
 
 ### 4. Hunt URL and Path Canonicalization
 
+Read [authorization path interpretations](references/authorization-paths.md)
+when reviewing or changing gatekeeper bypasses, method/path authorization, or
+JWT path claims. It owns the shared normalization contract, literal wildcard
+semantics, cache safety, and consumer regression fixtures.
+
 For any path-based auth, bypass, ACL, route, redirect, or upstream decision,
 verify the exact representation used at the moment of the security check.
 

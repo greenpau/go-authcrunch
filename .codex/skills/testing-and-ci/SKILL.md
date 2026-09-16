@@ -282,7 +282,11 @@ validation. The CLI subprocess is separate from the parent coverage profile.
 
 Authorization tests live under `pkg/authz`, including gatekeeper behavior,
 authentication requests, redirect handlers, cache behavior, options, and token
-validator sources. `pkg/authz/validator` and related tests use `httptest`,
+validator sources. Path normalization and JWT path-claim changes use the TLS
+consumer fixtures in `pkg/authz/path_e2e_test.go`; the
+[authorization path owner](../threat-hunting/references/authorization-paths.md)
+defines their adversarial matrix and unit/fuzz coverage.
+`pkg/authz/validator` and related tests use `httptest`,
 test crypto key stores, test users, ACL helpers, and exact source/match
 expectations.
 

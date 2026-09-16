@@ -218,7 +218,7 @@ func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *req
 		}
 	}
 
-	if err := v.guardian.authorize(ctx, r, usr); err != nil {
+	if err := v.authorizeRequest(ctx, r, usr); err != nil {
 		ar.Response.User = make(map[string]interface{})
 		if usr.Claims.ID != "" {
 			ar.Response.User["jti"] = usr.Claims.ID

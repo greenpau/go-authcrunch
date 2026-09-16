@@ -20,6 +20,8 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/authz/internal/uri"
 )
 
 type bypassMatchStrategy int
@@ -85,7 +87,21 @@ func cleanURIPath(s string) string {
 
 // Match matches HTTP URL to the bypass configuration.
 func Match(r *http.Request, cfgs []*Config) bool {
-	reqPath := cleanURIPath(r.URL.Path)
+	paths, valid := uri.RequestPaths(r)
+	if !valid {
+		return false
+	}
+	// A bypass must be valid at every decoding stage, including the path
+	// supplied by net/http. Decoding must never grant a new bypass.
+	for _, reqPath := range paths {
+		if !matchPath(reqPath, cfgs) {
+			return false
+		}
+	}
+	return true
+}
+
+func matchPath(reqPath string, cfgs []*Config) bool {
 	for _, cfg := range cfgs {
 		cfgURI := cfg.cleanURI
 		if cfgURI == "" {

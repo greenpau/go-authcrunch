@@ -15,7 +15,9 @@
 package bypass
 
 import (
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -106,5 +108,69 @@ func TestMatchCleansRequestPath(t *testing.T) {
 				t.Fatalf("Match() = %v, want %v; parsed path: %q", got, tc.want, req.URL.Path)
 			}
 		})
+	}
+}
+
+func TestMatchEncodedRequestPaths(t *testing.T) {
+	for _, tc := range []struct {
+		name, kind, uri, target string
+		want                    bool
+	}{
+		{"cleaning cannot grant bypass", "prefix", "/public/", "/admin/../public/file", false},
+		{"encoded cleaning cannot grant bypass", "prefix", "/public/", "/admin/%2e%2e/public/file", false},
+		{"clean before decode", "prefix", "/public/", "/public/a%252fb/../%252e%252e/admin", false},
+		{"double dots", "prefix", "/public/", "/public/%252e%252e/admin", false},
+		{"double slash", "prefix", "/public/", "/public/..%252fadmin", false},
+		{"triple dots", "prefix", "/public/", "/public/%25252e%25252e/admin", false},
+		{"private intermediate", "prefix", "/public/", "/public/%252e%252e/admin/%25252e%25252e/public/file", false},
+		{"decoding cannot grant bypass", "prefix", "/public/", "/private/%252e%252e/public/file", false},
+		{"partial", "partial", "/public/", "/public/%252e%252e/admin", false},
+		{"regex", "regex", "^/public/", "/public/%252e%252e/admin", false},
+		{"exact", "exact", "/public/%2e%2e/admin", "/public/%252e%252e/admin", false},
+		{"suffix", "suffix", "/%2e%2e/admin", "/public/%252e%252e/admin", false},
+		{"public child", "prefix", "/public/", "/public/assets/app.css", true},
+		{"public directory", "prefix", "/public/", "/public/", true},
+		{"exact directory", "exact", "/public/", "/public/", true},
+		{"regex directory", "regex", "^/public/$", "/public/", true},
+		{"suffix directory", "suffix", "/assets/", "/public/assets/", true},
+		{"ordinary escaped filename", "prefix", "/public/", "/public/%2541+file", true},
+		{"trailing encoded slash", "prefix", "/public/", "/public/assets%252f", true},
+		{"percent in query only", "prefix", "/public/", "/public/file?q=%25zz", true},
+		{"literal non-escape", "prefix", "/public/", "/public/%25zz", true},
+		{"literal percent", "prefix", "/public/", "/public/100%25", true},
+		{"malformed beside traversal", "prefix", "/public/", "/public/%25zz/%252e%252e/admin", false},
+		{"malformed cannot match broad rule", "regex", ".*", "/public/%25zz/%252e%252e/admin", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &Config{MatchType: tc.kind, URI: tc.uri}
+			if err := cfg.Validate(); err != nil {
+				t.Fatal(err)
+			}
+			r := httptest.NewRequest(http.MethodGet, tc.target, nil)
+			path, rawPath, requestURI := r.URL.Path, r.URL.RawPath, r.RequestURI
+			if got := Match(r, []*Config{cfg}); got != tc.want {
+				t.Fatalf("Match()=%t want=%t Path=%q RawPath=%q RequestURI=%q", got, tc.want, path, rawPath, requestURI)
+			}
+			if r.URL.Path != path || r.URL.RawPath != rawPath || r.RequestURI != requestURI {
+				t.Fatal("matching changed the request handed to the application")
+			}
+		})
+	}
+}
+
+func TestMatchRejectsUnresolvedPaths(t *testing.T) {
+	cfg := &Config{MatchType: "regex", URI: ".*"}
+	if err := cfg.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	target := "/public/%2e%2e/admin"
+	for range 5 {
+		target = strings.ReplaceAll(target, "%", "%25")
+	}
+	r := httptest.NewRequest(http.MethodGet, target, nil)
+	for _, req := range []*http.Request{nil, {}, r} {
+		if Match(req, []*Config{cfg}) {
+			t.Fatal("invalid or unresolved request was bypassed")
+		}
 	}
 }

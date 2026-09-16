@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
-	"path"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -27,6 +25,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz/cache"
+	"github.com/greenpau/go-authcrunch/pkg/authz/internal/uri"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
@@ -36,7 +35,7 @@ import (
 )
 
 type guardian interface {
-	authorize(context.Context, *http.Request, *user.User) error
+	authorize(context.Context, *http.Request, *user.User, string) error
 }
 
 type guardianBase struct {
@@ -90,34 +89,26 @@ type TokenValidator struct {
 	logger              *zap.Logger
 }
 
-const maxCanonicalPathDecodePasses = 4
-
-func canonicalRequestPath(r *http.Request) string {
-	if r == nil || r.URL == nil {
-		return "/"
+// authorizeRequest checks every path interpretation before accepting an
+// identity. The backend may stop decoding at any stage, including one that
+// traverses a protected path before a later stage returns to a public path.
+func (v *TokenValidator) authorizeRequest(ctx context.Context, r *http.Request, usr *user.User) error {
+	if !v.opts.ValidateMethodPath && !v.opts.ValidateAccessListPathClaim {
+		return v.guardian.authorize(ctx, r, usr, "")
 	}
-	return canonicalURLPath(r.URL.Path)
-}
-
-func canonicalURLPath(s string) string {
-	if s == "" {
-		return "/"
-	}
-	for i := 0; i < maxCanonicalPathDecodePasses; i++ {
-		decoded, err := url.PathUnescape(s)
-		if err != nil || decoded == s {
-			break
+	paths, valid := uri.RequestPaths(r)
+	if !valid {
+		if v.opts.ValidateMethodPath {
+			return errors.ErrAccessNotAllowed
 		}
-		s = decoded
+		return errors.ErrAccessNotAllowedByPathACL
 	}
-	cleaned := path.Clean(s)
-	if !strings.HasPrefix(cleaned, "/") {
-		cleaned = "/" + cleaned
+	for _, reqPath := range paths {
+		if err := v.guardian.authorize(ctx, r, usr, reqPath); err != nil {
+			return err
+		}
 	}
-	if strings.HasSuffix(s, "/") && cleaned != "/" {
-		cleaned += "/"
-	}
-	return cleaned
+	return nil
 }
 
 // NewTokenValidator returns an instance of TokenValidator
@@ -178,7 +169,7 @@ func (v *TokenValidator) GetSourcePriority() []string {
 	return v.tokenSources
 }
 
-func (g *guardianBase) authorize(ctx context.Context, r *http.Request, usr *user.User) error {
+func (g *guardianBase) authorize(ctx context.Context, r *http.Request, usr *user.User, _ string) error {
 	// Note: the cache was removed because authorize uses the same
 	// authorization endpoint. Previously, the endpoint was
 	// attached to a route.
@@ -191,7 +182,7 @@ func (g *guardianBase) authorize(ctx context.Context, r *http.Request, usr *user
 	return nil
 }
 
-func (g *guardianWithSrcAddr) authorize(ctx context.Context, r *http.Request, usr *user.User) error {
+func (g *guardianWithSrcAddr) authorize(ctx context.Context, r *http.Request, usr *user.User, _ string) error {
 	if userAllowed := g.accessList.Allow(ctx, usr.GetData()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
@@ -205,14 +196,13 @@ func (g *guardianWithSrcAddr) authorize(ctx context.Context, r *http.Request, us
 	return nil
 }
 
-func (g *guardianWithPathClaim) authorize(ctx context.Context, r *http.Request, usr *user.User) error {
+func (g *guardianWithPathClaim) authorize(ctx context.Context, r *http.Request, usr *user.User, reqPath string) error {
 	if userAllowed := g.accessList.Allow(ctx, usr.GetData()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
 	if usr.Claims.AccessList == nil {
 		return errors.ErrAccessNotAllowedByPathACL
 	}
-	reqPath := canonicalRequestPath(r)
 	for path := range usr.Claims.AccessList.Paths {
 		if acl.MatchPathBasedACL(path, reqPath) {
 			return nil
@@ -221,7 +211,7 @@ func (g *guardianWithPathClaim) authorize(ctx context.Context, r *http.Request, 
 	return errors.ErrAccessNotAllowedByPathACL
 }
 
-func (g *guardianWithSrcAddrPathClaim) authorize(ctx context.Context, r *http.Request, usr *user.User) error {
+func (g *guardianWithSrcAddrPathClaim) authorize(ctx context.Context, r *http.Request, usr *user.User, reqPath string) error {
 	if userAllowed := g.accessList.Allow(ctx, usr.GetData()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
@@ -235,7 +225,6 @@ func (g *guardianWithSrcAddrPathClaim) authorize(ctx context.Context, r *http.Re
 	if usr.Claims.AccessList == nil {
 		return errors.ErrAccessNotAllowedByPathACL
 	}
-	reqPath := canonicalRequestPath(r)
 	for path := range usr.Claims.AccessList.Paths {
 		if acl.MatchPathBasedACL(path, reqPath) {
 			return nil
@@ -244,26 +233,26 @@ func (g *guardianWithSrcAddrPathClaim) authorize(ctx context.Context, r *http.Re
 	return errors.ErrAccessNotAllowedByPathACL
 }
 
-func (g *guardianWithMethodPath) authorize(ctx context.Context, r *http.Request, usr *user.User) error {
+func (g *guardianWithMethodPath) authorize(ctx context.Context, r *http.Request, usr *user.User, reqPath string) error {
 	kv := make(map[string]interface{})
 	for k, v := range usr.GetData() {
 		kv[k] = v
 	}
 	kv["method"] = r.Method
-	kv["path"] = canonicalRequestPath(r)
+	kv["path"] = reqPath
 	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
 	return nil
 }
 
-func (g *guardianWithMethodPathSrcAddr) authorize(ctx context.Context, r *http.Request, usr *user.User) error {
+func (g *guardianWithMethodPathSrcAddr) authorize(ctx context.Context, r *http.Request, usr *user.User, reqPath string) error {
 	kv := make(map[string]interface{})
 	for k, v := range usr.GetData() {
 		kv[k] = v
 	}
 	kv["method"] = r.Method
-	kv["path"] = canonicalRequestPath(r)
+	kv["path"] = reqPath
 	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
@@ -277,13 +266,12 @@ func (g *guardianWithMethodPathSrcAddr) authorize(ctx context.Context, r *http.R
 	return nil
 }
 
-func (g *guardianWithMethodPathPathClaim) authorize(ctx context.Context, r *http.Request, usr *user.User) error {
+func (g *guardianWithMethodPathPathClaim) authorize(ctx context.Context, r *http.Request, usr *user.User, reqPath string) error {
 	kv := make(map[string]interface{})
 	for k, v := range usr.GetData() {
 		kv[k] = v
 	}
 	kv["method"] = r.Method
-	reqPath := canonicalRequestPath(r)
 	kv["path"] = reqPath
 	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
 		return errors.ErrAccessNotAllowed
@@ -299,13 +287,12 @@ func (g *guardianWithMethodPathPathClaim) authorize(ctx context.Context, r *http
 	return errors.ErrAccessNotAllowedByPathACL
 }
 
-func (g *guardianWithMethodPathSrcAddrPathClaim) authorize(ctx context.Context, r *http.Request, usr *user.User) error {
+func (g *guardianWithMethodPathSrcAddrPathClaim) authorize(ctx context.Context, r *http.Request, usr *user.User, reqPath string) error {
 	kv := make(map[string]interface{})
 	for k, v := range usr.GetData() {
 		kv[k] = v
 	}
 	kv["method"] = r.Method
-	reqPath := canonicalRequestPath(r)
 	kv["path"] = reqPath
 	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
 		return errors.ErrAccessNotAllowed

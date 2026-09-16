@@ -1162,44 +1162,6 @@ func TestAuthorize(t *testing.T) {
 	}
 }
 
-func TestCanonicalRequestPath(t *testing.T) {
-	testcases := []struct {
-		name   string
-		target string
-		want   string
-	}{
-		{
-			name:   "encoded dot segment",
-			target: "/public/%2e%2e/admin",
-			want:   "/admin",
-		},
-		{
-			name:   "double encoded dot segment",
-			target: "/public/%252e%252e/admin",
-			want:   "/admin",
-		},
-		{
-			name:   "encoded current directory segment",
-			target: "/public/%2e/assets/logo.png",
-			want:   "/public/assets/logo.png",
-		},
-		{
-			name:   "duplicate slash preserves trailing slash",
-			target: "/public//assets/",
-			want:   "/public/assets/",
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tc.target, nil)
-			if got := canonicalRequestPath(req); got != tc.want {
-				t.Fatalf("canonicalRequestPath() = %q, want %q; parsed path: %q", got, tc.want, req.URL.Path)
-			}
-		})
-	}
-}
-
 func TestSetSourcePriority(t *testing.T) {
 	testcases := []struct {
 		name      string
