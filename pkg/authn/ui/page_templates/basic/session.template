@@ -3,17 +3,33 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ .PageTitle }}</title>
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
+    <meta name="description" content="{{ .MetaDescription }}">
+    <meta name="author" content="{{ .MetaAuthor }}">
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.svg" }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}">
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/generic.css" }}">
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/basic.css" }}">
+    {{ if .CustomCSSEnabled }}<link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}">{{ end }}
   </head>
-  <body>
-    <main>
-      <h1>{{ .PageTitle }}</h1>
-      <p id="session-message">{{ .Message }}</p>
-      {{ if eq .Data.session_action "logout" }}<button id="session-logout" type="button">Sign out</button>{{ end }}
-      <p><a href="{{ pathjoin .ActionEndpoint "/login" }}?fresh=1">Sign in</a></p>
-      <noscript>JavaScript is required to continue this session.</noscript>
-    </main>
+  <body class="basic-theme">
+    <div class="app-page">
+      <div class="app-content">
+        <main class="app-container" aria-labelledby="session-title">
+          <div class="brand-banner" aria-hidden="true"></div>
+          <header class="brand-heading">
+            {{ if .LogoURL }}<img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}">{{ end }}
+            <h1 id="session-title">{{ .PageTitle }}</h1>
+          </header>
+          <p class="brand-message" id="session-message">{{ .Message }}</p>
+          <div class="brand-actions">
+            {{ if eq .Data.session_action "logout" }}<button class="app-btn-pri" id="session-logout" type="button">Sign out</button>{{ end }}
+            <a href="{{ pathjoin .ActionEndpoint "/login" }}?fresh=1">Sign in</a>
+          </div>
+          <noscript><p class="brand-message">JavaScript is required to continue this session.</p></noscript>
+        </main>
+      </div>
+    </div>
     <script src="{{ pathjoin .ActionEndpoint "/assets/js/refresh.js" }}" data-base="{{ .ActionEndpoint }}" data-action="{{ .Data.session_action }}" data-next="{{ .Data.session_next }}"></script>
   </body>
 </html>

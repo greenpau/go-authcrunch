@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"net/http"
 	"slices"
 	"sync"
@@ -53,7 +52,7 @@ type Provider struct {
 	nextSweep                                   time.Time
 	closed                                      bool
 	now                                         func() time.Time
-	consentTemplate, formPostTemplate           *template.Template
+	renderPage                                  func(context.Context, Page) ([]byte, error)
 }
 
 type oidcSession struct {

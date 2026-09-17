@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="h-full bg-blue-100">
+<html lang="en" class="h-full">
   <head>
     <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
@@ -7,27 +7,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="{{ .MetaDescription }}" />
     <meta name="author" content="{{ .MetaAuthor }}" />
-    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
-    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png">
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.svg" }}" type="image/svg+xml">
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/montserrat.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/sandbox.css" }}" />
 
-    {{ if eq .Data.ui_options.custom_css_required "yes" }}
-    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
-    {{ end }}
+
     {{ if or (eq .Data.view "mfa_app_auth") (eq .Data.view "mfa_app_register") }}
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/mfa_app.css" }}" />
     {{ end }}
     {{ if eq .Data.view "password_recovery" }}
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/password.css" }}" />
     {{ end }}
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/basic.css" }}">
+    {{ if .CustomCSSEnabled }}<link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}">{{ end }}
   </head>
-  <body class="h-full">
+  <body class="basic-theme h-full">
     <div class="app-page">
       <div class="app-content">
         <div class="app-container">
+          <div class="brand-banner" aria-hidden="true"></div>
           <div class="logo-box">
             {{ if .LogoURL }}
               <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
@@ -75,7 +75,7 @@
                   autocomplete="off"
                   >
               <div>
-                <label for="secret" class="app-inp-lbl text-center">Please provide your password</label>
+                <label for="secret" class="app-inp-lbl">Please provide your password</label>
                 <div class="app-inp-box">
                   <div class="app-inp-prf-img">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -91,7 +91,7 @@
                 <input id="sandbox_id" name="sandbox_id" type="hidden" value="{{ .Data.id }}" />
               </div>
 
-              <div class="flex gap-4">
+              <div class="flex gap-4 app-form-actions">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
                     <button type="button" class="app-btn-sec">
@@ -149,7 +149,7 @@
               
               <input id="sandbox_id" name="sandbox_id" type="hidden" value="{{ .Data.id }}" />
 
-              <div class="flex gap-4">
+              <div class="flex gap-4 app-form-actions">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
                     <button type="button" class="app-btn-sec">
@@ -196,7 +196,7 @@
                          required />
                 </div>
               </div>
-              <div class="flex gap-4">
+              <div class="flex gap-4 app-form-actions">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
                     <button type="button" class="app-btn-sec">
@@ -390,7 +390,7 @@
                   </div>
                 </div>
 
-                <div class="flex gap-4">
+                <div class="flex gap-4 app-form-actions">
                   <div class="grow">
                     <button type="submit" name="submit" class="app-btn-pri">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -436,7 +436,7 @@
                 </div>
               </div>
 
-              <div class="flex gap-4">
+              <div class="flex gap-4 app-form-actions">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
                     <button type="button" class="app-btn-sec">
@@ -491,7 +491,7 @@
           <div class="app-txt-section">
             <p>{{ .Data.error }}.</p>
           </div>
-          <div class="flex gap-4">
+          <div class="flex gap-4 app-form-actions">
             <div class="grow">
               <a href="{{ pathjoin .ActionEndpoint "login" }}">
                 <button type="button" class="app-btn-pri">
@@ -510,7 +510,7 @@
             <p>Your session failed to meet authorization requirements.</p>
             <p>{{ .Data.error }}.</p>
           </div>
-          <div class="flex gap-4">
+          <div class="flex gap-4 app-form-actions">
             <div class="grow">
               <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id }}">
                 <button type="button" class="app-btn-pri">

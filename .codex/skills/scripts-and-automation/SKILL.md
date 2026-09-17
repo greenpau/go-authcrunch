@@ -27,9 +27,10 @@ boundary for these workflows.
 | `make test TEST_DIR='./pkg/authn/...' TEST='TestPortalRefresh'` | Same lifecycle with selected packages/test pattern |
 | `make qtest QUICK_TEST_DIR='./pkg/authn/token_refresh/...'` | Token engine and public parser lifecycle under `.coverage/quick`; default scope is `./pkg/system` |
 | `make run-reports` | Rebuild presentations from the existing tested evidence bundle |
-| `make test-ui` | Node spec-reported embedded refresh-client tests |
+| `make test-ui` | Node spec-reported login and refresh client tests (`*_client_test.cjs`) |
 | `make test-automation` | Verbose Python automation/version/release fixture tests |
-| `make ci-check` | Sequential version, automation, lint, Go tests, UI tests, and build gates |
+| `make brand-assets` / `make brand-assets-check` | Regenerate SVG branding and shared colors from the palette, or check drift without writes |
+| `make ci-check` | Sequential version, brand-asset consistency, automation, lint, Go tests, UI tests, and build gates |
 | `make version-check` / `make version-sync` | Check or explicitly synchronize version-bearing Go defaults |
 | `make artifact-id` | Validate and print the versioned artifact identity |
 | `make docs` | Generate ignored `.doc/index.txt` from `go doc -all` |
@@ -63,6 +64,13 @@ module manifests or global executable directories. Go dependency/tool downloads
 may need network access. Node browser tests and Python automation use only their
 standard libraries and need no npm/pip installation.
 
+`test-ui` discovers `pkg/authn/ui/testdata/*_client_test.cjs`; the current files
+cover login/QR state transitions and the refresh client. Keep browser drivers
+under their `*_browser_e2e.cjs` names so they are launched by their Go fixtures,
+not the Node unit-test glob. For CSS, responsive layouts, and QR presentation,
+use the [theme validation workflow](../authentication-portal-themes/references/basic-theme.md#validation)
+and its headless Chrome journey in addition to any affected client tests.
+
 ## Explicit Maintenance
 
 `make templates` runs `make license`. That command applies license headers to
@@ -77,11 +85,20 @@ requested. Keep diagnostic reports until the user has the needed evidence.
 
 ## Asset and Security Scripts
 
+`assets/scripts/update_brand_assets.py` owns the palette-driven core/profile
+SVG artwork, the marked color block in `basic.css`, and profile theme metadata.
+Run it through `make brand-assets` after editing `assets/branding/palette.json`
+or the source mark. `make brand-assets-check` is read-only and runs in the CI
+gate. Its unit and executable regeneration tests run under `test-automation`.
+Use the [theme owner](../authentication-portal-themes/references/basic-theme.md#changing-the-default-palette-and-svg-artwork)
+for palette fields, output ownership, and deployment overrides.
+
 `assets/scripts/update_ui_apps.sh` rewrites `pkg/authn/ui/apps.go`, replaces
 `pkg/authn/ui/profile`, and formats the asset inventory. Run it only for an
 explicit embedded-profile asset refresh with a frontend build available at
 `../../authcrunch/authcrunch-ui/frontend/profile/build` relative to this root.
-It does not own the handwritten refresh client under `pkg/authn/ui/core/js`.
+It does not own the handwritten login or refresh scripts under
+`pkg/authn/ui/core/js` or the shared portal theme styles.
 
 `assets/scripts/run_codeql_scan.sh` assumes CodeQL CLI/query packs under
 `$HOME/.local/codeql`, uses the GOPATH checkout, and writes its database/results

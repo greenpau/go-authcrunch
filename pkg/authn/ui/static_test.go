@@ -31,7 +31,7 @@ func TestNewStaticAssetLibrary(t *testing.T) {
 		t.Fatal("Expected StaticAssetLibrary instance, got nil")
 	}
 
-	wantCount := 88
+	wantCount := 91
 	gotCount := sal.GetAssetCount()
 	if gotCount != wantCount {
 		t.Errorf("Expected asset count %d, got %d", wantCount, gotCount)
@@ -41,9 +41,11 @@ func TestNewStaticAssetLibrary(t *testing.T) {
 		"assets/cbor/cbor.js",
 		"assets/css/apps_mobile_access.css",
 		"assets/css/apps_sso.css",
+		"assets/css/basic.css",
 		"assets/css/generic.css",
 		"assets/css/login.css",
 		"assets/css/mfa_app.css",
+		"assets/css/oidc.css",
 		"assets/css/password.css",
 		"assets/css/portal.css",
 		"assets/css/register.css",
@@ -82,8 +84,9 @@ func TestNewStaticAssetLibrary(t *testing.T) {
 		"assets/highlight.js/js/highlight.js",
 		"assets/highlight.js/js/languages/json.min.js",
 		"assets/highlight.js/js/languages/plaintext.min.js",
-		"assets/images/favicon.ico",
-		"assets/images/favicon.png",
+		"assets/images/background.svg",
+		"assets/images/banner.svg",
+		"assets/images/favicon.svg",
 		"assets/images/logo.svg",
 		"assets/js/apps_mobile_access.js",
 		"assets/js/apps_sso.js",
@@ -168,8 +171,10 @@ func TestNewStaticAssetLibrary(t *testing.T) {
 		"assets/cbor/cbor.js":                                             "application/javascript",
 		"assets/css/apps_mobile_access.css":                               "text/css",
 		"assets/css/apps_sso.css":                                         "text/css",
+		"assets/css/basic.css":                                            "text/css",
 		"assets/css/generic.css":                                          "text/css",
 		"assets/css/login.css":                                            "text/css",
+		"assets/css/oidc.css":                                             "text/css",
 		"assets/css/mfa_app.css":                                          "text/css",
 		"assets/css/password.css":                                         "text/css",
 		"assets/css/portal.css":                                           "text/css",
@@ -209,8 +214,9 @@ func TestNewStaticAssetLibrary(t *testing.T) {
 		"assets/highlight.js/js/highlight.js":                             "application/javascript",
 		"assets/highlight.js/js/languages/json.min.js":                    "application/javascript",
 		"assets/highlight.js/js/languages/plaintext.min.js":               "application/javascript",
-		"assets/images/favicon.ico":                                       "image/x-icon",
-		"assets/images/favicon.png":                                       "image/png",
+		"assets/images/favicon.svg":                                       "image/svg+xml",
+		"assets/images/background.svg":                                    "image/svg+xml",
+		"assets/images/banner.svg":                                        "image/svg+xml",
 		"assets/images/logo.svg":                                          "image/svg+xml",
 		"assets/js/apps_mobile_access.js":                                 "application/javascript",
 		"assets/js/apps_sso.js":                                           "application/javascript",

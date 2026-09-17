@@ -20,6 +20,7 @@ Important common fields:
 | `.PageTitle` | Page heading selected by the handler |
 | `.MetaTitle`, `.MetaDescription`, `.MetaAuthor` | Configured site metadata |
 | `.LogoURL`, `.LogoDescription` | Configured logo, with the base path already applied to local URLs |
+| `.CustomCSSEnabled` | Factory flag used by every current basic template to include custom CSS after all base/view styles |
 | `.Message`, `.MessageType` | Top-level status/error values used by some pages |
 | `.PrivateLinks` | Configured and user-specific links; keep target/icon conditions |
 | `.Data` | Handler-specific values and translations; not a general theme-settings map |
@@ -46,6 +47,7 @@ HTML/URL/JavaScript escaping and avoid introducing raw HTML helpers for branding
 | `whoami` | Escaped `.Data.token` JSON display, Highlight.js assets/initialization, portal and logout links |
 | `apps_sso` | Numeric `.Data.role_count`, `.Data.roles` entries with `ProviderName`, `AccountID`, and `Name`, generated role links and empty state; this is the AWS SSO role-selection page |
 | `apps_mobile_access` | Instructional content and navigation; the current baseline does not itself render a mobile QR image |
+| `oidc` | All `.Data.oidc.Kind` branches: consent CSRF/decisions, form-post action/values/nonce/manual Continue, and local error message; see the [owning contract](../../authentication-portal-oidc/references/browser-pages.md#page-and-template-contract) |
 | `session` | `.Message`, continuation/logout action, confirmation button, fresh-login link, external refresh client and data attributes |
 
 Handlers live in `pkg/authn/handle_http_login.go`,
@@ -54,6 +56,11 @@ Handlers live in `pkg/authn/handle_http_login.go`,
 `handle_http_apps_mobile_access.go`, and `handle_http_session.go`. Generic
 responses also come from shared response/error handlers. Inspect these for the
 exact data supplied to an affected branch.
+
+OIDC rendering is adapted by `pkg/authn/oidc_ui.go`, with snapshots and response
+policies owned by `pkg/oidc/pages.go`. Its nested `.Data.oidc` model differs from
+the top-level `.Message` used by `session`. Read the owning contract above before
+moving OIDC forms or scripts into a common shell.
 
 ## Login, Sandbox, and Registration DOM
 
@@ -64,11 +71,47 @@ single-step password form.
 
 `core/js/login.js` uses `loginform`, `authenticators`, `username`, `realm`,
 `user_actions`, `user_register_link`, `forgot_username_link`,
-`contact_support_link`, `bookmarks`, `qr`, and `qrcode`. Keep the existing
+`contact_support_link`, `bookmarks`, `qr`, `show-qrcode`, `qrcode`, and
+`close-qrcode`. Keep the existing
 `showLoginForm`, `hideLoginForm`, `showQRCode`, and `hideQRCode` calls and their
 arguments. Preserve `.hidden` and `sm:block` semantics; blanket display rules
 can expose inactive forms or break toggling. Identity-provider `.endpoint`
 links and local-realm form selection are distinct paths through the loop.
+
+### QR controls
+
+The basic login's `qr` panel belongs inside `.app-container`, after the login
+form and authenticator list; it does not append a second panel below the card.
+The container remains a DOM wrapper even when the phone stylesheet removes its
+visual surface. `showQRCode(path)` records the visible `loginform` and/or
+`authenticators`, hides them, replaces `qrcode`'s children with one image, and
+reveals `qr`. Repeated opening is a no-op. `hideQRCode()` removes the image,
+hides `qr`, and restores only the recorded panels; repeated closing is a no-op.
+
+Preserve the username, selected realm, and registration/recovery/support links.
+Do not call `showLoginForm()` to close QR mode: it clears the username and may
+select a different view. Single-realm login, provider selection, a selected
+local realm, and external-provider-only markup must all remain usable.
+
+Use `type="button"` for `show-qrcode`, `qrcode`, and `close-qrcode`; the latter
+two call `hideQRCode()`. Keep the visible Close QR Code label and accessible
+names on the icon and image buttons. The bookmark has `aria-controls="qr"` and
+updated `aria-expanded`. Opening focuses Close QR Code; closing focuses the
+bookmark, or a restored login control if a narrow resize has hidden it. Escape
+closes only an open QR view. Keep keyboard focus visible on the borderless image.
+
+The bookmark's `hidden sm:block` classes expose it at widths of 640px and above,
+including tablets. Phones do not get a new QR opener. A QR view opened before
+resizing stays usable at phone widths and can still be closed. Preserve these
+responsive semantics when adjusting markup or CSS.
+
+Build the image request from `.ActionEndpoint` and `/qrcode/login.png`.
+`pkg/authn/respond_qrcode.go` generates its PNG at runtime; this image is not a
+brand asset or the sandbox's OTP-enrollment QR. The UI change does not add an
+authentication method. Older filesystem login templates need the new panel and
+close controls; replacing JavaScript alone does not relocate their QR view.
+
+### Sandbox and registration hooks
 
 In `sandbox.template`, preserve form action paths containing `.Data.id`, input
 names, hidden values, and all MFA views. In particular, U2F code uses
@@ -119,13 +162,16 @@ handlers will not work under this policy. Style the existing action button
 without changing its behavior. Add the normal CSS hook to the session head:
 
 ```html
-{{ if eq .Data.ui_options.custom_css_required "yes" }}
+{{ if .CustomCSSEnabled }}
 <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
 {{ end }}
 ```
 
-The minimal built-in session template has neither the usual `.app-page` shell
-nor custom CSS/JS hooks. Add the theme's wrappers/classes and the external CSS
-link explicitly, preserving the IDs and script above. For changes to renewal,
-logout, or redirects, use
+The current basic session template includes `.basic-theme`, `.app-page`, a
+responsive content wrapper, logo, banner, metadata, favicon, and this custom
+CSS hook. The card and banner are visible at tablet/desktop widths; the
+[phone rules](basic-theme.md#phone-layout) remove their decoration. Older
+filesystem copies may lack them; carry over the current structure and stylesheet
+order when updating such a copy. There is no custom JavaScript hook. For changes
+to renewal, logout, or redirects, use
 [refresh-token-transports](../../refresh-token-transports/SKILL.md).

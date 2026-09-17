@@ -89,7 +89,7 @@ func TestOIDCIndividualClaimConsent(t *testing.T) {
 	cookie := responseCookie(t, f.login(t), o.sessionCookie)
 	params := url.Values{"client_id": {"client"}, "redirect_uri": {"https://client.example.test/callback"}, "response_type": {"code"}, "scope": {"openid"}, "claims": {`{"userinfo":{"name":{"essential":true}}}`}}
 	response := oidcUnitRequest(t, f, "GET", "/oidc/authorize?"+params.Encode(), nil, cookie)
-	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "userinfo:name") {
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "Full name") {
 		t.Fatal("individual claim missing from consent")
 	}
 	// Previously approved openid alone cannot authorize the additional name.

@@ -95,7 +95,8 @@ coordination, continuation, and logout.
 ## Authentication Portal Themes
 
 Use `authentication-portal-themes` for custom portal templates, CSS, branding
-assets, theme configuration, and compatibility with current portal pages.
+assets, theme configuration, built-in page styling, and compatibility with
+current portal pages, including OIDC consent, continuation, and browser errors.
 
 ## Local Password Authentication
 
@@ -113,8 +114,9 @@ OAuth E2E tests.
 
 Use `authentication-portal-oidc` for downstream OIDC discovery, registered clients,
 authorization code/PKCE flows, local-user consent, dedicated ID-token signing keys,
-UserInfo, revocation, and OP conformance testing. This covers the reusable
-`pkg/oidc` public API and the local-user portal adapter in `pkg/authn`.
+UserInfo, revocation, browser rendering contracts and response policies, and OP
+conformance testing. This covers the reusable `pkg/oidc` public API and the
+local-user portal adapter in `pkg/authn`.
 
 ## Portal Signing-Key Discovery
 

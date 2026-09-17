@@ -1,0 +1,138 @@
+/* Shared basic-theme branding. Load after page CSS and before custom.css. */
+:root {
+  /* BEGIN BRAND COLORS */
+  /* Generated from assets/branding/palette.json. */
+  --brand-page: #edf3fc;
+  --brand-surface: #ffffff;
+  --brand-soft: #f8fafc;
+  --brand-ink: #172b4d;
+  --brand-muted: #52637a;
+  --brand-primary: #245bca;
+  --brand-on-primary: #ffffff;
+  --brand-primary-hover: #194ba9;
+  --brand-border: #dce4ef;
+  --brand-control-border: #8191a8;
+  --brand-focus: #245bca;
+  --brand-shadow: 0 12px 40px #172b4d12, 0 2px 6px #172b4d06;
+  /* END BRAND COLORS */
+  --brand-page-image: url("../images/background.svg");
+  --brand-radius: 20px;
+  --brand-logo-size: 96px;
+  --brand-banner-image: url("../images/banner.svg");
+  --brand-banner-height: 8px;
+}
+body.basic-theme {
+  margin: 0;
+  min-height: 100vh;
+  color-scheme: light;
+  color: var(--brand-ink);
+  background-color: var(--brand-page);
+  background-image: var(--brand-page-image);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  font: 16px/1.55 Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.basic-theme *, .basic-theme *::before, .basic-theme *::after { box-sizing: border-box; }
+.basic-theme .app-page { min-height: 100vh; padding: 48px 20px; }
+.basic-theme .app-content { width: 100%; max-width: 580px; margin: 0 auto; padding-bottom: 0; }
+.basic-theme .app-content-wide { max-width: 960px; }
+.basic-theme .app-container {
+  --card-padding: 32px;
+  padding: var(--card-padding);
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--brand-radius);
+  box-shadow: var(--brand-shadow);
+}
+.basic-theme .brand-banner {
+  height: var(--brand-banner-height);
+  /* Retain the card's full corner curve even when the painted accent is thin. */
+  min-height: var(--brand-radius);
+  background-image: var(--brand-banner-image);
+  background-size: 100% var(--brand-banner-height);
+  background-position: center top;
+  background-repeat: no-repeat;
+  border-radius: var(--brand-radius) var(--brand-radius) 0 0;
+}
+.basic-theme .app-container > .brand-banner { margin: calc(-1 * var(--card-padding)) calc(-1 * var(--card-padding)) 24px; }
+.basic-theme .logo-img { width: var(--brand-logo-size); height: var(--brand-logo-size); object-fit: contain; flex-shrink: 0; }
+.basic-theme .logo-box { max-width: none; }
+.basic-theme .logo-col-box { flex-wrap: wrap; gap: 16px; padding-bottom: 24px; }
+.basic-theme .logo-col-box > div { min-width: 0; }
+.basic-theme :is(.logo-txt, .logo-col-txt, .app-gen-banner-header) { color: var(--brand-ink); font-size: 32px; line-height: 1.25; font-weight: 700; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.basic-theme .logo-txt { margin: 12px 0 32px; }
+.basic-theme :is(.app-inp-lbl, .app-gen-inp-lbl) { display: block; margin: 0 0 16px; padding: 0; color: var(--brand-muted); font-family: inherit; font-size: 18px; font-weight: 500; line-height: 1.5; text-align: left; overflow-wrap: anywhere; }
+.basic-theme .app-gen-inp-lbl + div { margin-top: 0; }
+.basic-theme .app-gen-banner-message { color: var(--brand-muted); font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
+.basic-theme [class*="text-primary-"] { color: var(--brand-muted); }
+.basic-theme a[class*="text-primary-"], .basic-theme .app-lst-lnk { color: var(--brand-primary); }
+.basic-theme .app-inp-box { margin-top: 0; }
+.basic-theme :is(.app-inp-txt, .app-gen-inp-txt, .app-inp-sel, .app-inp-code-txt) { min-width: 0; min-height: 56px; max-width: 100%; padding: 12px 16px; color: var(--brand-ink); background-color: var(--brand-surface); border: 1px solid var(--brand-control-border); border-radius: 8px; font-size: 18px; line-height: 1.5; }
+.basic-theme .app-inp-prf-img + .app-inp-txt { padding-left: 48px; }
+.basic-theme .app-inp-sel { padding-right: 40px; }
+.basic-theme .app-inp-code-txt { font-size: 28px; }
+.basic-theme :is(.app-inp-txt, .app-gen-inp-txt, .app-inp-sel)::placeholder { color: var(--brand-muted); opacity: 1; }
+.basic-theme .app-inp-prf-img { color: var(--brand-muted); }
+.basic-theme :is(.app-btn-pri, .app-btn-sec, .app-gen-btn-txt) { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; border: 1px solid transparent; border-radius: 8px; padding: 12px 16px; font-size: 18px; font-weight: 500; line-height: 1.5; text-align: center; }
+.basic-theme :is(.app-btn-pri, .app-btn-sec) > div { display: flex; align-items: center; padding: 0; }
+.basic-theme :is(.app-btn-pri, .app-btn-sec) :is(i, svg) { flex-shrink: 0; width: 24px; height: 24px; font-size: 24px; line-height: 1; }
+.basic-theme :is(.app-btn-pri, .app-gen-btn-txt) { color: var(--brand-on-primary); background: var(--brand-primary); }
+.basic-theme :is(.app-btn-pri, .app-gen-btn-txt):hover { background: var(--brand-primary-hover); }
+.basic-theme .app-btn-sec { color: var(--brand-ink); background: var(--brand-surface); border-color: var(--brand-control-border); }
+.basic-theme .app-btn-sec:hover { background: var(--brand-soft); }
+.basic-theme .app-form-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.basic-theme .app-form-actions > div, .basic-theme .app-form-actions > div > a { display: flex; min-width: 0; }
+.basic-theme .app-form-actions > .grow { flex: 1 1 120px; }
+.basic-theme .app-form-actions:has(> .flex-none:nth-child(2)) > .grow { flex-basis: 180px; }
+.basic-theme .app-form-actions .app-btn-sec { min-width: 56px; padding-left: 12px; padding-right: 12px; }
+.basic-theme #authenticators, .basic-theme .app-link-list { gap: 12px; }
+.basic-theme .app-link-list { margin-top: 24px; }
+.basic-theme .app-qr-toggle { display: flex; align-items: center; justify-content: center; width: 48px; min-height: 48px; }
+.basic-theme .app-qr-view { text-align: center; }
+.basic-theme .app-qr-image { display: block; width: 280px; max-width: 100%; margin: 0 auto; padding: 12px; border: 0; border-radius: 0; background: #ffffff; }
+.basic-theme .app-qr-image img { display: block; width: 100%; height: auto; }
+.basic-theme .app-qr-close { width: fit-content; max-width: 100%; margin: 24px auto 0; }
+.basic-theme #authenticators a, .basic-theme .app-link-list a { display: block; border-radius: 10px; }
+/* One rounded outline owns both backgrounds; nested radii leave visible seams. */
+.basic-theme :is(.app-login-btn-box, .app-portal-btn-box) { display: flex; align-items: stretch; min-height: 64px; overflow: hidden; border: 1px solid var(--brand-border); border-radius: 10px; }
+.basic-theme :is(.app-login-btn-box, .app-portal-btn-box) > :first-child { display: flex; align-items: center; justify-content: center; flex: 0 0 64px; padding: 12px; border-radius: 0; box-shadow: none; }
+.basic-theme .app-login-btn-box > :first-child i { font-size: 32px; line-height: 1; }
+.basic-theme .app-portal-btn-img i { font-size: 24px; line-height: 1; }
+.basic-theme :is(.app-login-btn-txt, .app-portal-btn-txt) { display: flex; align-items: center; flex: 1; min-width: 0; padding: 16px 20px; border-radius: 0; box-shadow: none; color: var(--brand-ink); background: var(--brand-soft); font-size: 24px; font-weight: 500; line-height: 1.35; text-align: left; overflow-wrap: anywhere; }
+.basic-theme :is(.app-login-btn-txt, .app-portal-btn-txt) > span { min-width: 0; line-height: inherit; }
+.basic-theme .app-portal-btn-img { color: var(--brand-primary); background: var(--brand-soft); }
+.basic-theme :is(.app-login-btn-box, .app-portal-btn-box):hover { border-color: color-mix(in srgb, var(--brand-soft) 85%, var(--brand-ink)); }
+.basic-theme :is(.app-login-btn-box, .app-portal-btn-box):hover :is(.app-login-btn-txt, .app-portal-btn-txt, .app-portal-btn-img) { background: color-mix(in srgb, var(--brand-soft) 94%, var(--brand-ink)); }
+.basic-theme :is(.app-inp-txt, .app-gen-inp-txt, .app-inp-sel, .app-inp-code-txt, .app-btn-pri, .app-btn-sec):focus { box-shadow: none; }
+.basic-theme :is(a, button, input, select, textarea):focus-visible { outline: 3px solid var(--brand-focus); outline-offset: 3px; }
+/* The legacy MFA stylesheet suppresses outlines with !important. */
+.basic-theme input.mfa-app-auth-passcode:focus-visible { outline: 3px solid var(--brand-focus) !important; }
+.basic-theme .brand-heading { text-align: center; }
+.basic-theme .brand-heading .logo-img { margin: 0 auto 20px; }
+.basic-theme .brand-heading h1 { margin: 0 0 24px; font-size: 32px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.basic-theme .brand-message { color: var(--brand-muted); margin: 16px 0; overflow-wrap: anywhere; }
+.basic-theme .brand-actions { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+.basic-theme .brand-actions a { color: var(--brand-primary); text-align: center; text-decoration: underline; }
+.basic-theme pre { max-width: 100%; overflow: auto; }
+/* Phones use the page itself as the surface; tablet and desktop keep the card. */
+@media (max-width: 639px) {
+  body.basic-theme { min-height: 100svh; -webkit-text-size-adjust: 100%; }
+  .basic-theme :is(.app-page, .oidc-shell) {
+    width: 100%;
+    min-height: 100svh;
+    padding: calc(32px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+  }
+  .basic-theme .app-content { max-width: none; }
+  .basic-theme :is(.app-container, .oidc-card) { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; }
+  .basic-theme .app-container { --card-padding: 0px; }
+  .basic-theme .brand-banner { display: none; }
+  .basic-theme .logo-col-box { flex-direction: column; gap: 12px; padding-bottom: 32px; text-align: center; }
+  .basic-theme :is(.logo-txt, .logo-col-txt, .brand-heading h1) { font-size: 28px; }
+  .basic-theme :is(.app-login-btn-box, .app-portal-btn-box) > :first-child { flex-basis: 56px; }
+  .basic-theme :is(.app-login-btn-txt, .app-portal-btn-txt) { padding: 14px 16px; font-size: 22px; }
+}
+@media (forced-colors: active) {
+  .basic-theme :is(.app-container, .app-btn-pri, .app-btn-sec, .app-gen-btn-txt) { border-color: CanvasText; }
+  .basic-theme .brand-banner { background-image: none; border-bottom: 1px solid CanvasText; }
+}

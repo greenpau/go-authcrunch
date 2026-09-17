@@ -78,6 +78,8 @@ func TestTagCompliance(t *testing.T) {
 		err       error
 	}{
 		{name: "test oidc.Provider struct", entry: &oidc.Provider{}, opts: &Options{}},
+		{name: "test oidc.Page struct", entry: &oidc.Page{}, opts: &Options{}},
+		{name: "test oidc.PagePermission struct", entry: &oidc.PagePermission{}, opts: &Options{}},
 		{name: "test oidc.Options struct", entry: &oidc.Options{}, opts: &Options{}},
 		{name: "test oidc.Authentication struct", entry: &oidc.Authentication{}, opts: &Options{}},
 		{name: "test oidc.Identity struct", entry: &oidc.Identity{}, opts: &Options{}},

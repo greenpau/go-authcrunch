@@ -94,8 +94,11 @@ async function navigate(page, path, sessionClient = false) {
     stage = "portal routes after login";
     const routes = await evaluate(tab, async (base) => {
       const results = [];
-      for (const path of ["/beacon?format=json", "/qrcode/login", "/favicon.ico", "/apps/mobile-access"]) {
+      for (const path of ["/beacon?format=json", "/qrcode/login", "/favicon.svg", "/apps/mobile-access"]) {
         const response = await fetch(base + path, { redirect: "manual", cache: "no-store" });
+        if (path === "/favicon.svg" && response.headers.get("Content-Type") !== "image/svg+xml") {
+          throw new Error("favicon route did not serve SVG artwork");
+        }
         results.push(response.status);
       }
       const profile = await fetch(base + "/api/profile", {

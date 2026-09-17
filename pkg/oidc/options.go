@@ -15,10 +15,10 @@
 package oidc
 
 import (
+	"context"
 	"crypto"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"net/http"
 	"net/url"
 	"path"
@@ -33,6 +33,13 @@ import (
 // Cookie names default to the portal cookie factory's AUTHP names. The host must
 // keep them distinct from its other cookies, including at overlapping mounts.
 type Options struct {
+	// RenderPage optionally integrates the host's templates. It runs without
+	// provider locks, may be called concurrently, and must return complete,
+	// escaped HTML or an error. Nil uses the standalone embedded template.
+	// Use same-origin styles/images and Page.Nonce for the form-post script;
+	// the provider owns CSP, status, caching, and protocol response headers.
+	RenderPage func(context.Context, Page) ([]byte, error) `json:"-" xml:"-" yaml:"-"`
+
 	SessionCookieName string `json:"-" xml:"-" yaml:"-"`
 	RequestCookieName string `json:"-" xml:"-" yaml:"-"`
 	// LoginURL defaults to <issuer>/login?fresh=1. A custom URL must be canonical,
@@ -100,12 +107,13 @@ func NewProvider(config *Config, verifier IdentityVerifier, options Options) (*P
 	if o.keys, err = loadSigningKeys(o.config.SigningKeyFiles, options.ExcludedSigningKeys); err != nil {
 		return nil, err
 	}
-	if o.consentTemplate, err = template.New("oidc-consent").Parse(oidcConsentTemplate); err != nil {
-		return nil, err
+	o.renderPage = options.RenderPage
+	if o.renderPage == nil {
+		if o.renderPage, err = newPageRenderer(); err != nil {
+			return nil, err
+		}
 	}
-	if o.formPostTemplate, err = template.New("oidc-form-post").Parse(oidcFormPostTemplate); err != nil {
-		return nil, err
-	}
+
 	for _, c := range o.config.Clients {
 		o.clients[c.ClientID] = c
 	}

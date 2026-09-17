@@ -18,7 +18,6 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
-	"fmt"
 	"maps"
 	"net/http"
 	"net/url"
@@ -28,7 +27,7 @@ import (
 	"time"
 )
 
-func (o *Provider) authorize(w http.ResponseWriter, r *http.Request) {
+func (o *Provider) authorize(w *oidcHTTPResponse, r *http.Request) {
 	if !oidcMethod(w, r, "GET", "POST") {
 		return
 	}
@@ -194,7 +193,7 @@ func (o *Provider) validateAuthorization(request *oidcAuthorization, client *Cli
 	return ""
 }
 
-func (o *Provider) continueAuthorization(w http.ResponseWriter, r *http.Request) {
+func (o *Provider) continueAuthorization(w *oidcHTTPResponse, r *http.Request) {
 	if !oidcMethod(w, r, "GET", "POST") {
 		return
 	}
@@ -270,7 +269,7 @@ func (o *Provider) continueAuthorization(w http.ResponseWriter, r *http.Request)
 
 // issueCode is called under the provider lock. Commit occurs inside the local
 // identity transaction so revocation cannot interleave with code issuance.
-func (o *Provider) issueCode(w http.ResponseWriter, r *http.Request, request *oidcAuthorization) {
+func (o *Provider) issueCode(w *oidcHTTPResponse, r *http.Request, request *oidcAuthorization) {
 	if len(o.grants) >= o.config.MaxGrants {
 		o.authorizationResponse(w, r, request, "", "temporarily_unavailable")
 		return
@@ -292,7 +291,7 @@ func (o *Provider) issueCode(w http.ResponseWriter, r *http.Request, request *oi
 	o.authorizationResponse(w, r, request, code, "")
 }
 
-func (o *Provider) authorizationResponse(w http.ResponseWriter, r *http.Request, request *oidcAuthorization, code, failure string) {
+func (o *Provider) authorizationResponse(w *oidcHTTPResponse, r *http.Request, request *oidcAuthorization, code, failure string) {
 	values := url.Values{"iss": {o.config.Issuer}}
 	if request.state != "" {
 		values.Set("state", request.state)
@@ -303,11 +302,8 @@ func (o *Provider) authorizationResponse(w http.ResponseWriter, r *http.Request,
 		values.Set("code", code)
 	}
 	if request.responseMode == "form_post" {
-		nonce := oidcRandom()
-		target, _ := url.Parse(request.redirectURI)
-		w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'none'; script-src 'nonce-%s'; frame-ancestors 'none'; base-uri 'none'; form-action %s://%s", nonce, target.Scheme, target.Host))
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = o.formPostTemplate.Execute(w, map[string]any{"RedirectURI": request.redirectURI, "Values": values, "Nonce": nonce})
+		w.page = &Page{Kind: "form_post", Title: "Continue to application",
+			ClientName: o.clients[request.clientID].ClientName, Action: request.redirectURI, Values: values}
 		return
 	}
 	target, _ := url.Parse(request.redirectURI)
@@ -316,11 +312,3 @@ func (o *Provider) authorizationResponse(w http.ResponseWriter, r *http.Request,
 	target.RawQuery = query.Encode()
 	http.Redirect(w, r, target.String(), http.StatusFound)
 }
-
-func (o *Provider) consentPage(w http.ResponseWriter, _ *http.Request, request *oidcAuthorization) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = o.consentTemplate.Execute(w, map[string]any{"Client": o.clients[request.clientID].ClientName, "Subject": o.sessions[request.session].username, "Scopes": request.scopes, "Claims": request.consentItems(), "CSRF": request.consent, "Action": o.config.Issuer + "/oidc/continue"})
-}
-
-const oidcConsentTemplate = `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Authorize application</title><main><h1>Authorize {{.Client}}</h1><p>Signed in as {{.Subject}}.</p><p>This application requests access to:</p><ul>{{range .Scopes}}<li>{{if eq . "openid"}}Your account identifier{{else if eq . "profile"}}Your profile information{{else if eq . "email"}}Your email address{{else if eq . "address"}}Your postal address{{else if eq . "phone"}}Your telephone number{{else if eq . "offline_access"}}Continued access using refresh tokens until expiry or revocation{{end}}</li>{{end}}</ul><p>Approved permissions (including individually requested claims):</p><ul>{{range .Claims}}<li>{{.}}</li>{{end}}</ul><form method="post" action="{{.Action}}"><input type="hidden" name="csrf" value="{{.CSRF}}"><button name="decision" value="allow">Allow</button> <button name="decision" value="deny">Deny</button></form></main></html>`
-const oidcFormPostTemplate = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Continue to application</title><form id="response" method="post" action="{{.RedirectURI}}">{{range $key, $values := .Values}}{{range $values}}<input type="hidden" name="{{$key}}" value="{{.}}">{{end}}{{end}}<button type="submit">Continue</button></form><script nonce="{{.Nonce}}">document.getElementById('response').submit();</script></html>`

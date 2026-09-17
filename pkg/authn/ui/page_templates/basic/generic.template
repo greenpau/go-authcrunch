@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-blue-100">
+<html lang="en" class="h-full">
   <head>
     <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
@@ -7,41 +7,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="description" content="{{ .MetaDescription }}" />
     <meta name="author" content="{{ .MetaAuthor }}" />
-    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
-    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.svg" }}" type="image/svg+xml">
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/generic.css" }}" />
-    {{ if eq .Data.ui_options.custom_css_required "yes" }}
-      <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
-    {{ end }}
+
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/basic.css" }}">
+    {{ if .CustomCSSEnabled }}<link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}">{{ end }}
   </head>
 
-  <body class="h-full">
+  <body class="basic-theme h-full">
     <div class="app-page">
-      <div class="app-content md:max-w-2xl lg:max-w-2xl">
-        <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
-          <div class="bg-white min-h-full px-4 py-16 sm:px-6 sm:py-24 md:grid md:place-items-center lg:px-8">
-            <div class="max-w-max mx-auto">
-              <main class="sm:flex">
-                {{ if .LogoURL }}
-                  <img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
-                {{ end }}
-                <div class="sm:ml-6">
-                  <div class="app-gen-banner-box">
-                    <h1 class="app-gen-banner-header">{{ .PageTitle }}</h1>
-                    <p class="app-gen-banner-message">{{ .Data.message }}</p>
-                  </div>
-                  {{ if .Data.go_back_url }}
-                    <div class="app-gen-btn-box">
-                      <a href="{{ .Data.go_back_url }}" class="app-gen-btn-txt"> {{ .Data.i18n_go_back_action }} </a>
-                    </div>
-                  {{ end }}
-                </div>
-              </main>
-            </div>
+      <div class="app-content">
+        <main class="app-container" aria-labelledby="generic-title">
+          <div class="brand-banner" aria-hidden="true"></div>
+          <header class="brand-heading">
+            {{ if .LogoURL }}<img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}">{{ end }}
+            <h1 id="generic-title">{{ .PageTitle }}</h1>
+          </header>
+          <p class="brand-message">{{ .Data.message }}</p>
+          {{ if .Data.go_back_url }}
+          <div class="app-gen-btn-box">
+            <a href="{{ .Data.go_back_url }}" class="app-gen-btn-txt">{{ .Data.i18n_go_back_action }}</a>
           </div>
-        </div>
+          {{ end }}
+        </main>
       </div>
     </div>
     <!-- JavaScript -->

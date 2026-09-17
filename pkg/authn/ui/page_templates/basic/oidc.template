@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
+    <meta name="description" content="{{ .MetaDescription }}">
+    <meta name="author" content="{{ .MetaAuthor }}">
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.svg" }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}">
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/oidc.css" }}">
+
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/basic.css" }}">
+    {{ if .CustomCSSEnabled }}<link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}">{{ end }}
+  </head>
+  <body class="basic-theme oidc-page">
+    <div class="oidc-shell">
+      <div class="oidc-brand">{{ if .LogoURL }}<img src="{{ .LogoURL }}" alt="{{ .LogoDescription }}">{{ end }}<span>{{ .MetaTitle }}</span></div>
+      {{ with .Data.oidc }}
+    <main class="oidc-card" aria-labelledby="oidc-title">
+      <div class="brand-banner" aria-hidden="true"></div>
+      <header class="oidc-header">
+        <p class="oidc-eyebrow">{{ if eq .Kind "consent" }}Application access{{ else if eq .Kind "form_post" }}Return to application{{ else }}Sign-in request{{ end }}</p>
+        <h1 id="oidc-title">{{ .Title }}</h1>
+        {{ if eq .Kind "consent" }}
+        <p class="oidc-intro"><strong class="oidc-client">{{ .ClientName }}</strong> would like to access your account.</p>
+        <div class="oidc-account"><span class="oidc-account-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/></svg></span><div><span class="oidc-account-label">Signed in as</span><strong class="oidc-username">{{ .Username }}</strong></div></div>
+        {{ else if eq .Kind "form_post" }}
+        <p class="oidc-intro">Continue to <strong class="oidc-client">{{ .ClientName }}</strong> to finish this request.</p>
+        {{ else }}
+        <p class="oidc-intro" role="alert">{{ .Message }}</p>
+        {{ end }}
+      </header>
+      {{ if eq .Kind "consent" }}
+      <section class="oidc-permissions" aria-labelledby="oidc-permissions-title">
+        <h2 id="oidc-permissions-title">Review requested access</h2>
+        <ul class="oidc-permission-list">
+          {{ range .Permissions }}
+          <li><span class="oidc-permission-mark" aria-hidden="true">&#8226;</span><div><h3>{{ .Title }}</h3><p>{{ .Description }}</p></div></li>
+          {{ end }}
+        </ul>
+        {{ if .UserInfoClaims }}
+        <div class="oidc-claims"><h3>Additional information</h3><p>The application can also access:</p><ul>{{ range .UserInfoClaims }}<li>{{ . }}</li>{{ end }}</ul></div>
+        {{ end }}
+        {{ if .IDTokenClaims }}
+        <div class="oidc-claims"><h3>Included when you sign in</h3><p>These details will be sent directly to the application:</p><ul>{{ range .IDTokenClaims }}<li>{{ . }}</li>{{ end }}</ul></div>
+        {{ end }}
+      </section>
+      <footer class="oidc-footer">
+        <p class="oidc-notice">Only continue if you trust this application.</p>
+        <form method="post" action="{{ .Action }}" class="oidc-actions">
+          <input type="hidden" name="csrf" value="{{ .CSRF }}">
+          <button class="oidc-button oidc-button-primary" type="submit" name="decision" value="allow">Allow access</button>
+          <button class="oidc-button oidc-button-secondary" type="submit" name="decision" value="deny">Deny</button>
+        </form>
+        <p class="oidc-footnote">Choosing Deny returns you to the application without granting access.</p>
+      </footer>
+      {{ else if eq .Kind "form_post" }}
+      <footer class="oidc-footer">
+        <form id="response" method="post" action="{{ .Action }}">
+          {{ range $key, $values := .Values }}{{ range $values }}<input type="hidden" name="{{ $key }}" value="{{ . }}">{{ end }}{{ end }}
+          <button class="oidc-button oidc-button-primary oidc-button-wide" type="submit">Continue</button>
+        </form>
+        <p class="oidc-footnote">If you are not redirected automatically, select Continue.</p>
+        <noscript><p class="oidc-footnote">Automatic redirection is unavailable. You can continue using the button above.</p></noscript>
+      </footer>
+      {{ end }}
+    </main>
+    {{ if eq .Kind "form_post" }}<script nonce="{{ .Nonce }}">document.getElementById('response').submit();</script>{{ end }}
+      {{ end }}
+    </div>
+  </body>
+</html>

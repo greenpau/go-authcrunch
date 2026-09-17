@@ -115,7 +115,8 @@ accepted by a gatekeeper in `pkg/authz/cookie_names_test.go`.
 path boundaries, sharing between subdomains, and matching deletion with a TLS
 listener and a public-suffix-aware cookie jar.
 `pkg/authn/cookie_browser_e2e_test.go` and its dependency-free CDP driver run
-actual Chrome with a temporary profile and a TLS test-certificate SPKI allowlist.
+headless Chrome with a temporary profile and a TLS test-certificate SPKI allowlist,
+following the [browser engine policy](../testing-and-ci/SKILL.md#browser-engine).
 They prove old deletion headers fail in a browser, then verify real local login,
 sandbox cleanup, gatekeeper access, path isolation, logout, and subsequent denial
 with default, custom, secure-prefixed, and host-prefixed names. Go's cookie jar

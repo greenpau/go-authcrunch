@@ -17,6 +17,7 @@ package oidc
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"slices"
@@ -58,8 +59,10 @@ func oidcRefreshFixture(t *testing.T, configure ...func(*Provider)) (*providerFi
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", oidcTestOrigin+"/auth/oidc/authorize", nil)
 	o.mu.Lock()
-	o.issueCode(w, req, r)
+	buffered := &oidcHTTPResponse{header: make(http.Header)}
+	o.issueCode(buffered, req, r)
 	o.mu.Unlock()
+	o.sendResponse(w, req, buffered, true)
 	code := oidcUnitCode(t, w)
 	response := oidcUnitToken(t, f, code)
 	if response.Code != 200 {

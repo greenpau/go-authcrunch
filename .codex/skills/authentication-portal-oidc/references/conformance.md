@@ -42,6 +42,7 @@ Review the current plans again before certifying a release.
 | Single-use code, replay revocation, concurrent exchanges | `TestE2EOIDCConcurrentCodeRedemption`, `TestE2EOIDCProviderBrowserConsent` |
 | PKCE S256 and downgrade/missing-verifier rejection | `TestOIDCPKCE`, `TestE2EOIDCClientBindingAndPKCE` |
 | Escaped form-post responses and CSP | `TestE2EOIDCOptionalParametersAndFormPost` |
+| Themed native consent, Allow/Deny, callback origin/referrer policy, automatic and no-JavaScript form-post | `TestE2EOIDCThemedBrowser`; [browser-page validation](browser-pages.md#validation) also covers overrides and rendering failures |
 | Expiry, bounded storage, shutdown, separate keys | `TestOIDCLifetimesAndCapacity`, `TestOIDCKeys`, `TestOIDCConfigurationTrustBoundaries` |
 | Real local MFA and account invalidation | `TestE2EOIDCRequiresCompletedMFA`, `TestE2EOIDCAccountChanges` |
 | Logout, revocation, token-purpose separation, native compatibility | `TestE2EOIDCLogoutAndRevocation`, `TestE2EOIDCTokenPurposeSeparation`, `TestE2EOIDCNativeLoginDoesNotSetBrowserCookies` |

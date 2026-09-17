@@ -1,5 +1,27 @@
 # Brand Assets and Color
 
+For the shipped AuthCrunch assets, CSS variables, and a complete deployment
+example, read [basic theme branding](basic-theme.md). This reference covers how
+to choose or prepare replacement artwork and palettes; its suggested dimensions
+are design starting points rather than runtime requirements.
+
+## Shipped identity versus replacement artwork
+
+The built-in identity is the blue/navy Soft Square chain mark. Its logo,
+favicon, banner, and background are native SVGs generated from the
+[palette and source geometry](basic-theme.md#changing-the-default-palette-and-svg-artwork).
+Keep that identity unless a new direction is requested. Do not reintroduce
+PNG/ICO branding fallbacks, shrink its 96px ordinary-page logo box on phones,
+or turn the mark into a repeated banner/background motif. The two decorative
+assets have separate abstract compositions and contain no logo or text.
+
+The generic sizes and raster formats below are options for other requested
+deliverables, such as photographic backgrounds or social previews. They do not
+replace the [built-in component sizes](basic-theme.md#component-proportions-and-interaction-states).
+Runtime-generated QR PNGs and browser screenshot PNGs are separate from the
+shipped brand files. Image generation is unnecessary for edits to the existing
+native SVG geometry or CSS layout.
+
 ## Suggested Sizes
 
 AuthCrunch does not impose a standard logo, banner, or background size. Use the
@@ -11,9 +33,9 @@ not a fixed display resolution. See [MDN's viewBox reference](https://developer.
 
 | Asset | Suggested source or export size | Typical use |
 | --- | --- | --- |
-| Square logo | SVG with a square `viewBox`, e.g. `0 0 64 64`; PNG fallback at 256 by 256 or 512 by 512 | Display at 64–96 CSS px on desktop, 48–72 on mobile |
+| Square logo | SVG with a square `viewBox`, e.g. `0 0 64 64`; raster exports only for a requested compatibility target | Choose display size from the mark's optical size; basic uses 96 CSS px on desktop and phone |
 | Horizontal wordmark | SVG preserving the brand's ratio; e.g. a 400 by 100 artboard and 800 by 200 PNG export | Display about 160–240 CSS px wide; preserve height proportionally |
-| Favicon | SVG with a simple square mark; PNG at 16 by 16 and 32 by 32; optional ICO containing 16, 32, and 48 px versions | Browser tabs; review at the actual 16 px size |
+| Favicon | SVG with a simple square mark; additional raster/ICO exports only for a requested compatibility target | Browser tabs; review at the actual 16 px size |
 | Metadata/share banner | 1200 by 630 PNG or JPEG, approximately 1.9:1; retain an editable vector source if appropriate | `og:image` for link previews; check the target service's current requirements |
 | Visible page banner | Start at 1600 by 400, a 4:1 ratio; use SVG for simple artwork | A wide strip in the page; adapt height to the actual card/header layout |
 | Desktop background | 1920 by 1080 raster; 2560 by 1440 if the artwork benefits from more detail; SVG for patterns/geometry | Full viewport decoration with `background-size: cover` |
@@ -25,6 +47,42 @@ cropping behavior matter more than matching a screen's exact aspect ratio.
 Do not upscale a small raster source and call it a higher-detail asset.
 
 ## Logo and Favicon
+
+When the user requests a new identity, explore distinct simple silhouettes
+before adapting the selected mark to the theme. AuthCrunch concepts include
+verified identity, trusted access, and protected boundaries; avoid packing
+every security metaphor into one symbol. A small mark should not need its
+wordmark or slogan to remain recognizable.
+
+For round and square avatars, keep the complete symbol inside a centered safe
+area with generous clear space. Preview both crops, including 24px/32px versions,
+and check that negative spaces and separate parts remain distinguishable.
+Transparent originals support light and dark preview surfaces without baking
+an avatar crop into the source. Do not assume a square image survives a circle
+crop just because its center looks good.
+
+For concept options, save each named candidate separately in the user-requested
+directory and provide a comparison page with round, square, and small-size
+previews. Keep generation prompts with generated concept assets so choices can
+be refined consistently. Use image generation for new bitmap concepts and
+native SVG editing for established vector artwork; a raster image embedded in
+an SVG wrapper is not an editable vector logo. Carry an agreed design into the
+logo, favicon, and artwork palette together when applying it to the theme.
+
+When SVG output is requested, create actual vector paths or primitives. A
+bitmap concept can guide the design, but rebuild simple geometry with explicit
+coordinates, radii, and colors. Keep repeated parts identical through transforms;
+use concentric curves for even bands and proportionate inner spaces. Shortening
+a shape should reduce its straight sections without distorting its curves or
+thickening the stroke. Retain a small parameter/source file when generating
+several related variants so later geometry and palette changes stay consistent.
+
+Keep cutouts transparent, rather than painting them the preview background
+color. Validate SVG XML, the square viewBox, safe avatar bounds, and absence of
+embedded raster images or external resources. Inspect the rendered result at
+actual icon sizes: valid paths can still have crowded crossings or weak strokes.
+The comparison page may supply a background; the source mark should retain
+transparency unless a badge is part of the requested design.
 
 Use the user's established mark when supplied. Prepare a full logo for the
 portal and a simplified mark for small contexts if its wordmark/detail becomes
@@ -84,8 +142,13 @@ formats. Use a configured absolute public HTTPS image URL when needed; do not
 derive a public hostname from `.ActionEndpoint`. The
 [Open Graph protocol](https://ogp.me/#structured) supports `og:image:type`,
 `og:image:width`, `og:image:height`, and `og:image:alt`. Set them to the exported
-image's actual values. AuthCrunch does not supply a separate banner parameter;
-register the asset and reference it in the custom template.
+image's actual values. AuthCrunch does not supply a separate metadata banner
+parameter; register the asset and reference it in the custom template. The
+visible basic-theme card banner has a `--brand-banner-image` CSS hook and an
+embedded `banner.svg`; it does not configure Open Graph metadata.
+That accent is visible at tablet/desktop widths and hidden by the
+[phone layout](basic-theme.md#phone-layout). Review a replacement at its actual
+painted height, not just by opening its source artboard.
 
 For a visible banner, keep essential headings/instructions in HTML. If the
 whole graphic must remain visible, use `width: 100%; height: auto`. If the
@@ -100,6 +163,9 @@ Simple gradients, quiet geometry, or subdued photography are useful options.
 Keep the center or intended form area quiet; distribute stronger visual detail
 toward the edges. Avoid baked-in logos/text that will be cropped, repeated, or
 covered by the card. A CSS gradient may be sufficient without an image file.
+On basic-theme phones, text sits directly on the backdrop, so also inspect its
+contrast where the desktop card would normally hide the artwork. Keep any
+strong edge contours out of the reading area at narrow and long-page crops.
 
 `cover` preserves the image ratio while cropping overflow; a landscape image
 can lose most of its sides on a portrait phone. Adjust `background-position`
@@ -121,9 +187,10 @@ Example for an external stylesheet served at `assets/css/custom.css`:
 ```
 
 Choose the overlay for the artwork and palette; the dark overlay above is an
-example, not a requirement for light themes. Use an opaque card or a sufficiently
-opaque surface over photography. Do not reduce the entire page's `opacity`,
-which also fades its inputs and text. Preserve a solid fallback color when an
+example, not a requirement for light themes. Use a sufficiently opaque reading
+surface over photography; for the basic phone layout, use a page-level wash or
+quieter background rather than restoring the removed card. Do not reduce the
+entire page's `opacity`, which also fades its inputs and text. Preserve a solid fallback color when an
 image cannot load. Keep decorative layers from intercepting input and avoid
 expensive animated filters behind credential forms.
 
@@ -151,7 +218,22 @@ sRGB; `on-primary` is the button's text color, not another background color.
 | `--brand-focus` | `#1F1F1F` | `#1D4ED8` | `#5EEAD4` |
 
 The paper palette uses light cards over a dark page, so its form controls still
-use a light color scheme. Use a subtler separate border for decorative card
+use a light color scheme. When applying it to the basic theme, account for the
+transparent phone shell: dark ink would otherwise sit directly on the dark
+page. For example, retain the light reading surface at phone widths with:
+
+```css
+@media (max-width: 639px) {
+  .basic-theme {
+    --brand-page: var(--brand-surface);
+    --brand-page-image: none;
+  }
+}
+```
+
+This is an adjustment for that example palette, not a change to the shipped
+blue theme. Check actual page/background and foreground colors at each
+breakpoint. Use a subtler separate border for decorative card
 dividers if desired; do not reuse an almost invisible divider as the only way
 to identify a text input.
 
@@ -165,8 +247,10 @@ Calculated contrast ratios for the opaque pairs above, rounded for display:
 | On-primary / primary-hover | 18.88:1 | 8.72:1 | 7.77:1 |
 | Control-border / surface | 4.23:1 | 4.76:1 | 3.67:1 |
 
-Apply the chosen tokens to the actual components; declaring variables alone
-does not change the built-in CSS. A light/blue excerpt:
+Current basic pages consume these `--brand-*` variables through `basic.css`;
+set them on `.basic-theme` and also select matching background/banner artwork.
+For older or independent themes without that shared stylesheet, map the tokens
+to their components explicitly. A light/blue excerpt for such a theme:
 
 ```css
 .brand-body {
@@ -258,6 +342,7 @@ while keeping portal instructions and headings as real HTML text.
 Review logos at 16, 32, 64, and 96 px, banners as small thumbnails, and backgrounds
 on desktop, portrait mobile, and long registration/MFA pages. Check image
 failure, light/dark surroundings, crop, legibility, and transferred bytes.
-Test 320–390 px viewport widths as well as a wide desktop. Reuse or edit existing
-SVG/vector assets where suitable; use image generation when bitmap artwork
+For the basic theme, follow the [viewport and interaction checks](basic-theme.md#validation),
+including 430px phones, the 639/640px boundary, tablets, and wide desktops.
+Reuse or edit existing SVG/vector assets where suitable; use image generation when bitmap artwork
 benefits the request. Asset creation does not require image generation.

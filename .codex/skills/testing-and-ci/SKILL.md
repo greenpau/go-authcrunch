@@ -109,15 +109,29 @@ claim of a substantial coverage target. Raise it only with an intentional
 coverage policy and measured baseline.
 
 Direct `go test` is appropriate for a narrow debugging iteration, compile-only
-check, or fuzzing; it is not the report lifecycle. Deterministic browser-client
-simulations use Node's spec reporter; automation uses verbose Python unittest
+check, or fuzzing; it is not the report lifecycle. `make test-ui` discovers
+`pkg/authn/ui/testdata/*_client_test.cjs` and runs Node's spec reporter for login/QR
+and refresh-client simulations. Automation uses verbose Python unittest
 discovery. Both use standard-library facilities. The default Go suite also runs
-`TestE2ERefreshBrowserBootstrap` with Node 24 and Chrome/Chromium, using a temporary
+`TestE2ERefreshBrowserBootstrap` with Node 24 and headless Chrome, using a temporary
 profile and actual TLS portal. Supply `AUTHCRUNCH_TEST_BROWSER` when the executable
 is not discoverable. Missing browsers are a validation failure; the Node VM
-suite does not substitute for this E2E. Use `refresh-token-transports` for the
-fixture, process/trust isolation, and exact consumer assertions. Loopback
-`httptest` listeners are expected.
+suite does not substitute for this E2E. The default suite also runs
+`TestE2EOIDCThemedBrowser` with the same browser discovery and startup helpers.
+Use `refresh-token-transports` for the refresh fixture and the
+[OIDC browser-page owner](../authentication-portal-oidc/references/browser-pages.md#validation)
+for consent/continuation assertions, browser isolation, and screenshot capture.
+Loopback `httptest` listeners are expected.
+
+### Browser Engine
+
+Use headless Google Chrome (`--headless=new`) for repository browser tests,
+theme previews, and screenshot validation. Do not use Firefox or switch to it
+when a Chrome check fails. Set `AUTHCRUNCH_TEST_BROWSER` to the Chrome executable
+when discovery is unavailable; report a missing Chrome installation as a
+validation blocker. Keep the existing isolated profiles, fixture certificate
+trust, bounded execution, and process cleanup. Node DOM simulations complement
+the real Chrome E2E tests and do not replace them.
 
 ## Diagnostics in Agent Changes
 
@@ -390,7 +404,8 @@ go test ./...
 ```
 
 Use `make test` for the repository coverage lifecycle after a narrow diagnostic
-iteration. Use `make test-ui` for embedded refresh-client JavaScript.
+iteration. Use `make test-ui` for embedded login/QR and refresh-client JavaScript;
+it complements the Chrome E2E journeys and does not replace them.
 
 ## CI Workflow
 

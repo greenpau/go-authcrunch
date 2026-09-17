@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-blue-100">
+<html lang="en" class="h-full">
   <head>
     <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
@@ -7,20 +7,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="description" content="{{ .MetaDescription }}" />
     <meta name="author" content="{{ .MetaAuthor }}" />
-    <link rel="shortcut icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
-    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.png" }}" type="image/png" />
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.svg" }}" type="image/svg+xml">
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/line-awesome/line-awesome.css" }}" />
     <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/portal.css" }}" />
-    {{ if eq .Data.ui_options.custom_css_required "yes" }}
-      <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}" />
-    {{ end }}
+
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/basic.css" }}">
+    {{ if .CustomCSSEnabled }}<link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}">{{ end }}
   </head>
 
-  <body class="h-full">
+  <body class="basic-theme h-full">
     <div class="app-page">
       <div class="app-content">
         <div class="app-container">
+          <div class="brand-banner" aria-hidden="true"></div>
           <div class="logo-col-box justify-center">
             {{ if .LogoURL }}
               <div>
@@ -34,9 +34,9 @@
           <div>
             <p class="app-inp-lbl">{{ .Data.i18n_access_services_instruction }}</p>
           </div>
-          <div class="mt-3 grid">
+          <div class="mt-3 grid app-link-list">
             {{ range .PrivateLinks }}
-              <div class="pb-2">
+              <div>
                 <a href="{{ .Link }}" {{ if .TargetEnabled }}target="{{ .Target }}"{{ end }}>
                   <div class="app-portal-btn-box">
                     <div class="app-portal-btn-img">{{ if .IconEnabled -}}<i class="{{ .IconName }}"></i>{{- end }}</div>
@@ -45,7 +45,7 @@
                 </a>
               </div>
             {{ end }}
-            <div class="pb-2">
+            <div>
               <a href="{{ pathjoin .ActionEndpoint "/logout" }}">
                 <div class="app-portal-btn-box">
                   <div class="app-portal-btn-img"><i class="las la-sign-out-alt"></i></div>

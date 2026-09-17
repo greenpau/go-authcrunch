@@ -168,7 +168,9 @@ portal with default/custom cookie names and checks that an older SID cannot
 consume another account's current credential.
 
 `TestE2ERefreshBrowserBootstrap` runs in the default Go suite and requires Node
-24 and Chrome/Chromium. Set `AUTHCRUNCH_TEST_BROWSER` to an executable if it is
+24 and headless Chrome, following the
+[browser engine policy](../testing-and-ci/SKILL.md#browser-engine). Do not use
+Firefox. Set `AUTHCRUNCH_TEST_BROWSER` to the Chrome executable if it is
 not on PATH or at the standard macOS Chrome location. Missing engines fail
 rather than substituting the VM simulation. The Go fixture owns the browser
 process and a temporary profile, trusts only its test certificate's SPKI, and

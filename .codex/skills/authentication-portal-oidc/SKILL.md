@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-oidc
-description: Maintain the reusable pkg/oidc OpenID Provider, its public interfaces and methods, and the local-user authentication portal adapter, including client registration, discovery, code/PKCE, consent, ID-token keys, scoped and individual claims, authentication context, signed Request Objects, rotating OIDC refresh tokens, revocation, and conformance tests. Excludes upstream OAuth identity providers and portal refresh-token transport.
+description: Maintain the reusable pkg/oidc OpenID Provider, its public API and portal adapter, including client registration, discovery, code/PKCE, consent and browser-page rendering, ID-token keys, scoped and individual claims, authentication context, Request Objects, rotating OIDC refresh tokens, revocation, and conformance tests. Use for OIDC renderer integration, form-post continuation, browser errors, and their response policies. Excludes upstream OAuth providers and portal refresh-token transport.
 ---
 
 # Authentication Portal OpenID Provider
@@ -42,18 +42,25 @@ runtime `Options`. The package has no dependency on the `authn` portal runtime.
   definition fails; prior portal validation is invalidated so OIDC defaults run.
 - `identity.go`: public `Authentication`, `Identity`, `IdentityVerifier`, and
   `OpenIDProvider` contracts.
-- `options.go`: construction, configurable login URL, cookie names, and excluded
-  signing keys; `provider.go`: bounded sessions, consent, and browser lifecycle.
+- `options.go`: construction, runtime `RenderPage` callback, configurable login
+  URL, cookie names, and excluded signing keys; `provider.go`: bounded sessions,
+  consent, and browser lifecycle.
 - `keys.go`: dedicated RSA PEM loading, thumbprints, public `JWKS`, signing, hints.
 - `http.go`: public `ServeHTTP`, `HandleHTTP`, `ValidateLoginRequest`, and
   `Discovery`, guarded issuer routing, parsing, CORS, and buffered responses.
+- `pages.go`, `page.template`: browser page snapshots, standalone rendering,
+  content negotiation and CSP. The portal uses its `oidc` UI template alias;
+  read [browser pages and themes](references/browser-pages.md) when changing
+  consent, form-post continuation, browser errors or rendering integration.
 - `authorization.go`, `request_object.go`, `token.go`: code/PKCE, consent,
   unsigned/RS256 Request Objects, client authentication, UserInfo, and revocation.
   `claims.go` owns claims permissions and ACR mapping; `refresh.go` owns OIDC
   refresh families; `request_keys.go` validates client verification keys.
 
 `pkg/authn/oidc_runtime.go` supplies `portalOIDCIdentityVerifier`, local-realm
-validation, key/cookie isolation, and sandbox/browser adapters. `configureOIDC`
+validation, key/cookie isolation, and sandbox/browser adapters. It binds
+`pkg/authn/oidc_ui.go` to the existing portal UI factory for browser rendering;
+the reusable provider does not import that factory. `configureOIDC`
 runs after portal keys and optional refresh configuration. `Portal.Close` closes
 the provider; `Portal.GetOIDCProvider` exposes its public interface.
 `pkg/authn/oidc_config.go` retains `OIDCProviderConfig` and `OIDCClientConfig` as
@@ -238,6 +245,11 @@ identity, session, consent and absolute expiry. The ordinary portal refresh
 protocol remains independent.
 
 ## Validation
+
+For renderer, template, CSS, browser policy, or consent-presentation changes,
+use the [browser-page validation matrix](references/browser-pages.md#validation).
+It covers both standalone and portal rendering, filesystem overrides, native
+browser form submissions, and JavaScript-disabled continuation.
 
 `pkg/oidc/config_test.go` covers config, client authentication, and PKCE contracts.
 `provisioning_test.go` covers generated credentials, defaults, copied registration,

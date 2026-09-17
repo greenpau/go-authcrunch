@@ -87,7 +87,7 @@ func TestE2EOIDCClaimsAndRefresh(t *testing.T) {
 	params.Set("scope", "openid")
 	params.Set("claims", `{"userinfo":{"name":{"essential":true}},"id_token":{"given_name":null,"acr":{"essential":true,"values":["urn:authcrunch:password"]}}}`)
 	consent := f.request(t, "GET", "/oidc/authorize?"+params.Encode(), nil, nil)
-	if !strings.Contains(string(consent.body), "userinfo:name") || !strings.Contains(string(consent.body), "id_token:given_name") {
+	if !strings.Contains(string(consent.body), "Full name") || !strings.Contains(string(consent.body), "Given name") {
 		t.Fatal("claim consent missing")
 	}
 	code := oidcProviderE2ECode(t, f.approve(t, consent, "allow"))
@@ -111,7 +111,7 @@ func TestE2EOIDCClaimsAndRefresh(t *testing.T) {
 	params.Set("scope", "openid profile email address phone offline_access")
 	params.Set("prompt", "consent")
 	consent = f.request(t, "GET", "/oidc/authorize?"+params.Encode(), nil, nil)
-	if !strings.Contains(string(consent.body), "refresh tokens") || !strings.Contains(string(consent.body), "postal address") {
+	if !strings.Contains(string(consent.body), "Continued access") || !strings.Contains(string(consent.body), "postal address") {
 		t.Fatal("expanded consent missing")
 	}
 	code = oidcProviderE2ECode(t, f.approve(t, consent, "allow"))

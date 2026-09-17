@@ -43,6 +43,12 @@ Supply `Options.ExcludedSigningKeys` with public keys trusted for other token
 purposes in the host. Construction rejects matching OIDC signing keys. The
 portal adapter supplies its access-token verification keys automatically.
 
+`Options.RenderPage` optionally renders consent, form-post continuation and local
+browser errors through host templates. Nil uses the styled standalone fallback.
+The callback receives a `Page` snapshot without provider locks; preserve its form
+contract and contextual escaping. See [browser pages](browser-pages.md) for the
+runtime API, portal `oidc` template alias, response policies and tests.
+
 ## Provider settings directives
 
 Import `github.com/greenpau/go-authcrunch/pkg/oidc/parser` as `oidcparser`.

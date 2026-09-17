@@ -8,7 +8,7 @@ theme, fills aliases without overrides, and loads custom template files.
 Currently only `basic` is registered in `ui.Themes`.
 
 The current aliases are `login`, `sandbox`, `portal`, `register`, `generic`,
-`whoami`, `apps_sso`, `apps_mobile_access`, and `session`. Use bare aliases in
+`whoami`, `apps_sso`, `apps_mobile_access`, `session`, and `oidc`. Use bare aliases in
 configuration, such as `login`, rather than `basic/login` or `login.template`.
 `basic/login` is the embedded asset name used by factory APIs, not the override
 key used by the portal. There is no directory autodiscovery for custom themes.
@@ -56,6 +56,7 @@ ui {
     template apps_sso {env.AUTH_PORTAL_THEME_ROOT}/apps_sso.template
     template apps_mobile_access {env.AUTH_PORTAL_THEME_ROOT}/apps_mobile_access.template
     template session {env.AUTH_PORTAL_THEME_ROOT}/session.template
+    template oidc {env.AUTH_PORTAL_THEME_ROOT}/oidc.template
 }
 ```
 
@@ -82,7 +83,8 @@ For a direct library consumer, these are corresponding fields in the portal's
   "custom_css_path": "/srv/auth-portal-theme/theme.css",
   "templates": {
     "login": "/srv/auth-portal-theme/login.template",
-    "session": "/srv/auth-portal-theme/session.template"
+    "session": "/srv/auth-portal-theme/session.template",
+    "oidc": "/srv/auth-portal-theme/oidc.template"
   },
   "static_assets": [
     {
@@ -120,29 +122,41 @@ In Go templates:
   <img class="logo-img brand-logo" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}" />
 {{ end }}
 <link rel="icon" type="image/svg+xml" href="{{ pathjoin .ActionEndpoint "/assets/images/brand-favicon.svg" }}" />
-<meta property="og:image" content="{{ pathjoin .ActionEndpoint "/assets/images/brand-banner.svg" }}" />
 ```
 
 `Args.BaseURL` already adds the mount to local `.LogoURL` values. Do not join
 it a second time. A deliberate fixed logo can instead use `pathjoin` like the
 favicon example, but then the `logo_url` setting no longer controls that image.
-The banner example exposes a local metadata asset; if a social preview is a
-deliverable, verify the consumer's crawler requirements, absolute public URL,
-and supported image format separately.
+The visible card accent is not a social preview asset. If a social preview is
+a requested deliverable, register a separate asset and add its metadata to the
+custom head; verify the crawler requirements, absolute public URL, and supported
+format separately. See [banner guidance](brand-assets-and-color.md#banners).
 
 `custom_css_path` and `custom_js_path` are filesystem paths. They register the
-fixed URLs `assets/css/custom.css` and `assets/js/custom.js`. Ordinary built-in
-pages conditionally include these using `.Data.ui_options`; `session` needs an
-explicit stylesheet link in its override. Put the CSS hook after all base and
-view-specific styles when the theme should take precedence.
+fixed URLs `assets/css/custom.css` and `assets/js/custom.js`. Every current
+built-in page uses `.CustomCSSEnabled` for CSS and loads it after view styles and
+`basic.css`, including `session` and `oidc`. Older filesystem copies may still
+use `.Data.ui_options` or omit the hook. Ordinary pages retain their custom
+JavaScript hooks; session and OIDC do not load custom JavaScript. See
+[basic theme branding](basic-theme.md) for shared color variables and complete
+logo/icon/banner/background wiring without template copies.
+
+The built-in phone layout and QR interaction need no new UI fields or parser
+directives. They come from `basic.css`, `oidc.css`, the current login template,
+and `login.js`. CSS can recolor or resize the UI; an older filesystem login
+template must also adopt the [QR DOM contract](template-contracts.md#qr-controls)
+to move the code into the content area and add Close QR Code. Keep the
+[phone breakpoint](basic-theme.md#phone-layout) and tablet/desktop rules separate
+when adding custom CSS. A configured banner remains hidden on phones unless
+the deployment deliberately overrides that rule.
 
 Static CSS is served verbatim, so `{{ pathjoin ... }}` inside `theme.css` will
 not be evaluated. With CSS served as `assets/css/custom.css`, this URL remains
 valid at both `/` and `/xauth`:
 
 ```css
-.brand-body .app-page {
-  background-image: url("../images/brand-background.svg");
+.basic-theme {
+  --brand-page-image: url("../images/brand-background.svg");
 }
 ```
 
@@ -151,9 +165,22 @@ For different themes on multiple portals in one process, use distinct asset
 keys, including distinct stylesheets linked by each custom template. The fixed
 `custom.css`/`custom.js` keys cannot hold separate content per portal. The
 custom HTML header mechanism also mutates built-in template assets; it is not
-an include mechanism for filesystem overrides and does not reach the current
-session template. Prefer explicit head markup for a custom template set.
+an include mechanism for filesystem overrides. Injected markup is still subject
+to each page's CSP, including session and OIDC. Prefer explicit head markup for
+a custom template set.
 
 Static responses use ETags and `Cache-Control: max-age=7200`. When changes appear
 missing, check runtime loading, the requested URL, and the browser cache before
 rewriting the CSS. Versioned asset filenames can help deployed theme updates.
+
+## OIDC pages
+
+The `oidc` alias renders consent, form-post continuation and local browser errors.
+It honors portal metadata, the local logo, and the custom CSS hook. Preserve
+`.Data.oidc` form fields and the form-post nonce. OIDC uses separate `.oidc-*`
+styles with shared `--brand-*` colors, so old `.app-*` overrides alone do not
+cover it. Set `templates.oidc` only when
+changing markup; custom CSS can style the built-in view without replacing it.
+Register branding assets locally for its response policy. See the
+[OIDC browser template contract](../../authentication-portal-oidc/references/browser-pages.md)
+for page data, CSP, content negotiation and browser validation.

@@ -77,7 +77,7 @@ func (p *Portal) configureOIDC() error {
 			return fmt.Errorf("oidc realm must identify exactly one local store")
 		}
 	}
-	options := oidc.Options{SessionCookieName: p.cookie.OIDCSessionIDCookieName, RequestCookieName: p.cookie.OIDCRequestIDCookieName}
+	options := oidc.Options{RenderPage: p.renderOIDCPage, SessionCookieName: p.cookie.OIDCSessionIDCookieName, RequestCookieName: p.cookie.OIDCRequestIDCookieName}
 	if p.refresh != nil {
 		issuer, _ := url.Parse(config.Issuer)
 		if p.config.RefreshTokens.PublicOrigin != issuer.Scheme+"://"+issuer.Host || strings.TrimSuffix(p.config.RefreshTokens.BasePath, "/") != issuer.Path {

@@ -1,0 +1,16 @@
+{
+  "primary": "#245bca",
+  "primary_hover": "#194ba9",
+  "on_primary": "#ffffff",
+  "ink": "#172b4d",
+  "muted": "#52637a",
+  "surface": "#ffffff",
+  "soft": "#f8fafc",
+  "page": "#edf3fc",
+  "border": "#dce4ef",
+  "control_border": "#8191a8",
+  "banner_edge": "#d8e5fa",
+  "background_start": "#e3edfc",
+  "background_middle": "#f5f8fd",
+  "background_end": "#e8effa"
+}

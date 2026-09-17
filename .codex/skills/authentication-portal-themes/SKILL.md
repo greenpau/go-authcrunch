@@ -1,24 +1,39 @@
 ---
 name: authentication-portal-themes
-description: Build, customize, or update AuthCrunch authentication portal themes using Go HTML templates, CSS, logos, favicons, banners, and backgrounds. Use for filesystem template overrides and their UI/static-asset configuration; the embedded React profile application has a separate build.
+description: Build, customize, or update AuthCrunch authentication portal themes using Go HTML templates, CSS, and SVG branding. Use for responsive layouts, login QR controls, filesystem overrides, UI/static-asset configuration, and OIDC consent, continuation, and error-page styling. The embedded React profile application has a separate build.
 ---
 
 # Authentication Portal Themes
 
-Create a deployable theme in the consuming application's theme directory, with
-the user's branding, working portal flows, and matching configuration. Start
-from the built-in templates for the AuthCrunch version the application runs.
+For an application theme, create deployable files in its theme directory, with
+the user's branding, working portal flows, and matching configuration. For
+library UI work, update the built-in templates and their rendering/browser tests.
+Start from the templates for the AuthCrunch version the application runs.
 Use an existing custom theme as a design reference, then carry its styling onto
 those templates. Filesystem overrides do not inherit later upstream changes.
 
 ## Choose the Customization Surface
 
-- For colors, typography, spacing, and a logo, prefer UI parameters and custom
-  CSS. Keep the built-in markup when it meets the request.
-- For a branded page shell, favicon/metadata, or different layout, copy and
-  override the affected templates. Unspecified aliases keep their built-in
+Read [basic theme branding](references/basic-theme.md) for the built-in blue
+palette, shared CSS variables, logo/icon/banner/background replacements, and
+tested configuration examples. Use it for defaults or CSS-only branding before
+copying templates.
+
+For sizing, alignment, gaps, corners, and hover/focus changes, read the
+[component contract](references/basic-theme.md#component-proportions-and-interaction-states).
+For phone-only work, use the [phone layout](references/basic-theme.md#phone-layout)
+and verify the tablet/desktop boundary. For QR behavior, use the
+[login QR contract](references/template-contracts.md#qr-controls); styling must
+preserve the active login view, entered values, and keyboard focus.
+
+- For colors, typography, spacing, logo, icon, banner, and background, prefer
+  shared CSS variables and existing UI/static-asset settings. Keep the built-in
+  markup when it meets the request.
+- For different page structure, additional metadata, or custom favicon URLs,
+  copy and override the affected templates. Unspecified aliases keep their built-in
   templates. A complete theme should account for every page the application
-  exposes, including session continuation and logout confirmation when enabled.
+  exposes, including session continuation, logout confirmation, and the OIDC
+  consent, form-post continuation, and error views when enabled.
 - Keep application themes in the consuming application. Editing
   `pkg/authn/ui/page_templates/basic` changes the library's default UI and is
   appropriate only when that is the requested scope.
@@ -67,6 +82,14 @@ theme CSS from the same origin. Do not relax its Content Security Policy to
 reuse an inline style block. Read `refresh-token-transports` if changing session
 behavior; visual changes alone do not require redesigning the refresh flow.
 
+For OIDC styling, read the
+[OIDC browser page contract](../authentication-portal-oidc/references/browser-pages.md)
+before copying the `oidc` alias. It owns `.Data.oidc`, consent/continuation form
+semantics, response policies, and browser validation. These pages use their own
+`.oidc-*` styles; the theme's `.app-*` overrides alone will not style them. OIDC
+and ordinary portal views share the `--brand-*` tokens in `basic.css`.
+Form-post continuation and the portal refresh `session` page are separate flows.
+
 ## Source of Truth
 
 Paths below are relative to the repository root:
@@ -76,8 +99,17 @@ Paths below are relative to the repository root:
 - `pkg/authn/ui/ui.go`: template functions, `Args`, `BaseURL`, and rendering.
 - `pkg/authn/ui/page_templates/basic/`: current template baselines.
 - `pkg/authn/ui/core/css/` and `pkg/authn/ui/core/js/`: styles and DOM consumers.
+- `pkg/authn/ui/core/js/login.js` and `pkg/authn/respond_qrcode.go`: login QR
+  view transitions and the generated code endpoint, separate from brand assets.
+- `pkg/authn/ui/core/css/basic.css` and `pkg/authn/ui/core/images/`: common
+  branding tokens, vector logo, favicon, decorative banner, and background.
+- `assets/branding/palette.json` and `assets/branding/soft-square.svg`: default
+  colors and source geometry; `make brand-assets` regenerates the related SVGs,
+  CSS colors, and profile metadata. `make brand-assets-check` checks drift.
 - `pkg/authn/handle_http_static.go`: public asset routing and caching.
 - `pkg/authn/handle_http_session.go`: session rendering and response policy.
+- `pkg/authn/oidc_ui.go`: OIDC page snapshots passed to the portal UI factory;
+  `pkg/oidc/pages.go` owns the response policies and standalone fallback.
 
 Use the application's pinned dependency when it differs from this checkout.
 Recompare overrides with that baseline on upgrades; do not copy an older theme's

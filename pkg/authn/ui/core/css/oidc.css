@@ -1,0 +1,65 @@
+/* OIDC consent, continuation and browser errors. All assets stay on this origin. */
+.oidc-page {
+  --oidc-ink: var(--brand-ink, #172b4d);
+  --oidc-muted: var(--brand-muted, #52637a);
+  --oidc-accent: var(--brand-primary, #245bca);
+  --oidc-border: var(--brand-border, #dce4ef);
+  margin: 0;
+  min-height: 100vh;
+  background: #edf3fc;
+  background: linear-gradient(160deg, #dbeafe 0%, #f2f6fc 55%, #eaf0fa 100%);
+  color: var(--oidc-ink);
+  font: 16px/1.55 Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+.oidc-page *, .oidc-page *::before, .oidc-page *::after { box-sizing: border-box; }
+.oidc-shell { width: min(100%, 620px); margin: 0 auto; padding: 48px 20px; }
+.oidc-brand { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px; color: var(--oidc-muted); font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+.oidc-brand img { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
+.oidc-card { background: var(--brand-surface, #fff); border: 1px solid var(--oidc-border); border-radius: var(--brand-radius, 20px); box-shadow: var(--brand-shadow, 0 12px 40px #17376312, 0 2px 6px #17376306); overflow: hidden; }
+.oidc-header { padding: 32px 36px 28px; }
+.oidc-eyebrow { margin: 0 0 10px; color: var(--oidc-accent); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.oidc-page h1 { margin: 0; font-size: 28px; font-weight: 700; line-height: 1.25; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.oidc-intro { margin: 14px 0 0; color: var(--oidc-muted); overflow-wrap: anywhere; }
+.oidc-client { color: var(--oidc-ink); font-weight: 600; }
+.oidc-account { display: flex; align-items: center; gap: 12px; margin-top: 24px; padding: 12px 14px; border: 1px solid var(--oidc-border); border-radius: 10px; background: var(--brand-soft, #f8fafc); }
+.oidc-account > div { min-width: 0; }
+.oidc-account-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--brand-soft, #e5edfb); color: var(--oidc-accent); flex-shrink: 0; }
+.oidc-account-icon svg { width: 20px; height: 20px; }
+.oidc-account-label { display: block; color: var(--oidc-muted); font-size: 12px; }
+.oidc-username { display: block; font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+.oidc-permissions { padding: 26px 36px; border-top: 1px solid var(--oidc-border); }
+.oidc-page h2 { margin: 0 0 20px; font-size: 15px; font-weight: 600; }
+.oidc-page h3 { margin: 0; font-size: 15px; font-weight: 500; }
+.oidc-permission-list { margin: 0; padding: 0; list-style: none; }
+.oidc-permission-list > li { display: flex; gap: 14px; margin-top: 20px; }
+.oidc-permission-list > li:first-child { margin-top: 0; }
+.oidc-permission-list p, .oidc-claims p { margin: 4px 0 0; color: var(--oidc-muted); font-size: 14px; }
+.oidc-permission-mark { width: 24px; height: 24px; flex-shrink: 0; display: grid; place-items: center; background: var(--brand-soft, #edf3ff); border-radius: 6px; color: var(--oidc-accent); }
+.oidc-claims { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--oidc-border); }
+.oidc-claims ul { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 12px 0 0; list-style: none; }
+.oidc-claims li { padding: 4px 10px; background: var(--brand-soft, #f1f5fa); border: 1px solid var(--oidc-border); border-radius: 6px; font-size: 13px; overflow-wrap: anywhere; }
+.oidc-footer { padding: 24px 36px 28px; background: var(--brand-soft, #fbfcfe); border-top: 1px solid var(--oidc-border); }
+.oidc-notice { margin: 0 0 18px; color: var(--oidc-ink); font-size: 14px; }
+.oidc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.oidc-button { display: inline-flex; justify-content: center; align-items: center; min-height: 46px; padding: 11px 18px; border: 1px solid transparent; border-radius: 8px; font: inherit; font-size: 15px; font-weight: 500; line-height: 1.4; cursor: pointer; text-align: center; }
+.oidc-button-primary { color: var(--brand-on-primary, #fff); background: var(--oidc-accent); }
+.oidc-button-primary:hover { background: var(--brand-primary-hover, #194ba9); }
+.oidc-button-secondary { color: var(--oidc-ink); background: var(--brand-surface, #fff); border-color: var(--brand-control-border, #8191a8); }
+.oidc-button-secondary:hover { background: var(--brand-soft, #edf3fc); }
+.oidc-button:focus-visible { outline: 3px solid var(--brand-focus, #245bca); outline-offset: 3px; }
+.oidc-button-wide { width: 100%; }
+.oidc-footnote { margin: 16px 0 0; color: var(--oidc-muted); font-size: 12px; line-height: 1.6; }
+@media (max-width: 639px) {
+  .oidc-brand { justify-content: flex-start; margin-bottom: 32px; }
+  .oidc-brand img { width: 48px; height: 48px; }
+  .oidc-header { padding: 0 0 24px; }
+  .oidc-permissions { padding: 24px 0; }
+  .oidc-footer { padding: 24px 0 0; background: transparent; }
+  .oidc-page h1 { font-size: 28px; }
+  .oidc-actions { grid-template-columns: 1fr; }
+  .oidc-button { min-height: 56px; font-size: 18px; }
+}
+@media (forced-colors: active) {
+  .oidc-card, .oidc-button, .oidc-account, .oidc-claims li { border: 1px solid CanvasText; }
+}

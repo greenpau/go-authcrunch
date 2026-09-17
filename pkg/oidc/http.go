@@ -39,7 +39,7 @@ func (o *Provider) HandleHTTP(w http.ResponseWriter, r *http.Request) bool {
 	}
 	// Release state and identity locks before writing to a potentially slow peer.
 	response := &oidcHTTPResponse{header: make(http.Header)}
-	defer response.send(w)
+	defer o.sendResponse(w, r, response, endpoint == "/oidc/authorize" || endpoint == "/oidc/continue")
 	w = response
 	oidcHeaders(w)
 	if !o.originOK(r) {
@@ -68,9 +68,9 @@ func (o *Provider) HandleHTTP(w http.ResponseWriter, r *http.Request) bool {
 		}
 		oidcJSON(w, r, o.JWKS())
 	case "/oidc/authorize":
-		o.authorize(w, r)
+		o.authorize(response, r)
 	case "/oidc/continue":
-		o.continueAuthorization(w, r)
+		o.continueAuthorization(response, r)
 	case "/oidc/token":
 		o.token(w, r)
 	case "/oidc/userinfo":
@@ -109,6 +109,9 @@ func oidcJSON(w http.ResponseWriter, r *http.Request, data any) {
 }
 
 func oidcError(w http.ResponseWriter, status int, code string) {
+	if response, ok := w.(*oidcHTTPResponse); ok {
+		response.errorCode = code
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": code})
@@ -190,9 +193,12 @@ func (o *Provider) Discovery() map[string]any {
 
 // Buffer bounded protocol responses so no network I/O occurs under state locks.
 type oidcHTTPResponse struct {
-	header http.Header
-	status int
-	body   bytes.Buffer
+	page             *Page
+	errorCode        string
+	formActionOrigin string
+	header           http.Header
+	status           int
+	body             bytes.Buffer
 }
 
 func (w *oidcHTTPResponse) Header() http.Header { return w.header }

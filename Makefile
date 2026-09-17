@@ -17,7 +17,7 @@ export TEST TEST_DIR TEST_TIMEOUT QUICK_TEST_DIR COVERAGE_DIR MINIMUM_COVERAGE
 export APP_VERSION GIT_COMMIT GIT_BRANCH BUILD_USER BUILD_DATE
 export PYTHONDONTWRITEBYTECODE := 1
 
-.PHONY: all info build linter dep install-test-tools test run-tests qtest run-quick-tests run-reports test-ui test-automation ci-check version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release release-git-check release-update-version release-git-commit
+.PHONY: all info build linter dep install-test-tools test run-tests qtest run-quick-tests run-reports test-ui test-automation ci-check brand-assets brand-assets-check version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release release-git-check release-update-version release-git-commit
 
 all: info build
 
@@ -68,14 +68,21 @@ run-reports:
 	@go tool tested report --output-dir "$$COVERAGE_DIR" --title "AuthCrunch Go tests"
 
 test-ui:
-	@node --test --test-reporter=spec pkg/authn/ui/testdata/token_refresh_client_test.cjs
+	@node --test --test-reporter=spec pkg/authn/ui/testdata/*_client_test.cjs
 
 test-automation:
 	@$(PYTHON) -m unittest discover -s assets/scripts/tests -p '*_test.py' -v
 
+brand-assets:
+	@$(PYTHON) assets/scripts/update_brand_assets.py
+
+brand-assets-check:
+	@$(PYTHON) assets/scripts/update_brand_assets.py --check
+
 # Recursive invocations deliberately serialize gates, even with make -j.
 ci-check:
 	@$(MAKE) version-check
+	@$(MAKE) brand-assets-check
 	@$(MAKE) test-automation
 	@$(MAKE) linter
 	@$(MAKE) test TEST=. TEST_DIR=./... COVERAGE_DIR=.coverage MINIMUM_COVERAGE=1

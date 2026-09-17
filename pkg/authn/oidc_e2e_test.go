@@ -83,6 +83,16 @@ func newOIDCE2EFixtureWithProviderDirectives(t *testing.T, mount string, refresh
 
 func newOIDCE2EFixtureConfigured(t *testing.T, mount string, refresh bool, directives []string, configure func(string, map[string]*oidc.ClientConfig), cookieConfigs ...*cookie.Config) *oidcE2EFixture {
 	t.Helper()
+	return newOIDCE2EFixtureWithPortalConfig(t, mount, refresh, directives, configure, nil, cookieConfigs...)
+}
+
+func newOIDCE2EFixtureWithPortalConfig(t *testing.T, mount string, refresh bool, directives []string, configure func(string, map[string]*oidc.ClientConfig), configurePortal func(*authn.PortalConfig), cookieConfigs ...*cookie.Config) *oidcE2EFixture {
+	t.Helper()
+	return newOIDCE2EFixtureWithConfig(t, mount, refresh, directives, configure, configurePortal, nil, cookieConfigs...)
+}
+
+func newOIDCE2EFixtureWithConfig(t *testing.T, mount string, refresh bool, directives []string, configure func(string, map[string]*oidc.ClientConfig), configurePortal func(*authn.PortalConfig), configureServer func(*authcrunch.Config), cookieConfigs ...*cookie.Config) *oidcE2EFixture {
+	t.Helper()
 	server := httptest.NewUnstartedServer(nil)
 	t.Cleanup(server.Close)
 	issuer := "https://" + server.Listener.Addr().String() + mount
@@ -130,7 +140,13 @@ func newOIDCE2EFixtureConfigured(t *testing.T, mount string, refresh bool, direc
 	if refresh {
 		portalConfig.RefreshTokens = &authn.TokenRefreshConfig{Enabled: true, PublicOrigin: "https://" + server.Listener.Addr().String(), BasePath: mount, Realms: []string{"local"}, BodyTransportEnabled: true}
 	}
+	if configurePortal != nil {
+		configurePortal(portalConfig)
+	}
 	config := &authcrunch.Config{IdentityStores: []*ids.IdentityStoreConfig{{Name: "oidc-local", Kind: "local", Params: map[string]any{"path": dbPath, "realm": "local"}}}, AuthenticationPortals: []*authn.PortalConfig{portalConfig}}
+	if configureServer != nil {
+		configureServer(config)
+	}
 	for nickname, client := range applications {
 		application, err := oidc.NewOAuthApplicationConfig(nickname, client)
 		if err != nil {

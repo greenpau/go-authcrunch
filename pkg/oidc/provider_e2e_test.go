@@ -255,6 +255,9 @@ func TestE2EStandaloneProvider(t *testing.T) {
 				}
 				consent := request("GET", "/oidc/continue", nil, nil)
 				expect(consent, http.StatusOK)
+				if !strings.Contains(string(consent.body), `class="oidc-card"`) || !strings.Contains(string(consent.body), "Review requested access") || !strings.Contains(consent.header.Get("Content-Security-Policy"), "style-src 'self' 'nonce-") {
+					t.Fatal("standalone styled consent missing")
+				}
 				match := regexp.MustCompile(`name="csrf" value="([^"]+)"`).FindSubmatch(consent.body)
 				if len(match) != 2 {
 					t.Fatal("missing standalone consent form")
