@@ -28,9 +28,9 @@ import (
 )
 
 // requestObjectParameters implements Core 6.1/6.3.3 parameter assembly for
-// unsecured Request Objects. This is an alternative encoding of untrusted
-// authorization parameters, NEVER authentication or client identity evidence.
-// Signed/encrypted objects and remote request_uri fetching are not supported.
+// unsecured or registered RS256 Request Objects. They are authorization
+// parameters, never end-user authentication evidence. Encrypted objects and
+// remote request_uri fetching are not supported.
 func (o *Provider) requestObjectParameters(outer url.Values) (url.Values, string) {
 	raw := outer.Get("request")
 	if raw == "" {
@@ -40,21 +40,25 @@ func (o *Provider) requestObjectParameters(outer url.Values) (url.Values, string
 		return nil, "invalid_request"
 	}
 	parts := strings.Split(raw, ".")
-	if len(raw) > oidcMaxRequestBytes || len(parts) != 3 || parts[2] != "" {
+	if len(raw) > oidcMaxRequestBytes || len(parts) != 3 {
 		return nil, "invalid_request_object"
 	}
 	header, err := oidcRequestObjectPart(parts[0])
-	var algorithm string
-	if err != nil || json.Unmarshal(header["alg"], &algorithm) != nil || algorithm != "none" {
+	if err != nil || !o.verifyRequestObject(outer.Get("client_id"), parts, header) {
 		return nil, "invalid_request_object"
 	}
-	for _, unsupported := range []string{"crit", "b64", "enc", "zip"} {
+	for _, unsupported := range []string{"crit", "b64", "enc", "zip", "jku", "jwk", "x5u", "x5c"} {
 		if _, exists := header[unsupported]; exists {
 			return nil, "invalid_request_object"
 		}
 	}
 	object, err := oidcRequestObjectPart(parts[1])
 	if err != nil {
+		return nil, "invalid_request_object"
+	}
+	var algorithm string
+	_ = json.Unmarshal(header["alg"], &algorithm)
+	if algorithm == "RS256" && (object["iss"] == nil || object["aud"] == nil) {
 		return nil, "invalid_request_object"
 	}
 	for _, nested := range []string{"request", "request_uri"} {
@@ -111,8 +115,7 @@ func (o *Provider) requestObjectParameters(outer url.Values) (url.Values, string
 			}
 			merged.Set(name, string(raw))
 		case "claims":
-			// The claims parameter is not supported; preserve its JSON encoding
-			// for the normal authorization validator to ignore.
+			// Preserve JSON for consent-aware claims validation.
 			merged.Set(name, string(raw))
 		case "client_id", "response_type", "redirect_uri", "scope", "state", "nonce", "response_mode", "prompt", "code_challenge", "code_challenge_method", "id_token_hint", "registration", "display", "login_hint", "ui_locales", "claims_locales", "acr_values":
 			var value string

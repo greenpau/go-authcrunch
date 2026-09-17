@@ -27,6 +27,7 @@ var ErrRefreshIdentityDenied = errors.New("refresh identity denied")
 
 // RefreshIdentity contains fresh non-secret attributes of an immutable record.
 type RefreshIdentity struct {
+	Profile               *Profile `json:"-" xml:"-" yaml:"-"`
 	Username, Email, Name string   `json:"-" xml:"-" yaml:"-"`
 	Roles, Challenges     []string `json:"-" xml:"-" yaml:"-"`
 }
@@ -56,7 +57,7 @@ func (db *Database) WithRefreshIdentity(ctx context.Context, proof requests.Auth
 	if err != nil {
 		return err
 	}
-	return apply(RefreshIdentity{Username: u.Username, Email: u.GetMailClaim(), Name: u.GetNameClaim(), Roles: u.GetRolesClaim(), Challenges: append([]string(nil), challenges...)})
+	return apply(RefreshIdentity{Profile: u.Profile.Clone(), Username: u.Username, Email: u.GetMailClaim(), Name: u.GetNameClaim(), Roles: u.GetRolesClaim(), Challenges: append([]string(nil), challenges...)})
 }
 
 // RevokeUserSessions invalidates refresh families and pending login evidence for

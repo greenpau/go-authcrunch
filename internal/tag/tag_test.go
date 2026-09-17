@@ -81,6 +81,10 @@ func TestTagCompliance(t *testing.T) {
 		{name: "test oidc.Options struct", entry: &oidc.Options{}, opts: &Options{}},
 		{name: "test oidc.Authentication struct", entry: &oidc.Authentication{}, opts: &Options{}},
 		{name: "test oidc.Identity struct", entry: &oidc.Identity{}, opts: &Options{}},
+		{name: "test identity.Profile struct", entry: &identity.Profile{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"profile": true}}},
+		{name: "test identity.Address struct", entry: &identity.Address{}, opts: &Options{}},
+		{name: "test oidc.AuthenticationContext struct", entry: &oidc.AuthenticationContext{}, opts: &Options{}},
+		{name: "test oidc.RequestObjectKey struct", entry: &oidc.RequestObjectKey{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"kid": true, "n": true, "e": true}}},
 		{name: "test oidc.Config struct", entry: &oidc.Config{}, opts: &Options{}},
 		{name: "test oidc.OAuthApplicationConfig struct", entry: &oidc.OAuthApplicationConfig{}, opts: &Options{}},
 		{

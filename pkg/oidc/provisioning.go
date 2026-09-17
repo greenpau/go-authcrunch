@@ -96,6 +96,7 @@ func (c *Config) AddClient(client *ClientConfig) error {
 func cloneClientConfig(config ClientConfig) *ClientConfig {
 	config.RedirectURIs = slices.Clone(config.RedirectURIs)
 	config.Scopes = slices.Clone(config.Scopes)
+	config.RequestObjectKeys = slices.Clone(config.RequestObjectKeys)
 	return &config
 }
 

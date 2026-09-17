@@ -28,7 +28,9 @@ import (
 // cfgutil.EncodeArgs; pass no braces. The embedding adapter owns block traversal
 // and placeholder expansion. Unknown headers and malformed bodies fail closed.
 // Repeat redirect_uri with exactly one callback per statement; the plural
-// redirect_uris directive is unsupported. Other fields occur at most once.
+// redirect_uris directive is unsupported. request_object_key is also repeatable;
+// other fields occur at most once. Request Object verification keys and signing
+// algorithm policy come from directives, never inherited persisted policy.
 //
 // Adaptation never generates credentials. Supply explicit client_id and, for a
 // confidential client, client_secret, or provide a persisted registration with

@@ -22,7 +22,6 @@ import (
 	"net/url"
 	"slices"
 	"strings"
-	"time"
 )
 
 func (o *Provider) authenticateClient(r *http.Request, params url.Values) *ClientConfig {
@@ -87,6 +86,10 @@ func (o *Provider) token(w http.ResponseWriter, r *http.Request) {
 		oidcError(w, http.StatusUnauthorized, "invalid_client")
 		return
 	}
+	if params.Get("grant_type") == "refresh_token" {
+		o.refreshToken(w, r, params, client)
+		return
+	}
 	if params.Get("grant_type") != "authorization_code" {
 		oidcError(w, http.StatusBadRequest, "unsupported_grant_type")
 		return
@@ -106,7 +109,7 @@ func (o *Provider) token(w http.ResponseWriter, r *http.Request) {
 	// Retain spent-code tombstones until the resulting token expires. A
 	// repeated redemption revokes that token, including concurrent replays.
 	if grant.redeemed {
-		delete(o.access, grant.accessHash)
+		o.revokeGrant(grant)
 		oidcError(w, http.StatusBadRequest, "invalid_grant")
 		return
 	}
@@ -114,32 +117,12 @@ func (o *Provider) token(w http.ResponseWriter, r *http.Request) {
 		oidcError(w, http.StatusBadRequest, "invalid_grant")
 		return
 	}
-	session := o.sessions[grant.session]
-	var response map[string]any
-	err = o.withIdentity(r.Context(), session, func(map[string]any) error {
-		now := o.now()
-		expires := now.Add(time.Duration(o.config.TokenLifetimeSeconds) * time.Second)
-		if session.expires.Before(expires) {
-			expires = session.expires
-		}
-		if expires.Unix() <= now.Unix() {
-			return ErrIdentityDenied
-		}
-		access := oidcRandom()
-		digest := sha256.Sum256([]byte(access))
-		claims := map[string]any{"iss": o.config.Issuer, "sub": session.subject, "aud": client.ClientID, "iat": now.Unix(), "exp": expires.Unix(), "auth_time": session.proof.AuthenticatedAt, "amr": slices.Clone(session.methods), "at_hash": base64.RawURLEncoding.EncodeToString(digest[:16])}
-		if grant.request.nonce != "" {
-			claims["nonce"] = grant.request.nonce
-		}
-		idToken, err := o.sign(claims)
-		if err != nil {
-			return err
-		}
-		grant.redeemed, grant.accessHash, grant.expires = true, digest, expires
-		o.access[digest] = grant
-		response = map[string]any{"access_token": access, "token_type": "Bearer", "expires_in": expires.Unix() - now.Unix(), "id_token": idToken, "scope": strings.Join(grant.request.scopes, " ")}
-		return nil
-	})
+	if grant.revoked || (slices.Contains(grant.request.scopes, "offline_access") && len(o.refresh) >= o.config.MaxRefreshTokens) {
+		oidcError(w, http.StatusServiceUnavailable, "temporarily_unavailable")
+		return
+	}
+	response, err := o.issueTokens(r, grant, client, false)
+
 	if err != nil {
 		oidcError(w, http.StatusBadRequest, "invalid_grant")
 		return
@@ -198,19 +181,20 @@ func (o *Provider) userinfo(w http.ResponseWriter, r *http.Request) {
 	defer o.mu.Unlock()
 	o.sweep()
 	grant := o.access[sha256.Sum256([]byte(credential))]
-	if o.closed || len(credential) != 43 || grant == nil || !o.now().Before(grant.expires) {
+	if o.closed || len(credential) != 43 || grant == nil || !o.now().Before(grant.accessExpires) || grant.revoked {
 		oidcInvalidBearer(w)
 		return
 	}
 	var result map[string]any
 	err := o.withIdentity(r.Context(), o.sessions[grant.session], func(current map[string]any) error {
 		result = map[string]any{"sub": current["sub"]}
-		if slices.Contains(grant.request.scopes, "profile") {
-			result["name"], result["preferred_username"] = current["name"], current["preferred_username"]
+		session := o.sessions[grant.session]
+		current["auth_time"] = session.proof.AuthenticatedAt
+		current["amr"] = slices.Clone(session.methods)
+		if acr := o.authenticationContext(session, &grant.request); acr != "" {
+			current["acr"] = acr
 		}
-		if slices.Contains(grant.request.scopes, "email") {
-			result["email"], result["email_verified"] = current["email"], current["email_verified"]
-		}
+		oidcDisclose(result, current, &grant.request, "userinfo")
 		return nil
 	})
 	if err != nil {
@@ -244,7 +228,10 @@ func (o *Provider) revoke(w http.ResponseWriter, r *http.Request) {
 	defer o.mu.Unlock()
 	hash := sha256.Sum256([]byte(params.Get("token")))
 	if grant := o.access[hash]; grant != nil && grant.request.clientID == client.ClientID {
-		delete(o.access, hash)
+		o.revokeGrant(grant)
+	}
+	if grant := o.refresh[hash]; grant != nil && grant.request.clientID == client.ClientID {
+		o.revokeGrant(grant)
 	}
 	w.WriteHeader(http.StatusOK)
 }

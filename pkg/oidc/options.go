@@ -58,7 +58,7 @@ func NewProvider(config *Config, verifier IdentityVerifier, options Options) (*P
 	if err != nil {
 		return nil, err
 	}
-	o := &Provider{verifier: verifier, clients: make(map[string]*ClientConfig), sessions: make(map[[32]byte]*oidcSession), pending: make(map[[32]byte]*oidcAuthorization), grants: make(map[[32]byte]*oidcGrant), access: make(map[[32]byte]*oidcGrant), now: time.Now}
+	o := &Provider{verifier: verifier, clients: make(map[string]*ClientConfig), sessions: make(map[[32]byte]*oidcSession), pending: make(map[[32]byte]*oidcAuthorization), grants: make(map[[32]byte]*oidcGrant), access: make(map[[32]byte]*oidcGrant), refresh: make(map[[32]byte]*oidcGrant), now: time.Now}
 	if err := json.Unmarshal(encoded, &o.config); err != nil {
 		return nil, err
 	}

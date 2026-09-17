@@ -128,13 +128,15 @@ with discovery/JWKS. Send the opaque access token in `Authorization: Bearer ...`
 to UserInfo. POST form-body `access_token` is also supported; query-string tokens
 are rejected. Never send an ID token or ordinary portal access token to UserInfo.
 
-Authorization requests can use query parameters, form POST, or an unsigned
-by-value Request Object (`request`, compact JWT with `alg: none`). The outer
+Authorization requests can use query parameters, form POST, or a by-value
+Request Object (`request`, compact JWT with `alg: none` or registered RS256). The outer
 request must still include `client_id`, `response_type`, and an `openid` scope.
 Object values take precedence; any object client ID or response type must match
 the outer request. The effective callback must match registration. These objects
 only encode authorization parameters and convey no authenticated identity.
-Signed/encrypted request objects and remote `request_uri` are not supported.
+RS256 requires the client's registered public verification keys. Encrypted objects
+and remote `request_uri` are not supported. See
+[provider capabilities](provider-capabilities.md) for registration directives.
 
 ## Claims and consent
 
@@ -146,15 +148,18 @@ username/email are reused.
 | Scope | UserInfo claims |
 | --- | --- |
 | `openid` | `sub` |
-| `profile` | `name`, `preferred_username`, plus `sub` |
+| `profile` | Available standard profile attributes from `identity.Profile`, name and username |
 | `email` | `email`, `email_verified: false`, plus `sub` |
+| `address` | Structured `address` from the current record |
+| `phone` | `phone_number` and its explicit verification flag, when present |
+| `offline_access` | Rotating refresh token after explicit consent; no additional UserInfo claims |
 
 Unconfigured/unknown scopes are omitted from the granted `scope` response.
 Roles and internal credential evidence are not exported. Claims come from the
 current local record; transformations still enforce denial and challenge policy.
 The provider does not assert that a local email address has been verified.
 
-Consent is required by default and records the scopes approved for each client
+Consent is required by default and records the scopes and individual claim locations approved for each client
 within that login session. Set `skip_consent: true` only when the administrator
 intends to preapprove that client for its registered scopes. A client requesting
 `prompt=consent` still receives the consent screen. `prompt=none` returns
@@ -198,6 +203,8 @@ login, refresh, or logout.
 | --- | --- | --- |
 | `session_lifetime_seconds` | 28800 | 1–86400 |
 | `token_lifetime_seconds` | 300 | 1–3600 |
+| `refresh_lifetime_seconds` | 28800 | 1–86400; also bounded by original session |
+| `max_refresh_tokens` | 10000 | 1–1000000 active plus spent refresh credentials |
 | `max_sessions` | 10000 | 1–1000000 |
 | `max_pending_requests` | 1024 | 1–100000 |
 | `max_grants` | 10000 | 1–1000000 |
@@ -220,7 +227,8 @@ session and its dependent opaque tokens. With a portal refresh cookie, GET logou
 displays confirmation and the protected POST performs revocation. Already issued
 ID tokens remain signed
 statements until expiration; clients manage their own application sessions.
-There is no advertised RP-initiated logout or OIDC refresh-token grant.
+There is no advertised RP-initiated logout. OIDC refresh tokens are described in
+[provider capabilities](provider-capabilities.md); portal refresh is separate.
 
 The issuer must be a canonical HTTPS URL without a trailing slash, query, or
 fragment. The path is the portal mount. Mounts containing reserved portal routes

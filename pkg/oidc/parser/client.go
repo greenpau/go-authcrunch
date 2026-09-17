@@ -35,6 +35,9 @@ import (
 // Each redirect_uri statement takes exactly one callback URI; repeat it to
 // register multiple callbacks in declaration order. The plural redirect_uris
 // directive is unsupported; that spelling belongs to the serialized array.
+// request_object_key takes kid, modulus and exponent (public RSA JWK
+// base64url integers), and is repeatable. request_object_signing_alg optionally
+// pins none or RS256; RS256 requires registered keys.
 // Other directives occur once: client_id, client_name, client_secret, and
 // token_endpoint_auth_method take one value; scopes takes one or more.
 // require_pkce and skip_consent each take one cfgutil.ParseBoolArg value.
@@ -84,14 +87,18 @@ func parseOIDCClientConfigFromDirectives(nickname string, statements []string) (
 		key := args[0]
 		switch key {
 		case "scopes":
-		case "redirect_uri", "client_id", "client_name", "client_secret", "token_endpoint_auth_method", "require_pkce", "skip_consent":
+		case "request_object_key":
+			if len(args) != 4 {
+				return nil, fmt.Errorf("oidc request_object_key requires kid, modulus and exponent at line %d", i+1)
+			}
+		case "redirect_uri", "client_id", "client_name", "client_secret", "token_endpoint_auth_method", "require_pkce", "skip_consent", "request_object_signing_alg":
 			if len(args) != 2 {
 				return nil, fmt.Errorf("oidc application directive %s at line %d requires one value", key, i+1)
 			}
 		default:
 			return nil, fmt.Errorf("unsupported oidc application directive at line %d", i+1)
 		}
-		if seen[key] && key != "redirect_uri" {
+		if seen[key] && key != "redirect_uri" && key != "request_object_key" {
 			return nil, fmt.Errorf("duplicate oidc application directive %s at line %d", key, i+1)
 		}
 		seen[key] = true
@@ -99,6 +106,10 @@ func parseOIDCClientConfigFromDirectives(nickname string, statements []string) (
 			return nil, fmt.Errorf("empty oidc application directive %s value at line %d", key, i+1)
 		}
 		switch key {
+		case "request_object_signing_alg":
+			config.RequestObjectSigningAlg = args[1]
+		case "request_object_key":
+			config.RequestObjectKeys = append(config.RequestObjectKeys, oidc.RequestObjectKey{KeyID: args[1], Modulus: args[2], Exponent: args[3]})
 		case "client_id":
 			config.ClientID = args[1]
 		case "client_name":

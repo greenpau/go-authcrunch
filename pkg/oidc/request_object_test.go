@@ -27,7 +27,7 @@ func oidcUnsecuredObject(header, body string) string {
 }
 
 func TestOIDCRequestObjects(t *testing.T) {
-	o := &Provider{config: Config{Issuer: "https://auth.test"}, now: func() time.Time { return time.Unix(1000, 0) }}
+	o := &Provider{clients: map[string]*ClientConfig{"client": {ClientID: "client"}}, config: Config{Issuer: "https://auth.test"}, now: func() time.Time { return time.Unix(1000, 0) }}
 	for _, tc := range []struct {
 		name, header, body, failure string
 		change                      func(url.Values)
@@ -117,7 +117,7 @@ func FuzzOIDCRequestObjects(f *testing.F) {
 		if len(header)+len(body) > oidcMaxRequestBytes {
 			return
 		}
-		o := &Provider{config: Config{Issuer: "https://auth.test"}, now: func() time.Time { return time.Unix(1000, 0) }}
+		o := &Provider{clients: map[string]*ClientConfig{"client": {ClientID: "client"}}, config: Config{Issuer: "https://auth.test"}, now: func() time.Time { return time.Unix(1000, 0) }}
 		v := url.Values{"client_id": {"client"}, "response_type": {"code"}, "scope": {"openid"}, "request": {oidcUnsecuredObject(header, body)}}
 		merged, failure := o.requestObjectParameters(v)
 		if failure == "" && (merged.Get("client_id") != "client" || merged.Get("response_type") != "code" || merged.Has("request") || merged.Has("request_uri")) {

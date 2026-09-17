@@ -182,6 +182,15 @@ func (o *Provider) validateAuthorization(request *oidcAuthorization, client *Cli
 		}
 		request.hintSubject = subject
 	}
+	if !request.promptConsent {
+		request.scopes = slices.DeleteFunc(request.scopes, func(scope string) bool { return scope == "offline_access" })
+	}
+	claims, err := parseOIDCClaims(params.Get("claims"), client)
+	if err != nil {
+		return "invalid_request"
+	}
+	request.claims = claims
+	request.acrValues = strings.Fields(params.Get("acr_values"))
 	return ""
 }
 
@@ -243,7 +252,7 @@ func (o *Provider) continueAuthorization(w http.ResponseWriter, r *http.Request)
 		if s.consents == nil {
 			s.consents = make(map[string][]string)
 		}
-		for _, scope := range request.scopes {
+		for _, scope := range request.consentItems() {
 			if !slices.Contains(s.consents[request.clientID], scope) {
 				s.consents[request.clientID] = append(s.consents[request.clientID], scope)
 			}
@@ -264,6 +273,10 @@ func (o *Provider) continueAuthorization(w http.ResponseWriter, r *http.Request)
 func (o *Provider) issueCode(w http.ResponseWriter, r *http.Request, request *oidcAuthorization) {
 	if len(o.grants) >= o.config.MaxGrants {
 		o.authorizationResponse(w, r, request, "", "temporarily_unavailable")
+		return
+	}
+	if s := o.sessions[request.session]; s == nil || !o.satisfiesClaims(s, request) {
+		o.authorizationResponse(w, r, request, "", "access_denied")
 		return
 	}
 	code := oidcRandom()
@@ -306,8 +319,8 @@ func (o *Provider) authorizationResponse(w http.ResponseWriter, r *http.Request,
 
 func (o *Provider) consentPage(w http.ResponseWriter, _ *http.Request, request *oidcAuthorization) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = o.consentTemplate.Execute(w, map[string]any{"Client": o.clients[request.clientID].ClientName, "Subject": o.sessions[request.session].username, "Scopes": request.scopes, "CSRF": request.consent, "Action": o.config.Issuer + "/oidc/continue"})
+	_ = o.consentTemplate.Execute(w, map[string]any{"Client": o.clients[request.clientID].ClientName, "Subject": o.sessions[request.session].username, "Scopes": request.scopes, "Claims": request.consentItems(), "CSRF": request.consent, "Action": o.config.Issuer + "/oidc/continue"})
 }
 
-const oidcConsentTemplate = `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Authorize application</title><main><h1>Authorize {{.Client}}</h1><p>Signed in as {{.Subject}}.</p><p>This application requests access to:</p><ul>{{range .Scopes}}<li>{{if eq . "openid"}}Your account identifier{{else if eq . "profile"}}Your name and username{{else if eq . "email"}}Your email address{{end}}</li>{{end}}</ul><form method="post" action="{{.Action}}"><input type="hidden" name="csrf" value="{{.CSRF}}"><button name="decision" value="allow">Allow</button> <button name="decision" value="deny">Deny</button></form></main></html>`
+const oidcConsentTemplate = `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Authorize application</title><main><h1>Authorize {{.Client}}</h1><p>Signed in as {{.Subject}}.</p><p>This application requests access to:</p><ul>{{range .Scopes}}<li>{{if eq . "openid"}}Your account identifier{{else if eq . "profile"}}Your profile information{{else if eq . "email"}}Your email address{{else if eq . "address"}}Your postal address{{else if eq . "phone"}}Your telephone number{{else if eq . "offline_access"}}Continued access using refresh tokens until expiry or revocation{{end}}</li>{{end}}</ul><p>Approved permissions (including individually requested claims):</p><ul>{{range .Claims}}<li>{{.}}</li>{{end}}</ul><form method="post" action="{{.Action}}"><input type="hidden" name="csrf" value="{{.CSRF}}"><button name="decision" value="allow">Allow</button> <button name="decision" value="deny">Deny</button></form></main></html>`
 const oidcFormPostTemplate = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Continue to application</title><form id="response" method="post" action="{{.RedirectURI}}">{{range $key, $values := .Values}}{{range $values}}<input type="hidden" name="{{$key}}" value="{{.}}">{{end}}{{end}}<button type="submit">Continue</button></form><script nonce="{{.Nonce}}">document.getElementById('response').submit();</script></html>`

@@ -67,7 +67,7 @@ func TestNewOIDCProviderConfigFromDirectives(t *testing.T) {
 		SigningKeyFiles: []string{"keys/active.pem"},
 		Clients: []*oidc.ClientConfig{{ClientID: "web-client-id", ClientName: "web-client-id", ClientSecret: strings.Repeat("s", 32),
 			TokenEndpointAuthMethod: "client_secret_basic", RedirectURIs: []string{"https://web.example.test/callback"}, Scopes: []string{"openid", "profile", "email"}}},
-		SessionLifetimeSeconds: 28800, TokenLifetimeSeconds: 300, MaxSessions: 10000, MaxPendingRequests: 1024, MaxGrants: 10000,
+		SessionLifetimeSeconds: 28800, TokenLifetimeSeconds: 300, RefreshLifetimeSeconds: 28800, MaxRefreshTokens: 10000, MaxSessions: 10000, MaxPendingRequests: 1024, MaxGrants: 10000,
 	}
 	if !cmp.Equal(config, expected) {
 		t.Fatal("provider defaults or selected registration differ")

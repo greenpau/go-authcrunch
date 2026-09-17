@@ -130,7 +130,7 @@ func (v *portalOIDCIdentityVerifier) WithIdentity(ctx context.Context, proof oid
 				return oidc.ErrIdentityDenied
 			}
 		}
-		return apply(oidc.Identity{Username: current.Username, Name: current.Name, Email: current.Email})
+		return apply(oidc.Identity{Profile: current.Profile, Username: current.Username, Name: current.Name, Email: current.Email})
 	})
 	if errors.Is(err, identity.ErrRefreshIdentityDenied) {
 		return oidc.ErrIdentityDenied

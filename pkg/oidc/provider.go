@@ -49,6 +49,7 @@ type Provider struct {
 	pending                                     map[[32]byte]*oidcAuthorization
 	grants                                      map[[32]byte]*oidcGrant
 	access                                      map[[32]byte]*oidcGrant
+	refresh                                     map[[32]byte]*oidcGrant
 	nextSweep                                   time.Time
 	closed                                      bool
 	now                                         func() time.Time
@@ -70,7 +71,7 @@ func (o *Provider) hasConsent(s *oidcSession, request *oidcAuthorization) bool {
 	if o.clients[request.clientID].SkipConsent {
 		return true
 	}
-	for _, scope := range request.scopes {
+	for _, scope := range request.consentItems() {
 		if !slices.Contains(s.consents[request.clientID], scope) {
 			return false
 		}
@@ -81,6 +82,8 @@ func (o *Provider) hasConsent(s *oidcSession, request *oidcAuthorization) bool {
 type oidcAuthorization struct {
 	clientID, redirectURI, state, nonce, challenge, responseMode, hintSubject string
 	scopes                                                                    []string
+	claims                                                                    oidcClaimsRequest
+	acrValues                                                                 []string
 	promptLogin, promptConsent, promptNone                                    bool
 	maxAge                                                                    *int64
 	created, expires                                                          time.Time
@@ -96,6 +99,10 @@ type oidcGrant struct {
 	codeExpires, expires time.Time
 	redeemed             bool
 	accessHash           [32]byte
+	accessExpires        time.Time
+	refreshCurrent       [32]byte
+	refreshHashes        [][32]byte
+	revoked              bool
 }
 
 // Close invalidates all browser sessions and grants. It is safe to call repeatedly.
@@ -107,6 +114,7 @@ func (o *Provider) Close() {
 	clear(o.pending)
 	clear(o.grants)
 	clear(o.access)
+	clear(o.refresh)
 }
 
 // All state access uses mu. Identity callbacks execute while holding mu, then
@@ -131,6 +139,9 @@ func (o *Provider) sweep() {
 		if !now.Before(grant.expires) {
 			delete(o.grants, hash)
 			delete(o.access, grant.accessHash)
+			for _, h := range grant.refreshHashes {
+				delete(o.refresh, h)
+			}
 		}
 	}
 }
@@ -191,7 +202,7 @@ func (o *Provider) withIdentity(ctx context.Context, s *oidcSession, apply func(
 		if current.Username != s.username {
 			return ErrIdentityDenied
 		}
-		return apply(map[string]any{"sub": s.subject, "name": current.Name, "preferred_username": current.Username, "email": current.Email, "email_verified": current.EmailVerified})
+		return apply(oidcCurrentClaims(current, s.subject))
 	})
 }
 

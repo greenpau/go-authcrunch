@@ -151,7 +151,11 @@ func oidcParameters(w http.ResponseWriter, r *http.Request, queryAllowed bool) (
 // Discovery returns a fresh copy of the provider metadata.
 func (o *Provider) Discovery() map[string]any {
 	issuer := o.config.Issuer
-	return map[string]any{
+	claims := []string{"iss", "sub", "aud", "exp", "iat", "auth_time", "nonce", "amr", "acr", "at_hash"}
+	for _, scope := range []string{"profile", "email", "address", "phone"} {
+		claims = append(claims, oidcScopeClaims[scope]...)
+	}
+	metadata := map[string]any{
 		"issuer":                                         issuer,
 		"authorization_endpoint":                         issuer + "/oidc/authorize",
 		"token_endpoint":                                 issuer + "/oidc/token",
@@ -160,20 +164,28 @@ func (o *Provider) Discovery() map[string]any {
 		"revocation_endpoint":                            issuer + "/oidc/revoke",
 		"response_types_supported":                       []string{"code"},
 		"response_modes_supported":                       []string{"query", "form_post"},
-		"grant_types_supported":                          []string{"authorization_code"},
+		"grant_types_supported":                          []string{"authorization_code", "refresh_token"},
 		"subject_types_supported":                        []string{"public"},
 		"id_token_signing_alg_values_supported":          []string{"RS256"},
 		"token_endpoint_auth_methods_supported":          []string{"client_secret_basic", "client_secret_post", "none"},
 		"revocation_endpoint_auth_methods_supported":     []string{"client_secret_basic", "client_secret_post", "none"},
-		"scopes_supported":                               []string{"openid", "profile", "email"},
-		"claims_supported":                               []string{"iss", "sub", "aud", "exp", "iat", "auth_time", "nonce", "amr", "at_hash", "name", "preferred_username", "email", "email_verified"},
+		"scopes_supported":                               []string{"openid", "profile", "email", "address", "phone", "offline_access"},
+		"claims_supported":                               claims,
 		"code_challenge_methods_supported":               []string{"S256"},
-		"claims_parameter_supported":                     false,
+		"claims_parameter_supported":                     true,
 		"request_parameter_supported":                    true,
-		"request_object_signing_alg_values_supported":    []string{"none"},
+		"request_object_signing_alg_values_supported":    []string{"none", "RS256"},
 		"request_uri_parameter_supported":                false,
 		"authorization_response_iss_parameter_supported": true,
 	}
+	if len(o.config.AuthenticationContexts) > 0 {
+		values := make([]string, 0, len(o.config.AuthenticationContexts))
+		for _, c := range o.config.AuthenticationContexts {
+			values = append(values, c.Value)
+		}
+		metadata["acr_values_supported"] = values
+	}
+	return metadata
 }
 
 // Buffer bounded protocol responses so no network I/O occurs under state locks.

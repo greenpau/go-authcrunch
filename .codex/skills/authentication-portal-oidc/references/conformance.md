@@ -14,11 +14,13 @@ The implementation follows [OpenID Connect Core 1.0 errata set 2](https://openid
 [RFC 7636](https://www.rfc-editor.org/rfc/rfc7636.html),
 [RFC 7009](https://www.rfc-editor.org/rfc/rfc7009.html), and
 [RFC 9207](https://www.rfc-editor.org/rfc/rfc9207.html) for the supported surface.
-Discovery intentionally does not advertise implicit/hybrid flows, Dynamic Client
-Registration, signed/encrypted request objects, remote request URIs, individual
-claims requests, unsigned
-or encrypted ID tokens, address/phone scopes, OIDC refresh grants, or RP logout
-profiles. FAPI profiles are outside this implementation.
+Discovery advertises code flow, scoped and individual claims, RS256 Request
+Objects, address/phone scopes and rotating OIDC refresh grants. See
+[provider capabilities](provider-capabilities.md) for registration, explicit
+identity data, authentication context and consent requirements. Implicit/hybrid
+flows, Dynamic Client Registration, encrypted Request Objects, remote request
+URIs, unsigned/encrypted ID tokens, RP logout profiles and FAPI remain outside
+the supported surface.
 
 The initial compatibility review used the official
 [conformance suite](https://gitlab.com/openid/conformance-suite) at commit
@@ -36,7 +38,7 @@ Review the current plans again before certifying a release.
 | Missing nonce, optional/unknown parameters, POST authorization | `TestE2EOIDCOptionalParametersAndFormPost` |
 | Login, silent login, consent, fresh authentication, delayed checkpoint redemption | `TestE2EOIDCConsentAndPrompt`, `TestE2EOIDCFreshLoginRejectsEarlierCheckpoint` |
 | Unsigned Request Objects, redirect/mode precedence, client binding, hostile claims | `TestOIDCRequestObjects`, `TestE2EOIDCRequestObjects` |
-| Signed/encrypted object and remote URI rejection, invalid redirects and prompts | `TestE2EOIDCProtocolErrors`, `TestE2EOIDCRequestObjects` |
+| Unregistered signatures, encrypted objects and remote URI rejection, invalid redirects and prompts | `TestE2EOIDCProtocolErrors`, `TestE2EOIDCRequestObjects` |
 | Single-use code, replay revocation, concurrent exchanges | `TestE2EOIDCConcurrentCodeRedemption`, `TestE2EOIDCProviderBrowserConsent` |
 | PKCE S256 and downgrade/missing-verifier rejection | `TestOIDCPKCE`, `TestE2EOIDCClientBindingAndPKCE` |
 | Escaped form-post responses and CSP | `TestE2EOIDCOptionalParametersAndFormPost` |
@@ -137,19 +139,19 @@ The runner exited nonzero because warnings and skips were not suppressed or
 listed in an expected-failures file. That exit is retained with the result bundle;
 it is not represented as a completely passing certification run.
 
-The warning categories have specific scope explanations:
+The historical September 12/13 warning categories reflected the then-supported surface:
 
-- Profile scope: the local model supplies name and preferred username; it does
-  not supply every optional OIDC profile claim. Missing data is not fabricated.
-- `acr_values`: no authentication-context class vocabulary is advertised or
+- Profile scope: the earlier local model supplied name and preferred username,
+  without every optional OIDC profile claim. Missing data is not fabricated.
+- `acr_values`: no authentication-context class vocabulary was advertised or
   asserted. Verified authentication methods remain in `amr`.
-- Request Object signing: only unsigned by-value objects are implemented.
+- Request Object signing: only unsigned by-value objects were implemented.
   Discovery recommends RS256 support for signed Request Objects; the suite
   reports that missing recommendation as a Config OP warning. Client signing-key
-  registration/verification is not implemented, and objects confer no client
-  authentication. Do not claim support for signed Request Objects or JAR.
-- Essential individual claims: `claims_parameter_supported` is false; the
-  provider releases data through approved scopes and ignores this optional
+  registration/verification was not implemented. Object signatures still do not
+  replace end-user or token-endpoint client authentication.
+- Essential individual claims: `claims_parameter_supported` was false; the
+  provider released data through approved scopes and ignored this optional
   parameter. A request for an individual name claim without profile scope does
   not override consent.
 
@@ -190,10 +192,23 @@ Public/native client policy is unchanged.
 The harness launches an unmodified suite and disposable MongoDB on loopback,
 puts a local TLS proxy in front of the suite, and drives real password/consent
 forms with the official HtmlUnit browser commands. The browser records actual
-login and rejection page source for visual-review placeholders. Those captures
+login and rejection page source for visual-review placeholders. Login capture
+is restricted to the `oidcc-prompt-login` and `oidcc-max-age-1` overrides;
+ordinary login tasks only submit credentials. A pending placeholder does not
+mean it requests a login page: Request Object tests can offer an error-page
+placeholder while awaiting a valid callback. Keep rejection captures restricted
+to rejection modules, the authorization endpoint, and actual `invalid_request`
+page content. The generated browser configuration is covered by
+`TestOIDCConformanceBrowserEvidenceRouting`; execute the official plans to verify
+the interactions and their resulting signed exports. Those captures
 remain REVIEW results; they are not approvals or screenshots from a certified
-production deployment. It runs all three plans without expected-failure lists
-or validator modifications. An optional Config-only preflight is explicitly
+production deployment. The current harness trusts its local TLS certificate via
+a private Java truststore and Python SSL_CERT_FILE, authenticates the runner
+with a local suite API token, and removes inherited TLS-bypass and outcome
+suppression switches. Java dev mode is local suite authentication setup; the
+runner does not use CONFORMANCE_DEV_MODE or DISABLE_SSL_VERIFY. It runs all three plans without expected-failure lists
+or validator modifications. Consent commands cover both `/oidc/authorize` and
+`/oidc/continue`, since a second client can receive consent directly at authorize. An optional Config-only preflight is explicitly
 marked in execution metadata and is never full qualification.
 
 Prepare the suite inside this repository, at the pinned revision
@@ -227,7 +242,9 @@ The directory is created with mode 0700; private configuration and logs use
 0600. It contains the deployment, a redacted deployment copy, discovery,
 candidate revision/build metadata and a source manifest including untracked
 additions, exact runner configuration, process logs,
-execution status, and the official signed plan export ZIPs. Preserve the entire
+execution status, the official signed plan export ZIPs, independently verified
+per-instance signed exports, captured visual evidence, summary.json and a private
+index.html linking the results and evidence. Preserve the entire
 bundle privately: registrations, user credentials, grants, and request logs are
 sensitive even though they are synthetic. A redacted deployment alone is not
 complete test evidence. The runner has its own bounded execution context, and
@@ -236,25 +253,128 @@ owned processes are stopped and awaited on fixture completion.
 Without the explicit suite environment, the external prerequisite test is
 SKIPPED in ordinary CI; the local unit, TLS, browser, and standalone provider
 regressions still run. The official runner's nonzero exit remains a failed
-opt-in Go run, including when all modules finish with warnings, skips, or
-review outcomes. Always inspect and retain those outcomes rather than changing
+opt-in Go run, including warnings or skips that make the runner fail. REVIEW can coexist with
+a zero runner exit and must still be reported as REVIEW. Always inspect and retain those outcomes rather than changing
 exit handling to make the certification run appear green.
 
 A local rehearsal of the new harness on 2026-09-13 completed all 71 modules:
 Basic OP and Form Post OP each had 24 PASSED, 3 WARNING, 4 SKIPPED, and 4 REVIEW;
 Config OP had 1 WARNING. There were zero FAILED or INTERRUPTED modules. The
 additional REVIEW compared with the September 12 record was the Request Object
-redirect case; retain that result as reported by the suite. The same warning
-categories described above remain applicable. This is local developer-mode
+redirect case; retain that result as reported by the suite. The same historical warning
+categories described above applied to that rehearsal. This is local developer-mode
 candidate evidence, not Foundation certification or hosted deployment testing.
 
 For the September 13 rehearsal, the four REVIEW modules in each code-flow plan
 were `oidcc-prompt-login`, `oidcc-max-age-1`,
 `oidcc-ensure-registered-redirect-uri`, and
 `oidcc-ensure-request-object-with-redirect-uri`. The first two request evidence
-of reauthentication; the latter two request redirect-error-page evidence.
-The official exports record each browser placeholder being filled, but its
-REVIEW status remains. Address, phone, all-scopes, and OIDC refresh-token modules
+of reauthentication; the latter two offer redirect-error-page evidence slots.
+Filling a slot does not establish that the attached page is appropriate; the
+September 17 export audit found this distinction matters for the Request Object
+case, as described below. Address, phone, all-scopes, and OIDC refresh-token modules
 were SKIPPED because those optional capabilities are not advertised. Portal
-token refresh is a separate protocol and does not implement the OIDC refresh
-grant.
+token refresh is a separate protocol. The later OIDC refresh implementation
+uses its own client-bound rotating families.
+
+
+## September 17 capability implementation
+
+The first completed runs of the updated library candidate exercised the same
+pinned unmodified suite's 71
+modules with **63 PASSED, 8 REVIEW, zero WARNING, SKIPPED, FAILED or INTERRUPTED**,
+and original runner exit **0**. Basic and Form Post each contribute 31 PASSED
+and 4 REVIEW; Config OP contributes 1 PASSED. This is library portal evidence,
+not validation of Caddy's binary, routing, TLS deployment, or configuration.
+Do not call the eight reviews passes or claim certification.
+
+Those REVIEW modules occurred once in each code-flow plan:
+
+| Module | Reason and remaining work |
+| --- | --- |
+| `oidcc-prompt-login` | Examine captured evidence of fresh login after prompt=login. |
+| `oidcc-max-age-1` | Examine captured reauthentication after authentication age exceeds the limit. |
+| `oidcc-ensure-registered-redirect-uri` | Examine the provider's rejection page for an unregistered callback. |
+| `oidcc-ensure-request-object-with-redirect-uri` | The initial harness incorrectly attached a login page to an optional error-page slot. This is invalid evidence for that purpose; the valid Request Object callback subsequently succeeded. |
+
+The suite preserves REVIEW after attaching captured page source. The first
+three rows require examination of the appropriate login/error pages. The fourth
+row required a harness correction and a new run. The module puts a registered
+callback inside the Request Object and an invalid callback in the outer request;
+it accepts processing the inner callback or displaying a redirect error. It
+does not test an unregistered callback inside the Request Object. Provider code
+must not spoof interaction or relabel any result.
+Any certification submission or publication remains a separate instruction.
+
+Private local runs are under `tmp/oidc-conformance/`. `capabilities-2` completed
+63 PASSED/8 REVIEW with runner exit 0. `capabilities-final` reproduced those
+module outcomes and runner exit 0, but its subsequent export collector rejected
+the suite's padded base64url signature encoding; its Go test failed and that
+failure is preserved. The collector now accepts padded and unpadded base64url
+and verifies RS256 before interpreting an export. `capabilities-verified` is
+the complete evidence/report run after that fix.
+
+`capabilities-1` is retained as an interrupted attempt: the original browser
+matcher missed direct authorization-page consent for the second refresh client.
+Before terminating the owned runner, all 70 instantiated module exports were
+saved: 60 PASSED, 8 REVIEW, and 2 still waiting without a result; one requested
+module had no instance. `interruption.json` records these facts, and
+`execution.json` preserves runner exit -1 (`signal: terminated`), followed by
+Go exit 1. These incomplete outcomes are not merged into the successful run.
+The consent matcher was corrected without weakening provider consent checks.
+
+Normal test runs still skip only the external-prerequisite Foundation harness.
+Local provider/portal E2E and the evidence collector's deliberately mixed-result
+TLS fixture run by default. Keep all private bundles, original runner exits,
+source manifests, failed reports and signed exports when comparing candidates.
+
+
+The verified run preserved 71 independently verified per-instance signatures
+and 8 page-source captures, but two captures were inappropriate for their slots
+as described above. Signature verification proves export integrity, not that a
+capture satisfies the requested visual evidence. Its private entry point is
+`tmp/oidc-conformance/capabilities-verified/index.html`; every module is linked
+to its original signed export. The three requested plans were fully instantiated.
+All owned Java/MongoDB/runner processes were stopped after collection.
+
+### Corrected browser evidence routing
+
+The subsequent `capture-routing-fixed` run restricts login-page capture to the
+two reauthentication modules. Both Request Object redirect-precedence cases
+now complete their real callbacks and are reported **PASSED by the unmodified
+suite**, with no page source attached to their optional error-page placeholders.
+No provider redirect validation or suite validator was changed.
+
+All 71 modules finished on September 17 with original runner exit **0** and
+Go test exit **0**:
+
+| Plan | PASSED | REVIEW | WARNING | SKIPPED | FAILED | INTERRUPTED |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Basic OP | 32 | 3 | 0 | 0 | 0 | 0 |
+| Config OP | 1 | 0 | 0 | 0 | 0 | 0 |
+| Form Post OP (code) | 32 | 3 | 0 | 0 | 0 | 0 |
+
+The six remaining REVIEW results are `oidcc-prompt-login`, `oidcc-max-age-1`,
+and `oidcc-ensure-registered-redirect-uri`, once per code-flow plan. The signed
+exports contain four login-page captures in `ExpectSecondLoginPage` slots and
+two `invalid_request` pages in `ExpectRedirectUriErrorPage` slots. All 71
+per-instance export signatures were independently verified. These six captures
+are page-source HTML, not screenshot images or Foundation review approvals;
+retain REVIEW and satisfy the Foundation's visual-evidence instructions before
+any separately authorized submission. Nothing was submitted or published.
+
+The private HTML entry point is
+`tmp/oidc-conformance/capture-routing-fixed/index.html`. Older bundles and their
+original eight-review results remain intact, including the two misplaced
+captures. The new outcome totals do not retroactively change those runs.
+The race-enabled focused unit/TLS evidence-collector run passed all 12 tests
+in `.coverage/oidc-capture-routing`; the complete official-plan E2E run took
+125 seconds. The changed Go files passed gopls diagnostics and `go vet .`;
+the owning skill passed its validator. All owned suite processes were stopped.
+
+Local suite/tools live under `tmp/oidc-conformance/` (this rehearsal used
+`suite`, `tools`, and `venv`). No global package installation is required.
+After keeping the private evidence bundles, remove those three prerequisite
+directories to reclaim their disk space. MongoDB files in each run directory
+are disposable evidence data, not a system database. Removing an entire run
+directory also removes its logs, credentials, signed exports and reports.

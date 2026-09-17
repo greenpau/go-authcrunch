@@ -70,12 +70,13 @@ oidc provider {
 | `realms` | One or more distinct identity realms. |
 | `signing key files` | One or more distinct dedicated RSA PEM paths; first signs, all publish. |
 | `applications` | One or more distinct registered application nicknames, in selection order. |
-| `session lifetime` / `token lifetime` | One integer in seconds; zero selects the validator default. |
-| `max sessions` / `max pending requests` / `max grants` | One integer capacity; zero selects the validator default. |
+| `session lifetime` / `token lifetime` / `refresh lifetime` | One integer in seconds; zero selects the validator default. |
+| `max sessions` / `max pending requests` / `max grants` / `max refresh tokens` | One integer capacity; zero selects the validator default. |
 
 The numeric defaults and bounds are in
 [configuration and clients](configuration-and-clients.md#lifetimes-reloads-and-deployment).
-Each setting occurs once; use one line for a list. Keywords are separate tokens,
+`acr <value> <method>...` is repeatable with unique values and requires all listed
+verified authentication methods. Other settings occur once; use one line for a list. Keywords are separate tokens,
 not underscore keys or one quoted multiword key. Boolean literals are not valid
 provider states. Unknown settings, duplicates, missing/empty values, extra scalar
 arguments, malformed quoting, embedded newlines, and overflowing integers fail.
@@ -303,7 +304,9 @@ and this change does not install the outer `oauth application` Caddyfile grammar
 | `client_secret` | One secret; generated for confidential clients if omitted. |
 | `token_endpoint_auth_method` | One of `client_secret_basic` (default), `client_secret_post`, or `none`. |
 | `redirect_uri` | Exactly one callback URI per statement; repeat to append in declaration order. At least one is required. Exact matching except the authorization port for public HTTP literal-loopback clients. |
-| `scopes` | One or more scopes; defaults to `openid profile email`. |
+| `scopes` | One or more supported scopes; defaults to `openid profile email`; address, phone and offline_access require explicit registration. |
+| `request_object_key` | Repeatable `kid modulus exponent`; public RSA JWK base64url integers, 2048–8192 bits. |
+| `request_object_signing_alg` | Optional `none` or `RS256` pin; RS256 requires registered keys. |
 | `require_pkce` | One boolean; defaults to true; public clients cannot disable it. |
 | `skip_consent` | One boolean; defaults to false. |
 
@@ -465,3 +468,14 @@ For an existing AuthCrunch portal, `Portal.GetOIDCProvider()` returns the public
 interface, or nil when disabled. The portal keeps its existing `oidc_provider`
 configuration and cookie-prefix behavior. `authn.OIDCProviderConfig` and
 `authn.OIDCClientConfig` remain aliases of `oidc.Config` and `oidc.ClientConfig`.
+
+
+## Claims and refresh integration
+
+`oidc.Identity.Profile` is an optional `*identity.Profile`. Supply current,
+explicit attributes from inside the verifier transaction. The portal adapter
+copies `identity.User.Profile` through `identity.RefreshIdentity`; stored values
+are authoritative, while transforms still enforce denial and challenge policy.
+Do not place arbitrary maps or authentication evidence in profile attributes.
+See [provider capabilities](provider-capabilities.md) for supported fields,
+consent, ACR mapping, client keys, refresh state and consumer tests.

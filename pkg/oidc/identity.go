@@ -18,6 +18,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
@@ -34,8 +35,9 @@ type Authentication struct {
 // Identity contains current, verified user attributes for scoped UserInfo output.
 // EmailVerified must be true only when the identity backend has verified ownership.
 type Identity struct {
-	Username, Name, Email string `json:"-" xml:"-" yaml:"-"`
-	EmailVerified         bool   `json:"-" xml:"-" yaml:"-"`
+	Profile               *identity.Profile `json:"-" xml:"-" yaml:"-"`
+	Username, Name, Email string            `json:"-" xml:"-" yaml:"-"`
+	EmailVerified         bool              `json:"-" xml:"-" yaml:"-"`
 }
 
 // IdentityVerifier connects a provider to an application's identity backend.

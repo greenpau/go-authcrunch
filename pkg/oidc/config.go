@@ -41,13 +41,16 @@ type Config struct {
 	// SigningKeyFiles contains dedicated RSA private PEM files. The first signs;
 	// all are published for verification during planned rotation. These keys
 	// must not also be used to sign the embedding application's access tokens.
-	SigningKeyFiles        []string        `json:"signing_key_files,omitempty" xml:"signing_key_files,omitempty" yaml:"signing_key_files,omitempty"`
-	Clients                []*ClientConfig `json:"clients,omitempty" xml:"clients,omitempty" yaml:"clients,omitempty"`
-	SessionLifetimeSeconds int             `json:"session_lifetime_seconds,omitempty" xml:"session_lifetime_seconds,omitempty" yaml:"session_lifetime_seconds,omitempty"`
-	TokenLifetimeSeconds   int             `json:"token_lifetime_seconds,omitempty" xml:"token_lifetime_seconds,omitempty" yaml:"token_lifetime_seconds,omitempty"`
-	MaxSessions            int             `json:"max_sessions,omitempty" xml:"max_sessions,omitempty" yaml:"max_sessions,omitempty"`
-	MaxPendingRequests     int             `json:"max_pending_requests,omitempty" xml:"max_pending_requests,omitempty" yaml:"max_pending_requests,omitempty"`
-	MaxGrants              int             `json:"max_grants,omitempty" xml:"max_grants,omitempty" yaml:"max_grants,omitempty"`
+	SigningKeyFiles        []string                `json:"signing_key_files,omitempty" xml:"signing_key_files,omitempty" yaml:"signing_key_files,omitempty"`
+	Clients                []*ClientConfig         `json:"clients,omitempty" xml:"clients,omitempty" yaml:"clients,omitempty"`
+	SessionLifetimeSeconds int                     `json:"session_lifetime_seconds,omitempty" xml:"session_lifetime_seconds,omitempty" yaml:"session_lifetime_seconds,omitempty"`
+	TokenLifetimeSeconds   int                     `json:"token_lifetime_seconds,omitempty" xml:"token_lifetime_seconds,omitempty" yaml:"token_lifetime_seconds,omitempty"`
+	MaxSessions            int                     `json:"max_sessions,omitempty" xml:"max_sessions,omitempty" yaml:"max_sessions,omitempty"`
+	MaxPendingRequests     int                     `json:"max_pending_requests,omitempty" xml:"max_pending_requests,omitempty" yaml:"max_pending_requests,omitempty"`
+	RefreshLifetimeSeconds int                     `json:"refresh_lifetime_seconds,omitempty" xml:"refresh_lifetime_seconds,omitempty" yaml:"refresh_lifetime_seconds,omitempty"`
+	MaxRefreshTokens       int                     `json:"max_refresh_tokens,omitempty" xml:"max_refresh_tokens,omitempty" yaml:"max_refresh_tokens,omitempty"`
+	AuthenticationContexts []AuthenticationContext `json:"authentication_contexts,omitempty" xml:"authentication_contexts,omitempty" yaml:"authentication_contexts,omitempty"`
+	MaxGrants              int                     `json:"max_grants,omitempty" xml:"max_grants,omitempty" yaml:"max_grants,omitempty"`
 }
 
 // ClientConfig registers a relying party. Public clients use "none" and
@@ -56,16 +59,19 @@ type Config struct {
 // loopback clients. Authorization may vary only their valid TCP port; every
 // other URI byte must match. Code redemption requires the actual authorized URI.
 // HTTPS and confidential-client redirects remain exact. Private-use schemes are
-// not supported. SkipConsent explicitly grants the registered scopes.
+// not supported. SkipConsent preapproves registered scopes and permitted individual
+// claims; an explicit prompt=consent (required for offline_access) still interacts.
 type ClientConfig struct {
-	ClientID                string   `json:"client_id,omitempty" xml:"client_id,omitempty" yaml:"client_id,omitempty"`
-	ClientName              string   `json:"client_name,omitempty" xml:"client_name,omitempty" yaml:"client_name,omitempty"`
-	ClientSecret            string   `json:"client_secret,omitempty" xml:"client_secret,omitempty" yaml:"client_secret,omitempty"`
-	TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method,omitempty" xml:"token_endpoint_auth_method,omitempty" yaml:"token_endpoint_auth_method,omitempty"`
-	RedirectURIs            []string `json:"redirect_uris,omitempty" xml:"redirect_uris,omitempty" yaml:"redirect_uris,omitempty"`
-	Scopes                  []string `json:"scopes,omitempty" xml:"scopes,omitempty" yaml:"scopes,omitempty"`
-	RequirePKCE             bool     `json:"require_pkce,omitempty" xml:"require_pkce,omitempty" yaml:"require_pkce,omitempty"`
-	SkipConsent             bool     `json:"skip_consent,omitempty" xml:"skip_consent,omitempty" yaml:"skip_consent,omitempty"`
+	ClientID                string             `json:"client_id,omitempty" xml:"client_id,omitempty" yaml:"client_id,omitempty"`
+	ClientName              string             `json:"client_name,omitempty" xml:"client_name,omitempty" yaml:"client_name,omitempty"`
+	ClientSecret            string             `json:"client_secret,omitempty" xml:"client_secret,omitempty" yaml:"client_secret,omitempty"`
+	TokenEndpointAuthMethod string             `json:"token_endpoint_auth_method,omitempty" xml:"token_endpoint_auth_method,omitempty" yaml:"token_endpoint_auth_method,omitempty"`
+	RedirectURIs            []string           `json:"redirect_uris,omitempty" xml:"redirect_uris,omitempty" yaml:"redirect_uris,omitempty"`
+	Scopes                  []string           `json:"scopes,omitempty" xml:"scopes,omitempty" yaml:"scopes,omitempty"`
+	RequestObjectSigningAlg string             `json:"request_object_signing_alg,omitempty" xml:"request_object_signing_alg,omitempty" yaml:"request_object_signing_alg,omitempty"`
+	RequestObjectKeys       []RequestObjectKey `json:"request_object_keys,omitempty" xml:"request_object_keys,omitempty" yaml:"request_object_keys,omitempty"`
+	RequirePKCE             bool               `json:"require_pkce,omitempty" xml:"require_pkce,omitempty" yaml:"require_pkce,omitempty"`
+	SkipConsent             bool               `json:"skip_consent,omitempty" xml:"skip_consent,omitempty" yaml:"skip_consent,omitempty"`
 }
 
 // Validate normalizes OIDC configuration and rejects ambiguous trust boundaries.
@@ -105,6 +111,8 @@ func (c *Config) Validate() error {
 	}{
 		{&c.SessionLifetimeSeconds, oidcDefaultSessionLifetime, 86400},
 		{&c.TokenLifetimeSeconds, oidcDefaultTokenLifetime, 3600},
+		{&c.RefreshLifetimeSeconds, oidcDefaultSessionLifetime, 86400},
+		{&c.MaxRefreshTokens, oidcDefaultCapacity, 1000000},
 		{&c.MaxSessions, oidcDefaultCapacity, 1000000},
 		{&c.MaxPendingRequests, 1024, 100000},
 		{&c.MaxGrants, oidcDefaultCapacity, 1000000},
@@ -116,7 +124,7 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("oidc lifetime or capacity outside supported bounds")
 		}
 	}
-	return nil
+	return validateAuthenticationContexts(c.AuthenticationContexts)
 }
 
 // Validate normalizes client registration and checks redirect and credential policy.
@@ -169,11 +177,11 @@ func (c *ClientConfig) Validate() error {
 		return fmt.Errorf("oidc scopes must be distinct and include openid")
 	}
 	for _, scope := range c.Scopes {
-		if !slices.Contains([]string{"openid", "profile", "email"}, scope) {
+		if !slices.Contains([]string{"openid", "profile", "email", "address", "phone", "offline_access"}, scope) {
 			return fmt.Errorf("unsupported oidc scope")
 		}
 	}
-	return nil
+	return c.validateRequestObjectKeys()
 }
 
 func oidcUniqueStrings(values []string) bool {

@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-oidc
-description: Maintain the reusable pkg/oidc OpenID Provider, its public interfaces and methods, and the local-user authentication portal adapter, including client registration, discovery, code/PKCE, consent, ID-token keys, UserInfo, revocation, and conformance tests. Excludes upstream OAuth identity providers and portal refresh-token transport.
+description: Maintain the reusable pkg/oidc OpenID Provider, its public interfaces and methods, and the local-user authentication portal adapter, including client registration, discovery, code/PKCE, consent, ID-token keys, scoped and individual claims, authentication context, signed Request Objects, rotating OIDC refresh tokens, revocation, and conformance tests. Excludes upstream OAuth identity providers and portal refresh-token transport.
 ---
 
 # Authentication Portal OpenID Provider
@@ -48,7 +48,9 @@ runtime `Options`. The package has no dependency on the `authn` portal runtime.
 - `http.go`: public `ServeHTTP`, `HandleHTTP`, `ValidateLoginRequest`, and
   `Discovery`, guarded issuer routing, parsing, CORS, and buffered responses.
 - `authorization.go`, `request_object.go`, `token.go`: code/PKCE, consent,
-  unsigned Request Objects, client authentication, UserInfo, and revocation.
+  unsigned/RS256 Request Objects, client authentication, UserInfo, and revocation.
+  `claims.go` owns claims permissions and ACR mapping; `refresh.go` owns OIDC
+  refresh families; `request_keys.go` validates client verification keys.
 
 `pkg/authn/oidc_runtime.go` supplies `portalOIDCIdentityVerifier`, local-realm
 validation, key/cookie isolation, and sandbox/browser adapters. `configureOIDC`
@@ -68,6 +70,10 @@ Read [configuration and clients](references/configuration-and-clients.md) for
 setup and operational constraints. Read [conformance](references/conformance.md)
 for the targeted certification profiles, supported features, test evidence,
 and the OpenID Foundation test-plan configuration.
+Conformance browser captures must match the module's evidence request. Keep
+login captures in the two reauthentication overrides; a generic pending
+placeholder can instead request an error page. See the conformance reference
+for the Request Object callback-precedence case and the capture regression test.
 Read [named application integration](references/reusable-provider.md#named-application-registration-and-reloads)
 for directive adapter ordering, registration persistence, and secret rotation.
 
@@ -182,13 +188,18 @@ mandatory S256 PKCE. Unsigned by-value Request Objects (`alg: none`) encode
 untrusted authorization parameters; they never authenticate clients or users.
 Object parameters take precedence, except client ID and response type must match
 the required outer values. Validate the effective redirect against registration.
-Reject duplicate JSON members, nested requests, signed/encrypted objects, and
-invalid JWT metadata. Remote request URIs return `request_uri_not_supported`
+Reject duplicate JSON members, nested requests, unregistered signatures, encrypted
+objects, and invalid JWT metadata. RS256 verifies only registered client RSA keys;
+remote or embedded header keys are rejected. Pin `request_object_signing_alg RS256`
+to prohibit unsigned Request Objects for a registration. Remote request URIs return `request_uri_not_supported`
 without network fetches. ID tokens still require RS256. Discovery advertises
-only implemented capabilities. `claims` requests are not supported/advertised; optional unrecognized
-parameters are ignored. Unknown scopes are omitted from the granted scope.
+only implemented capabilities. `claims` supports `userinfo` and `id_token` locations
+within registered scope permissions. Requested disclosure is bound to consent,
+code, and access token. Unknown extensions/scopes are ignored. Use
+[claims, authentication context, and refresh](references/provider-capabilities.md)
+for typed attributes, parser directives, security invariants, and validation.
 
-`prompt=none` never renders interaction. Prior consent covers only scopes
+`prompt=none` never renders interaction. Prior consent covers only scopes and individual claim locations
 actually approved for that client within the current session. `prompt=consent`
 requires a new decision; `prompt=login`, `select_account`, and stale `max_age`
 require new checkpoint completion with appropriately recent original authentication
@@ -202,7 +213,7 @@ form-post auto-submission is protected by a per-response CSP nonce.
 
 Authorization codes expire after 60 seconds. Redemption atomically checks
 client, exact actually authorized redirect URI, PKCE, expiry, and current identity. Keep spent-code
-tombstones until the resulting access token expires. A replay revokes that token,
+tombstones until the resulting token family expires. A replay revokes the family,
 including concurrent replays. All opaque credentials are stored by SHA-256 hash.
 Capacity exhaustion fails closed; active state is never evicted to admit a new
 request. One pending interactive authorization per browser is supported; a new
@@ -212,12 +223,19 @@ Dedicated RSA keys must be 2048–8192 bits and must not overlap portal verifica
 keys. All ID tokens use RS256 with a public-only JWKS and stable thumbprint `kid`.
 ID tokens contain issuer, immutable subject, client audience, numeric times,
 verified `amr`, `auth_time`, `at_hash`, and the exact nonce when supplied.
-UserInfo returns only the granted standard scopes, with a matching `sub`.
+UserInfo returns granted scopes and consented individual claims, with a matching `sub`.
+`identity.Profile` supplies explicit optional profile, address, and phone data;
+missing attributes are never fabricated. ACR mappings require completed methods;
+an unmet essential ACR or requested subject fails authorization.
 Email verification is not inferred: the portal adapter returns
 `email_verified: false`; standalone verifiers may attest verified ownership.
 Opaque UserInfo
 tokens cannot authorize other portal APIs, and neither ID tokens nor portal
-access tokens authorize UserInfo. No OIDC refresh tokens are issued.
+access tokens authorize UserInfo. `offline_access` requires explicit `prompt=consent`
+and a fresh approval even for `skip_consent` clients. OIDC refresh credentials
+rotate; reuse revokes the family. They remain bound to the original client,
+identity, session, consent and absolute expiry. The ordinary portal refresh
+protocol remains independent.
 
 ## Validation
 
@@ -265,7 +283,7 @@ values, binds each code to its authorized callback, and tests unselected clients
 with their own registered callback on every reload. Runtime sessions
 and grants remain process-local even when client credentials survive reloads.
 `pkg/authn/oidc_config_parser_e2e_test.go` checks discovery, selected clients,
-session/token lifetimes, all three capacity limits, and disabled routing through
+session/token lifetimes, all capacity limits, and disabled routing through
 a real TLS portal. Root `server_oidc_config_test.go` checks parsed configuration
 through server dispatch, including realm, key-file, and reserved-mount failures.
 `pkg/authn/oidc_e2e_test.go` keeps the real portal/local-database password and

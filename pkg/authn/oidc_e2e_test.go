@@ -78,6 +78,11 @@ func newOIDCE2EFixture(t *testing.T, mount string, refresh bool, cookieConfigs .
 // provider body. Nil uses the standard registrations shared by the protocol tests.
 func newOIDCE2EFixtureWithProviderDirectives(t *testing.T, mount string, refresh bool, directives []string, cookieConfigs ...*cookie.Config) *oidcE2EFixture {
 	t.Helper()
+	return newOIDCE2EFixtureConfigured(t, mount, refresh, directives, nil, cookieConfigs...)
+}
+
+func newOIDCE2EFixtureConfigured(t *testing.T, mount string, refresh bool, directives []string, configure func(string, map[string]*oidc.ClientConfig), cookieConfigs ...*cookie.Config) *oidcE2EFixture {
+	t.Helper()
 	server := httptest.NewUnstartedServer(nil)
 	t.Cleanup(server.Close)
 	issuer := "https://" + server.Listener.Addr().String() + mount
@@ -103,6 +108,9 @@ func newOIDCE2EFixtureWithProviderDirectives(t *testing.T, mount string, refresh
 		"trusted-web":    {ClientID: "second", ClientSecret: oidcE2ESecret, RedirectURIs: []string{"https://rp.example.test/callback?registered=yes"}, SkipConsent: true},
 		"post-web":       {ClientID: "post", ClientSecret: oidcE2ESecret, TokenEndpointAuthMethod: "client_secret_post", RedirectURIs: []string{"https://rp.example.test/callback?registered=yes"}, SkipConsent: true},
 		"browser-app":    {ClientID: "public", TokenEndpointAuthMethod: "none", RedirectURIs: []string{"https://rp.example.test/callback?registered=yes"}, SkipConsent: true},
+	}
+	if configure != nil {
+		configure(dbPath, applications)
 	}
 	if directives == nil {
 		directives = []string{

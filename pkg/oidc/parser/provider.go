@@ -33,11 +33,13 @@ import (
 //
 // "issuer" takes one value. "realms", "signing key files", and "applications"
 // take one or more. "session lifetime", "token lifetime", "max sessions",
-// "max pending requests", and "max grants" take one decimal integer; lifetimes
+// "refresh lifetime", "max pending requests", "max refresh tokens", and
+// "max grants" take one decimal integer; lifetimes
 // are seconds and zero retains oidc.Config.Validate defaults. Standalone
 // "enabled" or "disabled" selects the state, which defaults to enabled.
 // Boolean literals and underscore keys are not accepted. Each setting occurs
-// once; unknown settings, duplicates, empty values, and malformed statements fail.
+// once except repeatable "acr <value> <method>..." mappings with distinct values.
+// Unknown settings, duplicates, empty values, and malformed statements fail.
 // Reject empty arguments before encoding: EncodeArgs can trim a final empty field.
 // An absent block should remain a nil *oidc.Config.
 //
@@ -64,6 +66,8 @@ func NewOIDCProviderConfigFromDirectives(statements []string, applications map[s
 	integers := map[string]*int{
 		"session lifetime":     &config.SessionLifetimeSeconds,
 		"token lifetime":       &config.TokenLifetimeSeconds,
+		"refresh lifetime":     &config.RefreshLifetimeSeconds,
+		"max refresh tokens":   &config.MaxRefreshTokens,
 		"max sessions":         &config.MaxSessions,
 		"max pending requests": &config.MaxPendingRequests,
 		"max grants":           &config.MaxGrants,
@@ -80,10 +84,10 @@ func NewOIDCProviderConfigFromDirectives(statements []string, applications map[s
 		}
 		words := 1
 		switch args[0] {
-		case "enabled", "disabled", "issuer", "realms", "applications":
-		case "session", "token", "max":
+		case "enabled", "disabled", "issuer", "realms", "applications", "acr":
+		case "session", "token", "refresh", "max":
 			words = 2
-			if args[0] == "max" && len(args) > 1 && args[1] == "pending" {
+			if args[0] == "max" && len(args) > 1 && (args[1] == "pending" || args[1] == "refresh") {
 				words = 3
 			}
 		case "signing":
@@ -104,6 +108,13 @@ func NewOIDCProviderConfigFromDirectives(statements []string, applications map[s
 				return nil, fmt.Errorf("oidc provider %s at line %d does not take arguments", key, i+1)
 			}
 			key, values = "enabled", args
+		}
+		if key == "acr" {
+			if len(values) < 2 || slices.Contains(values, "") {
+				return nil, fmt.Errorf("oidc acr requires a value and authentication methods at line %d", i+1)
+			}
+			config.AuthenticationContexts = append(config.AuthenticationContexts, oidc.AuthenticationContext{Value: values[0], Methods: values[1:]})
+			continue
 		}
 		if key != "enabled" && key != "issuer" && lists[key] == nil && integers[key] == nil {
 			return nil, fmt.Errorf("unsupported oidc provider directive at line %d", i+1)
