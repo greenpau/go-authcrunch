@@ -199,14 +199,31 @@ async function checkRowInteraction(tab, selector, capture) {
   }
   await screenshot(tab, capture + "-hover");
   await command("Input.dispatchMouseEvent", { type: "mouseMoved", x: 0, y: 0 }, tab);
-  await command("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 }, tab);
-  await command("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 }, tab);
-  assert.equal(await evaluate(tab, (selector) => {
+  // QR dismissal leaves focus on the last control. Tab can move into Chrome's
+  // toolbar; script focus() cannot reliably restore visible keyboard focus.
+  // Traverse the real tab order, including a possible trip through the toolbar.
+  await command("Page.bringToFront", {}, tab);
+  const tabLimit = await evaluate(tab, () => document.querySelectorAll('a[href], button, input, select, textarea, [tabindex]').length + 2);
+  let focused = false;
+  for (let attempt = 0; attempt < tabLimit; attempt++) {
+    await command("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 }, tab);
+    await command("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 }, tab);
+    focused = await evaluate(tab, (selector) => document.hasFocus() && document.activeElement === document.querySelector(selector).closest("a"), selector);
+    if (focused) break;
+  }
+  assert.equal(focused, true, "row link is not reachable with keyboard Tab navigation");
+  const focus = await evaluate(tab, (selector) => {
     const row = document.querySelector(selector), link = row.closest("a");
-    link.focus();
     const style = getComputedStyle(link);
-    return link.matches(":focus-visible") && style.outlineStyle !== "none" && style.display === "block" && style.borderRadius === getComputedStyle(row).borderRadius;
-  }, selector), true, "keyboard focus does not follow the rounded row");
+    return { visible: link.matches(":focus-visible"), outlineStyle: style.outlineStyle,
+      outlineWidth: parseFloat(style.outlineWidth), display: style.display,
+      radius: style.borderRadius, rowRadius: getComputedStyle(row).borderRadius };
+  }, selector);
+  assert.equal(focus.visible, true, "row link lacks keyboard focus styling");
+  assert.notEqual(focus.outlineStyle, "none", "row link has no keyboard focus outline");
+  assert.ok(focus.outlineWidth > 0, "row link has an invisible keyboard focus outline");
+  assert.equal(focus.display, "block", "keyboard focus does not enclose the whole row");
+  assert.equal(focus.radius, focus.rowRadius, "keyboard focus does not follow the rounded row");
   await screenshot(tab, capture + "-focus");
 }
 async function checkLongRow(tab, selector) {
