@@ -17,7 +17,10 @@ package tag
 import (
 	"bufio"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"testing"
 	"unicode"
 
 	"github.com/greenpau/go-authcrunch"
@@ -64,10 +67,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
-
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 func TestTagCompliance(t *testing.T) {
@@ -1039,6 +1038,7 @@ func TestTagCompliance(t *testing.T) {
 }
 
 func TestStructTagCompliance(t *testing.T) {
+	const root = "../.."
 	var files []string
 	structMap := make(map[string]bool)
 	walkFn := func(path string, fileInfo os.FileInfo, err error) error {
@@ -1046,6 +1046,12 @@ func TestStructTagCompliance(t *testing.T) {
 			return err
 		}
 		if fileInfo.IsDir() {
+			// Match Go package discovery so generated artifacts and fixtures
+			// outside the source packages cannot require compliance entries.
+			name := fileInfo.Name()
+			if path != root && (strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") || name == "testdata" || name == "vendor") {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		fileName := filepath.Base(path)
@@ -1063,7 +1069,7 @@ func TestStructTagCompliance(t *testing.T) {
 		files = append(files, path)
 		return nil
 	}
-	if err := filepath.Walk("../../", walkFn); err != nil {
+	if err := filepath.Walk(root, walkFn); err != nil {
 		t.Error(err)
 	}
 
