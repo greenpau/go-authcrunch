@@ -138,7 +138,7 @@ func TestE2ERefreshBrowserBootstrap(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"alice", "bob"} {
-		if err := db.AddUser(&requests.Request{User: requests.User{Username: name, Email: name + "@example.test", Password: tests.TestPwd1, Roles: []string{"authp/user"}}}); err != nil {
+		if err := db.AddUser(&requests.Request{User: requests.User{Username: name, Email: name + "@example.test", Password: tests.TestPwd1Hash(t), Roles: []string{"authp/user"}}}); err != nil {
 			t.Fatal(err)
 		}
 	}

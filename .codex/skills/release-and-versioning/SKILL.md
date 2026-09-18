@@ -13,9 +13,10 @@ Expose patch and minor operations only; do not add a major bump. Adding a
 feature does not itself authorize bumping or publishing a release.
 
 `assets/scripts/version.py` validates that namespace and the fallback metadata
-in `cmd/authdbctl/main.go` and `pkg/identity/database.go`. `make version-check`
+in `cmd/authdb/main.go`, `cmd/authdbctl/main.go`, and
+`pkg/identity/database.go`. `make version-check`
 is read-only. `make version-sync` invokes the pinned `go tool versioned
--release -sync` for both projections, then checks them. Committed branch/commit
+-release -sync` for all projections, then checks them. Committed branch/commit
 fallbacks are empty; actual build metadata comes from linker flags. Ordinary
 builds/tests never synchronize source or run `go mod tidy` implicitly.
 
@@ -52,7 +53,7 @@ and conservative fallback behavior.
 `.github/workflows/release.yml` requires the reusable test job before publishing,
 checks the exact annotated tag and synchronized version, then runs pinned
 GoReleaser with write permission confined to that job. `.goreleaser.yaml` owns
-Linux/Windows/Darwin amd64/arm64 `authdbctl` builds, checksums, and linker
+Linux/Windows/Darwin amd64/arm64 `authdb` and `authdbctl` builds, checksums, and linker
 metadata. Preserve immutable action pins and avoid publishing every local tag.
 
 `assets/scripts/verify_release.sh` fetches only the event's exact tag from origin

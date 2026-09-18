@@ -42,6 +42,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
+	"github.com/greenpau/go-authcrunch/pkg/httpserver"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
@@ -77,6 +78,8 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test httpserver.Config struct", entry: &httpserver.Config{}, opts: &Options{}},
+		{name: "test httpserver.PortalRoute struct", entry: &httpserver.PortalRoute{}, opts: &Options{}},
 		{name: "test oidc.Provider struct", entry: &oidc.Provider{}, opts: &Options{}},
 		{name: "test oidc.Page struct", entry: &oidc.Page{}, opts: &Options{}},
 		{name: "test oidc.PagePermission struct", entry: &oidc.PagePermission{}, opts: &Options{}},

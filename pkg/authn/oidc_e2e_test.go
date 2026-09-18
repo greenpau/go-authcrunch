@@ -101,13 +101,13 @@ func newOIDCE2EFixtureWithConfig(t *testing.T, mount string, refresh bool, direc
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.AddUser(&requests.Request{User: requests.User{Username: "alice", Email: "alice@example.test", Password: tests.TestPwd1, Roles: []string{"authp/user"}}}); err != nil {
+	if err := db.AddUser(&requests.Request{User: requests.User{Username: "alice", Email: "alice@example.test", Password: tests.TestPwd1Hash(t), Roles: []string{"authp/user"}}}); err != nil {
 		t.Fatal("could not provision OIDC user")
 	}
-	if err := db.AddUser(&requests.Request{User: requests.User{Username: "admin", Email: "admin@example.test", Password: tests.TestPwd1, Roles: []string{"authp/admin"}}}); err != nil {
+	if err := db.AddUser(&requests.Request{User: requests.User{Username: "admin", Email: "admin@example.test", Password: tests.TestPwd1Hash(t), Roles: []string{"authp/admin"}}}); err != nil {
 		t.Fatal("could not provision OIDC administrator")
 	}
-	if err := db.AddUser(&requests.Request{User: requests.User{Username: "mfauser", Email: "mfa@example.test", Password: tests.TestPwd1, Roles: []string{"authp/user"}}}); err != nil {
+	if err := db.AddUser(&requests.Request{User: requests.User{Username: "mfauser", Email: "mfa@example.test", Password: tests.TestPwd1Hash(t), Roles: []string{"authp/user"}}}); err != nil {
 		t.Fatal("could not provision MFA user")
 	}
 	if err := db.AddMfaToken(&requests.Request{User: requests.User{Username: "mfauser", Email: "mfa@example.test"}, MfaToken: requests.MfaToken{Type: "totp", Comment: "E2E", Secret: "0123456789abcdef0123456789abcdef", Algorithm: "sha1", Digits: 6, Period: 30, SkipVerification: true}}); err != nil {

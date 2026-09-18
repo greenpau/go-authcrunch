@@ -5,6 +5,10 @@ description: Maintain cmd/authdbctl commands, flags, configuration, terminal inp
 
 # AuthDB Management CLI
 
+The standalone server is maintained by [authdb](../authdb/SKILL.md). Its portal
+root can be used as this client's `base_url`; authentication and management
+protocols remain unchanged.
+
 ## Ownership and Contracts
 
 `cmd/authdbctl` owns application paths, configuration discovery, flags/env,

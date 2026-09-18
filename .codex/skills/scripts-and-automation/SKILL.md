@@ -21,7 +21,7 @@ boundary for these workflows.
 
 | Command | Behavior |
 | --- | --- |
-| `make` / `make build` | Check version projections, compile `bin/authdbctl`, print version/help |
+| `make` / `make build` | Check version projections, compile `bin/authdb` and `bin/authdbctl`, print version/help |
 | `make dep` | Download/verify modules and resolve pinned `go tool` commands |
 | `make test` | Race-enabled, uncached Go tests and complete tested reports |
 | `make test TEST_DIR='./pkg/authn/...' TEST='TestPortalRefresh'` | Same lifecycle with selected packages/test pattern |

@@ -28,9 +28,11 @@
 
 ## Getting Started
 
-Database management commands require the `enable admin api` directive in
-`Caddyfile`. The `connect` command uses the portal's JSON `/login` endpoint and
-does not require the admin API:
+Database management commands require the portal's admin API. With standalone
+[`authdb`](../authdb/README.md), set `api.admin_enabled` to `true` in the portal's
+JSON configuration. With Caddy, use the `enable admin api` directive shown
+below. The `connect` command uses the portal's JSON `/login` endpoint and does
+not require the admin API:
 
 ```text
 {

@@ -189,7 +189,7 @@ func TestPasswordAttemptLimiterAuthProxyBasicAuth(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := db.AddUser(&requests.Request{User: requests.User{
-		Username: "alice", Email: "alice@example.test", Password: tests.TestPwd1, Roles: []string{"authp/user"},
+		Username: "alice", Email: "alice@example.test", Password: tests.TestPwd1Hash(t), Roles: []string{"authp/user"},
 	}}); err != nil {
 		t.Fatal(err)
 	}

@@ -227,7 +227,7 @@ never print real credentials. Ignore all report artifacts in Git.
 
 Tests and builds do not run license rewrites, version synchronization, or
 module tidy. `make ci-check` serializes version checks, automation fixtures,
-existing golint, full Go coverage, browser tests, and the CLI build. Use
+existing golint, full Go coverage, browser tests, and both executable builds. Use
 `scripts-and-automation` for maintenance side effects and
 `release-and-versioning` for release/tag operations.
 
@@ -254,6 +254,18 @@ Prefer existing test helpers before adding new ones:
 Use `t.TempDir()` for new isolated temporary filesystem tests unless the code
 under test already follows `tests.TempDir`, which writes below
 `/tmp/testdata/go-authcrunch/<test-name>/`.
+
+For repeated portal fixture provisioning, use `tests.TestPwd1Hash(t)` and
+`tests.TestPwd2Hash(t)` as password imports, and send `tests.TestPwd1` and
+`tests.TestPwd2` as plaintext during login. These helpers lazily hash each
+synthetic password once per process at `bcrypt.DefaultCost`; database records
+and authentication checks remain independent. Avoid repeating password
+generation in each TLS fixture: race instrumentation made that setup dominate
+the authentication package's CI budget. Keep plaintext creation and mutation
+in tests that exercise those operations, and retain real bcrypt comparisons,
+the production cost, and all request/package deadlines. Helper regressions
+live in `internal/tests/password_test.go`; the real TLS isolation journey is
+`pkg/authn/password_fixture_e2e_test.go`.
 
 ## Test Placement and Filenames
 
@@ -285,6 +297,11 @@ Authentication tests live under `pkg/authn`, including HTTP login/logout,
 external logout, response handling, cache sandbox behavior, cookie settings,
 transformers, icons, and embedded UI pages/static assets. Use `httptest` and
 `internal/testutils` helpers for request/response and token-driven behavior.
+
+Standalone server tests live under `pkg/httpserver` and `cmd/authdb`, including
+parser-based TLS refresh/OIDC journeys and the actual race-enabled executable.
+Use [authdb](../authdb/SKILL.md) for listener lifecycle, routing, configuration,
+subprocess cleanup, and targeted validation.
 
 Reusable login-client tests live under `pkg/authclient`, including E2E tests
 against a real local TLS portal and identity store in the default test suite;

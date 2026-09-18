@@ -12,7 +12,8 @@ checksum:
   name_template: "{{.ProjectName}}_{{.Version}}_SHA256SUMS"
 
 builds:
-  - env:
+  - id: authdbctl
+    env:
       - CGO_ENABLED=0
       - GO111MODULE=on
     goos:
@@ -35,6 +36,29 @@ builds:
         -X main.buildUser=goreleaser
         -X main.buildDate={{.Date}}
 
+  - id: authdb
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/authdb
+    binary: authdb
+    flags:
+      - -trimpath
+      - -mod=readonly
+    ldflags:
+      - >-
+        -s -w
+        -X main.appVersion={{.Version}}
+        -X main.gitCommit={{.FullCommit}}
+        -X main.buildUser=goreleaser
+        -X main.buildDate={{.Date}}
 
 nfpms:
   - id: authp

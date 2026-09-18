@@ -29,7 +29,7 @@ class ReleaseTests(unittest.TestCase):
             dest = self.root / name
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, dest)
-        for name in ('cmd/authdbctl/main.go', 'pkg/identity/database.go'):
+        for name in ('cmd/authdb/main.go', 'cmd/authdbctl/main.go', 'pkg/identity/database.go'):
             dest = self.root / name
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text('package main\nimport "github.com/greenpau/versioned"\n'
@@ -197,7 +197,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(self.run_command('git', '--git-dir', str(self.remote), 'tag').stdout, '')
         self.assertEqual(self.run_command('git', 'diff', '--cached', '--name-only').stdout, '')
         self.assertEqual(self.run_command('git', 'diff', '--name-only').stdout.splitlines(),
-                         ['VERSION', 'cmd/authdbctl/main.go', 'pkg/identity/database.go'])
+                         ['VERSION', 'cmd/authdb/main.go', 'cmd/authdbctl/main.go', 'pkg/identity/database.go'])
         # A blind retry must not increment again or publish the failed candidate.
         self.assertNotEqual(self.release(ok=False).returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.42')

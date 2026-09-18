@@ -12,7 +12,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION_PATTERN = re.compile(r"1\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
-TARGETS = ("cmd/authdbctl/main.go", "pkg/identity/database.go")
+TARGETS = ("cmd/authdb/main.go", "cmd/authdbctl/main.go", "pkg/identity/database.go")
 
 
 def read_version(root=ROOT):

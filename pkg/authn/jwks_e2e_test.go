@@ -86,7 +86,7 @@ func newJWKSE2EDatabase(t *testing.T) string {
 			role = "authp/admin"
 		}
 		if err := db.AddUser(&requests.Request{User: requests.User{
-			Username: username, Email: username + "@example.test", Password: tests.TestPwd1, Roles: []string{role},
+			Username: username, Email: username + "@example.test", Password: tests.TestPwd1Hash(t), Roles: []string{role},
 		}}); err != nil {
 			t.Fatal("could not provision E2E identity")
 		}

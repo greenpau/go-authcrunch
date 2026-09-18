@@ -29,7 +29,7 @@ class CITestSelectionTests(unittest.TestCase):
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / 'assets/scripts' / name, dest)
         (self.root / 'VERSION').write_text('1.2.0\n')
-        for name in ('cmd/authdbctl/main.go', 'pkg/identity/database.go'):
+        for name in ('cmd/authdb/main.go', 'cmd/authdbctl/main.go', 'pkg/identity/database.go'):
             dest = self.root / name
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text('app.SetVersion(appVersion, "1.2.0")\n'

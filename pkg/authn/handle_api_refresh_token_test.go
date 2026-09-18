@@ -60,7 +60,7 @@ func newRefreshPortal(t *testing.T, enabled, mfa bool) *refreshPortalFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := &requests.Request{User: requests.User{Username: tests.TestUser1, Email: tests.TestEmail1, Password: tests.TestPwd1, Roles: []string{"authp/user", "original"}}}
+	req := &requests.Request{User: requests.User{Username: tests.TestUser1, Email: tests.TestEmail1, Password: tests.TestPwd1Hash(t), Roles: []string{"authp/user", "original"}}}
 	if err := db.AddUser(req); err != nil {
 		t.Fatal(err)
 	}

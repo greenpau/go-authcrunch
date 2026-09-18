@@ -16,7 +16,8 @@ LDAP stores under `pkg/ids/local` and `pkg/ids/ldap`, OAuth and SAML providers
 under `pkg/idp/oauth` and `pkg/idp/saml`, and crypto key management under
 `pkg/kms`.
 
-The repository also includes the `authdbctl` management CLI in `cmd/authdbctl`,
+The repository also includes the standalone `authdb` HTTP server in `cmd/authdb`,
+the `authdbctl` management CLI in `cmd/authdbctl`,
 embedded portal/profile UI assets under `pkg/authn/ui`, shared identity and user
 data models under `pkg/identity`, user registration under `pkg/registry`,
 messaging providers under `pkg/messaging`, i18n helpers under `pkg/translate`,
@@ -124,6 +125,12 @@ Use `authentication-portal-jwks` for the portal `/.well-known/jwks.json`
 endpoint, public signing-key serialization, issuer selection, and base-path
 routing, plus reusable admin API directive configuration and opt-in private-key
 export.
+
+## Standalone HTTP Server
+
+Use `authdb` for `cmd/authdb`, the reusable `pkg/httpserver` listener and
+configuration parser, TLS, portal mounts, process lifecycle, executable tests,
+and standalone deployment. `authdbctl` remains the separate management client.
 
 ## Authentication Clients
 

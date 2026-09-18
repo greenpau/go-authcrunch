@@ -66,9 +66,9 @@ func newLoginIdentityConfiguredE2E(t *testing.T, refresh, provider, mfa bool, su
 		t.Fatal(err)
 	}
 	for _, name := range []string{"alice", "bob"} {
-		password := tests.TestPwd1
+		password := tests.TestPwd1Hash(t)
 		if name == "bob" {
-			password = tests.TestPwd2
+			password = tests.TestPwd2Hash(t)
 		}
 		if err := db.AddUser(&requests.Request{User: requests.User{Username: name, Email: name + "@example.test", Password: password, Roles: []string{"authp/user", name}}}); err != nil {
 			t.Fatal("could not provision login identity")

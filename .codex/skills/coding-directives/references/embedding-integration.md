@@ -1,5 +1,9 @@
 # Embedding Integration Boundaries
 
+The in-repository standalone host is `cmd/authdb`, using `pkg/httpserver.Serve`.
+Its [owning skill](../../authdb/SKILL.md) describes the JSON envelope, HTTP parser,
+TLS listener, mounts, and shutdown contract.
+
 Use these entry points when preparing configuration for an embedding server.
 The host owns block traversal, tokenization, placeholder expansion, and private
 credential storage. Encode each statement with `cfgutil.EncodeArgs`; reject
@@ -8,6 +12,7 @@ that a downstream configuration language already recognizes a directive.
 
 | Surface | Public parser | Apply to production configuration |
 | --- | --- | --- |
+| Standalone HTTP listener body | `pkg/httpserver/parser.NewHTTPServerConfigFromDirectives(statements)` | `httpserver.Serve` with the root security configuration |
 | `oauth application <nickname>` | `pkg/oidc/parser.NewOAuthApplicationConfigFromDirectives(header, statements, persisted)` | `Config.AddOAuthApplication` |
 | OIDC provider body | `pkg/oidc/parser.NewOIDCProviderConfigFromDirectives(statements, applications)` | `PortalConfig.ConfigureOIDCProvider`; root `Config.ConfigureOIDCProvider` resolves registered applications through this parser |
 | `token refresh` body | `pkg/authn/token_refresh/parser.NewTokenRefreshConfigFromDirectives(statements)` | `PortalConfig.RefreshTokens` |

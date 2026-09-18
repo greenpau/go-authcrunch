@@ -22,9 +22,24 @@ for local-user OIDC login and relying-party registration, the
 [reusable Go provider](.codex/skills/authentication-portal-oidc/references/reusable-provider.md), and
 [conformance testing](.codex/skills/authentication-portal-oidc/references/conformance.md).
 
+## Standalone server
+
+Run AuthCrunch directly with Go's HTTP server using `authdb`:
+
+```sh
+make build
+./bin/authdb run --config /path/to/authdb.json
+```
+
+Start with [the example configuration](cmd/authdb/config.json), set your TLS
+certificate/key and identity database paths, and follow the
+[authdb usage guide](cmd/authdb/README.md).
+The example serves the portal at `https://localhost:8443/auth`. `authdbctl`
+remains the management client; Caddy is not required.
+
 ## Development
 
-Use Go 1.25 or newer (CI uses 1.26.0), Node 24, Python 3.9+, and Make.
+Use Go 1.26 or newer (CI uses 1.26.8), Node 24, Python 3.9+, and Make.
 
 ```sh
 make dep
@@ -33,7 +48,7 @@ make ci-check
 
 `make test` runs race-enabled Go tests through pinned `tested` and writes the
 coverage/report bundle to `.coverage/index.html`. Use `make test-ui` for browser
-session tests and `make build` for `bin/authdbctl`.
+session tests and `make build` for `bin/authdb` and `bin/authdbctl`.
 
 Repository guidance lives in [repo-local skills](.codex/skills).
 [Release and versioning](.codex/skills/release-and-versioning/SKILL.md) describes

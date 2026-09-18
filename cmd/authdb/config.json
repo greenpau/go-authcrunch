@@ -1,0 +1,37 @@
+{
+  "http": {
+    "listen_address": "127.0.0.1:8443",
+    "tls_certificate_file": "server.crt",
+    "tls_key_file": "server.key",
+    "portals": [
+      {
+        "name": "local",
+        "path": "/auth"
+      }
+    ]
+  },
+  "security": {
+    "identity_stores": [
+      {
+        "name": "local",
+        "kind": "local",
+        "params": {
+          "realm": "local",
+          "path": "data/users.json"
+        }
+      }
+    ],
+    "authentication_portals": [
+      {
+        "name": "local",
+        "identity_stores": [
+          "local"
+        ],
+        "api": {
+          "admin_enabled": true,
+          "profile_enabled": true
+        }
+      }
+    ]
+  }
+}

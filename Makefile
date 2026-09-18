@@ -28,15 +28,17 @@ info:
 # Validation and builds never rewrite source, licenses, or module manifests.
 build: version-check
 	@mkdir -p bin
-	@CGO_ENABLED=0 go build -mod=readonly -trimpath -o bin/authdbctl \
-		-ldflags="-w -s \
-		-X main.appVersion=$$APP_VERSION \
-		-X main.gitBranch=$$GIT_BRANCH \
-		-X main.gitCommit=$$GIT_COMMIT \
-		-X main.buildUser=$$BUILD_USER \
-		-X main.buildDate=$$BUILD_DATE" ./cmd/authdbctl
-	@./bin/authdbctl --version
-	@./bin/authdbctl --help
+	@set -e; for command in authdb authdbctl; do \
+		CGO_ENABLED=0 go build -mod=readonly -trimpath -o "bin/$$command" \
+			-ldflags="-w -s \
+			-X main.appVersion=$$APP_VERSION \
+			-X main.gitBranch=$$GIT_BRANCH \
+			-X main.gitCommit=$$GIT_COMMIT \
+			-X main.buildUser=$$BUILD_USER \
+			-X main.buildDate=$$BUILD_DATE" "./cmd/$$command"; \
+		"./bin/$$command" --version; \
+		"./bin/$$command" --help; \
+	done
 
 linter:
 	@go tool golint -set_exit_status ./...

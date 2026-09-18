@@ -38,7 +38,7 @@ class VersionTests(unittest.TestCase):
                 (self.root / 'VERSION').write_text(text)
                 version.read_version(self.root)
 
-    def test_both_projection_versions_and_metadata_are_checked(self):
+    def test_all_projection_versions_and_metadata_are_checked(self):
         for target in version.TARGETS:
             path = self.root / target
             baseline = path.read_text()

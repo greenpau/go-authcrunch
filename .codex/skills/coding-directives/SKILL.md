@@ -42,7 +42,8 @@ for factor checkpoints/enrollment, and [saml-identity-provider](../saml-identity
 for upstream SAML trust and browser binding.
 Use `authentication-client` for reusable portal login clients and CLI credential
 handling. Use `authdbctl` for CLI commands, terminal behavior, and executable E2E
-tests.
+tests. Use [authdb](../authdb/SKILL.md) for the standalone HTTP server, listener
+configuration/parser, portal routing, TLS, and process lifecycle.
 
 ## Repository Scope
 
@@ -93,6 +94,9 @@ Put behavior in the package that owns the AuthCrunch surface:
 - `pkg/authclient` owns the JSON portal login client, challenge orchestration,
   opaque credential results, and optional token-file persistence. It uses the
   login endpoint without depending on the admin API or a CLI framework.
+- `pkg/httpserver` owns standalone listener configuration, portal mounts, TLS,
+  request draining, and root runtime disposal; its `parser` package owns HTTP
+  directives. `cmd/authdb` owns file loading, flags, logging, and signals.
 - `cmd/authdbctl` owns configuration discovery, application paths, flags,
   terminal prompts, database commands, management request retries, and output.
 

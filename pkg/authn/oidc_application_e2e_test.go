@@ -51,7 +51,7 @@ func TestE2EOAuthApplicationRegistrationReload(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := db.AddUser(&requests.Request{User: requests.User{Username: "alice", Email: "alice@example.test", Password: tests.TestPwd1, Roles: []string{"authp/user"}}}); err != nil {
+			if err := db.AddUser(&requests.Request{User: requests.User{Username: "alice", Email: "alice@example.test", Password: tests.TestPwd1Hash(t), Roles: []string{"authp/user"}}}); err != nil {
 				t.Fatal("could not provision local user")
 			}
 			keyFile := filepath.Join(dir, "signing key.pem")

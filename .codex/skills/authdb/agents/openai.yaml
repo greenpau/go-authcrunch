@@ -1,0 +1,4 @@
+interface:
+  display_name: "AuthDB Standalone Server"
+  short_description: "Standalone HTTP server, TLS, routing, and lifecycle"
+  default_prompt: "Use $authdb to maintain the standalone AuthCrunch server and validate its configuration, TLS listener, and executable login journeys."
