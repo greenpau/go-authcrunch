@@ -41,7 +41,11 @@ func (p *Portal) handleHTTPLogin(ctx context.Context, w http.ResponseWriter, r *
 	if (p.refresh != nil || p.oidc != nil) && r.Method == http.MethodPost {
 		return p.handleHTTPLoginRequest(ctx, w, r, rr)
 	}
-	if (p.refresh != nil || p.oidc != nil) && r.Method == http.MethodGet && r.URL.Query().Get("fresh") == "1" {
+	if r.Method == http.MethodGet && r.URL.Query().Get("fresh") == "1" {
+		p.disableClientCache(w)
+		// A still-valid access JWT must not send the submitted login back to
+		// the portal. Retain refresh cookies for revocation on login completion.
+		p.deleteAuthCookies(w, r)
 		rr.Response.Authenticated = false
 		return p.handleHTTPLoginScreen(ctx, w, r, rr)
 	}

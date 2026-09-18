@@ -565,3 +565,52 @@ func FuzzRefreshRequestBody(f *testing.F) {
 		}
 	})
 }
+
+// The embedded profile app navigates here after a profile API 401. A browser
+// navigation must reach login without changing the POST refresh contract.
+func TestPortalRefreshProfileNavigation(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		f := newRefreshPortal(t, enabled, false)
+		for _, tc := range []struct {
+			name, method, path, mode, dest string
+			redirect                       bool
+		}{
+			{"profile recovery", "GET", "/auth/api/refresh_token", "navigate", "document", true},
+			{"root mount", "GET", "/api/refresh_token", "navigate", "document", !enabled},
+			{"nested mount", "GET", "/nested/auth/api/refresh_token", "navigate", "document", !enabled},
+			{"API GET", "GET", "/auth/api/refresh_token", "cors", "empty", false},
+			{"no navigation metadata", "GET", "/auth/api/refresh_token", "", "", false},
+			{"frame", "GET", "/auth/api/refresh_token", "navigate", "iframe", false},
+			{"query", "GET", "/auth/api/refresh_token?refresh_token=unused", "navigate", "document", false},
+			{"encoded path", "GET", "/auth/api/%72efresh_token", "navigate", "document", false},
+			{"session API", "GET", "/auth/api/refresh_session", "navigate", "document", false},
+			{"logout API", "GET", "/auth/api/logout", "navigate", "document", false},
+			{"POST", "POST", "/auth/api/refresh_token", "navigate", "document", false},
+		} {
+			t.Run(fmt.Sprintf("enabled=%t/%s", enabled, tc.name), func(t *testing.T) {
+				r := httptest.NewRequest(tc.method, refreshTestOrigin+tc.path, nil)
+				r.Header.Set("Accept", "text/html,application/xhtml+xml")
+				r.Header.Set("Sec-Fetch-Mode", tc.mode)
+				r.Header.Set("Sec-Fetch-Dest", tc.dest)
+				w := httptest.NewRecorder()
+				if err := f.portal.ServeHTTP(t.Context(), w, r, requests.NewRequest()); err != nil {
+					t.Fatal(err)
+				}
+				if tc.redirect {
+					want := refreshTestOrigin + strings.TrimSuffix(tc.path, "/api/refresh_token") + "/login?fresh=1"
+					if w.Code != http.StatusFound || w.Header().Get("Location") != want {
+						t.Fatalf("profile navigation returned HTTP %d at %q, want login", w.Code, w.Header().Get("Location"))
+					}
+				} else if w.Code < 400 || w.Header().Get("Location") != "" {
+					t.Fatalf("non-navigation refresh request redirected or succeeded: HTTP %d", w.Code)
+				}
+				if w.Header().Get("Cache-Control") != "no-store" {
+					t.Fatal("refresh response was cacheable")
+				}
+				if len(w.Result().Cookies()) != 0 {
+					t.Fatal("refresh navigation changed credentials")
+				}
+			})
+		}
+	}
+}

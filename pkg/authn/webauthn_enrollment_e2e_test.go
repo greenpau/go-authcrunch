@@ -165,11 +165,16 @@ func webAuthnEnrollmentRequireNoTokens(t *testing.T, store interface {
 func webAuthnEnrollmentLoginWithU2F(t *testing.T, source *oidcE2EFixture, key *ecdsa.PrivateKey, credentialID, wantSubject string) {
 	t.Helper()
 	login := webAuthnEnrollmentBrowser(t, source)
-	portalURL, err := url.Parse(source.server.URL)
+	webAuthnEnrollmentAuthenticateWithU2F(t, login, key, credentialID, wantSubject)
+}
+
+func webAuthnEnrollmentAuthenticateWithU2F(t *testing.T, login *oidcE2EFixture, key *ecdsa.PrivateKey, credentialID, wantSubject string) {
+	t.Helper()
+	portalURL, err := url.Parse(login.server.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
-	origin := http.Header{"Origin": {source.server.URL}}
+	origin := http.Header{"Origin": {login.server.URL}}
 	start := login.request(t, http.MethodPost, "/login", url.Values{"username": {"alice"}, "realm": {"local"}}, origin)
 	oidcE2EStatus(t, start, http.StatusSeeOther)
 	sandbox := start.header.Get("Location")
@@ -185,7 +190,7 @@ func webAuthnEnrollmentLoginWithU2F(t *testing.T, source *oidcE2EFixture, key *e
 		t.Fatal("portal returned a malformed sandbox location")
 	}
 	endpoint := parts[0] + "/sandbox/" + strings.SplitN(parts[1], "/", 2)[0] + "/mfa-u2f-auth"
-	assertion := webAuthnE2EAssertion(t, key, credentialID, portalURL.Hostname(), string(match[1]), source.server.URL)
+	assertion := webAuthnE2EAssertion(t, key, credentialID, portalURL.Hostname(), string(match[1]), login.server.URL)
 	oidcE2EStatus(t, login.request(t, http.MethodPost, endpoint, url.Values{"webauthn_request": {assertion}}, origin), http.StatusSeeOther)
 	oidcE2EStatus(t, login.request(t, http.MethodGet, sandbox, nil, origin), http.StatusSeeOther)
 	loginIdentityClaims(t, login, loginIdentityCookie(login, "AUTHP_ACCESS_TOKEN"), wantSubject)

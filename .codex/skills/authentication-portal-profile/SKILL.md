@@ -39,6 +39,13 @@ operation after its underlying evidence is revoked. Require a fresh login;
 do not silently update cached credential versions after enrollment or deletion.
 For WebAuthn ceremony details use
 [portal MFA](../authentication-portal-mfa/SKILL.md).
+The embedded profile client's recovery navigation is handled by the
+[refresh transport compatibility path](../refresh-token-transports/SKILL.md).
+`profile_session_e2e_test.go` covers passkey addition and deletion, same-browser
+fresh login, and recovered profile access with refresh disabled/enabled. Its
+Chrome driver `ui/testdata/profile_session_browser_e2e.cjs` runs the shipped
+profile application using real TLS login cookies and checks the 401-to-login
+journey; signed synthetic WebAuthn assertions exercise the factor checkpoints.
 
 Validation belongs in `profile_identity_test.go`, `api_origin_test.go`,
 `profile_identity_e2e_test.go`, `identity_alias_e2e_test.go`, and the identity

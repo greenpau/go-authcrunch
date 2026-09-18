@@ -19,7 +19,16 @@ current family ID without rotating its credential; it uses the same origin,
 header, JSON, mount, and cookie checks. It does not establish fresh identity
 authorization. Known spent credentials retain normal lookup replay revocation;
 never use this endpoint to recover an uncertain exchange.
-Require the exact configured HTTPS origin, effective host, and canonical mount.
+
+The embedded profile client also uses a top-level GET navigation to
+`<mount>/api/refresh_token` after a 401. Canonical, query-free requests with
+`Sec-Fetch-Mode: navigate` and `Sec-Fetch-Dest: document` redirect to
+`<mount>/login?fresh=1`, including when refresh is disabled. With refresh enabled,
+the configured origin and mount must match. This compatibility path never
+rotates credentials; ordinary API GETs retain their method/availability errors.
+
+Refresh exchanges require the exact configured HTTPS origin, effective host, and
+canonical mount.
 Browser requests require matching Origin, `X-Authcrunch-Refresh: 1`, JSON,
 and compatible Fetch Metadata. Reject query parameters, unknown/duplicate JSON
 fields, trailing data, bodies over 1 KiB, duplicate refresh cookies, and mixed
@@ -110,7 +119,10 @@ relabel them using a document's ID or assume they refer to a new login.
 continuation/confirmation UI; `handle_http_portal.go`, `handle_http_login.go`,
 and the portal template load the client conditionally. Expired portal access
 can renew through top-level continuation; `fresh=1` starts a new login without
-looping back to renewal. Preserve CSP and trusted destination checks. External
+looping back to renewal. Fresh login also works on access-only portals and
+deletes the old access cookie so the next form submission can start a sandbox.
+Retain refresh cookies until login completion can revoke the previous family.
+Preserve CSP and trusted destination checks. External
 apps must explicitly integrate this flow; a same-origin portal client does not
 automatically renew arbitrary cross-origin applications.
 

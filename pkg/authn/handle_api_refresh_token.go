@@ -116,6 +116,17 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 	p.disableClientCache(w)
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
+	// The embedded profile client uses a top-level navigation here after a
+	// rejected session. Credential changes require a fresh login, even when
+	// refresh is disabled. Keep API requests on the POST-only refresh path.
+	if r.Method == http.MethodGet && r.Header.Get("Sec-Fetch-Mode") == "navigate" && r.Header.Get("Sec-Fetch-Dest") == "document" &&
+		r.URL.RawPath == "" && r.URL.RawQuery == "" && !r.URL.ForceQuery {
+		extractBasePath(ctx, r, rr)
+		if r.URL.Path == strings.TrimSuffix(rr.Upstream.BasePath, "/")+"/api/refresh_token" &&
+			(p.refresh == nil || (r.URL.Path == p.refreshPath("refresh_token") && p.validateRefreshOrigin(r) == nil)) {
+			return p.handleHTTPRedirect(ctx, w, r, rr, "/login?fresh=1")
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
 	if p.refresh == nil {
 		return p.handleJSONError(ctx, w, http.StatusNotFound, "Refresh is unavailable")
