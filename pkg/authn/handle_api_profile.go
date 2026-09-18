@@ -19,10 +19,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"regexp"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/role"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -88,6 +90,12 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	if err := p.authorizedRole(usr, []role.Kind{role.Admin, role.User}, rr.Response.Authenticated); err != nil {
 		resp["message"] = "Profile API did not find valid role for the user"
 		return handleAPIProfileResponse(w, rr, http.StatusForbidden, resp)
+	}
+
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || mediaType != "application/json" {
+		resp["message"] = "Profile API requires application/json"
+		return handleAPIProfileResponse(w, rr, http.StatusUnsupportedMediaType, resp)
 	}
 
 	// Unpack the request and determine the type of the request.
@@ -185,9 +193,18 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		zap.String("source_address", addrutil.GetSourceAddress(r)),
 	)
 
-	// Populate username (sub) and email address (email)
-	rr.User.Username = usr.Claims.Subject
-	rr.User.Email = usr.Claims.Email
+	// Profile credentials belong to the original local login identity. A
+	// transformed subject/email is output data, never a backend lookup key.
+	bound, err := newProfileIdentityStore(backend, usr)
+	if err != nil {
+		resp["message"] = "Profile API requires a current local login"
+		return handleAPIProfileResponse(w, rr, http.StatusUnauthorized, resp)
+	}
+	if err := bound.Request(operator.GetUser, rr); err != nil {
+		resp["message"] = "Profile API requires a current local login"
+		return handleAPIProfileResponse(w, rr, http.StatusUnauthorized, resp)
+	}
+	backend = bound
 
 	switch reqKind {
 	case "fetch_debug":

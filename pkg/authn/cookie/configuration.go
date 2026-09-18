@@ -36,6 +36,7 @@ func (c *Config) names() []cookieName {
 		{DefaultRefreshTokenCookieName, &c.RefreshTokenCookieName},
 		{DefaultOIDCSessionIDCookieName, &c.OIDCSessionIDCookieName},
 		{DefaultOIDCRequestIDCookieName, &c.OIDCRequestIDCookieName},
+		{DefaultSAMLSessionIDCookieName, &c.SAMLSessionIDCookieName},
 	}
 }
 

@@ -55,6 +55,16 @@ func (p *Portal) BasicAuth(r *authproxy.Request) error {
 	}
 
 	creds := strings.SplitN(string(arr), ":", 2)
+	if len(creds) != 2 || strings.TrimSpace(creds[0]) == "" || creds[1] == "" {
+		p.logger.Warn(
+			"failed to parse credentials",
+			zap.String("source_address", r.Address),
+			zap.String("custom_auth", "basicauth"),
+			zap.String("realm", r.Realm),
+			zap.String("error", "username or password is missing"),
+		)
+		return errors.ErrBasicAuthFailedDecodeSecret
+	}
 	rr.User.Username = creds[0]
 	rr.User.Password = creds[1]
 
@@ -115,7 +125,9 @@ func (p *Portal) BasicAuth(r *authproxy.Request) error {
 		return errors.ErrBasicAuthFailed
 	}
 
-	if err := backend.Request(operator.Authenticate, rr); err != nil {
+	if err := p.authenticatePassword(r.Address, func() error {
+		return backend.Request(operator.Authenticate, rr)
+	}); err != nil {
 		p.logger.Warn(
 			"user authentication failed",
 			zap.String("source_address", r.Address),

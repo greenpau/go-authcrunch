@@ -31,12 +31,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
+	"github.com/greenpau/go-authcrunch/pkg/authz/injector"
 	autherrors "github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -45,6 +47,10 @@ import (
 type pathServer struct {
 	server     *httptest.Server
 	protoMajor int
+}
+
+type downstreamHeaders struct {
+	Values map[string][]string `json:"values"`
 }
 
 func newPathServer(t *testing.T, cfg *authz.PolicyConfig, application http.Handler) *pathServer {
@@ -78,7 +84,7 @@ func newPathServerWithProtocol(t *testing.T, cfg *authz.PolicyConfig, applicatio
 			}
 			return
 		}
-		if r.URL.Path != originalPath || r.URL.RawPath != originalRawPath || r.RequestURI != originalURI {
+		if r.URL.Path != originalPath || r.URL.RawPath != originalRawPath || (!cfg.StripTokenEnabled && r.RequestURI != originalURI) {
 			http.Error(w, "request path was rewritten", http.StatusInternalServerError)
 			return
 		}
@@ -155,6 +161,170 @@ func (s *pathServer) request(t *testing.T, target, token string, wantStatus int,
 	}
 }
 
+func (s *pathServer) requestHeaders(t *testing.T, target, token string, headers http.Header) downstreamHeaders {
+	t.Helper()
+	client := s.server.Client()
+	client.Timeout = 5 * time.Second
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, s.server.URL+target, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, values := range headers {
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
+		t.Fatalf("status=%d, want %d: %s", resp.StatusCode, http.StatusOK, body)
+	}
+	var got downstreamHeaders
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<16)).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+func headerApplication(names ...string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got := downstreamHeaders{Values: make(map[string][]string)}
+		for _, name := range names {
+			if values, exists := r.Header[http.CanonicalHeaderKey(name)]; exists {
+				got.Values[http.CanonicalHeaderKey(name)] = append([]string(nil), values...)
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(got)
+	})
+}
+
+func TestE2EAuthorizationClaimHeaderBoundary(t *testing.T) {
+	const (
+		attackerValue = "attacker-controlled"
+		verifiedEmail = "verified@example.com"
+	)
+	newToken := func(t *testing.T, email string) string {
+		t.Helper()
+		claims := map[string]any{
+			"sub":   "header-user",
+			"roles": []string{"viewer"},
+			"exp":   time.Now().Add(5 * time.Minute).Unix(),
+			"iat":   time.Now().Unix(),
+		}
+		if email != "" {
+			claims["email"] = email
+		}
+		data, err := json.Marshal(claims)
+		if err != nil {
+			t.Fatal(err)
+		}
+		usr, err := user.NewUser(data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys, err := testutils.NewTestCryptoKeyStore()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := keys.SignToken("access_token", "HS512", usr); err != nil {
+			t.Fatal(err)
+		}
+		return usr.Token
+	}
+
+	t.Run("default headers are authoritative for uncached and cached users", func(t *testing.T) {
+		names := []string{
+			"X-Token-User-Name",
+			"X-Token-User-Email",
+			"X-Token-User-Roles",
+			"X-Token-Subject",
+			"X-Client-Context",
+		}
+		s := newPathServer(t, &authz.PolicyConfig{PassClaimsWithHeaders: true}, headerApplication(names...))
+		token := newToken(t, "")
+		input := http.Header{
+			"X-Token-User-Name":  {attackerValue},
+			"X-Token-User-Email": {attackerValue},
+			"X-Token-User-Roles": {attackerValue},
+			"X-Token-Subject":    {attackerValue},
+			"X-Client-Context":   {"preserved"},
+		}
+		want := map[string][]string{
+			"X-Token-User-Roles": {"viewer"},
+			"X-Token-Subject":    {"header-user"},
+			"X-Client-Context":   {"preserved"},
+		}
+		for round := range 2 {
+			got := s.requestHeaders(t, "/private", token, input)
+			if diff := cmp.Diff(want, got.Values); diff != "" {
+				t.Fatalf("round %d downstream headers mismatch (-want +got):\n%s", round, diff)
+			}
+		}
+	})
+
+	t.Run("mixed case custom headers and collisions are authoritative", func(t *testing.T) {
+		names := []string{"X-Custom-Department", "X-Token-User-Email", "X-Verified-Email", "X-Unowned-Claim"}
+		cfg := &authz.PolicyConfig{
+			PassClaimsWithHeaders: true,
+			HeaderInjectionConfigs: []*injector.Config{
+				{Header: "x-cUsToM-DePaRtMeNt", Field: "metadata.department"},
+				{Header: "x-ToKeN-uSeR-eMaIl", Field: "metadata.department"},
+				{Header: "x-vErIfIeD-eMaIl", Field: "email"},
+			},
+		}
+		s := newPathServer(t, cfg, headerApplication(names...))
+		token := newToken(t, verifiedEmail)
+		input := http.Header{
+			"X-Custom-Department": {attackerValue},
+			"X-Token-User-Email":  {attackerValue},
+			"X-Verified-Email":    {attackerValue},
+			"X-Unowned-Claim":     {"preserved"},
+		}
+		want := map[string][]string{
+			"X-Verified-Email": {verifiedEmail},
+			"X-Unowned-Claim":  {"preserved"},
+		}
+		for round := range 2 {
+			got := s.requestHeaders(t, "/private", token, input)
+			if diff := cmp.Diff(want, got.Values); diff != "" {
+				t.Fatalf("round %d downstream headers mismatch (-want +got):\n%s", round, diff)
+			}
+		}
+	})
+
+	t.Run("bypass strips gatekeeper owned headers", func(t *testing.T) {
+		names := []string{"X-Token-User-Email", "X-Custom-Department", "X-Unowned-Claim"}
+		cfg := &authz.PolicyConfig{
+			PassClaimsWithHeaders: true,
+			BypassConfigs:         []*bypass.Config{{MatchType: "prefix", URI: "/public/"}},
+			HeaderInjectionConfigs: []*injector.Config{
+				{Header: "X-Custom-Department", Field: "metadata.department"},
+			},
+		}
+		s := newPathServer(t, cfg, headerApplication(names...))
+		input := http.Header{
+			"X-Token-User-Email":  {attackerValue},
+			"X-Custom-Department": {attackerValue},
+			"X-Unowned-Claim":     {"application-value"},
+		}
+		got := s.requestHeaders(t, "/public/file", "", input)
+		if diff := cmp.Diff(map[string][]string{
+			"X-Unowned-Claim": {"application-value"},
+		}, got.Values); diff != "" {
+			t.Fatalf("bypassed downstream headers mismatch (-want +got):\n%s", diff)
+		}
+	})
+}
+
 func TestE2EAuthorizationBypassPaths(t *testing.T) {
 	for _, decodePasses := range []int{0, 1, 2, 6} {
 		t.Run(fmt.Sprintf("downstream_decodes_%d", decodePasses), func(t *testing.T) {
@@ -174,6 +344,44 @@ func TestE2EAuthorizationBypassPaths(t *testing.T) {
 				"/public/%25252525252e%25252525252e/admin",
 			} {
 				t.Run("deny_"+target, func(t *testing.T) { s.request(t, target, "", http.StatusUnauthorized, false, false) })
+			}
+		})
+	}
+}
+
+func TestE2EAuthorizationRejectsBackslashPathAmbiguity(t *testing.T) {
+	application := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		target := path.Clean(strings.ReplaceAll(r.URL.Path, `\`, "/"))
+		if strings.HasPrefix(target, "/admin") {
+			_, _ = io.WriteString(w, "private admin fixture")
+			return
+		}
+		_, _ = io.WriteString(w, "public fixture")
+	})
+	for _, mode := range []string{"bypass", "method", "claim"} {
+		t.Run(mode, func(t *testing.T) {
+			cfg := &authz.PolicyConfig{}
+			token := ""
+			status := http.StatusUnauthorized
+			switch mode {
+			case "bypass":
+				cfg.BypassConfigs = []*bypass.Config{{MatchType: "prefix", URI: "/public/"}}
+			case "method":
+				cfg.ValidateMethodPath = true
+				cfg.AccessListRules = []*acl.RuleConfiguration{
+					{Conditions: []string{"prefix match path /admin"}, Action: "deny stop"},
+					{Conditions: []string{"match roles viewer"}, Action: "allow stop"},
+				}
+				token = newPathToken(t, []string{"/public/**"})
+				status = http.StatusForbidden
+			case "claim":
+				cfg.ValidateAccessListPathClaim = true
+				token = newPathToken(t, []string{"/public/**"})
+				status = http.StatusForbidden
+			}
+			s := newPathServer(t, cfg, application)
+			for _, target := range []string{`/public/\../admin`, "/public/%5c../admin", "/public/%255c../admin"} {
+				s.request(t, target, token, status, false, false)
 			}
 		})
 	}

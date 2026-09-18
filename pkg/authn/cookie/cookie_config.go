@@ -41,6 +41,9 @@ const DefaultOIDCSessionIDCookieName string = "OIDC_SESSION_ID"
 // DefaultOIDCRequestIDCookieName is the OIDC request suffix, combined with the prefix.
 const DefaultOIDCRequestIDCookieName string = "OIDC_REQUEST_ID"
 
+// DefaultSAMLSessionIDCookieName is the SAML browser-binding suffix, combined with the prefix.
+const DefaultSAMLSessionIDCookieName string = "SAML_SESSION_ID"
+
 // Config represents a common set of configuration settings
 // applicable to the cookies issued by authn.Authenticator.
 type Config struct {
@@ -59,6 +62,7 @@ type Config struct {
 	RefreshTokenCookieName  string                   `json:"refresh_token_cookie_name,omitempty" xml:"refresh_token_cookie_name,omitempty" yaml:"refresh_token_cookie_name,omitempty"`
 	OIDCSessionIDCookieName string                   `json:"oidc_session_id_cookie_name,omitempty" xml:"oidc_session_id_cookie_name,omitempty" yaml:"oidc_session_id_cookie_name,omitempty"`
 	OIDCRequestIDCookieName string                   `json:"oidc_request_id_cookie_name,omitempty" xml:"oidc_request_id_cookie_name,omitempty" yaml:"oidc_request_id_cookie_name,omitempty"`
+	SAMLSessionIDCookieName string                   `json:"saml_session_id_cookie_name,omitempty" xml:"saml_session_id_cookie_name,omitempty" yaml:"saml_session_id_cookie_name,omitempty"`
 	CookieNamePrefix        string                   `json:"cookie_name_prefix,omitempty" xml:"cookie_name_prefix,omitempty" yaml:"cookie_name_prefix,omitempty"`
 }
 

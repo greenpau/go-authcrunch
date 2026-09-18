@@ -59,6 +59,7 @@ prefix and role suffix; apply an explicit name equal to that old default last.
 cookie prefix PORTAL
 cookie oidc session id name LOGIN_SESSION
 cookie oidc request id name LOGIN_REQUEST
+cookie saml session id name SAML_BROWSER
 ```
 
 Every role accepts `cookie <role> name <value>`:
@@ -73,6 +74,7 @@ Every role accepts `cookie <role> name <value>`:
 | `refresh token` | `AUTHP_REFRESH_TOKEN` |
 | `oidc session id` | `AUTHP_OIDC_SESSION_ID` |
 | `oidc request id` | `AUTHP_OIDC_REQUEST_ID` |
+| `saml session id` | `AUTHP_SAML_SESSION_ID` |
 
 Shared attributes and per-domain settings use:
 
@@ -115,6 +117,13 @@ which host selects that entry. Issue and delete with the same effective scope.
 OIDC and opaque refresh cookies retain their stricter security, path, and
 lifetime rules. Explicit `__Host-` compatibility names must satisfy their
 feature's root-path requirements. Prefixes do not disable security checks.
+The SAML session role is a five-minute browser-binding proof for cross-site
+HTTP-POST callbacks. Only its name is configurable: issuance is always
+host-only, `Path=/`, `Secure`, `HttpOnly`, `SameSite=None`, and `Max-Age=300`,
+regardless of common or per-domain attributes. The portal rotates it on every
+SP initiation, rejects duplicate callback cookies, and deletes it after a
+successful assertion. Configure an optional `__Host-` name when sibling
+subdomains are outside the portal's cookie trust boundary.
 Provider-owned upstream identity cookie names and gatekeeper policy overrides
 must be coordinated with the corresponding consumer; a shared cookie parser
 does not implicitly rewrite those separate configurations.

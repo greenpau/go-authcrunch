@@ -164,7 +164,8 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 		json.NewEncoder(w).Encode(map[string]any{"keys": f.keys})
 	case "/authorize":
 		q := r.URL.Query()
-		if q.Get("client_id") != oidcE2EClientID || q.Get("redirect_uri") != f.callback || q.Get("response_type") != "code" || q.Get("state") == "" || q.Get("nonce") == "" || q.Get("code_challenge_method") != "S256" || q.Get("code_challenge") == "" {
+		nonceOmitted := f.failure == "nonce omitted"
+		if q.Get("client_id") != oidcE2EClientID || q.Get("redirect_uri") != f.callback || q.Get("response_type") != "code" || q.Get("state") == "" || (q.Get("nonce") == "") != nonceOmitted || q.Get("code_challenge_method") != "S256" || q.Get("code_challenge") == "" {
 			t.Error("authorization request violated OAuth contract")
 			http.Error(w, "bad authorization request", 400)
 			return
@@ -192,7 +193,10 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 			return
 		}
 		f.exchanges++
-		claims := map[string]any{"iss": f.server.URL, "aud": oidcE2EClientID, "sub": record.subject, "email": record.subject + "@example.test", "name": "OAuth User", "nonce": record.nonce, "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(), "roles": []string{"viewer"}}
+		claims := map[string]any{"iss": f.server.URL, "aud": oidcE2EClientID, "sub": record.subject, "email": record.subject + "@example.test", "name": "OAuth User", "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(), "roles": []string{"viewer"}}
+		if record.nonce != "" {
+			claims["nonce"] = record.nonce
+		}
 		switch f.failure {
 		case "issuer":
 			claims["iss"] = "https://wrong.example"
@@ -202,6 +206,8 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 			claims["nonce"] = "wrong-nonce"
 		case "nonce type":
 			claims["nonce"] = 17
+		case "missing nonce":
+			delete(claims, "nonce")
 		case "expired":
 			claims["exp"] = time.Now().Add(-time.Hour).Unix()
 		}
@@ -240,7 +246,10 @@ type oidcE2EPortal struct {
 	issuer *oidcE2EIssuer
 }
 
-type oidcE2ETrustConfig struct{ issuer, audience, identityCookie, realm, sandboxCookie string }
+type oidcE2ETrustConfig struct {
+	issuer, audience, identityCookie, realm, sandboxCookie string
+	nonceDisabled                                          bool
+}
 
 func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode string, trust ...oidcE2ETrustConfig) *oidcE2EPortal {
 	t.Helper()
@@ -304,6 +313,9 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 	}
 	if settings.audience != "" {
 		add("access_token_audience", settings.audience)
+	}
+	if settings.nonceDisabled {
+		add("nonce", "disabled")
 	}
 	if issuer.accessMode == "userinfo" {
 		add("user_info_fields", "email", "roles")

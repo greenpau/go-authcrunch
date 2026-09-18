@@ -288,11 +288,38 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				return m, fmt.Errorf("Password recovery failed. Please retry")
 			default:
 				// Handle password authentication.
-				if err := validateSandboxPasswordForm(r, rr); err != nil {
+				var passwordFormErr error
+				passwordErr := p.authenticatePassword(addrutil.GetSourceAddress(r), func() error {
+					if err := validateSandboxPasswordForm(r, rr); err != nil {
+						passwordFormErr = err
+						return err
+					}
+					rr.Flags.Enabled = true
+					return backend.Request(operator.Authenticate, rr)
+				})
+				if passwordErr != nil {
 					checkpoint.FailedAttempts++
-					rr.Response.Code = http.StatusBadRequest
 					m["title"] = "Authentication Failed"
 					m["view"] = "error"
+					if passwordErr == errPasswordAttemptLimited {
+						rr.Response.Code = http.StatusTooManyRequests
+						return m, passwordErr
+					}
+					if passwordFormErr == nil {
+						rr.Response.Code = http.StatusUnauthorized
+						p.logger.Warn(
+							"password authentication failed",
+							zap.String("session_id", rr.Upstream.SessionID),
+							zap.String("request_id", rr.ID),
+							zap.Int("checkpoint_id", checkpoint.ID),
+							zap.String("src_ip", addrutil.GetSourceAddress(r)),
+							zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+							zap.String("checkpoint_name", checkpoint.Name),
+							zap.String("checkpoint_type", checkpoint.Type),
+						)
+						return m, fmt.Errorf("password authentication failed. Please retry")
+					}
+					rr.Response.Code = http.StatusBadRequest
 					p.logger.Warn(
 						"invalid password for submission",
 						zap.String("session_id", rr.Upstream.SessionID),
@@ -303,25 +330,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 						zap.String("checkpoint_name", checkpoint.Name),
 						zap.String("checkpoint_type", checkpoint.Type),
 					)
-					return m, err
-				}
-				rr.Flags.Enabled = true
-				if err := backend.Request(operator.Authenticate, rr); err != nil {
-					rr.Response.Code = http.StatusUnauthorized
-					checkpoint.FailedAttempts++
-					m["title"] = "Authentication Failed"
-					m["view"] = "error"
-					p.logger.Warn(
-						"password authentication failed",
-						zap.String("session_id", rr.Upstream.SessionID),
-						zap.String("request_id", rr.ID),
-						zap.Int("checkpoint_id", checkpoint.ID),
-						zap.String("src_ip", addrutil.GetSourceAddress(r)),
-						zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
-						zap.String("checkpoint_name", checkpoint.Name),
-						zap.String("checkpoint_type", checkpoint.Type),
-					)
-					return m, fmt.Errorf("Password authentication failed. Please retry")
+					return m, passwordFormErr
 				}
 				p.logger.Info(
 					"user authorization checkpoint passed",
@@ -338,6 +347,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				return m, nil
 			}
 		case "mfa", "totp", "u2f":
+			rr.Authentication = usr.LoginEvidence
 			if err := backend.Request(operator.CheckMfaLockout, rr); err != nil {
 				p.logger.Warn(
 					"user locked out due to too many failed MFA attempts",
@@ -370,6 +380,28 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					uniConfigured = true
 				}
 			}
+			// A password checkpoint does not authorize adding an alternate
+			// factor to an account that already requires MFA. Enrollment is
+			// available only for accounts with no enabled factor; the store
+			// repeats this check atomically with the credential mutation.
+			if configured && (action == "mfa-app-register" || action == "mfa-u2f-register") {
+				rr.Response.Code = http.StatusForbidden
+				m["view"] = "error"
+				return m, fmt.Errorf("verify an existing MFA factor before adding another")
+			}
+			// A concrete factor requirement must not be satisfied through the
+			// other factor's action, even when both credentials are registered.
+			switch checkpoint.Type {
+			case "totp":
+				uniConfigured = false
+			case "u2f":
+				appConfigured = false
+			}
+			if (action == "mfa-app-auth" && !appConfigured) || (action == "mfa-u2f-auth" && !uniConfigured) {
+				rr.Response.Code = http.StatusForbidden
+				m["view"] = "error"
+				return m, fmt.Errorf("the selected factor does not satisfy this authentication checkpoint")
+			}
 
 			switch {
 			case !configured && (action == ""):
@@ -393,24 +425,10 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					m["view"] = "error"
 					return m, err
 				}
-				var tokenErrors []string
-				var tokenValidated bool
-				for _, token := range bundle.Get() {
-					if token.Type != "totp" {
-						continue
-					}
-					if token.Disabled {
-						continue
-					}
-					if err := token.ValidateCode(rr.MfaToken.Passcode); err != nil {
-						tokenErrors = append(tokenErrors, err.Error())
-						continue
-					}
-					tokenValidated = true
-					break
-				}
-				if tokenValidated {
+				rr.Authentication = usr.LoginEvidence
+				if err := backend.Request(operator.ConsumeMfaTOTP, rr); err == nil {
 					// If validated successfully, continue.
+					rr.Authentication = usr.LoginEvidence
 					backend.Request(operator.ResetMfaFailedAttempts, rr)
 					p.logger.Info(
 						"user authorization checkpoint passed",
@@ -426,13 +444,11 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					m["view"] = "redirect"
 					return m, nil
 				}
-				if len(tokenErrors) == 0 {
-					tokenErrors = append(tokenErrors, "No available application tokens found")
-				}
 				m["view"] = "error"
 				checkpoint.FailedAttempts++
+				rr.Authentication = usr.LoginEvidence
 				backend.Request(operator.IncrementMfaFailedAttempts, rr)
-				return m, fmt.Errorf("%s", strings.Join(tokenErrors, "\n"))
+				return m, fmt.Errorf("invalid MFA token passcode")
 			case uniConfigured && (action == "mfa-u2f-auth" || action == ""):
 				m["title"] = "Hardware Token"
 				m["view"] = "mfa_u2f_auth"
@@ -444,12 +460,22 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 						return m, err
 					}
 					rr.WebAuthn.Challenge = usr.Authenticator.TempChallenge
+					expectedOrigin, err := getWebAuthnExpectedOrigin(r)
+					if err != nil {
+						m["view"] = "error"
+						checkpoint.FailedAttempts++
+						return m, fmt.Errorf("failed to validate WebAuthn origin: %v", err)
+					}
+					rr.WebAuthn.ExpectedOrigin = expectedOrigin
+					rr.Authentication = usr.LoginEvidence
 					if err := backend.Request(operator.Authenticate, rr); err != nil {
 						m["view"] = "error"
 						checkpoint.FailedAttempts++
+						rr.Authentication = usr.LoginEvidence
 						backend.Request(operator.IncrementMfaFailedAttempts, rr)
 						return m, fmt.Errorf("Token verification failed. Please retry")
 					}
+					rr.Authentication = usr.LoginEvidence
 					backend.Request(operator.ResetMfaFailedAttempts, rr)
 					checkpoint.Passed = true
 					checkpoint.FailedAttempts = 0
@@ -494,7 +520,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 						checkpoint.FailedAttempts++
 						return m, err
 					}
-					if err := backend.Request(operator.AddMfaToken, rr); err != nil {
+					if err := backend.Request(operator.EnrollMfaToken, rr); err != nil {
 						m["view"] = "error"
 						checkpoint.FailedAttempts++
 						return m, err
@@ -529,13 +555,23 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				m["title"] = "Hardware Token Registration"
 				m["view"] = "mfa_u2f_register"
 				m["action"] = "register"
+				binding, err := getWebAuthnEnrollmentBinding(r, rr, usr, "sandbox")
+				if err != nil {
+					m["view"] = "error"
+					return m, err
+				}
 				if r.Method == "POST" {
 					if err := validateAddU2FTokenForm(r, rr); err != nil {
 						m["view"] = "error"
 						checkpoint.FailedAttempts++
 						return m, err
 					}
-					if err := backend.Request(operator.AddMfaToken, rr); err != nil {
+					if err := p.webAuthnEnrollments.consume(binding, rr); err != nil {
+						m["view"] = "error"
+						checkpoint.FailedAttempts++
+						return m, err
+					}
+					if err := backend.Request(operator.EnrollMfaToken, rr); err != nil {
 						m["view"] = "error"
 						checkpoint.FailedAttempts++
 						return m, err
@@ -547,8 +583,12 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					return m, nil
 				}
 				// Display U2F registration.
-				usr.Authenticator.TempChallenge = util.GetRandomStringFromRange(64, 92)
-				m["webauthn_challenge"] = usr.Authenticator.TempChallenge
+				challenge, err := p.webAuthnEnrollments.issue(binding)
+				if err != nil {
+					m["view"] = "error"
+					return m, err
+				}
+				m["webauthn_challenge"] = challenge
 				m["webauthn_rp_name"] = "AUTHP"
 				m["webauthn_user_id"] = usr.Claims.ID
 				m["webauthn_user_email"] = usr.Claims.Email

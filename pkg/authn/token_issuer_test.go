@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
@@ -62,9 +63,60 @@ func TestSandboxCanonicalIdentity(t *testing.T) {
 		t.Fatal("sandbox did not retain backend identity separately from claims")
 	}
 	proof.Claims.Subject = "different-account"
+	proof.LoginMethods = []string{"pwd"}
 	u, tokens, err := f.portal.issueSandboxTokens(t.Context(), httptest.NewRequest(http.MethodGet, refreshTestOrigin+"/auth/sandbox/id", nil), rr, proof)
 	if err != nil || tokens != nil || u == nil || u.Claims.Subject != tests.TestUser1 || u.Claims.Email != "alias@example.test" {
 		t.Fatal("access issuance trusted transformed sandbox identity")
+	}
+	if u.LoginEvidence != proof.LoginEvidence || u.LoginUsername != tests.TestUser1 || u.LoginEmail != tests.TestEmail1 {
+		t.Fatal("issued session lost canonical account evidence")
+	}
+	proof.LoginMethods[0] = "changed"
+	if len(u.LoginMethods) != 1 || u.LoginMethods[0] != "pwd" {
+		t.Fatal("issued session did not retain independent authentication methods")
+	}
+}
+
+func TestRenewedSessionCanonicalIdentity(t *testing.T) {
+	f := newRefreshPortal(t, true, false)
+	proof, rr := completedIdentityProof(t, f)
+	proof.LoginMethods = []string{"pwd"}
+	proof.LoginEvidence.AuthenticatedAt = time.Now().Unix()
+	proof.RefreshTransport = tokenrefresh.CookieTransport
+	r := httptest.NewRequest(http.MethodGet, refreshTestOrigin+"/auth/sandbox/id", nil)
+	u, first, err := f.portal.issueSandboxTokens(t.Context(), r, rr, proof)
+	if err != nil || first == nil || u == nil {
+		t.Fatal("initial renewable session issuance failed", err)
+	}
+	assertCanonicalRefreshUser(t, u, proof.LoginEvidence, "pwd")
+	proof.LoginMethods[0] = "changed"
+	if u.LoginMethods[0] != "pwd" || first.Principal.Methods[0] != "pwd" {
+		t.Fatal("renewable session retained caller-owned authentication methods")
+	}
+
+	next, err := f.portal.refresh.Refresh(t.Context(), first.RefreshToken, tokenrefresh.CookieTransport)
+	if err != nil {
+		t.Fatal(err)
+	}
+	renewed, err := f.portal.userFromRefresh(t.Context(), next)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCanonicalRefreshUser(t, renewed, proof.LoginEvidence, "pwd")
+	next.Principal.Methods[0] = "changed"
+	if renewed.LoginMethods[0] != "pwd" {
+		t.Fatal("renewed session retained result-owned authentication methods")
+	}
+}
+
+func assertCanonicalRefreshUser(t *testing.T, u *user.User, proof requests.AuthenticationEvidence, method string) {
+	t.Helper()
+	if u.Claims.Email != "alias@example.test" || u.LoginUsername != tests.TestUser1 || u.LoginEmail != tests.TestEmail1 {
+		t.Fatal("renewed session trusted transformed identity as canonical account")
+	}
+	want := requests.AuthenticationEvidence{UserID: proof.UserID, BackendVersion: proof.BackendVersion, CredentialVersion: proof.CredentialVersion, AuthenticatedAt: proof.AuthenticatedAt}
+	if u.LoginEvidence != want || len(u.LoginMethods) != 1 || u.LoginMethods[0] != method {
+		t.Fatal("renewed session lost authentication evidence")
 	}
 }
 

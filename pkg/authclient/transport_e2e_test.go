@@ -16,6 +16,7 @@ package authclient_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -24,6 +25,7 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
@@ -110,14 +112,34 @@ func TestE2ENativeAuthenticate(t *testing.T) {
 				tr := &nativeRecordingTransport{t: t, next: supplied.Transport}
 				injected := *supplied
 				injected.Transport = tr
-				client, err := authclient.NewClient(nativeConfig(t, f, factor != ""), authclient.Options{HTTPClient: &injected})
+				options := authclient.Options{HTTPClient: &injected}
+				client, err := authclient.NewClient(nativeConfig(t, f, factor != ""), options)
 				if err != nil {
 					t.Fatal(err)
 				}
 				var previous *authclient.Credentials
 				var results []*authclient.Credentials
-				for range 2 {
-					credentials, err := client.Authenticate(t.Context())
+				for attempt := range 2 {
+					activeClient := client
+					if factor != "" && attempt == 1 {
+						cfg := nativeConfig(t, f, true)
+						cfg.TOTPSecret = ""
+						options.Prompt = func(_ context.Context, kind authclient.PromptKind) (string, error) {
+							switch kind {
+							case authclient.PromptMFA:
+								return "totp", nil
+							case authclient.PromptTOTP:
+								return e2eTOTPAt(time.Now().Add(30 * time.Second)), nil
+							default:
+								return "", errors.New("unexpected native login prompt")
+							}
+						}
+						activeClient, err = authclient.NewClient(cfg, options)
+						if err != nil {
+							t.Fatal(err)
+						}
+					}
+					credentials, err := activeClient.Authenticate(t.Context())
 					if err != nil {
 						t.Fatal(err)
 					}

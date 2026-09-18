@@ -1,0 +1,4 @@
+interface:
+  display_name: "Authentication Portal MFA"
+  short_description: "Authentication Portal MFA maintenance and validation"
+  default_prompt: "Use $authentication-portal-mfa to maintain its implementation and tests."

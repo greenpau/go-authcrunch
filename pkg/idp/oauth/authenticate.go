@@ -35,7 +35,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// Authenticate performs authentication.
+// Authenticate performs authentication. The embedding application must supply
+// Upstream.SessionID from a protected, distinct per-browser cookie on both the
+// initiating request and the callback; a shared correlation ID is insufficient.
 func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	// Delayed discovery publishes endpoints and issuer together. Do not read
 	// partially configured metadata while its background initialization runs.
@@ -50,6 +52,10 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	reqParams := parseOAuthAuthenticateRequestParams(r.Upstream.Request.URL.Query())
 
 	if reqParams.isOAuthResponse() {
+		if len(reqParams.values["state"]) != 1 || !b.state.beginCallback(reqParams.state, r.Upstream.SessionID, reqPath+"/authorization-code-callback") {
+			return errors.ErrIdentityProviderOauthAuthorizationStateNotFound
+		}
+		defer b.state.del(reqParams.state)
 		b.logger.Debug(
 			"received OAuth 2.0 response",
 			zap.String("session_id", r.Upstream.SessionID),
@@ -65,11 +71,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		switch {
 		case reqParams.codeExists && reqParams.stateExists:
 			// Received Authorization Code
-			if b.state.exists(reqParams.state) {
-				b.state.addCode(reqParams.state, reqParams.code)
-			} else {
-				return errors.ErrIdentityProviderOauthAuthorizationStateNotFound
-			}
+			b.state.addCode(reqParams.state, reqParams.code)
 			b.logger.Debug(
 				"received OAuth 2.0 code and state from the authorization server",
 				zap.String("session_id", r.Upstream.SessionID),
@@ -154,7 +156,6 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 				zap.String("request_id", r.ID),
 				zap.Any("claims", m),
 			)
-			b.state.del(reqParams.state)
 			return nil
 		case reqParams.idTokenExists && reqParams.accessTokenExists:
 			accessToken := map[string]interface{}{
@@ -184,10 +185,16 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		}
 		return errors.ErrIdentityProviderOauthResponseProcessingFailed
 	}
-	r.Response.Code = http.StatusFound
+	if r.Upstream.SessionID == "" {
+		return errors.ErrIdentityProviderConfig.WithArgs("OAuth browser session is missing")
+	}
 	state := uuid.New().String()
-	nonce := util.GetRandomString(32)
-	preparedRedirect, err := b.prepareAuthorizationRedirectURL(reqPath, reqParams, state, nonce, r.Upstream.SessionID, r.ID)
+	nonceRequired := !b.disableNonce
+	var nonce string
+	if nonceRequired {
+		nonce = util.GetRandomString(32)
+	}
+	preparedRedirect, err := b.prepareAuthorizationRedirectURL(reqPath, reqParams, state, nonce, nonceRequired, r.Upstream.SessionID, r.ID)
 	if err != nil {
 		return err
 	}
@@ -204,14 +211,11 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		codeChallenge = base64.RawURLEncoding.EncodeToString(h[:])
 	}
 
-	r.Response.RedirectURL = b.finalizeAuthorizationRedirectURL(preparedRedirect, codeChallenge)
-
-	if err := b.state.add(state, nonce); err != nil {
+	if err := b.state.addLogin(state, nonce, codeVerifier, r.Upstream.SessionID, reqPath+"/authorization-code-callback"); err != nil {
 		return errors.ErrIdentityProviderOauthAuthorizationStateLimitReached
 	}
-	if codeVerifier != "" {
-		b.state.addVerifier(state, codeVerifier)
-	}
+	r.Response.Code = http.StatusFound
+	r.Response.RedirectURL = b.finalizeAuthorizationRedirectURL(preparedRedirect, codeChallenge)
 	b.logger.Debug(
 		"redirecting to OAuth 2.0 endpoint",
 		zap.String("request_id", r.ID),

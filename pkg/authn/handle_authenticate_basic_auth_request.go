@@ -21,9 +21,10 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 )
 
-func (p *Portal) authenticateBasicAuthRequest(_ context.Context, _ http.ResponseWriter, _ *http.Request, rr *requests.Request, realmName, username, password string) error {
+func (p *Portal) authenticateBasicAuthRequest(_ context.Context, _ http.ResponseWriter, r *http.Request, rr *requests.Request, realmName, username, password string) error {
 	rr.User.Username = username
 	rr.User.Password = password
 	backend := p.getIdentityStoreByRealm(realmName)
@@ -46,7 +47,13 @@ func (p *Portal) authenticateBasicAuthRequest(_ context.Context, _ http.Response
 	if rr.User.Challenges[0] != "password" {
 		return fmt.Errorf("detected unsupported auth challenges")
 	}
-	if err := backend.Request(operator.Authenticate, rr); err != nil {
+	if err := p.authenticatePassword(addrutil.GetSourceAddress(r), func() error {
+		return backend.Request(operator.Authenticate, rr)
+	}); err != nil {
+		if err == errPasswordAttemptLimited {
+			rr.Response.Code = http.StatusTooManyRequests
+			return err
+		}
 		rr.Response.Code = http.StatusUnauthorized
 		return err
 	}

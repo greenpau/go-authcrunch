@@ -311,6 +311,13 @@ LDAP DN/config parsing, and table-driven success/error cases.
 Use [local-password-authentication](../local-password-authentication/SKILL.md)
 for the password-verifier regression matrix and controlled timing validation.
 
+Local transaction changes use [local-identity-database](../local-identity-database/SKILL.md)
+and the two-realm TLS journeys in `pkg/authn/identity_alias_e2e_test.go`.
+Profile credential changes use [authentication-portal-profile](../authentication-portal-profile/SKILL.md),
+including transformed-account, revoked-evidence and cross-origin persistence
+checks. Factor enrollment and replay use
+[authentication-portal-mfa](../authentication-portal-mfa/SKILL.md).
+
 Identity provider and SSO tests live under `pkg/idp`, `pkg/idp/oauth`,
 `pkg/idp/saml`, and `pkg/sso`. OAuth tests cover request parsing, state,
 provider setup, JWKS, GitHub email lookup, and provider HTTP interactions.

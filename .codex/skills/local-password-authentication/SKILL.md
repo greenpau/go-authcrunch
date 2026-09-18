@@ -67,8 +67,10 @@ TestDatabasePasswordMutationPersistence for focused checks.
 ## Verification Invariants
 
 For a nonempty password candidate, `AuthenticateUser` builds and executes the
-verifier before returning for a missing or disabled identity. Hold the existing
-database read lock through schedule construction and verification. Preserve
+verifier before returning for a missing or disabled identity. Hold the database transaction through schedule construction and verification;
+file-backed verification also holds the canonical file lock through the fresh
+snapshot and bcrypt comparison. Follow
+[local database transactions](../local-identity-database/SKILL.md). Preserve
 failure evidence clearing, success evidence issuance, existing error contracts,
 and the separate non-password/WebAuthn path.
 
@@ -123,7 +125,7 @@ work and preserve the chosen password semantics across affected transports.
 
 ## Current State and Operational Cost
 
-The schedule is rebuilt from current in-memory records for each request.
+The schedule is rebuilt from the current transaction snapshot for each request.
 Password replacement, import, reload, account enable/disable, and password
 expiration/disable must be reflected immediately. Introducing a cache requires
 covering these transitions and supported changes through the exported user
@@ -183,3 +185,18 @@ Warm both paths, alternate or randomize their order, and keep CPU-heavy tests
 separate from timing samples. Record distributions and fixture costs instead
 of a universal timing threshold. Compare both homogeneous and mixed-cost
 stores to expose regressions and the padding cost.
+
+## Portal Password Attempt Admission
+
+`pkg/authn/password_attempt_limiter.go` admits at most five failed/in-flight
+password attempts per source before a five-minute block. Public IPv4 addresses
+share a /24; private IPv4 and IPv6 use individual addresses. State is bounded and
+owned/closed by each portal runtime. Every browser, JSON, direct Basic and
+AuthProxy password path reserves an attempt before verification and completes it
+exactly once. Preserve concurrent admission and delayed-success denial tests.
+This is process-local, not a distributed rate-limit guarantee. Address metadata
+comes from the embedding server's established proxy trust boundary.
+
+Both local and remote Basic parsers must require a separator and nonempty
+username/password after Base64 decoding. Keep unit and TLS Server regressions
+for malformed input so a remote-authenticator path cannot bypass local guards.

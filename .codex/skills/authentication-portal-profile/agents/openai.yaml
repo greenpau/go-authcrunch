@@ -1,0 +1,4 @@
+interface:
+  display_name: "Authentication Portal Profile"
+  short_description: "Authentication Portal Profile maintenance and validation"
+  default_prompt: "Use $authentication-portal-profile to maintain its implementation and tests."

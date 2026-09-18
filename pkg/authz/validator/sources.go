@@ -96,40 +96,59 @@ func (v *TokenValidator) parseQueryParams(_ context.Context, r *http.Request, ar
 // AuthorizeAuthorizationHeader authorizes HTTP requests based on the presence and the
 // content of the tokens in HTTP Authorization header.
 func (v *TokenValidator) parseAuthHeader(_ context.Context, r *http.Request, ar *requests.AuthorizationRequest) {
-	hdr := r.Header.Get("Authorization")
-	if hdr == "" {
+	hdrs := r.Header.Values("Authorization")
+	if len(hdrs) == 0 {
 		return
 	}
 
-	entries := strings.Split(hdr, ",")
-	for _, entry := range entries {
-		if v.opts.ValidateBearerHeader && strings.HasPrefix(entry, "Bearer") {
-			// If JWT token as being passed as a bearer token
-			// then, the token will not be a key-value pair.
-			kv := strings.SplitN(entry, " ", 2)
+	for _, hdr := range hdrs {
+		for _, entry := range splitAuthorizationEntries(hdr) {
+			entry = strings.TrimSpace(entry)
+			fields := strings.Fields(entry)
+			if v.opts.ValidateBearerHeader && len(fields) == 2 && strings.EqualFold(fields[0], "Bearer") {
+				// If JWT token as being passed as a bearer token
+				// then, the token will not be a key-value pair.
+				ar.Token.Found = true
+				ar.Token.Name = tokenSourceBearerHeader
+				ar.Token.Payload = fields[1]
+				ar.Token.Source = tokenSourceBearerHeader
+				return
+			}
+			kv := strings.SplitN(entry, "=", 2)
 			if len(kv) != 2 {
 				continue
 			}
-
-			ar.Token.Found = true
-			ar.Token.Name = tokenSourceBearerHeader
-			ar.Token.Payload = strings.TrimSpace(kv[1])
-			ar.Token.Source = tokenSourceBearerHeader
-			return
-		}
-		kv := strings.SplitN(entry, "=", 2)
-		if len(kv) != 2 {
-			continue
-		}
-		k := strings.TrimSpace(kv[0])
-		if _, exists := v.authHeaders[k]; exists {
-			ar.Token.Found = true
-			ar.Token.Name = k
-			ar.Token.Payload = strings.TrimSpace(kv[1])
-			ar.Token.Source = tokenSourceHeader
-			return
+			k := strings.TrimSpace(kv[0])
+			if _, exists := v.authHeaders[k]; exists {
+				ar.Token.Found = true
+				ar.Token.Name = k
+				ar.Token.Payload = strings.TrimSpace(kv[1])
+				ar.Token.Source = tokenSourceHeader
+				return
+			}
 		}
 	}
+}
+
+func splitAuthorizationEntries(value string) []string {
+	var entries []string
+	start := 0
+	quoted := false
+	escaped := false
+	for i := 0; i < len(value); i++ {
+		switch {
+		case escaped:
+			escaped = false
+		case quoted && value[i] == '\\':
+			escaped = true
+		case value[i] == '"':
+			quoted = !quoted
+		case value[i] == ',' && !quoted:
+			entries = append(entries, value[start:i])
+			start = i + 1
+		}
+	}
+	return append(entries, value[start:])
 }
 
 // AuthorizeCookies authorizes HTTP requests based on the presence and the

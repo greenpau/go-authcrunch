@@ -46,6 +46,7 @@ type Result struct {
 	SessionID                                            string         `json:"-" xml:"-" yaml:"-"`
 	AccessExpiresAt, RefreshExpiresAt, AbsoluteExpiresAt int64          `json:"-" xml:"-" yaml:"-"`
 	Claims                                               map[string]any `json:"-" xml:"-" yaml:"-"`
+	Principal                                            Principal      `json:"-" xml:"-" yaml:"-"`
 }
 
 // Manager separates authentication, issuance, rotation, and delivery.
@@ -306,7 +307,7 @@ func (m *Manager) prepare(ctx context.Context, s Session, source map[string]any)
 	if err != nil || accessToken == "" {
 		return nil, ErrUnavailable
 	}
-	return &Result{AccessToken: accessToken, RefreshToken: token, SessionID: s.ID, AccessExpiresAt: accessExpiry, RefreshExpiresAt: idleExpiry, AbsoluteExpiresAt: s.AbsoluteExpiresAt, Claims: claims}, nil
+	return &Result{AccessToken: accessToken, RefreshToken: token, SessionID: s.ID, AccessExpiresAt: accessExpiry, RefreshExpiresAt: idleExpiry, AbsoluteExpiresAt: s.AbsoluteExpiresAt, Claims: claims, Principal: cloneSession(s).Principal}, nil
 }
 
 func stringList(v any) ([]string, error) {

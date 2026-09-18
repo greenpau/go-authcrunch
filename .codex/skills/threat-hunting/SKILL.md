@@ -26,6 +26,11 @@ Use the repo-local `coding-directives` skill for fixes, `testing-and-ci` for
 test selection, and `scripts-and-automation` for repository tooling.
 Use [local-password-authentication](../local-password-authentication/SKILL.md)
 when reviewing local password enumeration, bcrypt costs, or dummy comparisons.
+Use [local identity database](../local-identity-database/SKILL.md) for persisted
+credential/replay/lockout transactions, [portal profile](../authentication-portal-profile/SKILL.md)
+for identity-bound self-service, [portal MFA](../authentication-portal-mfa/SKILL.md)
+for factor checkpoints and enrollment, and [SAML providers](../saml-identity-provider/SKILL.md)
+for signed callback/browser/certificate trust.
 
 ---
 
@@ -258,6 +263,9 @@ network edge for the affected flow.
 ---
 
 ### 6. Hunt Token, Cookie, and Session Issues
+
+Read [gatekeeper credential handling](references/gatekeeper-credentials.md)
+when changing injected identity headers, token stripping or credential caches.
 
 **Token sources and propagation:**
 - Default acceptance of query-string tokens (leaks to logs, referrers, proxies)

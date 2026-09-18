@@ -124,6 +124,8 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 		return b.authenticator.DeletePublicKey(r)
 	case operator.AddMfaToken:
 		return b.authenticator.AddMfaToken(r)
+	case operator.EnrollMfaToken:
+		return b.authenticator.EnrollMfaToken(r)
 	case operator.DeleteMfaToken:
 		return b.authenticator.DeleteMfaToken(r)
 	case operator.AddAPIKey:
@@ -142,6 +144,8 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 		return b.authenticator.GetMfaTokens(r)
 	case operator.GetMfaToken:
 		return b.authenticator.GetMfaToken(r)
+	case operator.ConsumeMfaTOTP:
+		return b.authenticator.ConsumeMfaTOTP(r)
 	case operator.AddUser:
 		return b.authenticator.AddUser(r)
 	case operator.GetUsers:

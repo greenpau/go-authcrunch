@@ -249,7 +249,6 @@ func TestDatabaseAPIKeyCredentialState(t *testing.T) {
 	if err := db.AddAPIKey(req); err != nil {
 		t.Fatal(err)
 	}
-	owner := db.Users[0]
 	for _, tc := range []struct {
 		name                                  string
 		disabledKey, expiredKey, disabledUser bool
@@ -260,9 +259,13 @@ func TestDatabaseAPIKeyCredentialState(t *testing.T) {
 		{name: "disabled owner", disabledUser: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			owner := db.Users[0]
 			owner.Disabled = tc.disabledUser
 			owner.APIKeys[0].Disabled = tc.disabledKey
 			owner.APIKeys[0].Expired = tc.expiredKey
+			if err := db.Save(); err != nil {
+				t.Fatal(err)
+			}
 			lookup := requests.NewRequest()
 			lookup.Key.Payload = key
 			err := db.LookupAPIKey(lookup)

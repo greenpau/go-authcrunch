@@ -38,8 +38,18 @@ var (
 	}
 )
 
+const (
+	claimHeaderUserName  = "X-Token-User-Name"
+	claimHeaderUserEmail = "X-Token-User-Email"
+	claimHeaderUserRoles = "X-Token-User-Roles"
+	claimHeaderSubject   = "X-Token-Subject"
+)
+
 // Authenticate authorizes HTTP requests.
 func (g *Gatekeeper) Authenticate(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
+	// The gatekeeper owns configured identity headers on every request. Clear
+	// client values before any branch can return or reach downstream code.
+	g.stripInjectedHeaders(r)
 	if g.closed.Load() {
 		ar.Response.Authorized = false
 		ar.Response.Bypassed = false
@@ -259,6 +269,25 @@ func (g *Gatekeeper) stripAuthToken(r *http.Request, usr *user.User) {
 		return
 	}
 	switch usr.TokenSource {
+	case "bearer", "header", "basicauth":
+		stripAuthorizationToken(r.Header, usr)
+	case "apiauth":
+		r.Header.Del(g.config.APIKeyHeaderName)
+	case "query":
+		values := r.URL.Query()
+		entries := values[usr.TokenName]
+		for i, entry := range entries {
+			if strings.TrimSpace(entry) != usr.Token {
+				continue
+			}
+			values[usr.TokenName] = append(entries[:i], entries[i+1:]...)
+			if len(values[usr.TokenName]) == 0 {
+				values.Del(usr.TokenName)
+			}
+			break
+		}
+		r.URL.RawQuery = values.Encode()
+		r.RequestURI = r.URL.RequestURI()
 	case "cookie":
 		if usr.TokenName == "" {
 			return
@@ -273,13 +302,9 @@ func (g *Gatekeeper) stripAuthToken(r *http.Request, usr *user.User) {
 			var updateCookie bool
 			for _, cookie := range strings.Split(entry, ";") {
 				s := strings.TrimSpace(cookie)
-				if strings.HasPrefix(s, usr.TokenName+"=") {
-					// Skip the cookie matching the token name.
-					updateCookie = true
-					continue
-				}
-				if strings.Contains(s, usr.Token) {
-					// Skip the cookie with the value matching user token.
+				parsed, err := http.ParseCookie(s)
+				if err == nil && len(parsed) == 1 && parsed[0].Name == usr.TokenName && (parsed[0].Value == usr.Token || strings.HasPrefix(parsed[0].Value, usr.Token+" ")) {
+					// Skip only the cookie which supplied the accepted token.
 					updateCookie = true
 					continue
 				}
@@ -293,30 +318,98 @@ func (g *Gatekeeper) stripAuthToken(r *http.Request, usr *user.User) {
 	}
 }
 
+func stripAuthorizationToken(header http.Header, usr *user.User) {
+	values := header.Values("Authorization")
+	if len(values) == 0 {
+		return
+	}
+	keptValues := make([]string, 0, len(values))
+	for _, value := range values {
+		entries := splitAuthorizationEntries(value)
+		keptEntries := make([]string, 0, len(entries))
+		removed := false
+		for _, entry := range entries {
+			trimmed := strings.TrimSpace(entry)
+			remove := false
+			switch usr.TokenSource {
+			case "basicauth":
+				parts := strings.Fields(trimmed)
+				remove = len(parts) == 2 && strings.EqualFold(parts[0], "Basic")
+			case "bearer":
+				parts := strings.Fields(trimmed)
+				remove = len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") && parts[1] == usr.Token
+			case "header":
+				name, value, found := strings.Cut(trimmed, "=")
+				remove = found && strings.TrimSpace(name) == usr.TokenName && strings.TrimSpace(value) == usr.Token
+			}
+			if remove {
+				removed = true
+				continue
+			}
+			keptEntries = append(keptEntries, trimmed)
+		}
+		if !removed {
+			keptValues = append(keptValues, value)
+		} else if len(keptEntries) > 0 {
+			keptValues = append(keptValues, strings.Join(keptEntries, ", "))
+		}
+	}
+	header.Del("Authorization")
+	for _, value := range keptValues {
+		header.Add("Authorization", value)
+	}
+}
+
+// splitAuthorizationEntries supports the repository's comma-separated
+// credential extension without treating commas inside quoted auth parameters
+// as credential boundaries. An unterminated quote keeps the remainder in one
+// entry, so malformed input cannot expose a hidden credential.
+func splitAuthorizationEntries(value string) []string {
+	var entries []string
+	start := 0
+	quoted := false
+	escaped := false
+	for i := 0; i < len(value); i++ {
+		switch {
+		case escaped:
+			escaped = false
+		case quoted && value[i] == '\\':
+			escaped = true
+		case value[i] == '"':
+			quoted = !quoted
+		case value[i] == ',' && !quoted:
+			entries = append(entries, value[start:i])
+			start = i + 1
+		}
+	}
+	return append(entries, value[start:])
+}
+
 func (g *Gatekeeper) injectHeaders(r *http.Request, usr *user.User) {
+	g.stripInjectedHeaders(r)
 	if g.config.PassClaimsWithHeaders {
 		// Inject default X-Token headers.
 		headers := usr.GetRequestHeaders()
 		if headers == nil {
 			headers = make(map[string]string)
 			if usr.Claims.Name != "" {
-				headers["X-Token-User-Name"] = usr.Claims.Name
+				headers[claimHeaderUserName] = usr.Claims.Name
 			}
 			if usr.Claims.Email != "" {
-				headers["X-Token-User-Email"] = usr.Claims.Email
+				headers[claimHeaderUserEmail] = usr.Claims.Email
 			}
 			if len(usr.Claims.Roles) > 0 {
-				headers["X-Token-User-Roles"] = strings.Join(usr.Claims.Roles, " ")
+				headers[claimHeaderUserRoles] = strings.Join(usr.Claims.Roles, " ")
 			}
 			if usr.Claims.Subject != "" {
-				headers["X-Token-Subject"] = usr.Claims.Subject
+				headers[claimHeaderSubject] = usr.Claims.Subject
 			}
 			usr.SetRequestHeaders(headers)
 		}
 
 		for k, v := range headers {
 			if g.injectedHeaders != nil {
-				if _, exists := g.injectedHeaders[k]; exists {
+				if _, exists := g.injectedHeaders[http.CanonicalHeaderKey(k)]; exists {
 					continue
 				}
 			}
@@ -329,6 +422,22 @@ func (g *Gatekeeper) injectHeaders(r *http.Request, usr *user.User) {
 		if v := usr.GetClaimValueByField(entry.Field); v != "" {
 			r.Header.Set(entry.Header, v)
 		}
+	}
+}
+
+func (g *Gatekeeper) stripInjectedHeaders(r *http.Request) {
+	if g.config.PassClaimsWithHeaders {
+		for _, name := range [...]string{
+			claimHeaderUserName,
+			claimHeaderUserEmail,
+			claimHeaderUserRoles,
+			claimHeaderSubject,
+		} {
+			r.Header.Del(name)
+		}
+	}
+	for _, entry := range g.config.HeaderInjectionConfigs {
+		r.Header.Del(entry.Header)
 	}
 }
 

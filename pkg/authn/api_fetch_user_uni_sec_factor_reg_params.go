@@ -16,14 +16,11 @@ package authn
 
 import (
 	"context"
-	"encoding/base64"
 	"net/http"
-	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
-	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
 // FetchUserUniSecFactorRegParams fetches U2F authenticator registration parameters.
@@ -38,9 +35,18 @@ func (p *Portal) FetchUserUniSecFactorRegParams(
 	backend ids.IdentityStore,
 	bodyData map[string]interface{}) error {
 
-	params := make(map[string]interface{})
-	randomStr := util.GetRandomStringFromRange(64, 92)
-	params["challenge"] = strings.TrimRight(base64.StdEncoding.EncodeToString([]byte(randomStr)), "=")
+	binding, err := getWebAuthnEnrollmentBinding(r, rr, usr, "profile")
+	if err != nil {
+		resp["message"] = errWebAuthnEnrollment.Error()
+		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+	}
+	challenge, err := p.webAuthnEnrollments.issue(binding)
+	if err != nil {
+		resp["message"] = errWebAuthnEnrollment.Error()
+		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+	}
+	params := make(map[string]any)
+	params["challenge"] = challenge
 	params["rp_name"] = "AuthCrunch"
 	// params["rp_id"] = "auth.authcrunch.com"
 	params["user_id"] = usr.Claims.ID

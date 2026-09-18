@@ -143,6 +143,26 @@ cannot be configured or authenticate again. Embedders drain requests before
 disposal. The root `Server.Close` owns shared providers once; individual portals
 do not own their lifetime. Direct provider consumers call Close themselves.
 
+## Browser State and Nonce Policy
+
+`state.go` atomically publishes nonce, PKCE verifier and login binding. Bind a
+five-minute, single-use callback to the initiating protected browser SessionID
+and exact callback URL. Claim it atomically before processing any code or direct
+token; delete it on every completion/error path. State is distinct from the
+browser cookie, and a supplied state must never create its own browser binding.
+
+Capture nonce policy when login starts. `NonceDisabled` omits nonce from the
+authorization URL (including a preconfigured nonce parameter) and skips only the
+nonce-claim check for that transaction. An enabled transaction requires its exact
+stored nonce. Later config changes cannot weaken an existing transaction; legacy
+state entries fail closed to nonce-required behavior. Missing state still fails.
+Signature, issuer, audience, browser state, expiry, replay and PKCE validation
+remain active when nonce compatibility is disabled.
+
+Keep `nonce_policy_test.go`, `state_binding_test.go`, parser round-trip OAuth TLS
+coverage and `oauth_state_e2e_test.go` for both settings, wrong/missing nonce,
+wrong browser/callback, replay and malformed signed identity tokens.
+
 ## Claims and Protocol Compatibility
 
 An invalid ID token or selected identity access token fails authentication.

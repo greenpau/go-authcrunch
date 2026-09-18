@@ -18,18 +18,21 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
+
 	samllib "github.com/crewjam/saml"
 	"github.com/crewjam/saml/samlsp"
+	"go.uber.org/zap"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
-	"go.uber.org/zap"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"strings"
 )
 
 const (
@@ -47,6 +50,7 @@ type IdentityProvider struct {
 	loginURL   string
 	logger     *zap.Logger
 	configured bool
+	state      *stateManager
 }
 
 // NewIdentityProvider return an instance of IdentityProvider.
@@ -58,6 +62,7 @@ func NewIdentityProvider(cfg *Config, logger *zap.Logger) (*IdentityProvider, er
 	b := &IdentityProvider{
 		config: cfg,
 		logger: logger,
+		state:  newStateManager(),
 	}
 
 	if err := b.config.Validate(); err != nil {
@@ -132,7 +137,7 @@ func (b *IdentityProvider) Configure() error {
 		}
 		opts.IDPMetadata = idpMetadata
 	} else {
-		metadataFileContent, err := ioutil.ReadFile(b.config.IdpMetadataLocation)
+		metadataFileContent, err := os.ReadFile(b.config.IdpMetadataLocation)
 		if err != nil {
 			return err
 		}
@@ -142,11 +147,14 @@ func (b *IdentityProvider) Configure() error {
 		}
 		opts.IDPMetadata = idpMetadata
 	}
+	if err := pinIDPSigningCertificate(opts.IDPMetadata, idpSignCert); err != nil {
+		return err
+	}
 
 	b.serviceProviders = make(map[string]*samllib.ServiceProvider)
 	for _, acsURL := range b.config.AssertionConsumerServiceURLs {
 		sp := samlsp.DefaultServiceProvider(opts)
-		sp.AllowIDPInitiated = true
+		sp.AllowIDPInitiated = false
 		//sp.EntityID = sp.IDPMetadata.EntityID
 
 		cfgAcsURL, _ := url.Parse(acsURL)
@@ -161,27 +169,6 @@ func (b *IdentityProvider) Configure() error {
 
 		if b.idpMetadataURL != nil {
 			sp.MetadataURL = *b.idpMetadataURL
-		}
-
-		for i := range sp.IDPMetadata.IDPSSODescriptors {
-			idpSSODescriptor := &sp.IDPMetadata.IDPSSODescriptors[i]
-			keyDescriptor := &samllib.KeyDescriptor{
-				Use: "signing",
-				KeyInfo: samllib.KeyInfo{
-					XMLName: xml.Name{
-						Space: "http://www.w3.org/2000/09/xmldsig#",
-						Local: "KeyInfo",
-					},
-					// Certificate: idpSignCert,
-					X509Data: samllib.X509Data{
-						X509Certificates: []samllib.X509Certificate{
-							{Data: idpSignCert},
-						},
-					},
-				},
-			}
-			idpSSODescriptor.KeyDescriptors = append(idpSSODescriptor.KeyDescriptors, *keyDescriptor)
-			break
 		}
 
 		b.serviceProviders[acsURL] = &sp
@@ -201,6 +188,33 @@ func (b *IdentityProvider) Configure() error {
 
 	b.configured = true
 
+	return nil
+}
+
+// pinIDPSigningCertificate makes the separately configured certificate the
+// only signing trust anchor. Metadata still supplies endpoints and explicit
+// encryption keys, but it cannot add a signing key that bypasses the pin.
+func pinIDPSigningCertificate(metadata *samllib.EntityDescriptor, certificate string) error {
+	if metadata == nil || len(metadata.IDPSSODescriptors) == 0 {
+		return fmt.Errorf("SAML IdP metadata has no SSO descriptor")
+	}
+	for i := range metadata.IDPSSODescriptors {
+		descriptor := &metadata.IDPSSODescriptors[i]
+		keys := make([]samllib.KeyDescriptor, 0, len(descriptor.KeyDescriptors)+1)
+		for _, key := range descriptor.KeyDescriptors {
+			if key.Use == "encryption" {
+				keys = append(keys, key)
+			}
+		}
+		descriptor.KeyDescriptors = keys
+	}
+	metadata.IDPSSODescriptors[0].KeyDescriptors = append(metadata.IDPSSODescriptors[0].KeyDescriptors, samllib.KeyDescriptor{
+		Use: "signing",
+		KeyInfo: samllib.KeyInfo{
+			XMLName:  xml.Name{Space: "http://www.w3.org/2000/09/xmldsig#", Local: "KeyInfo"},
+			X509Data: samllib.X509Data{X509Certificates: []samllib.X509Certificate{{Data: certificate}}},
+		},
+	})
 	return nil
 }
 

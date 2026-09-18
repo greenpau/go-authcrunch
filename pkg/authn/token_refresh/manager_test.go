@@ -125,6 +125,28 @@ func TestRefreshLifecycle(t *testing.T) {
 	}
 }
 
+func TestResultPrincipalIsIndependentSnapshot(t *testing.T) {
+	h := newTestManager(t)
+	h.principal.BackendVersion = "backend-version"
+	h.principal.CredentialVersion = 7
+	first := h.issue(t)
+	if first.Principal.UserID != h.principal.UserID || first.Principal.BackendVersion != "backend-version" || first.Principal.CredentialVersion != 7 {
+		t.Fatal("result omitted issuer principal")
+	}
+	h.principal.Methods[0] = "changed"
+	first.Principal.Methods[0] = "result-changed"
+	first.Principal.Challenges[0] = "result-changed"
+	first.Principal.Audience[0] = "result-changed"
+	first.Principal.Scopes[0] = "result-changed"
+	next, err := h.manager.Refresh(context.Background(), first.RefreshToken, CookieTransport)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.Principal.Methods[0] != "pwd" || next.Principal.Challenges[0] != "password:" || next.Principal.Audience[0] != "app" || next.Principal.Scopes[0] != "read" {
+		t.Fatal("caller mutation changed stored issuer principal")
+	}
+}
+
 func TestRefreshReplayAndIsolation(t *testing.T) {
 	h := newTestManager(t)
 	first, unrelated := h.issue(t), h.issue(t)

@@ -16,14 +16,17 @@ package identity
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
+	stderrors "errors"
+	"os"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 // ErrRefreshIdentityDenied distinguishes revoked identities from store outages.
-var ErrRefreshIdentityDenied = errors.New("refresh identity denied")
+var ErrRefreshIdentityDenied = stderrors.New("refresh identity denied")
 
 // RefreshIdentity contains fresh non-secret attributes of an immutable record.
 type RefreshIdentity struct {
@@ -43,6 +46,34 @@ func (db *Database) authenticationEvidence(u *User) requests.AuthenticationEvide
 func (db *Database) WithRefreshIdentity(ctx context.Context, proof requests.AuthenticationEvidence, apply func(RefreshIdentity) error) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if db.inMemory {
+		return db.withRefreshIdentityUnlocked(ctx, proof, apply)
+	}
+	return withDatabaseFileLock(db.path, func() error {
+		data, err := os.ReadFile(db.path)
+		if err != nil {
+			return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+		}
+		target := &Database{path: db.path}
+		if err := json.Unmarshal(data, target); err != nil {
+			return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+		}
+		if err := target.indexMfaMutationSnapshot(); err != nil {
+			return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+		}
+		if target.Revision != db.Revision {
+			db.LoadedAt = time.Now().UTC()
+		}
+		target.LoadedAt = db.LoadedAt
+		db.adoptMfaMutationSnapshot(target)
+		return target.withRefreshIdentityUnlocked(ctx, proof, apply)
+	})
+}
+
+func (db *Database) withRefreshIdentityUnlocked(ctx context.Context, proof requests.AuthenticationEvidence, apply func(RefreshIdentity) error) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -66,6 +97,9 @@ func (db *Database) RevokeUserSessions(ctx context.Context, userID string) error
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := db.refreshPersistedSnapshotUnlocked(); err != nil {
 		return err
 	}
 	u, err := db.getUserByID(userID)

@@ -113,6 +113,15 @@ func (p *Portal) AddUserUniSecFactorToken(
 	rr.MfaToken.Tags = tokenTags
 	rr.MfaToken.Labels = tokenLabels
 
+	binding, err := getWebAuthnEnrollmentBinding(r, rr, usr, "profile")
+	if err == nil {
+		err = p.webAuthnEnrollments.consume(binding, rr)
+	}
+	if err != nil {
+		resp["message"] = errWebAuthnEnrollment.Error()
+		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+	}
+
 	if err := backend.Request(operator.AddMfaToken, rr); err != nil {
 		resp["message"] = "Profile API failed to add token to identity store"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)

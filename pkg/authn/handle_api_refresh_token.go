@@ -214,7 +214,7 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 		return p.refreshError(ctx, w, err)
 	}
 	if transport == tokenrefresh.CookieTransport {
-		u, err := p.userFromRefresh(tokens)
+		u, err := p.userFromRefresh(ctx, tokens)
 		if err != nil {
 			return p.refreshError(ctx, w, err)
 		}

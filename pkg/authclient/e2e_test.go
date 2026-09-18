@@ -454,9 +454,13 @@ func (f *e2ePortal) assertCredentialAccess(t *testing.T, credentials *authclient
 // Compute the prompt answer independently of authclient's private generator,
 // as an authenticator app would, using the raw secret convention of the portal.
 func e2eTOTP() string {
+	return e2eTOTPAt(time.Now())
+}
+
+func e2eTOTPAt(at time.Time) string {
 	mac := hmac.New(sha1.New, []byte(e2eTOTPSecret))
 	var counter [8]byte
-	binary.BigEndian.PutUint64(counter[:], uint64(time.Now().Unix()/30))
+	binary.BigEndian.PutUint64(counter[:], uint64(at.Unix()/30))
 	mac.Write(counter[:])
 	digest := mac.Sum(nil)
 	offset := digest[len(digest)-1] & 15

@@ -43,6 +43,11 @@ func (f *Factory) GetDeleteSessionIDCookie(h string) string {
 	return deletionCookie(f.GetSessionIDCookie(h, "delete"))
 }
 
+// GetDeleteSAMLSessionIDCookie expires the host-only SAML browser binding.
+func (f *Factory) GetDeleteSAMLSessionIDCookie() string {
+	return deletionCookie(f.GetSAMLSessionIDCookie("delete"))
+}
+
 // GetDeleteIdentityTokenCookie expires the provider-owned identity cookie name
 // at the same whoami path used by GetIdentityTokenCookie.
 func (f *Factory) GetDeleteIdentityTokenCookie(name, basePath string) string {

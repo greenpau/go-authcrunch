@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -271,6 +272,8 @@ func (db *Database) GetPath() string {
 
 // ResetUserPassword resets user password in database.
 func (db *Database) ResetUserPassword(r *requests.Request) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	if err := db.CheckPolicyCompliance(r.User.Username, r.User.Password); err != nil {
 		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
 	}
@@ -319,6 +322,7 @@ func (db *Database) OverwriteUserRoles(r *requests.Request) error {
 		}
 	}
 
+	user.CredentialVersion++
 	if err := db.commit(); err != nil {
 		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
 	}
@@ -349,6 +353,7 @@ func (db *Database) AddUserRoles(r *requests.Request) error {
 		}
 	}
 
+	user.CredentialVersion++
 	if err := db.commit(); err != nil {
 		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
 	}
@@ -619,9 +624,42 @@ func (db *Database) EnableUser(r *requests.Request) error {
 
 // AuthenticateUser adds user identity to the database.
 func (db *Database) AuthenticateUser(r *requests.Request) error {
+	proof := r.Authentication
 	r.Authentication = requests.AuthenticationEvidence{}
-	db.mu.RLock()
-	defer db.mu.RUnlock()
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if db.inMemory {
+		return db.authenticateUserUnlocked(r, proof)
+	}
+	var result error
+	err := withDatabaseFileLock(db.path, func() error {
+		data, err := os.ReadFile(db.path)
+		if err != nil {
+			return err
+		}
+		target := &Database{path: db.path}
+		if err := json.Unmarshal(data, target); err != nil {
+			return err
+		}
+		if err := target.indexMfaMutationSnapshot(); err != nil {
+			return err
+		}
+		if target.Revision != db.Revision {
+			db.LoadedAt = time.Now().UTC()
+		}
+		target.LoadedAt = db.LoadedAt
+		result = target.authenticateUserUnlocked(r, proof)
+		db.adoptMfaMutationSnapshot(target)
+		return nil
+	})
+	if err != nil {
+		r.Response.Code = 500
+		return errors.ErrAuthFailed.WithArgs("identity store unavailable")
+	}
+	return result
+}
+
+func (db *Database) authenticateUserUnlocked(r *requests.Request, proof requests.AuthenticationEvidence) error {
 	user, err := db.getUser(r.User.Username)
 	var passwordErr error
 	if r.User.Password != "" {
@@ -646,6 +684,10 @@ func (db *Database) AuthenticateUser(r *requests.Request) error {
 			return errors.ErrAuthFailed.WithArgs(passwordErr)
 		}
 	case r.WebAuthn.Request != "":
+		if authenticationEvidenceBound(proof) && !db.authenticationEvidenceMatches(proof, user) {
+			r.Response.Code = 401
+			return errors.ErrAuthFailed.WithArgs("identity changed during authentication")
+		}
 		if err := user.VerifyWebAuthnRequest(r); err != nil {
 			r.Response.Code = 400
 			return errors.ErrAuthFailed.WithArgs(err)
@@ -671,22 +713,24 @@ func (db *Database) AuthenticateUser(r *requests.Request) error {
 func (db *Database) CheckMfaLockout(r *requests.Request) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	user, err := db.getUser(r.User.Username)
+	locked := false
+	err := db.updateMfaFailureStateUnlocked(r, func(user *User) (bool, error) {
+		if user.Lockout == nil || user.MfaFailedAttempts == 0 {
+			return false, nil
+		}
+		if user.Lockout.IsLocked() {
+			locked = true
+			return false, nil
+		}
+		// Lockout expired, auto-clear.
+		user.Lockout.Enabled = false
+		user.MfaFailedAttempts = 0
+		return true, nil
+	})
 	if err != nil {
-		return nil
+		return errors.ErrMfaLockout.WithArgs("failed reading lockout state")
 	}
-	if user.Lockout == nil || user.MfaFailedAttempts == 0 {
-		return nil
-	}
-	if user.Lockout.IsLocked() {
-		return errors.ErrMfaLockout.WithArgs("too many failed attempts")
-	}
-	// Lockout expired, auto-clear.
-	user.Lockout.Enabled = false
-	user.MfaFailedAttempts = 0
-	if err := db.commit(); err != nil {
-		// Revert in-memory state on persist failure.
-		user.Lockout.Enabled = true
+	if locked {
 		return errors.ErrMfaLockout.WithArgs("too many failed attempts")
 	}
 	return nil
@@ -697,18 +741,16 @@ func (db *Database) CheckMfaLockout(r *requests.Request) error {
 func (db *Database) IncrementMfaFailedAttempts(r *requests.Request) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	user, err := db.getUser(r.User.Username)
-	if err != nil {
-		return nil
-	}
-	user.MfaFailedAttempts++
-	if user.MfaFailedAttempts >= 10 {
-		if user.Lockout == nil {
-			user.Lockout = NewLockoutState()
+	return db.updateMfaFailureStateUnlocked(r, func(user *User) (bool, error) {
+		user.MfaFailedAttempts++
+		if user.MfaFailedAttempts >= 10 {
+			if user.Lockout == nil {
+				user.Lockout = NewLockoutState()
+			}
+			user.Lockout.Lock(15 * time.Minute)
 		}
-		user.Lockout.Lock(15 * time.Minute)
-	}
-	return db.commit()
+		return true, nil
+	})
 }
 
 // ResetMfaFailedAttempts resets the MFA failed attempt counter
@@ -716,18 +758,66 @@ func (db *Database) IncrementMfaFailedAttempts(r *requests.Request) error {
 func (db *Database) ResetMfaFailedAttempts(r *requests.Request) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	user, err := db.getUser(r.User.Username)
-	if err != nil {
-		return nil
+	return db.updateMfaFailureStateUnlocked(r, func(user *User) (bool, error) {
+		if user.MfaFailedAttempts == 0 {
+			return false, nil
+		}
+		user.MfaFailedAttempts = 0
+		if user.Lockout != nil {
+			user.Lockout.Enabled = false
+		}
+		return true, nil
+	})
+}
+
+func (db *Database) updateMfaFailureStateUnlocked(r *requests.Request, update func(*User) (bool, error)) error {
+	if db.inMemory {
+		user, err := db.getUser(r.User.Username)
+		if err != nil {
+			return nil
+		}
+		if authenticationEvidenceBound(r.Authentication) && !db.authenticationEvidenceMatches(r.Authentication, user) {
+			return ErrIdentityRequestDenied
+		}
+		changed, resultErr := update(user)
+		if changed {
+			if err := db.commitUnlocked(); err != nil {
+				return err
+			}
+		}
+		return resultErr
 	}
-	if user.MfaFailedAttempts == 0 {
-		return nil
-	}
-	user.MfaFailedAttempts = 0
-	if user.Lockout != nil {
-		user.Lockout.Enabled = false
-	}
-	return db.commit()
+	return withDatabaseFileLock(db.path, func() error {
+		data, err := os.ReadFile(db.path)
+		if err != nil {
+			return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+		}
+		target := &Database{path: db.path}
+		if err := json.Unmarshal(data, target); err != nil {
+			return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+		}
+		if err := target.indexMfaMutationSnapshot(); err != nil {
+			return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+		}
+		target.LoadedAt = db.LoadedAt
+		user, err := target.getUser(r.User.Username)
+		if err != nil {
+			db.adoptMfaMutationSnapshot(target)
+			return nil
+		}
+		if authenticationEvidenceBound(r.Authentication) && !target.authenticationEvidenceMatches(r.Authentication, user) {
+			db.adoptMfaMutationSnapshot(target)
+			return ErrIdentityRequestDenied
+		}
+		changed, resultErr := update(user)
+		if changed {
+			if err := target.commitUnlocked(); err != nil {
+				return err
+			}
+		}
+		db.adoptMfaMutationSnapshot(target)
+		return resultErr
+	})
 }
 
 // getUser return User by either email address or username.
@@ -806,17 +896,41 @@ func (db *Database) Save() error {
 func (db *Database) Copy(fp string) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	path := db.path
-	db.path = fp
-	err := db.commit()
-	db.path = path
-	return err
+	data, err := json.Marshal(db)
+	if err != nil {
+		return errors.ErrDatabaseCommit.WithArgs(fp, err)
+	}
+	target := &Database{path: fp}
+	if err := json.Unmarshal(data, target); err != nil {
+		return errors.ErrDatabaseCommit.WithArgs(fp, err)
+	}
+	if err := target.indexMfaMutationSnapshot(); err != nil {
+		return errors.ErrDatabaseCommit.WithArgs(fp, err)
+	}
+	target.LoadedAt = db.LoadedAt
+	return withDatabaseFileLock(fp, target.commitUnlocked)
 }
 
 // commit writes the database contents to a file.
 func (db *Database) commit() error {
+	if db.inMemory {
+		return db.commitUnlocked()
+	}
+	return withDatabaseFileLock(db.path, func() error {
+		if err := db.mergePersistedTOTPCounters(); err != nil {
+			return err
+		}
+		return db.commitUnlocked()
+	})
+}
+
+func (db *Database) commitUnlocked() error {
 	db.Revision++
 	db.LastModified = time.Now().UTC()
+	return db.writeSnapshotUnlocked()
+}
+
+func (db *Database) writeSnapshotUnlocked() error {
 	if db.inMemory {
 		return nil
 	}
@@ -824,10 +938,98 @@ func (db *Database) commit() error {
 	if err != nil {
 		return errors.ErrDatabaseCommit.WithArgs(db.path, err)
 	}
-	if err := os.WriteFile(db.path, []byte(data), 0600); err != nil {
+	if err := writeDatabaseFileAtomically(db.path, data); err != nil {
 		return errors.ErrDatabaseCommit.WithArgs(db.path, err)
 	}
 	return nil
+}
+
+func (db *Database) mergePersistedTOTPCounters() error {
+	if info, err := os.Stat(db.path); err == nil && info.IsDir() {
+		file, openErr := os.OpenFile(db.path, os.O_WRONLY, 0600)
+		if file != nil {
+			_ = file.Close()
+		}
+		return errors.ErrDatabaseCommit.WithArgs(db.path, openErr)
+	}
+	data, err := os.ReadFile(db.path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+	}
+	if len(data) == 0 {
+		return nil
+	}
+	persisted := &Database{path: db.path}
+	if err := json.Unmarshal(data, persisted); err != nil {
+		return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+	}
+	if persisted.Revision != db.Revision {
+		if err := persisted.indexMfaMutationSnapshot(); err != nil {
+			return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+		}
+		db.adoptMfaMutationSnapshot(persisted)
+		db.LoadedAt = time.Now().UTC()
+		return errors.ErrDatabaseCommit.WithArgs(db.path, "database changed since it was loaded")
+	}
+	persistedCounters := make(map[string]map[string]uint64)
+	for _, user := range persisted.Users {
+		if user == nil {
+			continue
+		}
+		for _, token := range user.MfaTokens {
+			if token == nil || token.LastTOTPCounter == nil {
+				continue
+			}
+			if persistedCounters[user.ID] == nil {
+				persistedCounters[user.ID] = make(map[string]uint64)
+			}
+			persistedCounters[user.ID][token.ID] = *token.LastTOTPCounter
+		}
+	}
+	for _, user := range db.Users {
+		if user == nil {
+			continue
+		}
+		for _, token := range user.MfaTokens {
+			if token == nil {
+				continue
+			}
+			counter, exists := persistedCounters[user.ID][token.ID]
+			if !exists || (token.LastTOTPCounter != nil && counter <= *token.LastTOTPCounter) {
+				continue
+			}
+			token.LastTOTPCounter = &counter
+		}
+	}
+	return nil
+}
+
+func (db *Database) refreshPersistedSnapshotUnlocked() error {
+	if db.inMemory {
+		return nil
+	}
+	return withDatabaseFileLock(db.path, func() error {
+		data, err := os.ReadFile(db.path)
+		if err != nil {
+			return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+		}
+		target := &Database{path: db.path}
+		if err := json.Unmarshal(data, target); err != nil {
+			return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+		}
+		if target.Revision == db.Revision {
+			return nil
+		}
+		if err := target.indexMfaMutationSnapshot(); err != nil {
+			return errors.ErrDatabaseCommit.WithArgs(db.path, err)
+		}
+		db.adoptMfaMutationSnapshot(target)
+		db.LoadedAt = time.Now().UTC()
+		return nil
+	})
 }
 
 func (db *Database) validateUserIdentity(username, email string) (*User, error) {
@@ -1145,6 +1347,9 @@ func (db *Database) IdentifyUser(r *requests.Request) error {
 	r.Authentication = requests.AuthenticationEvidence{}
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	if err := db.refreshPersistedSnapshotUnlocked(); err != nil {
+		return err
+	}
 	user, err := db.getUser(r.User.Username)
 	if err != nil {
 		r.User.Username = "nobody"
@@ -1187,6 +1392,37 @@ func (db *Database) LookupAPIKey(r *requests.Request) error {
 	r.Key.Prefix = string(r.Key.Payload[:24])
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	if db.inMemory {
+		return db.lookupAPIKeyUnlocked(r)
+	}
+	var result error
+	err := withDatabaseFileLock(db.path, func() error {
+		data, err := os.ReadFile(db.path)
+		if err != nil {
+			return err
+		}
+		target := &Database{path: db.path}
+		if err := json.Unmarshal(data, target); err != nil {
+			return err
+		}
+		if err := target.indexMfaMutationSnapshot(); err != nil {
+			return err
+		}
+		if target.Revision != db.Revision {
+			db.LoadedAt = time.Now().UTC()
+		}
+		target.LoadedAt = db.LoadedAt
+		result = target.lookupAPIKeyUnlocked(r)
+		db.adoptMfaMutationSnapshot(target)
+		return nil
+	})
+	if err != nil {
+		return errors.ErrLookupAPIKeyFailed
+	}
+	return result
+}
+
+func (db *Database) lookupAPIKeyUnlocked(r *requests.Request) error {
 	user, exists := db.refAPIKey[r.Key.Prefix]
 	if !exists || user.Disabled {
 		return errors.ErrLookupAPIKeyFailed
@@ -1202,17 +1438,199 @@ func (db *Database) LookupAPIKey(r *requests.Request) error {
 
 // AddMfaToken adds MFA token for a user.
 func (db *Database) AddMfaToken(r *requests.Request) error {
+	return db.mutateMfaToken(r, false)
+}
+
+// EnrollMfaToken adds a factor only when no enabled factor exists. Login
+// enrollment cannot replace proof of an already-configured factor.
+func (db *Database) EnrollMfaToken(r *requests.Request) error {
+	return db.mutateMfaToken(r, true)
+}
+
+func (db *Database) mutateMfaToken(r *requests.Request, enrollment bool) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	if r == nil {
+		return errors.ErrAddMfaToken.WithArgs("request is nil")
+	}
+	cached, err := db.validateUserIdentity(r.User.Username, r.User.Email)
+	if err != nil {
+		return errors.ErrAddMfaToken.WithArgs(err)
+	}
+	bound, err := db.validateMfaTokenMutationEvidence(r.Authentication, cached)
+	if err != nil {
+		return err
+	}
+	if enrollment && cached.Disabled {
+		return errors.ErrAddMfaToken.WithArgs("identity changed before MFA enrollment")
+	}
+	if db.inMemory || (!enrollment && !bound) {
+		return db.addMfaTokenUnlocked(r, enrollment, db.commit)
+	}
+	return withDatabaseFileLock(db.path, func() error {
+		data, err := os.ReadFile(db.path)
+		if err != nil {
+			return errors.ErrAddMfaToken.WithArgs(err)
+		}
+		target := &Database{path: db.path}
+		if err := json.Unmarshal(data, target); err != nil {
+			return errors.ErrAddMfaToken.WithArgs(err)
+		}
+		if err := target.indexMfaMutationSnapshot(); err != nil {
+			return errors.ErrAddMfaToken.WithArgs(err)
+		}
+		current, err := target.validateUserIdentity(r.User.Username, r.User.Email)
+		if err != nil {
+			return errors.ErrAddMfaToken.WithArgs(err)
+		}
+		if current.Disabled {
+			return errors.ErrAddMfaToken.WithArgs("identity changed before MFA enrollment")
+		}
+		if enrollment && (current.ID != cached.ID || current.CredentialVersion != cached.CredentialVersion) {
+			return errors.ErrAddMfaToken.WithArgs("identity changed before MFA enrollment")
+		}
+		if bound {
+			if _, err := db.validateMfaTokenMutationEvidence(r.Authentication, current); err != nil {
+				return err
+			}
+		}
+		if enrollment {
+			for _, token := range current.MfaTokens {
+				if token != nil && !token.Disabled {
+					return errors.ErrAddMfaToken.WithArgs("an enabled MFA factor already exists")
+				}
+			}
+		}
+		// Apply the factor to the fresh persisted snapshot. Committing the live
+		// cached snapshot here could overwrite unrelated changes from a realm
+		// which shares this database file.
+		target.LoadedAt = db.LoadedAt
+		return target.addMfaTokenUnlocked(r, enrollment, func() error {
+			if err := target.commitUnlocked(); err != nil {
+				return err
+			}
+			db.adoptMfaMutationSnapshot(target)
+			return nil
+		})
+	})
+}
+
+func (db *Database) indexMfaMutationSnapshot() error {
+	db.Version = app.Version
+	db.enforceDefaultPolicy()
+	db.refUsername = make(map[string]*User)
+	db.refID = make(map[string]*User)
+	db.refEmailAddress = make(map[string]*User)
+	db.refAPIKey = make(map[string]*User)
+	for _, user := range db.Users {
+		if user == nil {
+			return fmt.Errorf("nil user in persisted database")
+		}
+		if err := user.Valid(); err != nil {
+			return err
+		}
+		username := strings.ToLower(user.Username)
+		if _, exists := db.refUsername[username]; exists {
+			return fmt.Errorf("duplicate username %q", user.Username)
+		}
+		if _, exists := db.refID[user.ID]; exists {
+			return fmt.Errorf("duplicate user ID %q", user.ID)
+		}
+		db.refUsername[username] = user
+		db.refID[user.ID] = user
+		for _, password := range user.Passwords {
+			if password != nil && password.Algorithm == "" {
+				password.Algorithm = "bcrypt"
+			}
+		}
+		for _, email := range user.EmailAddresses {
+			if email == nil {
+				continue
+			}
+			address := strings.ToLower(email.Address)
+			if _, exists := db.refEmailAddress[address]; exists {
+				return fmt.Errorf("duplicate email address %q", email.Address)
+			}
+			db.refEmailAddress[address] = user
+		}
+		for _, key := range user.APIKeys {
+			if key == nil {
+				continue
+			}
+			if _, exists := db.refAPIKey[key.Prefix]; exists {
+				return fmt.Errorf("duplicate API key prefix %q", key.Prefix)
+			}
+			db.refAPIKey[key.Prefix] = user
+		}
+	}
+	return nil
+}
+
+func (db *Database) adoptMfaMutationSnapshot(target *Database) {
+	db.Version = target.Version
+	db.Policy = target.Policy
+	db.Revision = target.Revision
+	db.LastModified = target.LastModified
+	db.Users = target.Users
+	db.refUsername = target.refUsername
+	db.refID = target.refID
+	db.refEmailAddress = target.refEmailAddress
+	db.refAPIKey = target.refAPIKey
+}
+
+func (db *Database) validateMfaTokenMutationEvidence(proof requests.AuthenticationEvidence, user *User) (bool, error) {
+	bound := authenticationEvidenceBound(proof)
+	if !bound {
+		return false, nil
+	}
+	if !db.authenticationEvidenceMatches(proof, user) {
+		return true, errors.ErrAddMfaToken.WithArgs("authentication evidence no longer matches the identity")
+	}
+	return true, nil
+}
+
+func authenticationEvidenceBound(proof requests.AuthenticationEvidence) bool {
+	return proof.UserID != "" || proof.BackendVersion != "" || proof.CredentialVersion != 0 ||
+		proof.AuthenticatedAt != 0 || proof.Method != ""
+}
+
+func (db *Database) authenticationEvidenceMatches(proof requests.AuthenticationEvidence, user *User) bool {
+	return proof.UserID != "" && proof.BackendVersion != "" && user != nil && !user.Disabled &&
+		proof.UserID == user.ID && proof.CredentialVersion == user.CredentialVersion &&
+		proof.BackendVersion == db.LoadedAt.Format(time.RFC3339Nano)
+}
+
+func (db *Database) addMfaTokenUnlocked(r *requests.Request, enrollment bool, commit func() error) error {
 	user, err := db.validateUserIdentity(r.User.Username, r.User.Email)
 	if err != nil {
 		return errors.ErrAddMfaToken.WithArgs(err)
 	}
+	if enrollment {
+		for _, token := range user.MfaTokens {
+			if token != nil && !token.Disabled {
+				return errors.ErrAddMfaToken.WithArgs("an enabled MFA factor already exists")
+			}
+		}
+	}
+	previousTokens := append([]*MfaToken(nil), user.MfaTokens...)
+	previousCredentialVersion := user.CredentialVersion
+	previousUserRevision := user.Revision
+	previousUserLastModified := user.LastModified
+	previousDatabaseRevision := db.Revision
+	previousDatabaseLastModified := db.LastModified
 	if err := user.AddMfaToken(r); err != nil {
 		return err
 	}
 	user.CredentialVersion++
-	if err := db.commit(); err != nil {
+	if err := commit(); err != nil {
+		if slices.Contains(db.Users, user) {
+			user.MfaTokens = previousTokens
+			user.CredentialVersion = previousCredentialVersion
+			user.Revision = previousUserRevision
+			user.LastModified = previousUserLastModified
+			db.Revision = previousDatabaseRevision
+			db.LastModified = previousDatabaseLastModified
+		}
 		return errors.ErrAddMfaToken.WithArgs(err)
 	}
 	return nil
@@ -1233,7 +1651,12 @@ func (db *Database) GetMfaTokens(r *requests.Request) error {
 				continue
 			}
 		}
-		bundle.Add(token)
+		copy := *token
+		if copy.LastTOTPCounter != nil {
+			counter := *copy.LastTOTPCounter
+			copy.LastTOTPCounter = &counter
+		}
+		bundle.Add(&copy)
 	}
 	r.Response.Payload = bundle
 	return nil
@@ -1256,10 +1679,128 @@ func (db *Database) GetMfaToken(r *requests.Request) error {
 		if token.ID != r.MfaToken.ID {
 			continue
 		}
-		r.Response.Payload = token
+		copy := *token
+		if copy.LastTOTPCounter != nil {
+			counter := *copy.LastTOTPCounter
+			copy.LastTOTPCounter = &counter
+		}
+		r.Response.Payload = &copy
 		return nil
 	}
 	return errors.ErrGetMfaToken.WithArgs("not found")
+}
+
+// ConsumeMfaTOTP validates and atomically consumes a TOTP time step for a
+// user's enabled factors.
+func (db *Database) ConsumeMfaTOTP(r *requests.Request) error {
+	return db.consumeMfaTOTPWithTime(r, time.Now().UTC())
+}
+
+func (db *Database) consumeMfaTOTPWithTime(r *requests.Request, ts time.Time) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if db.inMemory {
+		return db.consumeMfaTOTPUnlocked(r, ts, db.commitUnlocked)
+	}
+	err := withDatabaseFileLock(db.path, func() error {
+		data, err := os.ReadFile(db.path)
+		if err != nil {
+			return errors.ErrMfaTokenInvalidPasscode.WithArgs("failed")
+		}
+		target := &Database{path: db.path}
+		if err := json.Unmarshal(data, target); err != nil {
+			return errors.ErrMfaTokenInvalidPasscode.WithArgs("failed")
+		}
+		if err := target.indexMfaMutationSnapshot(); err != nil {
+			return errors.ErrMfaTokenInvalidPasscode.WithArgs("failed")
+		}
+		cachedUser, cachedErr := db.validateUserIdentity(r.User.Username, r.User.Email)
+		currentUser, currentErr := target.validateUserIdentity(r.User.Username, r.User.Email)
+		if cachedErr != nil || currentErr != nil || cachedUser.ID != currentUser.ID ||
+			cachedUser.CredentialVersion != currentUser.CredentialVersion {
+			db.adoptMfaMutationSnapshot(target)
+			db.LoadedAt = time.Now().UTC()
+			return errors.ErrMfaTokenInvalidPasscode.WithArgs("failed")
+		}
+		target.LoadedAt = db.LoadedAt
+		return target.consumeMfaTOTPUnlocked(r, ts, func() error {
+			if err := target.commitUnlocked(); err != nil {
+				return err
+			}
+			db.adoptMfaMutationSnapshot(target)
+			return nil
+		})
+	})
+	if err != nil {
+		return errors.ErrMfaTokenInvalidPasscode.WithArgs("failed")
+	}
+	return nil
+}
+
+func (db *Database) consumeMfaTOTPUnlocked(r *requests.Request, ts time.Time, commit func() error) error {
+	user, err := db.findUserIdentity(r.User.Username, r.User.Email)
+	if err != nil || user.Disabled || user.Lockout != nil && user.Lockout.IsLocked() ||
+		authenticationEvidenceBound(r.Authentication) && !db.authenticationEvidenceMatches(r.Authentication, user) {
+		return errors.ErrMfaTokenInvalidPasscode.WithArgs("failed")
+	}
+	var consumedToken *MfaToken
+	var consumedCounter uint64
+	for _, token := range user.MfaTokens {
+		if token == nil {
+			continue
+		}
+		if token.Type != "totp" || token.Disabled || token.Expired {
+			continue
+		}
+		counter, err := token.matchCodeWithTime(r.MfaToken.Passcode, ts)
+		if err != nil {
+			continue
+		}
+		if token.LastTOTPCounter != nil && counter <= *token.LastTOTPCounter {
+			continue
+		}
+		consumedToken = token
+		consumedCounter = counter
+		break
+	}
+	if consumedToken == nil {
+		return errors.ErrMfaTokenInvalidPasscode.WithArgs("failed")
+	}
+	previousCounter := consumedToken.LastTOTPCounter
+	consumedToken.LastTOTPCounter = &consumedCounter
+	if err := commit(); err != nil {
+		consumedToken.LastTOTPCounter = previousCounter
+		return errors.ErrMfaTokenInvalidPasscode.WithArgs("failed")
+	}
+	return nil
+}
+
+func (db *Database) findUserIdentity(username, email string) (*User, error) {
+	var usernameUser, emailUser *User
+	for _, user := range db.Users {
+		if user == nil {
+			continue
+		}
+		if strings.EqualFold(user.Username, username) {
+			usernameUser = user
+		}
+		for _, address := range user.EmailAddresses {
+			if address == nil {
+				continue
+			}
+			if strings.EqualFold(address.Address, email) {
+				emailUser = user
+				break
+			}
+		}
+	}
+	if usernameUser == nil || emailUser == nil {
+		return nil, errors.ErrDatabaseUserNotFound
+	}
+	if usernameUser.ID != emailUser.ID {
+		return nil, errors.ErrDatabaseInvalidUser
+	}
+	return usernameUser, nil
 }
 
 // DeleteMfaToken deletes MFA token associated with a user by token id.

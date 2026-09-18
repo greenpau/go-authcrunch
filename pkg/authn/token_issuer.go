@@ -67,7 +67,7 @@ func (p *Portal) issueSandboxTokens(ctx context.Context, r *http.Request, rr *re
 		if err != nil {
 			return nil, nil, err
 		}
-		u, err := p.userFromRefresh(tokens)
+		u, err := p.userFromRefresh(ctx, tokens)
 		return u, tokens, err
 	}
 	// Local access-only issuance checks the same immutable account and security
@@ -136,6 +136,9 @@ func (p *Portal) issueSandboxAccessToken(ctx context.Context, r *http.Request, r
 		return nil, err
 	}
 	u.Authenticator = user.Authenticator{Name: proof.Authenticator.Name, Realm: proof.Authenticator.Realm, Method: proof.Authenticator.Method}
+	u.LoginEvidence = proof.LoginEvidence
+	u.LoginUsername, u.LoginEmail = current.Username, current.Email
+	u.LoginMethods = append([]string(nil), proof.LoginMethods...)
 	if v, exists := m["frontend_links"]; exists {
 		if err := u.AddFrontendLinks(v); err != nil {
 			return nil, err
@@ -147,18 +150,44 @@ func (p *Portal) issueSandboxAccessToken(ctx context.Context, r *http.Request, r
 	return u, nil
 }
 
-func (p *Portal) userFromRefresh(tokens *tokenrefresh.Result) (*user.User, error) {
+func (p *Portal) userFromRefresh(ctx context.Context, tokens *tokenrefresh.Result) (*user.User, error) {
+	if tokens == nil {
+		return nil, tokenrefresh.ErrDenied
+	}
+	principal := tokens.Principal
+	backend := p.getIdentityStoreByRealm(principal.Realm)
+	store, ok := backend.(refreshIdentityStore)
+	if !ok || backend.GetName() != principal.Backend || !p.refreshRealm(principal.Realm) {
+		return nil, tokenrefresh.ErrDenied
+	}
+	evidence := requests.AuthenticationEvidence{
+		UserID: principal.UserID, BackendVersion: principal.BackendVersion,
+		CredentialVersion: principal.CredentialVersion, AuthenticatedAt: principal.AuthTime,
+	}
+	var current identity.RefreshIdentity
+	err := store.WithRefreshIdentity(ctx, evidence, func(snapshot identity.RefreshIdentity) error {
+		if snapshot.Username != principal.Subject {
+			return tokenrefresh.ErrDenied
+		}
+		current = snapshot
+		return nil
+	})
+	if errors.Is(err, identity.ErrRefreshIdentityDenied) {
+		err = tokenrefresh.ErrDenied
+	}
+	if err != nil {
+		return nil, err
+	}
 	u, err := user.NewUser(tokens.Claims)
 	if err != nil {
 		return nil, err
 	}
 	u.Token, u.TokenName = tokens.AccessToken, p.cookie.AccessTokenCookieName
 	u.Authorized = true
-	backend := p.getIdentityStoreByRealm(u.Claims.Origin)
-	if backend == nil {
-		return nil, tokenrefresh.ErrDenied
-	}
 	u.Authenticator = user.Authenticator{Name: backend.GetName(), Realm: backend.GetRealm(), Method: backend.GetKind()}
+	u.LoginEvidence = evidence
+	u.LoginUsername, u.LoginEmail = current.Username, current.Email
+	u.LoginMethods = append([]string(nil), principal.Methods...)
 	if v, ok := tokens.Claims["frontend_links"]; ok {
 		if err := u.AddFrontendLinks(v); err != nil {
 			return nil, err

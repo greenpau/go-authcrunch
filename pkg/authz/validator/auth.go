@@ -16,6 +16,7 @@ package validator
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"net/http"
 	"strings"
@@ -46,26 +47,28 @@ func (v *TokenValidator) parseCustomAuthHeader(ctx context.Context, r *http.Requ
 
 func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
 	var tokenSecret, tokenRealm string
-	hdr := r.Header.Get("Authorization")
-	if hdr == "" {
+	hdrs := r.Header.Values("Authorization")
+	if len(hdrs) == 0 {
 		return nil
 	}
-	entries := strings.Split(hdr, ",")
-	for _, entry := range entries {
-		entry = strings.TrimSpace(entry)
-		if !strings.HasPrefix(entry, "Basic") {
-			continue
+	for _, hdr := range hdrs {
+		for _, entry := range splitAuthorizationEntries(hdr) {
+			parts := strings.Fields(entry)
+			if len(parts) != 2 || !strings.EqualFold(parts[0], "Basic") {
+				continue
+			}
+
+			ar.Token.Source = "basicauth"
+			ar.Token.Name = "Basic"
+			ar.Token.Found = true
+
+			tokenSecret = parts[1]
+			tokenRealm = r.Header.Get(v.authRealmHeaderName)
+			break
 		}
-		entry = strings.TrimPrefix(entry, "Basic")
-		entry = strings.TrimSpace(entry)
-
-		ar.Token.Source = "basicauth"
-		ar.Token.Name = "Basic"
-		ar.Token.Found = true
-
-		tokenSecret = entry
-		tokenRealm = r.Header.Get(v.authRealmHeaderName)
-		break
+		if ar.Token.Found {
+			break
+		}
 	}
 
 	if ar.Token.Found {
@@ -83,7 +86,7 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 			Secret:  tokenSecret,
 		}
 
-		remoteCacheKey := fmt.Sprintf("remote|%s|%s|%s", apr.Address, apr.Realm, apr.Secret)
+		remoteCacheKey := credentialCacheKey("remote", apr)
 		if v.cache.Get(remoteCacheKey) != nil {
 			// This is the use case where remote authenticator was able to
 			// successfully authenticate user based on provided credentials
@@ -95,7 +98,7 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 			return nil
 		}
 
-		localCacheKey := fmt.Sprintf("local|%s|%s|%s", apr.Address, apr.Realm, apr.Secret)
+		localCacheKey := credentialCacheKey("local", apr)
 		if usr := v.cache.Get(localCacheKey); usr != nil {
 			// This is the use case where local authenticator was able to
 			// successfully authenticate user based on provided credentials
@@ -157,7 +160,7 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 		Secret:  tokenSecret,
 	}
 
-	remoteCacheKey := fmt.Sprintf("remote|%s|%s|%s", apr.Address, apr.Realm, apr.Secret)
+	remoteCacheKey := credentialCacheKey("remote", apr)
 	if v.cache.Get(remoteCacheKey) != nil {
 		// This is the use case where remote authenticator was able to
 		// successfully authenticate user based on provided credentials
@@ -169,7 +172,7 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 		return nil
 	}
 
-	localCacheKey := fmt.Sprintf("local|%s|%s|%s", apr.Address, apr.Realm, apr.Secret)
+	localCacheKey := credentialCacheKey("local", apr)
 	if usr := v.cache.Get(localCacheKey); usr != nil {
 		// This is the use case where local authenticator was able to
 		// successfully authenticate user based on provided credentials
@@ -201,4 +204,9 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 	ar.Token.Found = true
 
 	return nil
+}
+
+func credentialCacheKey(kind string, r *authproxy.Request) string {
+	digest := sha256.Sum256([]byte(r.Secret))
+	return fmt.Sprintf("%s|%s|%s|%x", kind, r.Address, r.Realm, digest)
 }

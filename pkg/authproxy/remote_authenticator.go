@@ -85,6 +85,9 @@ func (r *RemoteAuthenticator) BasicAuth(apr *Request) error {
 		return err
 	}
 	creds := strings.SplitN(string(decodedSecret), ":", 2)
+	if len(creds) != 2 || strings.TrimSpace(creds[0]) == "" || creds[1] == "" {
+		return fmt.Errorf("invalid basic auth credentials")
+	}
 	messageData.Username = creds[0]
 	messageData.Password = creds[1]
 

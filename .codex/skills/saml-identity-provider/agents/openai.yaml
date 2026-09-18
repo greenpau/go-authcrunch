@@ -1,0 +1,4 @@
+interface:
+  display_name: "SAML Identity Provider"
+  short_description: "SAML Identity Provider maintenance and validation"
+  default_prompt: "Use $saml-identity-provider to maintain its implementation and tests."

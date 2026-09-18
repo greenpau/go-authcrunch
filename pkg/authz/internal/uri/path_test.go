@@ -174,7 +174,10 @@ func TestRequestPathsRequestTargets(t *testing.T) {
 }
 
 func TestRequestPathsEscapedRouting(t *testing.T) {
-	for _, target := range []string{"/public%2fadmin", "/public%2Fadmin", "/public/assets%2ffile"} {
+	for _, target := range []string{
+		"/public%2fadmin", "/public%2Fadmin", "/public/assets%2ffile",
+		`/public\..\admin`, "/public/%5c../admin", "/public/%255c../admin",
+	} {
 		req := httptest.NewRequest(http.MethodGet, target, nil)
 		if paths, valid := uri.RequestPaths(req); valid || paths != nil {
 			t.Fatalf("ambiguous encoded separator accepted: %q", target)

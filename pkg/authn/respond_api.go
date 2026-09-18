@@ -31,6 +31,9 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 	if strings.HasSuffix(r.URL.Path, "/api/refresh_token") || strings.HasSuffix(r.URL.Path, "/api/refresh_session") || strings.HasSuffix(r.URL.Path, "/api/logout") {
 		return p.handleAPIRefreshToken(ctx, w, r, rr)
 	}
+	if !validAPIRequestOrigin(r) {
+		return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
+	}
 	p.injectSessionID(ctx, w, r, rr)
 
 	p.logger.Debug(

@@ -65,6 +65,7 @@ type MfaToken struct {
 	Parameters       map[string]string `json:"parameters,omitempty" xml:"parameters,omitempty" yaml:"parameters,omitempty"`
 	Flags            map[string]bool   `json:"flags,omitempty" xml:"flags,omitempty" yaml:"flags,omitempty"`
 	SignatureCounter uint32            `json:"signature_counter,omitempty" xml:"signature_counter,omitempty" yaml:"signature_counter,omitempty"`
+	LastTOTPCounter  *uint64           `json:"last_totp_counter,omitempty" xml:"last_totp_counter,omitempty" yaml:"last_totp_counter,omitempty"`
 	Tags             []tagging.Tag     `json:"tags,omitempty" xml:"tags,omitempty" yaml:"tags,omitempty"`
 	Labels           []string          `json:"labels,omitempty" xml:"labels,omitempty" yaml:"labels,omitempty"`
 
@@ -429,7 +430,8 @@ func (p *MfaToken) WebAuthnRequest(payload string) (*WebAuthnAuthenticateRequest
 		return r, errors.ErrWebAuthnRequest.WithArgs("client data cross origin true is not supported")
 	}
 
-	// TODO(greenpau): Verify that the value of C.origin matches the Relying Party's origin.
+	// The identity-level VerifyWebAuthnRequest operation verifies C.origin
+	// against the trusted expected origin supplied by the portal.
 
 	// Verify that the rpIdHash in authData is the SHA-256 hash of the RP ID expected by
 	// the Relying Party.
@@ -493,15 +495,23 @@ func (p *MfaToken) ValidateCode(code string) error {
 
 // ValidateCodeWithTime validates a passcode at a particular time.
 func (p *MfaToken) ValidateCodeWithTime(code string, ts time.Time) error {
+	_, err := p.matchCodeWithTime(code, ts)
+	return err
+}
+
+// matchCodeWithTime validates a passcode and returns its TOTP counter. It is
+// deliberately stateless so enrollment and diagnostic checks do not consume a
+// login credential.
+func (p *MfaToken) matchCodeWithTime(code string, ts time.Time) (uint64, error) {
 	code = strings.TrimSpace(code)
 	if code == "" {
-		return errors.ErrMfaTokenInvalidPasscode.WithArgs("empty")
+		return 0, errors.ErrMfaTokenInvalidPasscode.WithArgs("empty")
 	}
 	if len(code) < 4 || len(code) > 8 {
-		return errors.ErrMfaTokenInvalidPasscode.WithArgs("not 4-8 characters long")
+		return 0, errors.ErrMfaTokenInvalidPasscode.WithArgs("not 4-8 characters long")
 	}
 	if len(code) != p.Digits {
-		return errors.ErrMfaTokenInvalidPasscode.WithArgs("digits length mismatch")
+		return 0, errors.ErrMfaTokenInvalidPasscode.WithArgs("digits length mismatch")
 	}
 	tp := uint64(math.Floor(float64(ts.Unix()) / float64(p.Period)))
 	tps := []uint64{}
@@ -514,10 +524,10 @@ func (p *MfaToken) ValidateCodeWithTime(code string, ts time.Time) error {
 			continue
 		}
 		if subtle.ConstantTimeCompare([]byte(localCode), []byte(code)) == 1 {
-			return nil
+			return uts, nil
 		}
 	}
-	return errors.ErrMfaTokenInvalidPasscode.WithArgs("failed")
+	return 0, errors.ErrMfaTokenInvalidPasscode.WithArgs("failed")
 }
 
 func generateMfaCode(secret, algo string, digits int, ts uint64) (string, error) {

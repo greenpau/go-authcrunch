@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	samllib "github.com/crewjam/saml"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 
@@ -205,5 +206,40 @@ func TestIdentityProviderSerialization(t *testing.T) {
 	config := provider.GetConfig()
 	if config["name"] != "private-config-name" || config["realm"] != "private-config-realm" {
 		t.Fatal("explicit configuration access changed")
+	}
+}
+
+func TestPinIDPSigningCertificateReplacesMetadataTrust(t *testing.T) {
+	metadata := &samllib.EntityDescriptor{IDPSSODescriptors: []samllib.IDPSSODescriptor{
+		{SSODescriptor: samllib.SSODescriptor{RoleDescriptor: samllib.RoleDescriptor{KeyDescriptors: []samllib.KeyDescriptor{
+			{Use: "signing", KeyInfo: samllib.KeyInfo{X509Data: samllib.X509Data{X509Certificates: []samllib.X509Certificate{{Data: "rogue-signing"}}}}},
+			{KeyInfo: samllib.KeyInfo{X509Data: samllib.X509Data{X509Certificates: []samllib.X509Certificate{{Data: "rogue-unspecified"}}}}},
+			{Use: "encryption", KeyInfo: samllib.KeyInfo{X509Data: samllib.X509Data{X509Certificates: []samllib.X509Certificate{{Data: "encryption"}}}}},
+		}}}},
+		{SSODescriptor: samllib.SSODescriptor{RoleDescriptor: samllib.RoleDescriptor{KeyDescriptors: []samllib.KeyDescriptor{
+			{Use: "signing", KeyInfo: samllib.KeyInfo{X509Data: samllib.X509Data{X509Certificates: []samllib.X509Certificate{{Data: "second-rogue"}}}}},
+		}}}},
+	}}
+	if err := pinIDPSigningCertificate(metadata, "trusted-pin"); err != nil {
+		t.Fatal(err)
+	}
+	var signing, encryption []string
+	for _, descriptor := range metadata.IDPSSODescriptors {
+		for _, key := range descriptor.KeyDescriptors {
+			for _, cert := range key.KeyInfo.X509Data.X509Certificates {
+				switch key.Use {
+				case "signing", "":
+					signing = append(signing, cert.Data)
+				case "encryption":
+					encryption = append(encryption, cert.Data)
+				}
+			}
+		}
+	}
+	if got := strings.Join(signing, ","); got != "trusted-pin" {
+		t.Fatalf("signing trust anchors = %q", got)
+	}
+	if got := strings.Join(encryption, ","); got != "encryption" {
+		t.Fatalf("encryption keys = %q", got)
 	}
 }

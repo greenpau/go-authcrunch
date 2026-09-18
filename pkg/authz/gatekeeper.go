@@ -16,8 +16,13 @@ package authz
 
 import (
 	"context"
+	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
@@ -26,11 +31,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
-
-	"strings"
-
-	"github.com/google/uuid"
-	"go.uber.org/zap"
 )
 
 // Gatekeeper is an auth.
@@ -92,7 +92,7 @@ func (g *Gatekeeper) configure() error {
 		if g.injectedHeaders == nil {
 			g.injectedHeaders = make(map[string]bool)
 		}
-		g.injectedHeaders[entry.Header] = true
+		g.injectedHeaders[http.CanonicalHeaderKey(entry.Header)] = true
 	}
 
 	// Load token configuration into key managers, extract token verification

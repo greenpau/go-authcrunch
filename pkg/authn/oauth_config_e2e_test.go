@@ -100,3 +100,35 @@ func TestE2EOAuthIdentityProviderDirectives(t *testing.T) {
 		}
 	}
 }
+
+func TestE2EOAuthNonceDirectiveRuntime(t *testing.T) {
+	for _, tc := range []struct {
+		name, failure string
+		disabled      bool
+		wantStatus    int
+	}{
+		{name: "disabled accepts omission", failure: "nonce omitted", disabled: true, wantStatus: http.StatusSeeOther},
+		{name: "enabled rejects omission", failure: "missing nonce", wantStatus: http.StatusUnauthorized},
+		{name: "enabled rejects mismatch", failure: "nonce", wantStatus: http.StatusUnauthorized},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			issuer := newOIDCE2EIssuer(t, "EdDSA", "opaque", tc.failure, false)
+			portal := newOIDCE2EPortal(t, issuer, "/tenant/auth", "HS512", "discovery", oidcE2ETrustConfig{nonceDisabled: tc.disabled})
+			token, _ := portal.login(t, tc.wantStatus)
+			status, body := portal.get(t, "/protected", token)
+			if tc.wantStatus == http.StatusSeeOther {
+				if status != http.StatusOK || string(body) != "protected-resource" {
+					t.Fatal("disabled-nonce login did not yield protected access")
+				}
+			} else if status == http.StatusOK || string(body) == "protected-resource" {
+				t.Fatal("invalid enabled-nonce login yielded protected access")
+			}
+			issuer.mu.Lock()
+			exchanges := issuer.exchanges
+			issuer.mu.Unlock()
+			if exchanges != 1 {
+				t.Fatal("test did not exercise a PKCE-bound authorization code exchange")
+			}
+		})
+	}
+}

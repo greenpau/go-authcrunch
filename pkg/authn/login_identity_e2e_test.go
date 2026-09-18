@@ -140,9 +140,13 @@ func newLoginIdentityConfiguredE2E(t *testing.T, refresh, provider, mfa bool, su
 }
 
 func loginIdentityTOTP() string {
+	return loginIdentityTOTPAt(time.Now())
+}
+
+func loginIdentityTOTPAt(at time.Time) string {
 	mac := hmac.New(sha1.New, []byte(loginIdentityTOTPSecret))
 	var counter [8]byte
-	binary.BigEndian.PutUint64(counter[:], uint64(time.Now().Unix()/30))
+	binary.BigEndian.PutUint64(counter[:], uint64(at.Unix()/30))
 	mac.Write(counter[:])
 	digest := mac.Sum(nil)
 	offset := digest[len(digest)-1] & 15
@@ -322,7 +326,7 @@ func TestE2ELoginIdentityMutation(t *testing.T) {
 				}
 				if flow == "html" {
 					factor := f.request(t, http.MethodPost, sandbox, url.Values{"passcode": {loginIdentityTOTP()}}, origin)
-					if factor.status != http.StatusUnauthorized && factor.status != http.StatusSeeOther {
+					if factor.status != http.StatusUnauthorized && factor.status != http.StatusForbidden && factor.status != http.StatusSeeOther {
 						t.Fatalf("unexpected checkpoint status %d", factor.status)
 					}
 					final := f.request(t, http.MethodGet, sandbox, nil, nil)

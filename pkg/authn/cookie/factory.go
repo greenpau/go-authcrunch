@@ -34,6 +34,7 @@ type Factory struct {
 	RefreshTokenCookieName  string `json:"refresh_token_cookie_name,omitempty" xml:"refresh_token_cookie_name,omitempty" yaml:"refresh_token_cookie_name,omitempty"`
 	OIDCSessionIDCookieName string `json:"oidc_session_id_cookie_name,omitempty" xml:"oidc_session_id_cookie_name,omitempty" yaml:"oidc_session_id_cookie_name,omitempty"`
 	OIDCRequestIDCookieName string `json:"oidc_request_id_cookie_name,omitempty" xml:"oidc_request_id_cookie_name,omitempty" yaml:"oidc_request_id_cookie_name,omitempty"`
+	SAMLSessionIDCookieName string `json:"saml_session_id_cookie_name,omitempty" xml:"saml_session_id_cookie_name,omitempty" yaml:"saml_session_id_cookie_name,omitempty"`
 }
 
 // NewFactory returns an instance of cookie factory.
@@ -80,6 +81,7 @@ func NewFactory(c *Config) (*Factory, error) {
 	f.RefreshTokenCookieName = f.config.RefreshTokenCookieName
 	f.OIDCSessionIDCookieName = f.config.OIDCSessionIDCookieName
 	f.OIDCRequestIDCookieName = f.config.OIDCRequestIDCookieName
+	f.SAMLSessionIDCookieName = f.config.SAMLSessionIDCookieName
 
 	hasOverlaps, duplicate := f.HasCookieNameOverlaps()
 	if hasOverlaps {
@@ -100,6 +102,7 @@ func (f *Factory) HasCookieNameOverlaps() (bool, string) {
 		"RefreshTokenCookieName":  f.RefreshTokenCookieName,
 		"OIDCSessionIDCookieName": f.OIDCSessionIDCookieName,
 		"OIDCRequestIDCookieName": f.OIDCRequestIDCookieName,
+		"SAMLSessionIDCookieName": f.SAMLSessionIDCookieName,
 	}
 
 	// seen stores: [cookie_value] -> field_name

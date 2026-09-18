@@ -80,6 +80,10 @@ const (
 	// OverwriteAuthChallengeRules operator signals overwriting authentication
 	// challenge rules for a user.
 	OverwriteAuthChallengeRules
+	// ConsumeMfaTOTP operator signals validation and consumption of a TOTP step.
+	ConsumeMfaTOTP
+	// EnrollMfaToken adds the first enabled factor during login enrollment.
+	EnrollMfaToken
 )
 
 // String returns string representation of an operator.
@@ -105,8 +109,12 @@ func (e Type) String() string {
 		return "GetMfaTokens"
 	case GetMfaToken:
 		return "GetMfaToken"
+	case ConsumeMfaTOTP:
+		return "ConsumeMfaTOTP"
 	case AddMfaToken:
 		return "AddMfaToken"
+	case EnrollMfaToken:
+		return "EnrollMfaToken"
 	case DeleteMfaToken:
 		return "DeleteMfaToken"
 	case GetUsers:

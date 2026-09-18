@@ -26,6 +26,9 @@ func TestProfileIdentitySnapshot(t *testing.T) {
 		t.Fatal("default identity fabricated personal attributes")
 	}
 	db.Users[0].Profile = &Profile{GivenName: "Test", PhoneNumber: "+1 202-555-0100", PhoneNumberVerified: new(false), Address: &Address{Country: "US"}}
+	if err := db.Save(); err != nil {
+		t.Fatal(err)
+	}
 	err := db.WithRefreshIdentity(t.Context(), r.Authentication, func(current RefreshIdentity) error {
 		if current.Profile == nil || current.Profile.GivenName != "Test" {
 			t.Fatal("profile missing in identity transaction")

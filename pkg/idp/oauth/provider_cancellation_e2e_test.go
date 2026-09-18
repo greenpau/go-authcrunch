@@ -28,6 +28,7 @@ import (
 
 	"go.uber.org/zap"
 
+	autherrors "github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
@@ -87,7 +88,7 @@ func TestE2EOAuthJwksAuthenticationCancellation(t *testing.T) {
 			t.Fatal("construct OAuth consumer request")
 		}
 		r := requests.NewRequest()
-		r.Upstream = requests.Upstream{BaseURL: "https://portal.example", Method: "oauth2", Realm: "test", Request: req}
+		r.Upstream = requests.Upstream{BaseURL: "https://portal.example", Method: "oauth2", Realm: "test", Request: req, SessionID: "synthetic-browser-session"}
 		return r
 	}
 	newCallback := func(ctx context.Context) *requests.Request {
@@ -140,5 +141,134 @@ func TestE2EOAuthJwksAuthenticationCancellation(t *testing.T) {
 	}
 	if fetches.Load() != 3 {
 		t.Fatal("unexpected discovery or authentication key refresh count")
+	}
+}
+
+func TestE2EOAuthTokenCallbackStateBinding(t *testing.T) {
+	key, private := newOAuthEdKey(t, "callback-key", "EdDSA")
+	var server *httptest.Server
+	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/metadata":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"issuer": server.URL, "authorization_endpoint": server.URL + "/authorize",
+				"token_endpoint": server.URL + "/token", "jwks_uri": server.URL + "/keys",
+			})
+		case "/keys":
+			_ = json.NewEncoder(w).Encode(map[string]any{"keys": []*JwksKey{key}})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	cfg := lifecycleOAuthConfig(server.URL)
+	provider, err := NewIdentityProvider(cfg, zap.NewNop())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer provider.Close()
+	if err := provider.Configure(); err != nil {
+		t.Fatal(err)
+	}
+
+	const browserSession = "matching-browser-session"
+	newRequest := func(sessionID string, query url.Values) *requests.Request {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://portal.example/oauth2/test?"+query.Encode(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := requests.NewRequest()
+		r.Upstream = requests.Upstream{
+			BaseURL: "https://portal.example", Method: "oauth2", Realm: "test",
+			Request: req, SessionID: sessionID,
+		}
+		return r
+	}
+
+	login := newRequest(browserSession, nil)
+	if err := provider.Authenticate(login); err != nil || login.Response.Code != http.StatusFound {
+		t.Fatalf("initiate login: code=%d error=%v", login.Response.Code, err)
+	}
+	redirect, err := url.Parse(login.Response.RedirectURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, nonce := redirect.Query().Get("state"), redirect.Query().Get("nonce")
+	if state == "" || nonce == "" {
+		t.Fatal("authorization redirect omitted state or nonce")
+	}
+	claims := oauthEdClaims()
+	claims["iss"], claims["aud"], claims["nonce"] = server.URL, cfg.ClientID, nonce
+	token := signOAuthEdToken(t, private, map[string]any{"alg": "EdDSA", "kid": key.KeyID}, claims)
+	validQuery := url.Values{"state": {state}, "id_token": {token}, "access_token": {"opaque"}}
+
+	wrongBrowser := newRequest("different-browser", validQuery)
+	if err := provider.Authenticate(wrongBrowser); err == nil || err.Error() != autherrors.ErrIdentityProviderOauthAuthorizationStateNotFound.Error() {
+		t.Fatalf("wrong-browser Authenticate() error = %v, want %v", err, autherrors.ErrIdentityProviderOauthAuthorizationStateNotFound)
+	}
+	valid := newRequest(browserSession, validQuery)
+	if err := provider.Authenticate(valid); err != nil || valid.Response.Code != http.StatusOK {
+		t.Fatalf("matching token callback: code=%d error=%v", valid.Response.Code, err)
+	}
+	identity, ok := valid.Response.Payload.(map[string]any)
+	if !ok || identity["sub"] != "ed-user" {
+		t.Fatal("matching callback did not return signed identity")
+	}
+
+	// A disabled-nonce transaction accepts an independently signed identity
+	// token with no nonce while retaining the browser and single-use state
+	// boundary. Changing the live flag afterward cannot change its policy.
+	provider.disableNonce = true
+	disabledLogin := newRequest(browserSession, nil)
+	if err := provider.Authenticate(disabledLogin); err != nil || disabledLogin.Response.Code != http.StatusFound {
+		t.Fatalf("initiate disabled-nonce login: code=%d error=%v", disabledLogin.Response.Code, err)
+	}
+	disabledRedirect, err := url.Parse(disabledLogin.Response.RedirectURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabledState := disabledRedirect.Query().Get("state")
+	if disabledState == "" || disabledRedirect.Query().Has("nonce") {
+		t.Fatal("disabled-nonce authorization redirect has invalid state or nonce")
+	}
+	disabledClaims := oauthEdClaims()
+	disabledClaims["iss"], disabledClaims["aud"] = server.URL, cfg.ClientID
+	delete(disabledClaims, "nonce")
+	disabledToken := signOAuthEdToken(t, private, map[string]any{"alg": "EdDSA", "kid": key.KeyID}, disabledClaims)
+	disabledQuery := url.Values{"state": {disabledState}, "id_token": {disabledToken}, "access_token": {"opaque"}}
+
+	wrongDisabledBrowser := newRequest("different-browser", disabledQuery)
+	if err := provider.Authenticate(wrongDisabledBrowser); err == nil || err.Error() != autherrors.ErrIdentityProviderOauthAuthorizationStateNotFound.Error() {
+		t.Fatalf("disabled-nonce wrong-browser error = %v", err)
+	}
+	provider.disableNonce = false
+	disabledValid := newRequest(browserSession, disabledQuery)
+	if err := provider.Authenticate(disabledValid); err != nil || disabledValid.Response.Code != http.StatusOK {
+		t.Fatalf("disabled-nonce matching callback: code=%d error=%v", disabledValid.Response.Code, err)
+	}
+	if identity, ok := disabledValid.Response.Payload.(map[string]any); !ok || identity["sub"] != "ed-user" {
+		t.Fatal("disabled-nonce callback did not return signed identity")
+	}
+
+	for _, tc := range []struct {
+		name      string
+		sessionID string
+		query     url.Values
+	}{
+		{name: "missing state", sessionID: browserSession, query: url.Values{"id_token": {disabledToken}, "access_token": {"opaque"}}},
+		{name: "wrong state", sessionID: browserSession, query: url.Values{"state": {"unrelated"}, "id_token": {disabledToken}, "access_token": {"opaque"}}},
+		{name: "reused state", sessionID: browserSession, query: disabledQuery},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			callback := newRequest(tc.sessionID, tc.query)
+			err := provider.Authenticate(callback)
+			if err == nil || err.Error() != autherrors.ErrIdentityProviderOauthAuthorizationStateNotFound.Error() {
+				t.Fatalf("Authenticate() error = %v, want %v", err, autherrors.ErrIdentityProviderOauthAuthorizationStateNotFound)
+			}
+			if callback.Response.Code == http.StatusOK || callback.Response.Payload != nil {
+				t.Fatal("rejected callback returned identity evidence")
+			}
+		})
 	}
 }

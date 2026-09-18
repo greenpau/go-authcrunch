@@ -111,7 +111,7 @@ func (p oauthAuthenticateRequestParams) isOAuthResponse() bool {
 	return p.stateExists || p.errorExists || p.codeExists || p.accessTokenExists
 }
 
-func (b *IdentityProvider) prepareAuthorizationRedirectURL(reqPath string, reqParams oauthAuthenticateRequestParams, state, nonce, sessionID, requestID string) (*preparedAuthorizationRedirectURL, error) {
+func (b *IdentityProvider) prepareAuthorizationRedirectURL(reqPath string, reqParams oauthAuthenticateRequestParams, state, nonce string, nonceRequired bool, sessionID, requestID string) (*preparedAuthorizationRedirectURL, error) {
 	authorizationURL, err := url.Parse(b.authorizationURL)
 	if err != nil {
 		return nil, errors.ErrIdentityProviderConfig.WithArgs("could not parse authorization url")
@@ -119,8 +119,10 @@ func (b *IdentityProvider) prepareAuthorizationRedirectURL(reqPath string, reqPa
 
 	params := authorizationURL.Query()
 	params.Set("state", state)
-	if !b.disableNonce {
+	if nonceRequired {
 		params.Set("nonce", nonce)
+	} else {
+		params.Del("nonce")
 	}
 	if !b.disableScope {
 		scopes := b.config.Scopes

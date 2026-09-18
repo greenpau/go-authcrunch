@@ -383,6 +383,13 @@ func (sa *Authenticator) AddMfaToken(r *requests.Request) error {
 	return sa.db.AddMfaToken(r)
 }
 
+// EnrollMfaToken adds the first enabled MFA factor during login enrollment.
+func (sa *Authenticator) EnrollMfaToken(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.EnrollMfaToken(r)
+}
+
 // DeleteMfaToken removes MFA token associated with the user.
 func (sa *Authenticator) DeleteMfaToken(r *requests.Request) error {
 	sa.mux.Lock()
@@ -402,6 +409,13 @@ func (sa *Authenticator) GetMfaToken(r *requests.Request) error {
 	sa.mux.Lock()
 	defer sa.mux.Unlock()
 	return sa.db.GetMfaToken(r)
+}
+
+// ConsumeMfaTOTP validates and consumes a TOTP time step for a user.
+func (sa *Authenticator) ConsumeMfaTOTP(r *requests.Request) error {
+	sa.mux.Lock()
+	defer sa.mux.Unlock()
+	return sa.db.ConsumeMfaTOTP(r)
 }
 
 // IdentifyUser returns user challenges.

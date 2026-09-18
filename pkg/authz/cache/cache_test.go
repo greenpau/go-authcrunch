@@ -16,6 +16,7 @@ package cache
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -81,7 +82,9 @@ func TestTokenCache(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			err = ks.SignToken("access_token", "HS512", usr)
+			if err = ks.SignToken("access_token", "HS512", usr); err != nil {
+				t.Fatalf("unexpected signing error: %v", err)
+			}
 			if tc.emptyToken {
 				usr.Token = ""
 			}
@@ -182,6 +185,60 @@ func TestTokenCacheAddStoresIsolatedUser(t *testing.T) {
 	}
 	if got.GetRequestIdentity()["id"] == "mutated@example.com" {
 		t.Fatal("expected cached request identity to be isolated from caller identity")
+	}
+}
+
+func TestTokenCacheCapacityIsBoundedAndReclaimsExpiredEntries(t *testing.T) {
+	c := NewTokenCache(0)
+	t.Cleanup(c.Close)
+	c.capacity = 1
+	first := testutils.NewTestUser()
+	first.Token = "first"
+	first.Claims.ExpiresAt = time.Now().Add(time.Minute).Unix()
+	second := first.Clone()
+	second.Token = "second"
+	if err := c.Add(first); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Add(second); err == nil {
+		t.Fatal("full token cache accepted a distinct entry")
+	}
+	if second.Cached {
+		t.Fatal("rejected entry was marked cached")
+	}
+	c.mu.Lock()
+	c.Entries[first.Token].Claims.ExpiresAt = time.Now().Add(-time.Second).Unix()
+	c.mu.Unlock()
+	if err := c.Add(second); err != nil {
+		t.Fatalf("expired entry did not release capacity: %v", err)
+	}
+	if got := c.Get(second.Token); got == nil {
+		t.Fatal("replacement entry was not cached")
+	}
+}
+
+func TestTokenCacheConcurrentCapacity(t *testing.T) {
+	c := NewTokenCache(0)
+	t.Cleanup(c.Close)
+	c.capacity = 32
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := range 128 {
+		wg.Go(func() {
+			usr := testutils.NewTestUser()
+			usr.Token = fmt.Sprintf("concurrent-%d", i)
+			usr.Claims.ExpiresAt = time.Now().Add(time.Minute).Unix()
+			<-start
+			_ = c.Add(usr)
+		})
+	}
+	close(start)
+	wg.Wait()
+	c.mu.RLock()
+	size := len(c.Entries)
+	c.mu.RUnlock()
+	if size != c.capacity {
+		t.Fatalf("concurrent cache size=%d, want capacity %d", size, c.capacity)
 	}
 }
 

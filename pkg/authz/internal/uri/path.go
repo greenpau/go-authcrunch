@@ -61,9 +61,12 @@ func RequestPaths(r *http.Request) ([]string, bool) {
 	if !strings.HasPrefix(escaped, "/") {
 		escaped = "/" + escaped
 	}
-	// Segment-aware routers retain escaped slashes as data, unlike URL.Path.
-	// There is no unambiguous path grant for these different segment layouts.
-	if strings.Contains(strings.ToLower(escaped), "%2f") {
+	// Segment-aware routers retain escaped separators as data, unlike
+	// URL.Path. Backslash is also a separator for Windows and for some
+	// application routers. There is no unambiguous path grant when these
+	// interpretations disagree.
+	escapedLower := strings.ToLower(escaped)
+	if strings.Contains(escapedLower, "%2f") || strings.Contains(escapedLower, "%5c") {
 		return nil, false
 	}
 	if escaped != s && strings.Contains(escaped, "%") {
@@ -82,7 +85,7 @@ func RequestPaths(r *http.Request) ([]string, bool) {
 	for pass := 0; len(pending) != 0; pass++ {
 		var next []string
 		for _, original := range pending {
-			if !utf8.ValidString(original) {
+			if !utf8.ValidString(original) || strings.Contains(original, `\`) {
 				return nil, false
 			}
 			normalized := path.Clean(original)

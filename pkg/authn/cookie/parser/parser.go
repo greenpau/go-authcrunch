@@ -35,7 +35,7 @@ import (
 // "cookie prefix <value>" covers every role, including OIDC session/request IDs.
 // "cookie <role> name <value>" overrides a name: roles are session id, referer,
 // sandbox id, identity token, access token, refresh token, oidc session id, and
-// oidc request id. "redirect url" aliases referer; "id token" aliases identity
+// oidc request id, and saml session id. "redirect url" aliases referer; "id token" aliases identity
 // token. Explicit names win regardless of statement order, even names equal to
 // an old default. Each prefix/name setting occurs once across aliases.
 //
@@ -144,6 +144,7 @@ func nameFields(c *cookie.Config) map[string]*string {
 		"sandbox id": &c.SandboxIDCookieName, "identity token": &c.IdentityTokenCookieName,
 		"access token": &c.AccessTokenCookieName, "refresh token": &c.RefreshTokenCookieName,
 		"oidc session id": &c.OIDCSessionIDCookieName, "oidc request id": &c.OIDCRequestIDCookieName,
+		"saml session id": &c.SAMLSessionIDCookieName,
 	}
 }
 

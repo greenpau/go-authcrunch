@@ -1,0 +1,4 @@
+interface:
+  display_name: "Local Identity Database"
+  short_description: "Local Identity Database maintenance and validation"
+  default_prompt: "Use $local-identity-database to maintain its implementation and tests."

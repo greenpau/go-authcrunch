@@ -362,6 +362,9 @@ func (user *User) VerifyWebAuthnRequest(r *requests.Request) error {
 		if resp == nil {
 			return errors.ErrWebAuthnVerifyRequest
 		}
+		if r.WebAuthn.ExpectedOrigin == "" || resp.ClientData == nil || resp.ClientData.Origin == "" || resp.ClientData.Origin != r.WebAuthn.ExpectedOrigin {
+			return errors.ErrWebAuthnVerifyRequest
+		}
 		if resp.ClientData.Challenge != r.WebAuthn.Challenge {
 			return errors.ErrWebAuthnVerifyRequest
 		}

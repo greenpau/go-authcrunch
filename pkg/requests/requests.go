@@ -146,6 +146,9 @@ type WebAuthn struct {
 	Register  string `json:"register,omitempty" xml:"register,omitempty" yaml:"register,omitempty"`
 	Challenge string `json:"challenge,omitempty" xml:"challenge,omitempty" yaml:"challenge,omitempty"`
 	Request   string `json:"request,omitempty" xml:"request,omitempty" yaml:"request,omitempty"`
+	// ExpectedOrigin is trusted server metadata for assertion validation. It is
+	// never accepted from JSON, XML, or YAML request payloads.
+	ExpectedOrigin string `json:"-" xml:"-" yaml:"-"`
 }
 
 // Flags holds various flags.

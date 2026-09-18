@@ -98,6 +98,9 @@ func parseBasicAuthHeader(r *http.Request) (map[string]string, error) {
 				return nil, err
 			}
 			creds := strings.SplitN(string(arrDecoded), ":", 2)
+			if len(creds) != 2 {
+				return nil, fmt.Errorf("invalid authorization credentials")
+			}
 			kv["username"] = creds[0]
 			kv["password"] = creds[1]
 		case strings.HasPrefix(header, "Realm") || strings.HasPrefix(header, "realm"):

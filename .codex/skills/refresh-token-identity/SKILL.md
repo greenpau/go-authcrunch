@@ -34,6 +34,12 @@ access keeps its canonical `sub`; OIDC keeps its immutable derived subject and
 backend UserInfo attributes. A transformed subject never becomes a backend
 lookup key or an OIDC/refresh proof username.
 
+Cached access-only users retain LoginEvidence, canonical LoginUsername/LoginEmail,
+and an independent LoginMethods slice. Renewed users reconstruct those fields
+from the server-only cloned `tokenrefresh.Result.Principal` and current backend
+identity, never transformed access claims. Profile self-service consumes this
+metadata through [its bound adapter](../authentication-portal-profile/SKILL.md).
+
 ## Ownership and Evidence
 
 `pkg/authn/login_proof.go`, `sandbox_user.go`, `handle_http_sandbox.go`, and
@@ -65,18 +71,21 @@ exposes `RevokeUserSessions(ctx, immutableUserID)`. The persisted
 mutations advance it without rewriting every existing account in bulk.
 
 In `pkg/identity/database.go`, password change/reset/update, MFA add/delete,
-account disable/enable, and challenge-rule changes must invalidate captured
+account disable/enable, role changes, and challenge-rule changes must invalidate captured
 versions. Explicit session revocation uses the same boundary. Deletion denies
 lookup; recreating a username must not reuse its immutable ID. Database reload
 changes `LoadedAt` evidence so restoring an older file cannot restore refresh
 eligibility.
 
 Read current account state and re-evaluate required challenges on every
-issuance. Role changes use fresh attributes rather than invalidating solely
-because roles changed; new challenge requirements must already be satisfied
-by verified evidence. A subject rename requires fresh login.
+issuance. Role changes advance CredentialVersion and require a new login; otherwise
+cached profile roles could retain credential-management authority. New challenge
+requirements must already be satisfied by verified evidence. A subject rename requires fresh login.
 
-`WithRefreshIdentity` holds the local database lock through transformations,
+Use [local identity database](../local-identity-database/SKILL.md) for durable
+locking, cross-instance revisions, snapshot adoption, TOTP and bound profile
+operations. File-backed `WithRefreshIdentity` holds the canonical file lock as
+well as the local database lock through transformations,
 signing, and the store commit. Security mutation therefore cannot interleave
 between checking the credential version and returning credentials. Preserve
 lock order and avoid re-entering the database from that callback. Any future

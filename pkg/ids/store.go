@@ -50,6 +50,12 @@ type IdentityStore interface {
 	GetLoginIcon() *icons.LoginIcon
 }
 
+// IdentityRequestStore is an optional identity-store capability for profile
+// operations bound to the immutable authentication evidence in the request.
+type IdentityRequestStore interface {
+	RequestWithIdentity(operator.Type, *requests.Request) error
+}
+
 // NewIdentityStore returns IdentityStore instance.
 func NewIdentityStore(cfg *IdentityStoreConfig, logger *zap.Logger) (IdentityStore, error) {
 	var st IdentityStore

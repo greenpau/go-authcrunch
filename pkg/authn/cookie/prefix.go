@@ -102,6 +102,9 @@ func (c *Config) validatePrefixes() error {
 			return err
 		}
 	}
+	if err := ValidatePrefix(c.SAMLSessionIDCookieName, "", "/", true); err != nil {
+		return fmt.Errorf("SAML session cookie: %w", err)
+	}
 	// Active refresh and OIDC runtimes own their stricter security and mount
 	// checks. Their names must not inherit legacy refresh-path restrictions.
 	return nil

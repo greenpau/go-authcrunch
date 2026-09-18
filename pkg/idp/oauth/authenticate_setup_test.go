@@ -52,6 +52,7 @@ func mustPrepareAndFinalizeAuthorizationRedirect(t *testing.T, provider *Identit
 		params,
 		authorizationSetupTestState,
 		authorizationSetupTestNonce,
+		!provider.disableNonce,
 		authorizationSetupTestSession,
 		authorizationSetupTestRequest,
 	)
@@ -409,6 +410,7 @@ func TestResponseTypeCanBeDisabled(t *testing.T) {
 func TestNonceCanBeDisabled(t *testing.T) {
 	provider := newGoogleAuthorizationSetupTestProvider()
 	provider.disableNonce = true
+	provider.authorizationURL += "?nonce=configured-value"
 
 	redirect := mustPrepareAndFinalizeAuthorizationRedirect(t, provider, parseOAuthAuthenticateRequestParams(url.Values{}))
 	query := mustParseRedirectQuery(t, redirect)
@@ -454,6 +456,7 @@ func TestInvalidAuthorizationURLFailsBeforePKCE(t *testing.T) {
 		parseOAuthAuthenticateRequestParams(url.Values{}),
 		authorizationSetupTestState,
 		authorizationSetupTestNonce,
+		!provider.disableNonce,
 		authorizationSetupTestSession,
 		authorizationSetupTestRequest,
 	)

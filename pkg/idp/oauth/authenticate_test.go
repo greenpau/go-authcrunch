@@ -310,6 +310,7 @@ func TestAuthenticate(t *testing.T) {
 				return
 			}
 
+			tc.request.Upstream.SessionID = "synthetic-browser-session"
 			err = prv.Authenticate(&tc.request)
 			if tests.EvalErrPhaseWithLog(t, err, "authenticate", tc.errPhase, tc.shouldErr, tc.err, msgs) {
 				return

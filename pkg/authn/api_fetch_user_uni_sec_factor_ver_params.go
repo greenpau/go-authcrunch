@@ -16,16 +16,13 @@ package authn
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
-	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
 // FetchUserUniSecFactorVerParams fetches U2F authenticator verification parameters.
@@ -67,7 +64,12 @@ func (p *Portal) FetchUserUniSecFactorVerParams(
 	params := make(map[string]interface{})
 	allowedCredential := make(map[string]interface{})
 
-	token, err := identity.NewMfaToken(rr)
+	binding, err := getWebAuthnEnrollmentBinding(r, rr, usr, "profile")
+	if err != nil {
+		resp["message"] = errWebAuthnEnrollment.Error()
+		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+	}
+	token, challenge, err := p.webAuthnEnrollments.prepare(binding, rr)
 	if err != nil {
 		resp["message"] = fmt.Errorf("the Profile API received malformed U2F token in the request payload: %v", err)
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
@@ -85,8 +87,7 @@ func (p *Portal) FetchUserUniSecFactorVerParams(
 		}
 	}
 
-	randomStr := util.GetRandomStringFromRange(64, 92)
-	params["challenge"] = strings.TrimRight(base64.StdEncoding.EncodeToString([]byte(randomStr)), "=")
+	params["challenge"] = challenge
 	params["rp_name"] = "AuthCrunch"
 	// params["rp_id"] = "auth.authcrunch.com"
 	params["timeout"] = 60000

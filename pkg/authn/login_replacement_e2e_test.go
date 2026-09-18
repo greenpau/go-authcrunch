@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
@@ -29,6 +30,10 @@ import (
 )
 
 func replacementLogin(t *testing.T, f *oidcE2EFixture, username, realm, transport, password string, mfa bool, headers http.Header) (oidcE2EResponse, apiauth.AuthResponse) {
+	return replacementLoginWithTOTPOffset(t, f, username, realm, transport, password, mfa, headers, 0)
+}
+
+func replacementLoginWithTOTPOffset(t *testing.T, f *oidcE2EFixture, username, realm, transport, password string, mfa bool, headers http.Header, totpOffset time.Duration) (oidcE2EResponse, apiauth.AuthResponse) {
 	t.Helper()
 	req := apiauth.AuthRequest{Username: username, Realm: realm, RefreshTransport: transport}
 	start := loginIdentityResponse(t, f.jsonRequest(t, "/login", req, "", headers))
@@ -41,7 +46,7 @@ func replacementLogin(t *testing.T, f *oidcE2EFixture, username, realm, transpor
 			t.Fatal("password bypassed required MFA")
 		}
 		req.SandboxID, req.SandboxSecret = result.SandboxID, result.SandboxSecret
-		req.ChallengeKind, req.ChallengeResponse = result.NextChallenge, loginIdentityTOTP()
+		req.ChallengeKind, req.ChallengeResponse = result.NextChallenge, loginIdentityTOTPAt(time.Now().Add(totpOffset))
 		response = f.jsonRequest(t, "/login", req, "", headers)
 		result = loginIdentityResponse(t, response)
 	}
@@ -90,7 +95,7 @@ func TestE2EJSONBrowserSessionReplacement(t *testing.T) {
 					} else if mfa {
 						username, password = "alice", tests.TestPwd1
 					}
-					_, second := replacementLogin(t, f, username, realm, "", password, mfa, origin)
+					_, second := replacementLoginWithTOTPOffset(t, f, username, realm, "", password, mfa, origin, 30*time.Second)
 					oldBrowser := replacementClientWithoutJar(f)
 					oldHeaders := http.Header{"Origin": {f.server.URL}, "X-Authcrunch-Refresh": {"1"}, "Cookie": {cookies.RefreshTokenCookieName + "=" + oldRefresh}}
 					oidcE2EStatus(t, oldBrowser.jsonRequest(t, "/api/refresh_token", map[string]any{}, "", oldHeaders), http.StatusUnauthorized)

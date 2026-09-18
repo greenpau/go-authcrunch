@@ -17,22 +17,53 @@ package saml
 import (
 	"encoding/base64"
 	"fmt"
+	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"time"
 
+	samllib "github.com/crewjam/saml"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 
 	"go.uber.org/zap"
 )
 
-// Authenticate performs authentication.
+// Authenticate performs authentication. The embedding application must supply
+// Upstream.SessionID as dedicated SAML browser-binding proof on both the
+// initiating request and callback. The portal consumer derives it from its
+// protected, distinct SAML cookie. RelayState is a separate, unpredictable
+// transaction identifier and never acts as a callback destination.
 func (b *IdentityProvider) Authenticate(r *requests.Request) error {
-	r.Response.Code = 400
-	if r.Upstream.Request.Method != "POST" {
-		r.Response.Code = 302
-		r.Response.RedirectURL = b.loginURL
+	r.Response.Code = http.StatusBadRequest
+	callbackURL := r.Upstream.BaseURL + path.Join(r.Upstream.BasePath, r.Upstream.Method, r.Upstream.Realm)
+	sp, serviceProviderExists := b.serviceProviders[callbackURL]
+	if !serviceProviderExists {
+		return fmt.Errorf("unsupported ACS URL %s", callbackURL)
+	}
+	if r.Upstream.Request.Method == http.MethodGet {
+		if r.Upstream.SessionID == "" {
+			return fmt.Errorf("SAML browser binding is missing")
+		}
+		authnRequest, err := sp.MakeAuthenticationRequest(b.loginURL, samllib.HTTPRedirectBinding, samllib.HTTPPostBinding)
+		if err != nil {
+			return fmt.Errorf("failed creating SAML authentication request: %w", err)
+		}
+		relayState, err := b.state.add(r.Upstream.SessionID, callbackURL, authnRequest.ID)
+		if err != nil {
+			return err
+		}
+		redirectURL, err := authnRequest.Redirect(relayState, sp)
+		if err != nil {
+			b.state.del(relayState)
+			return fmt.Errorf("failed creating SAML authentication redirect: %w", err)
+		}
+		r.Response.Code = http.StatusFound
+		r.Response.RedirectURL = redirectURL.String()
 		return nil
+	}
+	if r.Upstream.Request.Method != http.MethodPost {
+		return fmt.Errorf("request method is not GET or POST")
 	}
 
 	if 500 > r.Upstream.Request.ContentLength || r.Upstream.Request.ContentLength > 30000 {
@@ -45,43 +76,30 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	if err := r.Upstream.Request.ParseForm(); err != nil {
 		return fmt.Errorf("failed to parse form: %v", err)
 	}
-	if r.Upstream.Request.FormValue("SAMLResponse") == "" {
-		return fmt.Errorf("request from has no SAMLResponse field")
+	responseValues := r.Upstream.Request.PostForm["SAMLResponse"]
+	if len(responseValues) != 1 || responseValues[0] == "" {
+		return fmt.Errorf("request form must have exactly one SAMLResponse field")
 	}
-	samlResponseBytes, err := base64.StdEncoding.DecodeString(r.Upstream.Request.FormValue("SAMLResponse"))
+	relayStateValues := r.Upstream.Request.PostForm["RelayState"]
+	if len(relayStateValues) != 1 || relayStateValues[0] == "" {
+		return fmt.Errorf("request form must have exactly one RelayState field")
+	}
+	requestID, ok := b.state.consume(relayStateValues[0], r.Upstream.SessionID, callbackURL)
+	if !ok {
+		return fmt.Errorf("SAML RelayState browser binding is invalid or expired")
+	}
+	samlResponseBytes, err := base64.StdEncoding.DecodeString(responseValues[0])
 	if err != nil {
 		return fmt.Errorf("failed to decode SAMLResponse: %v", err)
-	}
-	acsURL := ""
-	s := string(samlResponseBytes)
-	for _, elem := range []string{"Destination=\""} {
-		i := strings.Index(s, elem)
-		if i < 0 {
-			continue
-		}
-		j := strings.Index(s[i+len(elem):], "\"")
-		if j < 0 {
-			continue
-		}
-		acsURL = s[i+len(elem) : i+len(elem)+j]
-	}
-
-	if acsURL == "" {
-		return fmt.Errorf("failed to parse ACS URL")
 	}
 
 	if b.config.Driver == "azure" {
 		if !strings.Contains(r.Upstream.Request.Header.Get("Origin"), "login.microsoftonline.com") && !strings.Contains(r.Upstream.Request.Header.Get("Referer"), "windowsazure.com") {
-			return fmt.Errorf("Origin does not contain login.microsoftonline.com and Referer is not windowsazure.com")
+			return fmt.Errorf("origin does not contain login.microsoftonline.com and Referer is not windowsazure.com")
 		}
 	}
 
-	sp, serviceProviderExists := b.serviceProviders[acsURL]
-	if !serviceProviderExists {
-		return fmt.Errorf("unsupported ACS URL %s", acsURL)
-	}
-
-	samlAssertions, err := sp.ParseXMLResponse(samlResponseBytes, []string{""}, sp.AcsURL)
+	samlAssertions, err := sp.ParseXMLResponse(samlResponseBytes, []string{requestID}, sp.AcsURL)
 	if err != nil {
 		return fmt.Errorf("failed to ParseXMLResponse: %s", err)
 	}

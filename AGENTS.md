@@ -147,3 +147,16 @@ Use `identity-public-keys` for user-owned GPG/SSH public-key parsing, profile AP
 registration, persisted identity compatibility, and OpenPGP dependency changes.
 Portal signing-key publication and admin private-key export belong to
 `authentication-portal-jwks`.
+
+## Local Identity Transactions and Profile
+
+Use `local-identity-database` for file locking, atomic persistence, cross-instance
+revocation, TOTP state and identity-bound operations. Use
+`authentication-portal-profile` for local self-service authorization, canonical
+identity and API browser-origin checks. Use `authentication-portal-mfa` for
+TOTP/WebAuthn checkpoints and enrollment.
+
+## SAML Identity Providers
+
+Use `saml-identity-provider` for upstream signed assertions, SP-initiated browser
+binding, ACS validation and authoritative signing-certificate pins.

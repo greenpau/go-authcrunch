@@ -35,6 +35,11 @@ key parsing, profile registration, persisted formats, and OpenPGP dependencies.
 Use [authentication-portal-oidc](../authentication-portal-oidc/SKILL.md) for the
 portal acting as a downstream OpenID Provider, including client registration,
 authorization grants, consent, dedicated keys, and conformance.
+Use [local-identity-database](../local-identity-database/SKILL.md) for durable
+identity transactions, [authentication-portal-profile](../authentication-portal-profile/SKILL.md)
+for self-service credential operations, [authentication-portal-mfa](../authentication-portal-mfa/SKILL.md)
+for factor checkpoints/enrollment, and [saml-identity-provider](../saml-identity-provider/SKILL.md)
+for upstream SAML trust and browser binding.
 Use `authentication-client` for reusable portal login clients and CLI credential
 handling. Use `authdbctl` for CLI commands, terminal behavior, and executable E2E
 tests.

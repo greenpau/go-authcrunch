@@ -74,9 +74,11 @@ type Config struct {
 	KeyVerificationDisabled bool `json:"key_verification_disabled,omitempty" xml:"key_verification_disabled,omitempty" yaml:"key_verification_disabled,omitempty"`
 	PassGrantTypeDisabled   bool `json:"pass_grant_type_disabled,omitempty" xml:"pass_grant_type_disabled,omitempty" yaml:"pass_grant_type_disabled,omitempty"`
 	ResponseTypeDisabled    bool `json:"response_type_disabled,omitempty" xml:"response_type_disabled,omitempty" yaml:"response_type_disabled,omitempty"`
-	NonceDisabled           bool `json:"nonce_disabled,omitempty" xml:"nonce_disabled,omitempty" yaml:"nonce_disabled,omitempty"`
-	ScopeDisabled           bool `json:"scope_disabled,omitempty" xml:"scope_disabled,omitempty" yaml:"scope_disabled,omitempty"`
-	PKCEDisabled            bool `json:"pkce_disabled,omitempty" xml:"pkce_disabled,omitempty" yaml:"pkce_disabled,omitempty"`
+	// NonceDisabled omits the authorization nonce and its token-claim check for
+	// login transactions initiated with this policy.
+	NonceDisabled bool `json:"nonce_disabled,omitempty" xml:"nonce_disabled,omitempty" yaml:"nonce_disabled,omitempty"`
+	ScopeDisabled bool `json:"scope_disabled,omitempty" xml:"scope_disabled,omitempty" yaml:"scope_disabled,omitempty"`
+	PKCEDisabled  bool `json:"pkce_disabled,omitempty" xml:"pkce_disabled,omitempty" yaml:"pkce_disabled,omitempty"`
 
 	AcceptHeaderEnabled bool `json:"accept_header_enabled,omitempty" xml:"accept_header_enabled,omitempty" yaml:"accept_header_enabled,omitempty"`
 

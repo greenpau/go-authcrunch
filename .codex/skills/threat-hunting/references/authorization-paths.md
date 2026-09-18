@@ -29,7 +29,9 @@ opaque targets, authority-form CONNECT (which names a host and port, not `/`),
 and the server-wide `*` target fail path checks. CONNECT with a real URL path
 remains supported. Do not grant a tunnel solely because its absent path became `/`.
 
-Reject invalid UTF-8 before cleaning at every decoding stage, even if cleaning
+Reject literal backslashes and encoded backslashes at every decoding stage;
+Windows-style downstream normalization must not turn a granted child into a
+protected parent. Reject invalid UTF-8 before cleaning at every decoding stage, even if cleaning
 would erase the offending segment. Go's regexp matcher treats malformed bytes
 as U+FFFD; `ServeMux` compares decoded segment bytes. A regex grant for a valid
 U+FFFD directory could otherwise admit `/public/%FF/file` to a different
@@ -66,7 +68,7 @@ rules. Do not silently turn administrator regex rules into literal patterns.
 
 The supported normalization model is URL percent decoding plus POSIX path
 cleaning, starting from `URL.Path`. It does not prove equivalence for backend
-case folding, backslash separators, matrix parameters, Unicode normalization,
+case folding, matrix parameters, Unicode normalization,
 symlinks, selective decoding, or rewrites after authorization. Embedding servers
 must align those routing semantics and any escaped-path-only resource identities
 with their policy. Raw query and authority fields are not path ACL inputs.
@@ -120,7 +122,8 @@ go test ./pkg/authz/internal/uri -run '^$' -fuzz '^FuzzRequestPaths$' -fuzztime=
 go test ./pkg/acl -run '^$' -fuzz '^FuzzMatchPathBasedACL$' -fuzztime=30s -parallel=4
 ```
 
-Encoded slash and invalid UTF-8 requests are rejected by path-based checks. A
+Encoded slash, literal/encoded backslash and invalid UTF-8 requests are rejected
+by path-based checks. A
 path normalization change can also intentionally reject requests whose original
 form is forbidden even when their cleaned form is allowed. Record this
 compatibility effect and any correction to previously interpreted regex syntax

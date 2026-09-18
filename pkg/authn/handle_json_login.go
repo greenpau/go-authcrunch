@@ -123,9 +123,15 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			// including when the caller supplied an email address or mixed case.
 			rr.User.Username = usr.LoginUsername
 			rr.User.Password = authRequest.ChallengeResponse
-			if err := backend.Request(operator.Authenticate, rr); err != nil {
+			if err := p.authenticatePassword(addrutil.GetSourceAddress(r), func() error {
+				return backend.Request(operator.Authenticate, rr)
+			}); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
 				checkpoint.FailedAttempts++
+				if err == errPasswordAttemptLimited {
+					rr.Response.Code = http.StatusTooManyRequests
+					return err
+				}
 				p.logger.Warn(
 					"password authentication failed",
 					zap.String("session_id", rr.Upstream.SessionID),
@@ -149,6 +155,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			checkpoint.Passed = true
 			prevCheckpointPassed = true
 		case checkpoint.Type == "totp" || (checkpoint.Type == "mfa" && challengeContainsOnlyNumbers):
+			rr.Authentication = usr.LoginEvidence
 			if err := backend.Request(operator.CheckMfaLockout, rr); err != nil {
 				p.logger.Warn(
 					"user locked out due to too many failed MFA attempts",
@@ -179,24 +186,11 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				return fmt.Errorf("failed fetching totp tokens")
 			}
 
-			var tokenValidated bool
-			tokenBundle := rr.Response.Payload.(*identity.MfaTokenBundle)
-			for _, token := range tokenBundle.Get() {
-				if token.Type != "totp" {
-					continue
-				}
-				if token.Disabled {
-					continue
-				}
-				if err := token.ValidateCode(rr.MfaToken.Passcode); err != nil {
-					continue
-				}
-				tokenValidated = true
-				break
-			}
-			if !tokenValidated {
+			rr.Authentication = usr.LoginEvidence
+			if err := backend.Request(operator.ConsumeMfaTOTP, rr); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
 				checkpoint.FailedAttempts++
+				rr.Authentication = usr.LoginEvidence
 				backend.Request(operator.IncrementMfaFailedAttempts, rr)
 				p.logger.Warn(
 					"totp passcode authentication failed",
@@ -211,6 +205,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				return fmt.Errorf("totp passcode authentication failed")
 			}
 
+			rr.Authentication = usr.LoginEvidence
 			backend.Request(operator.ResetMfaFailedAttempts, rr)
 			p.logger.Info(
 				"user authentication checkpoint passed",
@@ -304,9 +299,18 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 			rr.Flags.Enabled = true
 			rr.User.Username = usr.LoginUsername
 			rr.WebAuthn.Challenge = usr.Authenticator.TempChallenge
+			var err error
+			rr.WebAuthn.ExpectedOrigin, err = getWebAuthnExpectedOrigin(r)
+			if err != nil {
+				rr.Response.Code = http.StatusUnauthorized
+				checkpoint.FailedAttempts++
+				return fmt.Errorf("failed to validate WebAuthn origin: %v", err)
+			}
+			rr.Authentication = usr.LoginEvidence
 			if err := backend.Request(operator.Authenticate, rr); err != nil {
 				rr.Response.Code = http.StatusUnauthorized
 				checkpoint.FailedAttempts++
+				rr.Authentication = usr.LoginEvidence
 				backend.Request(operator.IncrementMfaFailedAttempts, rr)
 				p.logger.Warn(
 					"u2f authentication failed",
@@ -431,7 +435,11 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 				zap.String("username", rr.User.Username),
 				zap.Error(err),
 			)
-			return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+			statusCode := http.StatusUnauthorized
+			if err == errPasswordAttemptLimited {
+				statusCode = http.StatusTooManyRequests
+			}
+			return p.handleJSONErrorWithLog(ctx, w, r, rr, statusCode, http.StatusText(statusCode))
 		}
 
 		if err := p.recordLoginEvidence(usr, rr, completedBefore); err != nil {

@@ -30,7 +30,7 @@ import (
 
 func TestNewCookieConfigFromDirectives(t *testing.T) {
 	defaults, err := cookieparser.NewCookieConfigFromDirectives(nil)
-	if err != nil || !reflect.DeepEqual(defaults, cookie.NewConfig()) {
+	if err != nil || !reflect.DeepEqual(defaults, cookie.NewConfig()) || defaults.SAMLSessionIDCookieName != "AUTHP_SAML_SESSION_ID" {
 		t.Fatal("empty directives lost portal defaults")
 	}
 	for _, input := range [][]string{
@@ -55,11 +55,43 @@ func TestNewCookieConfigFromDirectives(t *testing.T) {
 	}
 }
 
+func TestSAMLCookieDirective(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		directives []string
+		want       string
+		invalid    bool
+	}{
+		{name: "default", want: "AUTHP_SAML_SESSION_ID"},
+		{name: "prefix", directives: []string{"cookie prefix PORTAL"}, want: "PORTAL_SAML_SESSION_ID"},
+		{name: "explicit", directives: []string{"cookie saml session id name SAML_BROWSER"}, want: "SAML_BROWSER"},
+		{name: "collision", directives: []string{"cookie saml session id name AUTHP_ACCESS_TOKEN"}, invalid: true},
+		{name: "duplicate", directives: []string{"cookie saml session id name ONE", "cookie saml session id name TWO"}, invalid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := cookieparser.NewCookieConfigFromDirectives(tc.directives)
+			if tc.invalid {
+				if err == nil || got != nil {
+					t.Fatal("invalid SAML cookie directive returned a configuration")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.SAMLSessionIDCookieName != tc.want {
+				t.Fatalf("got %q, want %q", got.SAMLSessionIDCookieName, tc.want)
+			}
+		})
+	}
+}
+
 func TestCookieDirectiveNamesAndAttributes(t *testing.T) {
 	input := []string{
 		"cookie prefix PORTAL", "cookie session id name CUSTOM_SESSION", "cookie redirect url name CUSTOM_REDIRECT",
 		"cookie sandbox id name CUSTOM_SANDBOX", "cookie id token name CUSTOM_IDENTITY", "cookie access token name CUSTOM_ACCESS",
 		"cookie refresh token name CUSTOM_REFRESH", "cookie oidc session id name CUSTOM_LOGIN", "cookie oidc request id name CUSTOM_REQUEST",
+		"cookie saml session id name CUSTOM_SAML",
 		cfgutil.EncodeArgs([]string{"cookie", "path", "/login path"}), "cookie lifetime 120", "cookie same site strict",
 		"cookie insecure disabled", "cookie strip domain enabled", "cookie guess domain disabled",
 		"cookie domain .EXAMPLE.test", "cookie domain example.test path /tenant", "cookie domain example.test lifetime 90",
@@ -72,8 +104,8 @@ func TestCookieDirectiveNamesAndAttributes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := []string{"CUSTOM_SESSION", "CUSTOM_REDIRECT", "CUSTOM_SANDBOX", "CUSTOM_IDENTITY", "CUSTOM_ACCESS", "CUSTOM_REFRESH", "CUSTOM_LOGIN", "CUSTOM_REQUEST"}
-		got := []string{c.SessionIDCookieName, c.RefererCookieName, c.SandboxIDCookieName, c.IdentityTokenCookieName, c.AccessTokenCookieName, c.RefreshTokenCookieName, c.OIDCSessionIDCookieName, c.OIDCRequestIDCookieName}
+		want := []string{"CUSTOM_SESSION", "CUSTOM_REDIRECT", "CUSTOM_SANDBOX", "CUSTOM_IDENTITY", "CUSTOM_ACCESS", "CUSTOM_REFRESH", "CUSTOM_LOGIN", "CUSTOM_REQUEST", "CUSTOM_SAML"}
+		got := []string{c.SessionIDCookieName, c.RefererCookieName, c.SandboxIDCookieName, c.IdentityTokenCookieName, c.AccessTokenCookieName, c.RefreshTokenCookieName, c.OIDCSessionIDCookieName, c.OIDCRequestIDCookieName, c.SAMLSessionIDCookieName}
 		if !slices.Equal(want, got) || c.Path != "/login path" || c.Lifetime != 120 || c.SameSite != "Strict" || c.Insecure || !c.StripDomainEnabled || c.GuessDomainEnabled {
 			t.Fatal("cookie settings changed during parsing")
 		}
@@ -138,12 +170,13 @@ func ExampleNewCookieConfigFromDirectives() {
 	config, err := cookieparser.NewCookieConfigFromDirectives([]string{
 		cfgutil.EncodeArgs([]string{"cookie", "prefix", "PORTAL"}),
 		cfgutil.EncodeArgs([]string{"cookie", "oidc", "session", "id", "name", "LOGIN_SESSION"}),
+		cfgutil.EncodeArgs([]string{"cookie", "saml", "session", "id", "name", "SAML_BROWSER"}),
 	})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(config.AccessTokenCookieName, config.OIDCSessionIDCookieName, config.OIDCRequestIDCookieName)
-	// Output: PORTAL_ACCESS_TOKEN LOGIN_SESSION PORTAL_OIDC_REQUEST_ID
+	fmt.Println(config.AccessTokenCookieName, config.OIDCSessionIDCookieName, config.OIDCRequestIDCookieName, config.SAMLSessionIDCookieName)
+	// Output: PORTAL_ACCESS_TOKEN LOGIN_SESSION PORTAL_OIDC_REQUEST_ID SAML_BROWSER
 }
 
 func TestCookieReservedPrefixValidation(t *testing.T) {

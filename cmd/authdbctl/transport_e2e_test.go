@@ -95,6 +95,9 @@ func TestE2EAuthdbctlNativeTransport(t *testing.T) {
 			path := filepath.Join(home, ".config", "authdbctl", "token.jwt")
 			var previous *authclient.Credentials
 			for range 2 {
+				if method == "totp" && previous != nil {
+					waitForNextCLITOTPStep(t)
+				}
 				out, diagnostic, err := runCLIProcess(t, binary, home, "", nil, "connect")
 				if err != nil {
 					t.Fatalf("native connect failed: %v", err)
@@ -157,4 +160,25 @@ func TestE2EAuthdbctlNativeTransport(t *testing.T) {
 		}
 		f.assertOnlyLogin(t, 1)
 	})
+}
+
+func waitForNextCLITOTPStep(t *testing.T) {
+	t.Helper()
+	initial := time.Now().Unix() / 30
+	deadline := time.NewTimer(31 * time.Second)
+	defer deadline.Stop()
+	ticker := time.NewTicker(25 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-t.Context().Done():
+			t.Fatal("test ended while waiting for the next TOTP step")
+		case <-deadline.C:
+			t.Fatal("TOTP step did not advance before the deadline")
+		case now := <-ticker.C:
+			if now.Unix()/30 > initial {
+				return
+			}
+		}
+	}
 }

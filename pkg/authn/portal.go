@@ -74,9 +74,12 @@ type Portal struct {
 	startedAt         time.Time
 	sessions          *cache.SessionCache
 	sandboxes         *cache.SandboxCache
+	passwordAttempts  *passwordAttemptLimiter
 	loginOptions      map[string]interface{}
 	baseURL           string
 	logger            *zap.Logger
+
+	webAuthnEnrollments *webAuthnEnrollmentStore
 }
 
 // PortalParameters are input parameters for NewPortal.
@@ -199,6 +202,12 @@ func (p *Portal) Close() {
 		if p.sandboxes != nil {
 			p.sandboxes.Stop()
 		}
+		if p.passwordAttempts != nil {
+			p.passwordAttempts.close()
+		}
+		if p.webAuthnEnrollments != nil {
+			p.webAuthnEnrollments.close()
+		}
 		if p.refreshStore != nil {
 			p.refreshStore.Close()
 		}
@@ -266,6 +275,8 @@ func (p *Portal) configureEssentials() error {
 	p.sessions.Run()
 	p.sandboxes = cache.NewSandboxCache()
 	p.sandboxes.Run()
+	p.passwordAttempts = newPasswordAttemptLimiter(time.Now, passwordAttemptLimiterCapacity)
+	p.webAuthnEnrollments = newWebAuthnEnrollmentStore(time.Now, webAuthnEnrollmentCapacity)
 
 	// A token refresh directive is an explicit override of the shared cookie
 	// setting. Resolve it before factory defaults and collision checks so every

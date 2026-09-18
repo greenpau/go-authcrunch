@@ -82,15 +82,21 @@ func (b *IdentityProvider) validateAccessToken(ctx context.Context, state string
 			return nil, err
 		}
 		if tokenName == b.config.IdentityTokenFieldName || tokenName == "id_token" {
-			nonce, exists, nonceErr := getOAuthStringClaim(claims, "nonce")
-			if nonceErr != nil {
-				return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, nonceErr)
-			}
-			if !exists {
-				return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, "nonce not found")
-			}
-			if err := b.state.validateNonce(state, nonce); err != nil {
+			nonceRequired, err := b.state.requiresNonce(state)
+			if err != nil {
 				return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, err)
+			}
+			if nonceRequired {
+				nonce, exists, nonceErr := getOAuthStringClaim(claims, "nonce")
+				if nonceErr != nil {
+					return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, nonceErr)
+				}
+				if !exists {
+					return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, "nonce not found")
+				}
+				if err := b.state.validateNonce(state, nonce); err != nil {
+					return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, err)
+				}
 			}
 
 			if !b.disableEmailClaimCheck {

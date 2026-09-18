@@ -64,7 +64,14 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 		)
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 	}
+	portalSessionID := rr.Upstream.SessionID
+	if authMethod == "saml" {
+		p.injectSAMLSessionID(w, r, rr)
+	}
 	err = provider.Request(operator.Authenticate, rr)
+	if authMethod == "saml" {
+		rr.Upstream.SessionID = portalSessionID
+	}
 	if err != nil {
 		p.logger.Warn(
 			"Authentication failed",
@@ -78,6 +85,9 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 	case http.StatusBadRequest:
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 	case http.StatusOK:
+		if authMethod == "saml" {
+			w.Header().Add("Set-Cookie", p.cookie.GetDeleteSAMLSessionIDCookie())
+		}
 		p.logger.Info(
 			"Successful login",
 			zap.String("session_id", rr.Upstream.SessionID),

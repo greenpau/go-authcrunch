@@ -153,6 +153,7 @@ func TestNewPortal(t *testing.T) {
 					"refresh_token_cookie_name":  "AUTHP_REFRESH_TOKEN",
 					"oidc_session_id_cookie_name": "AUTHP_OIDC_SESSION_ID",
 					"oidc_request_id_cookie_name": "AUTHP_OIDC_REQUEST_ID",
+					"saml_session_id_cookie_name": "AUTHP_SAML_SESSION_ID",
 					"sandbox_id_cookie_name":     "AUTHP_SANDBOX_ID",
 					"session_id_cookie_name":     "AUTHP_SESSION_ID"
 				},

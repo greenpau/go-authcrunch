@@ -23,21 +23,25 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
+const tokenCacheCapacity = 65536
+
 // TokenCache contains cached tokens
 type TokenCache struct {
-	mu      sync.RWMutex
-	closed  bool
-	stop    chan struct{}
-	done    chan struct{}
-	Entries map[string]*user.User `json:"entries,omitempty" xml:"entries,omitempty" yaml:"entries,omitempty"`
+	mu       sync.RWMutex
+	closed   bool
+	stop     chan struct{}
+	done     chan struct{}
+	capacity int
+	Entries  map[string]*user.User `json:"entries,omitempty" xml:"entries,omitempty" yaml:"entries,omitempty"`
 }
 
 // NewTokenCache returns TokenCache instance.
 func NewTokenCache(i int) *TokenCache {
 	c := &TokenCache{
-		Entries: make(map[string]*user.User),
-		stop:    make(chan struct{}),
-		done:    make(chan struct{}),
+		Entries:  make(map[string]*user.User),
+		stop:     make(chan struct{}),
+		done:     make(chan struct{}),
+		capacity: tokenCacheCapacity,
 	}
 	go manageTokenCache(i, c)
 	return c
@@ -102,7 +106,6 @@ func (c *TokenCache) Add(usr *user.User) error {
 		// If not expiration time provided, then expire within 5 minutes.
 		usr.Claims.ExpiresAt = time.Now().Add(5 * time.Minute).Unix()
 	}
-	usr.Cached = true
 	cachedUsr := usr.Clone()
 	cachedUsr.Cached = true
 
@@ -114,7 +117,23 @@ func (c *TokenCache) Add(usr *user.User) error {
 	if c.Entries == nil {
 		c.Entries = make(map[string]*user.User)
 	}
+	capacity := c.capacity
+	if capacity <= 0 {
+		capacity = tokenCacheCapacity
+	}
+	if _, exists := c.Entries[usr.Token]; !exists && len(c.Entries) >= capacity {
+		now := time.Now().Unix()
+		for token, cached := range c.Entries {
+			if cached.Claims.ExpiresAt < now {
+				delete(c.Entries, token)
+			}
+		}
+		if len(c.Entries) >= capacity {
+			return fmt.Errorf("token cache capacity reached")
+		}
+	}
 	c.Entries[usr.Token] = cachedUsr
+	usr.Cached = true
 
 	return nil
 }

@@ -16,8 +16,14 @@ package cookie
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 )
+
+// GetSAMLSessionIDCookie returns the short-lived SAML browser-binding cookie.
+func (f *Factory) GetSAMLSessionIDCookie(value string) string {
+	return (&http.Cookie{Name: f.SAMLSessionIDCookieName, Value: value, Path: "/", MaxAge: 300, Secure: true, HttpOnly: true, SameSite: http.SameSiteNoneMode}).String()
+}
 
 // GetAccessTokenCookie returns raw access token cookie string.
 func (f *Factory) GetAccessTokenCookie(h, v string) string {
