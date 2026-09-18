@@ -22,6 +22,28 @@ when all its logging uses qualify. The filter applies to the final logging
 sink, never to the source claims or the upstream flow model. This preserves
 non-debug uses of the same data and findings from other rules.
 
+`queries/StructuredDiagnostics.qll` accepts three kinds of individual fields:
+
+- Direct `zap.String` sinks with constant key `realm` or `auth_realm` and a
+  direct struct `Realm` field read.
+- Direct `zap.Any("error", err)`, `zap.NamedError("error", err)`, or
+  `zap.Error(err)` sinks whose error argument statically implements Go's `error`
+  interface, including concrete error types.
+- Direct `zap.Any("user", payload)` sinks, including user claims and objects.
+  The exception uses the constant key and actual function target, not the
+  payload's variable name or log message.
+
+All require actual Zap function and Logger method targets, including direct
+`Logger.With` fields, at every recognized level. All logging uses of a shared
+sink must qualify. Keep each exception on the individual sink: other fields in
+the same call and the same value logged elsewhere retain their existing
+analysis. Passwords merely labeled `realm` or `error`, aggregate realm values,
+and objects that do not implement `error` under the error key are not exceptions.
+Dynamic keys, wrappers, sugared key/value calls, `WithOptions`, and unrelated
+loggers are not exceptions. An Any value with static type `any` does not qualify
+as an error. Do not change the upstream flow model or treat realm-bearing
+objects, errors, error-message text, or user payloads as globally clean.
+
 The replacement query also excludes `go/clear-text-logging` sinks whose
 repository-relative path is exactly `pkg/acl/rule.go`, regardless of logger
 or level. Keep this equality check on the sink's location; prefix/suffix
@@ -59,9 +81,10 @@ dismissed a hosted alert.
 Inspect existing alerts after the first successful advanced scan. An alert can
 have instances from multiple analysis configurations; changing configurations
 may leave historical instances needing separate review. Dismiss only verified
-debug diagnostics or exact ACL rule/file matches, with a rationale identifying
-this policy. Do not bulk-dismiss every alert with the clear-text logging title:
-non-debug logging outside the exempt ACL file remains in scope for review.
+debug diagnostics, qualifying realm-name/error/user fields, or exact ACL rule/file
+matches, with a rationale identifying this policy. Do not bulk-dismiss every
+alert with the clear-text logging title: other non-debug fields outside the
+exempt ACL file remain in scope for review.
 
 GitHub documents [custom query configuration](https://docs.github.com/en/code-security/reference/code-scanning/workflow-configuration-options)
 and [query suite filtering](https://docs.github.com/en/code-security/tutorials/customize-code-scanning/create-query-suites).
@@ -94,12 +117,19 @@ extraction, configured default/replacement queries and SARIF, then compares the
 complete upstream default suite on the same database, including its rule IDs.
 It verifies structured claims, headers, token-like values and sugared debug
 calls disappear, and all logging levels in `pkg/acl/rule.go` are excepted.
+Realm, typed-error and user-payload fixtures exercise ordinary levels and
+attached fields and retain a sensitive neighbor in the same log call. Negative
+cases reject label-only, aggregate-realm, expression, dynamic-key, wrapper,
+sugared, opaque-error, and unrelated-logger overmatching. Error cases cover Any,
+Error, and NamedError constructors with concrete and interface error types.
+User cases include maps and objects, and a single call containing accepted
+realm, error and user fields alongside a reportable password field.
 It preserves ordinary levels, attached fields and unrelated loggers elsewhere,
 including a neighboring file that receives sensitive data from the exempt
 file and a nested path with the same suffix. It separately selects
 the extended-suite log-injection query alongside the replacement and verifies
-that Debug and the exempt ACL file remain sinks for that rule; it does not
-enable the extended suite in the production configuration.
+that Debug, realm/error/user diagnostics, and the exempt ACL file remain sinks for
+that rule; it does not enable the extended suite in the production configuration.
 The fixture and scan evidence stay in `.coverage/codeql/exception-e2e-*`.
 
 The CodeQL workflow runs this regression after the primary analysis has

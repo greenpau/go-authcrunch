@@ -29,7 +29,7 @@ boundary for these workflows.
 | `make run-reports` | Rebuild presentations from the existing tested evidence bundle |
 | `make test-ui` | Node spec-reported login and refresh client tests (`*_client_test.cjs`) |
 | `make test-automation` | Verbose Python automation/version/release fixture tests |
-| `make test-codeql` | Real CodeQL fixture scan verifying debug/ACL logging exceptions and retained alerts; requires CodeQL CLI |
+| `make test-codeql` | Real CodeQL fixture scan verifying accepted diagnostic logging exceptions and retained alerts; requires CodeQL CLI |
 | `make brand-assets` / `make brand-assets-check` | Regenerate SVG branding and shared colors from the palette, or check drift without writes |
 | `make ci-check` | Sequential version, brand-asset consistency, automation, lint, Go tests, UI tests, and build gates |
 | `make version-check` / `make version-sync` | Check or explicitly synchronize version-bearing Go defaults |

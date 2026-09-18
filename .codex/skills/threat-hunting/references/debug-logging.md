@@ -19,12 +19,14 @@ Inspect the actual call and data flow:
 
 - `zap.Logger.Debug` and `zap.SugaredLogger.Debug`, `Debugf`, and `Debugw` are the
   explicit levels recognized by the CodeQL exception.
-- Outside the ACL rule exception below, Info, Warn, Error, DPanic, Panic,
-  Fatal, standard-library logging and dynamic levels remain eligible for
-  findings. A debug-enabled logger does not make an Info or Warn call a debug
-  diagnostic.
+- Outside the structured realm-name/error/user and ACL rule exceptions below,
+  Info, Warn, Error, DPanic, Panic, Fatal, standard-library logging and dynamic
+  levels remain eligible for findings. A debug-enabled logger does not make an
+  Info or Warn call a debug diagnostic.
 - `With` and `WithOptions` attach fields that may outlive one debug call. They
-  remain eligible even when followed by Debug; trace their later uses.
+  remain eligible even when followed by Debug; trace their later uses. A direct
+  realm-name, typed-error, or user-payload field may independently qualify for
+  the exceptions below.
 - Claims are not globally sanitized data. The same value may be accepted at a
   debug sink and reportable at a Warn sink. Keep other queries, including log
   injection at Debug calls, active.
@@ -32,6 +34,70 @@ Inspect the actual call and data flow:
 Portal profile warnings require separate review. Historical alert line numbers
 may refer to older code; inspect the alert revision before equating it with
 the current checkout.
+
+## Realm-name diagnostics
+
+Realm names identify authentication routing and are accepted operational metadata
+at ordinary logging levels as well as Debug. Suppress `go/clear-text-logging`
+only for a direct `go.uber.org/zap.String` field with constant key `realm` or
+`auth_realm` whose value directly reads a struct field named `Realm`.
+Examples include `zap.String("realm", r.Realm)` and
+`zap.String("auth_realm", rr.Upstream.Realm)` on a Zap Logger call. Direct
+`Logger.With` fields also qualify. Resolve actual function/method targets rather
+than matching source text; unrelated loggers do not qualify.
+
+The exception applies to that individual field, never to every field in the same
+log call. A neighboring password, token, or session identifier retains its
+existing analysis. Error and user fields have their own exceptions below.
+A string field merely labeled `realm` does not qualify when its value is a
+password field, an arbitrary expression, or an aggregate object. Other keys,
+dynamic keys, wrappers, sugared key/value
+calls, and standard-library logging retain their existing checks.
+
+Keep the accepted realm field as a sink filter in the custom query. Do not
+globally sanitize `Realm` values, their containing request objects, or HTTP
+headers. The same value logged elsewhere remains analyzed, and other queries
+such as log injection continue to inspect realm diagnostics. This policy assumes
+`Realm` contains a realm name; it does not authorize putting credentials there.
+
+## Structured error diagnostics
+
+Operational error diagnostics are accepted at ordinary Zap Logger levels as
+well as Debug. Suppress `go/clear-text-logging` for direct
+`zap.Any("error", err)`, `zap.NamedError("error", err)`, and `zap.Error(err)`
+fields when the argument's static type implements Go's `error` interface.
+This includes concrete error types and direct `Logger.With` fields. Resolve
+actual Zap targets and require the constant `error` key for Any and NamedError.
+
+Apply the exception to the individual error field, including when the same call
+also logs realm metadata or user data. A password string, map, arbitrary object,
+or value with static type `any` merely labeled `error` does not qualify.
+Other keys, dynamic keys, wrappers, sugared key/value calls, `WithOptions`, and
+unrelated loggers retain their existing checks. Neighboring payload, credential,
+and session fields remain subject to their own logging policy.
+
+This is an accepted diagnostic sink, not proof that an error cannot contain
+sensitive data. Do not globally sanitize errors, their message text, or data
+that flows into them. Log injection and other rules still inspect these fields.
+The policy does not authorize adding credentials to error messages.
+
+## Structured user payloads
+
+User payloads deliberately logged as `zap.Any("user", payload)` are accepted
+authentication diagnostics at ordinary Zap Logger levels as well as Debug.
+This includes user claims, maps, and user objects, even when the upstream query
+tracks sensitive data into the payload. Direct `Logger.With` fields also qualify.
+Recognize the actual `go.uber.org/zap.Any` function and constant `user` key;
+do not infer an exception from a variable name or the log message.
+
+Suppress only that individual field for `go/clear-text-logging`. Separate
+password, token, session, and other payload fields in the same call remain
+analyzed unless they independently qualify for an accepted exception. Other
+keys (including `claims`), constructors, dynamic keys, wrappers, sugared calls,
+`WithOptions`, and unrelated loggers keep their existing analysis. Do not
+globally sanitize claims or user objects; other destinations and queries,
+including log injection, remain in scope. This policy preserves intentional
+diagnostics and does not authorize adding new secrets to user payloads.
 
 ## ACL rule logging
 

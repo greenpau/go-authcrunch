@@ -283,8 +283,9 @@ when changing injected identity headers, token stripping or credential caches.
 - Missing `kid` validation allowing key-set confusion
 - Apply the [diagnostic logging exceptions](references/debug-logging.md)
   to intentional claims, identity/session, ACL and OAuth/OIDC diagnostics.
-  Check the actual logger level, deployment boundary and explicitly accepted
-  rule/file scope before reporting or dismissing a clear-text logging alert.
+  Check the actual logger level, structured field, deployment boundary and
+  explicitly accepted rule/sink scope before reporting or dismissing a
+  clear-text logging alert.
 
 **Cookies:**
 - Manual cookie string construction instead of `http.Cookie`

@@ -5,7 +5,8 @@ queries:
 
 query-filters:
   # Replace only the upstream query. The local query retains the same rule ID
-  # and excepts explicit Zap debug diagnostics and sinks in pkg/acl/rule.go.
+  # and excepts explicit Zap debug diagnostics, structured realm-name/error/user
+  # fields, and sinks in pkg/acl/rule.go.
   - exclude:
       id: go/clear-text-logging
       query path: Security/CWE-312/CleartextLogging.ql
