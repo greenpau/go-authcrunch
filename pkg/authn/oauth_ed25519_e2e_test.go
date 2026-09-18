@@ -51,6 +51,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
 	idpparser "github.com/greenpau/go-authcrunch/pkg/idp/parser"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
@@ -233,6 +234,9 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 		}
 		f.userInfos++
 		json.NewEncoder(w).Encode(map[string]any{"sub": subject, "email": subject + "@example.test", "roles": []string{"userinfo-user"}})
+	case "/post-login":
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("post-login-destination"))
 	default:
 		http.NotFound(w, r)
 	}
@@ -249,6 +253,7 @@ type oidcE2EPortal struct {
 type oidcE2ETrustConfig struct {
 	issuer, audience, identityCookie, realm, sandboxCookie string
 	nonceDisabled                                          bool
+	loginRedirects                                         []*redirects.RedirectURIMatchConfig
 }
 
 func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode string, trust ...oidcE2ETrustConfig) *oidcE2EPortal {
@@ -369,7 +374,7 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 	if settings.sandboxCookie != "" {
 		cookies.SandboxIDCookieName = settings.sandboxCookie
 	}
-	portalConfig := &authn.PortalConfig{Name: "oauth-e2e", IdentityStores: []string{"local"}, IdentityProviders: []string{"upstream"}, RawCryptoKeyStoreConfig: keys, CookieConfig: cookies}
+	portalConfig := &authn.PortalConfig{Name: "oauth-e2e", IdentityStores: []string{"local"}, IdentityProviders: []string{"upstream"}, RawCryptoKeyStoreConfig: keys, CookieConfig: cookies, TrustedLoginRedirectURIConfigs: settings.loginRedirects}
 	if settings.identityCookie != "" {
 		// Identity-cookie consumers need permission to call the portal's Whoami.
 		portalConfig.AccessListConfigs = []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer"}, Action: "allow stop"}}

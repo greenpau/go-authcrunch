@@ -175,6 +175,7 @@ func TestForbiddenURLURIPlaceholderUsesLocalRequestURI(t *testing.T) {
 		target       string
 		forbiddenURL string
 		wantLocation string
+		wantStatus   int
 	}{
 		{
 			name:         "absolute request target becomes origin form",
@@ -189,10 +190,112 @@ func TestForbiddenURLURIPlaceholderUsesLocalRequestURI(t *testing.T) {
 			wantLocation: "/.//evil.example/admin?x=1",
 		},
 		{
+			name:         "encoded leading slashes remain path data",
+			target:       "https://app.example/%2F%2Fevil.example/admin?x=1",
+			forbiddenURL: "{uri}",
+			wantLocation: "/%2F%2Fevil.example/admin?x=1",
+		},
+		{
+			name:         "encoded leading backslashes remain path data",
+			target:       "https://app.example/%5C%5Cevil.example/admin?x=1",
+			forbiddenURL: "{uri}",
+			wantLocation: "/%5C%5Cevil.example/admin?x=1",
+		},
+		{
 			name:         "http request uri placeholder uses local URI",
 			target:       "https://app.example/private?next=http://evil.example",
 			forbiddenURL: "/forbidden?return={http.request.uri}",
 			wantLocation: "/forbidden?return=/private?next=http://evil.example",
+		},
+		{
+			name:         "placeholder-like request query is not expanded twice",
+			target:       "https://app.example/private?literal={uri}",
+			forbiddenURL: "{uri}",
+			wantLocation: "/private?literal={uri}",
+		},
+		{
+			name:         "trusted absolute destination preserves local URI path",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: "https://trusted.example{uri}",
+			wantLocation: "https://trusted.example/evil.example/callback",
+		},
+		{
+			name:         "trusted absolute destination preserves extra path slash",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: "https://trusted.example/{uri}",
+			wantLocation: "https://trusted.example//evil.example/callback",
+		},
+		{
+			name:         "trusted scheme relative destination preserves authority",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: "//trusted.example{uri}",
+			wantLocation: "//trusted.example/evil.example/callback",
+		},
+		{
+			name:         "trusted destination user info remains fixed",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: "https://user@trusted.example{uri}",
+			wantLocation: "https://user@trusted.example/evil.example/callback",
+		},
+		{
+			name:         "absolute current URL placeholder remains intentional",
+			target:       "https://app.example/private?x=1",
+			forbiddenURL: "{url}",
+			wantLocation: "https://app.example/private",
+		},
+		{
+			name:         "leading slash composition cannot create authority",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: "/{uri}",
+			wantStatus:   http.StatusForbidden,
+		},
+		{
+			name:         "scheme composition cannot create authority",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: "https:/{uri}",
+			wantStatus:   http.StatusForbidden,
+		},
+		{
+			name:         "opaque scheme composition is rejected",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: "https:{uri}",
+			wantStatus:   http.StatusForbidden,
+		},
+		{
+			name:         "backslash composition cannot create authority",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: `\{uri}`,
+			wantStatus:   http.StatusForbidden,
+		},
+		{
+			name:         "leading space cannot hide authority composition",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: " /{uri}",
+			wantStatus:   http.StatusForbidden,
+		},
+		{
+			name:         "control character cannot hide authority composition",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: "\t/{uri}",
+			wantStatus:   http.StatusForbidden,
+		},
+		{
+			name:         "multiple leading slashes cannot hide authority composition",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: "//{uri}",
+			wantStatus:   http.StatusForbidden,
+		},
+		{
+			name:         "three leading slashes cannot hide authority composition",
+			target:       "https://app.example/evil.example/callback",
+			forbiddenURL: "///{uri}",
+			wantStatus:   http.StatusForbidden,
+		},
+		{
+			name:         "marker-like request cannot satisfy template validation",
+			target:       "https://app.example/authcrunch-uri-a",
+			forbiddenURL: "/{uri}",
+			wantStatus:   http.StatusForbidden,
 		},
 	}
 
@@ -210,8 +313,12 @@ func TestForbiddenURLURIPlaceholderUsesLocalRequestURI(t *testing.T) {
 			if err := g.handleAuthorizeWithForbidden(w, r, ar); err != nil {
 				t.Fatalf("handleAuthorizeWithForbidden() error = %v", err)
 			}
-			if w.Code != http.StatusSeeOther {
-				t.Fatalf("status code = %d, want %d", w.Code, http.StatusSeeOther)
+			wantStatus := tc.wantStatus
+			if wantStatus == 0 {
+				wantStatus = http.StatusSeeOther
+			}
+			if w.Code != wantStatus {
+				t.Fatalf("status code = %d, want %d", w.Code, wantStatus)
 			}
 			if got := w.Header().Get("Location"); got != tc.wantLocation {
 				t.Fatalf("Location = %q, want %q", got, tc.wantLocation)

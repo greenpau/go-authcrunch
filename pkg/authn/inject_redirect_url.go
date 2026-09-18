@@ -26,6 +26,15 @@ import (
 )
 
 func (p *Portal) injectRedirectURL(_ context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) {
+	if redirectCookie := p.recordRedirectURL(w, r, rr); redirectCookie != "" {
+		rr.Response.RedirectURL = redirectCookie
+	}
+}
+
+// recordRedirectURL persists a trusted post-login destination without assigning
+// it to the response field used by identity providers for their authorization
+// endpoint.
+func (p *Portal) recordRedirectURL(w http.ResponseWriter, r *http.Request, rr *requests.Request) string {
 	if r.Method == "GET" {
 		q := r.URL.Query()
 		if redirectURL, exists := q["redirect_url"]; exists {
@@ -35,7 +44,7 @@ func (p *Portal) injectRedirectURL(_ context.Context, w http.ResponseWriter, r *
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 				)
-				return
+				return ""
 			}
 
 			if len(redirectURL) < 1 {
@@ -44,7 +53,7 @@ func (p *Portal) injectRedirectURL(_ context.Context, w http.ResponseWriter, r *
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 				)
-				return
+				return ""
 			}
 
 			loginRedirectURL, err := url.Parse(redirectURL[0])
@@ -54,7 +63,7 @@ func (p *Portal) injectRedirectURL(_ context.Context, w http.ResponseWriter, r *
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 				)
-				return
+				return ""
 			}
 
 			if !redirects.Match(loginRedirectURL, p.config.TrustedLoginRedirectURIConfigs) {
@@ -63,7 +72,7 @@ func (p *Portal) injectRedirectURL(_ context.Context, w http.ResponseWriter, r *
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 				)
-				return
+				return ""
 			}
 
 			c := p.cookie.GetRefererCookie(rr.Upstream.BasePath, util.StripQueryParam(redirectURL[0], "login_hint"))
@@ -75,7 +84,8 @@ func (p *Portal) injectRedirectURL(_ context.Context, w http.ResponseWriter, r *
 				zap.Any("redirect_url_any", redirectURL),
 			)
 			w.Header().Add("Set-Cookie", c)
-			rr.Response.RedirectURL = c
+			return c
 		}
 	}
+	return ""
 }

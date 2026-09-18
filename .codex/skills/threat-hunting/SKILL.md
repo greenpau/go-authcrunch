@@ -233,6 +233,11 @@ the result of any normalization helper used by the production code.
 
 ### 5. Hunt Redirect and Header Trust Issues
 
+Read [redirect trust boundaries](references/redirects.md) when reviewing portal
+login redirects, OIDC callbacks, gatekeeper redirect placeholders, or CodeQL
+open-redirect/bad-redirect-check alerts. It distinguishes the final destination
+from cookies and encoded return parameters and identifies consumer regressions.
+
 Review every `Location` header, HTML/JS redirect, return URL, logout URL,
 callback URL, and "current URL" helper.
 

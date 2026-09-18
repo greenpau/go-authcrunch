@@ -26,7 +26,10 @@ import (
 
 func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, authMethod string) error {
 	p.disableClientCache(w)
-	p.injectRedirectURL(ctx, w, r, rr)
+	p.recordRedirectURL(w, r, rr)
+	// This field belongs to the identity provider on the external-login path.
+	// Clear any response state retained by a caller before invoking the provider.
+	rr.Response.RedirectURL = ""
 
 	if strings.Contains(r.URL.Path, "-js-callback") {
 		// Intercept callback with Javascript.
@@ -97,6 +100,16 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 			zap.Any("user", rr.Response.Payload),
 		)
 	case http.StatusFound:
+		if rr.Response.RedirectURL == "" {
+			p.logger.Warn(
+				"Authentication provider returned an empty redirect URL",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+				zap.String("auth_method", rr.Upstream.Method),
+				zap.String("auth_realm", rr.Upstream.Realm),
+			)
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusBadGateway)
+		}
 		p.logger.Debug(
 			"Redirect to authorization server",
 			zap.String("session_id", rr.Upstream.SessionID),

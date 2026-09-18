@@ -95,8 +95,9 @@ the deadline, cancel them and close connections. Await handler completion before
 bounds graceful HTTP draining, not arbitrary blocking code in a custom provider.
 Unexpected accept failures also drain and dispose resources and return an error.
 Normal signal-driven shutdown returns success.
-The executable restores default signal handling after the first signal, so a
-second SIGINT/SIGTERM can interrupt a blocked drain or provider initialization.
+The executable synchronously restores default signal handling before publishing
+the first signal's cancellation, so a second SIGINT/SIGTERM can interrupt a
+blocked drain or provider initialization instead of racing asynchronous cleanup.
 
 Track whether a portal committed its response: an unwritten handler error gets
 500; a committed response must not receive another status/body. Never put raw

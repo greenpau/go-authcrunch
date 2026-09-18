@@ -24,6 +24,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/greenpau/versioned"
@@ -61,15 +62,44 @@ type configuration struct {
 }
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := newSignalContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	// The first signal starts graceful draining. Restore the default signal
-	// behavior immediately so a second signal can interrupt a stuck provider.
-	context.AfterFunc(ctx, stop)
 	if err := run(ctx, os.Args[1:], os.Stdout, os.Stderr); err != nil {
 		fmt.Fprintln(os.Stderr, "authdb:", err)
 		os.Exit(1)
 	}
+}
+
+func newSignalContext(parent context.Context, signals ...os.Signal) (context.Context, context.CancelFunc) {
+	return newSignalContextWithLifecycle(
+		parent,
+		func(ch chan<- os.Signal) { signal.Notify(ch, signals...) },
+		signal.Stop,
+	)
+}
+
+func newSignalContextWithLifecycle(parent context.Context, notify, stop func(chan<- os.Signal)) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(parent)
+	ch := make(chan os.Signal, 1)
+	notify(ch)
+	var once sync.Once
+	cleanup := func() {
+		once.Do(func() {
+			// Restore default handling before publishing cancellation so a second
+			// signal cannot be consumed while the server begins graceful draining.
+			stop(ch)
+			cancel()
+		})
+	}
+	go func() {
+		select {
+		case <-ch:
+			cleanup()
+		case <-ctx.Done():
+			cleanup()
+		}
+	}()
+	return ctx, cleanup
 }
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {

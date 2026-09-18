@@ -31,13 +31,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	placeholders = []string{
-		"http.request.uri", "uri",
-		"url",
-	}
-)
-
 const (
 	claimHeaderUserName  = "X-Token-User-Name"
 	claimHeaderUserEmail = "X-Token-User-Email"
@@ -186,15 +179,11 @@ func (g *Gatekeeper) handleAuthorizeWithForbidden(w http.ResponseWriter, r *http
 	}
 
 	if strings.Contains(g.config.ForbiddenURL, "{") && strings.Contains(g.config.ForbiddenURL, "}") {
-		// Run through placeholder replacer.
-		redirectLocation := g.config.ForbiddenURL
-		for _, placeholder := range placeholders {
-			switch placeholder {
-			case "uri", "http.request.uri":
-				redirectLocation = strings.ReplaceAll(redirectLocation, "{"+placeholder+"}", getRequestURI(r))
-			case "url":
-				redirectLocation = strings.ReplaceAll(redirectLocation, "{"+placeholder+"}", util.GetCurrentURL(r))
-			}
+		redirectLocation, ok := getForbiddenRedirectLocation(g.config.ForbiddenURL, r)
+		if !ok {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`Forbidden`))
+			return ar.Response.Error
 		}
 		w.Header().Set("Location", redirectLocation)
 	} else {
@@ -203,6 +192,73 @@ func (g *Gatekeeper) handleAuthorizeWithForbidden(w http.ResponseWriter, r *http
 	w.WriteHeader(303)
 	w.Write([]byte(`Forbidden`))
 	return ar.Response.Error
+}
+
+func getForbiddenRedirectLocation(template string, r *http.Request) (string, bool) {
+	currentURL := util.GetCurrentURL(r)
+	requestURI := getRequestURI(r)
+	redirectLocation := strings.NewReplacer(
+		"{http.request.uri}", requestURI,
+		"{uri}", requestURI,
+		"{url}", currentURL,
+	).Replace(template)
+
+	hasLocalPlaceholder := strings.Contains(template, "{uri}") || strings.Contains(template, "{http.request.uri}")
+	if !hasLocalPlaceholder {
+		return redirectLocation, true
+	}
+
+	// A local URI placeholder must not create or replace the redirect authority
+	// when combined with surrounding template bytes. Two distinct local marker
+	// paths make the comparison independent of any attacker-selected request URI.
+	skeletons := make([]string, 0, 2)
+	for _, markerPath := range []string{"/authcrunch-uri-a", "/authcrunch-uri-b"} {
+		skeleton := strings.NewReplacer(
+			"{http.request.uri}", markerPath,
+			"{uri}", markerPath,
+			"{url}", currentURL,
+		).Replace(template)
+		skeletons = append(skeletons, skeleton)
+	}
+	first, ok := getRedirectAuthority(skeletons[0])
+	if !ok {
+		return "", false
+	}
+	second, ok := getRedirectAuthority(skeletons[1])
+	if !ok || first != second {
+		return "", false
+	}
+	actual, ok := getRedirectAuthority(redirectLocation)
+	if !ok || first != actual {
+		return "", false
+	}
+	return redirectLocation, true
+}
+
+type redirectAuthority struct {
+	scheme string
+	host   string
+	user   string
+}
+
+func getRedirectAuthority(value string) (redirectAuthority, bool) {
+	if strings.IndexFunc(value, func(r rune) bool { return r < 0x20 || r == 0x7f }) >= 0 {
+		return redirectAuthority{}, false
+	}
+	normalized := strings.Trim(value, " ")
+	normalized = strings.ReplaceAll(normalized, `\`, "/")
+	if strings.HasPrefix(normalized, "///") {
+		normalized = "//" + strings.TrimLeft(normalized, "/")
+	}
+	u, err := url.Parse(normalized)
+	if err != nil || u.Opaque != "" || (u.Scheme != "" && u.Host == "") {
+		return redirectAuthority{}, false
+	}
+	var userInfo string
+	if u.User != nil {
+		userInfo = u.User.String()
+	}
+	return redirectAuthority{scheme: u.Scheme, host: u.Host, user: userInfo}, true
 }
 
 func getRequestURI(r *http.Request) string {

@@ -16,13 +16,102 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
+
+func TestSignalContextStopsDeliveryBeforeCancellation(t *testing.T) {
+	t.Run("signal ordering", func(t *testing.T) {
+		deadline, cancelDeadline := context.WithTimeout(t.Context(), 2*time.Second)
+		defer cancelDeadline()
+		var signals chan<- os.Signal
+		stopStarted := make(chan struct{})
+		releaseStop := make(chan struct{})
+		defer func() {
+			select {
+			case <-releaseStop:
+			default:
+				close(releaseStop)
+			}
+		}()
+		ctx, cleanup := newSignalContextWithLifecycle(
+			context.Background(),
+			func(ch chan<- os.Signal) { signals = ch },
+			func(chan<- os.Signal) {
+				close(stopStarted)
+				<-releaseStop
+			},
+		)
+		t.Cleanup(cleanup)
+
+		signals <- syscall.SIGTERM
+		select {
+		case <-stopStarted:
+		case <-deadline.Done():
+			t.Fatal("signal delivery cleanup did not start")
+		}
+		select {
+		case <-ctx.Done():
+			t.Fatal("context cancellation was published before signal delivery stopped")
+		default:
+		}
+		close(releaseStop)
+		select {
+		case <-ctx.Done():
+		case <-deadline.Done():
+			t.Fatal("signal did not cancel the context after delivery stopped")
+		}
+	})
+
+	t.Run("explicit cleanup", func(t *testing.T) {
+		deadline, cancelDeadline := context.WithTimeout(t.Context(), 2*time.Second)
+		defer cancelDeadline()
+		stopped := make(chan struct{})
+		ctx, cleanup := newSignalContextWithLifecycle(
+			context.Background(),
+			func(chan<- os.Signal) {},
+			func(chan<- os.Signal) { close(stopped) },
+		)
+		cleanup()
+		cleanup()
+		select {
+		case <-stopped:
+		case <-deadline.Done():
+			t.Fatal("explicit cleanup did not stop signal delivery")
+		}
+		select {
+		case <-ctx.Done():
+		case <-deadline.Done():
+			t.Fatal("explicit cleanup did not cancel the context")
+		}
+	})
+
+	t.Run("parent cancellation cleanup", func(t *testing.T) {
+		deadline, cancelDeadline := context.WithTimeout(t.Context(), 2*time.Second)
+		defer cancelDeadline()
+		parent, cancelParent := context.WithCancel(context.Background())
+		stopped := make(chan struct{})
+		_, cleanup := newSignalContextWithLifecycle(
+			parent,
+			func(chan<- os.Signal) {},
+			func(chan<- os.Signal) { close(stopped) },
+		)
+		t.Cleanup(cleanup)
+		cancelParent()
+		select {
+		case <-stopped:
+		case <-deadline.Done():
+			t.Fatal("parent cancellation did not stop signal delivery")
+		}
+	})
+}
 
 func TestRunFlags(t *testing.T) {
 	t.Setenv("AUTHDB_CONFIG_PATH", filepath.Join(t.TempDir(), "absent.json"))
