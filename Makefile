@@ -17,7 +17,7 @@ export TEST TEST_DIR TEST_TIMEOUT QUICK_TEST_DIR COVERAGE_DIR MINIMUM_COVERAGE
 export APP_VERSION GIT_COMMIT GIT_BRANCH BUILD_USER BUILD_DATE
 export PYTHONDONTWRITEBYTECODE := 1
 
-.PHONY: all info build linter dep install-test-tools test run-tests qtest run-quick-tests run-reports test-ui test-automation test-codeql ci-check brand-assets brand-assets-check version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release release-git-check release-update-version release-git-commit
+.PHONY: all info build linter dep install-test-tools test run-tests qtest run-quick-tests run-reports test-ui test-automation test-codeql ci-check brand-assets brand-assets-check version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release fast-release fast-minor-release release-git-check release-update-version release-git-commit
 
 all: info build
 
@@ -133,6 +133,13 @@ release:
 
 minor-release:
 	@bash assets/scripts/release.sh minor
+
+# Skip the local quality gate; GitHub release validation still runs.
+fast-release:
+	@bash assets/scripts/release.sh patch --skip-tests
+
+fast-minor-release:
+	@bash assets/scripts/release.sh minor --skip-tests
 
 release-git-check:
 	@bash assets/scripts/release.sh check

@@ -81,24 +81,34 @@ Only execute a publishing command when the user requests an actual release:
 
 - `make release`: patch bump, e.g. `1.1.41` to `1.1.42`.
 - `make minor-release`: minor bump/reset, e.g. `1.1.41` to `1.2.0`.
+- `make fast-release`: patch release without the local `make ci-check` gate.
+- `make fast-minor-release`: minor release without the local `make ci-check` gate.
 - `make release-git-check`: read-only local branch/clean-tree/version checks.
 
-Both publish paths invoke `assets/scripts/release.sh` sequentially, including
+All publish paths invoke `assets/scripts/release.sh` sequentially, including
 under `make -j`. Before bumping, they check `main`, a clean worktree/index
 including untracked files, synchronized versions, local main containing
 `origin/main`, and absence of the next tag locally and on origin. They bump and
-synchronize only declared projections, then run `make ci-check` exactly once
-against the release contents. Only a passing gate permits the
-`ops: released v<VERSION>` commit, one annotated tag, and the atomic push of main
-and that exact tag to origin. No force push or broad `git push --tags` belongs
-in this workflow. Partial legacy release targets deliberately fail with a
-pointer to the complete workflow.
+synchronize only declared projections. The checked targets then run
+`make ci-check` exactly once against the release contents and require it to pass.
+The fast targets pass `--skip-tests` to skip that entire local gate, including
+tests, lint, asset checks, and builds. They retain all Git preflight checks,
+version synchronization, and publication checks. GitHub's release workflow
+still requires its full validation job for every release tag.
+
+Publication creates the `ops: released v<VERSION>` commit, one annotated tag,
+and an atomic push of main and that exact tag to origin. No force push or broad
+`git push --tags` belongs in this workflow. Partial legacy release targets
+deliberately fail with a pointer to the complete workflow.
 
 A gate failure leaves the bumped, synchronized version files uncommitted and
 unstaged, with no new local commit/tag or remote update. Automation fixtures
 record the version seen by every gate invocation and assert a single invocation
 at the new patch/minor version. They also verify preflight rejection before the
 gate and preservation of the failed candidate without another bump on retry.
+The fixtures invoke the real Make targets with disposable Git repositories and
+local bare remotes; fast releases must publish the correct patch/minor version
+without invoking the local gate, even when that gate would fail.
 
 If a gate or push fails, inspect the worktree, local tag/commit, and remote refs
 before taking another step. Leave diagnostic state for review. Do not reset,

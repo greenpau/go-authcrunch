@@ -67,8 +67,12 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout)
         return result
 
-    def release(self, kind='patch', ok=True, **variables):
-        return self.run_command('bash', 'assets/scripts/release.sh', kind, ok=ok,
+    def release(self, kind='patch', ok=True, fast=False, **variables):
+        target = {'patch': 'release', 'minor': 'minor-release', 'check': 'release-git-check'}[kind]
+        if fast:
+            target = f'fast-{target}'
+        # Use the real public targets; their recursive gates run in this fixture.
+        return self.run_command('make', '-j2', '-f', str(ROOT / 'Makefile'), target, ok=ok,
                                 env=dict(self.env, **variables))
 
     def remote_head(self):
@@ -130,21 +134,51 @@ class ReleaseTests(unittest.TestCase):
     def test_patch_release_publishes_only_exact_annotated_tag(self):
         self.run_command('git', 'tag', 'unrelated-local-tag')
         self.release()
-        self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.42')
         self.assertEqual((self.root / '.fixture/gates').read_text(), '1.1.42\n')
+        self.assert_published_release('1.1.42')
+
+    def assert_published_release(self, version):
+        tag = f'v{version}'
+        self.assertEqual((self.root / 'VERSION').read_text().strip(), version)
+        self.run_command('make', 'version-check')
         self.assertEqual(self.run_command('git', 'status', '--porcelain').stdout, '')
         head = self.run_command('git', 'rev-parse', 'HEAD').stdout.strip()
         self.assertEqual(self.remote_head(), head)
-        self.assertEqual(self.run_command('git', '--git-dir', str(self.remote), 'tag').stdout.strip(), 'v1.1.42')
-        self.assertEqual(self.run_command('git', 'cat-file', '-t', 'v1.1.42').stdout.strip(), 'tag')
+        self.assertEqual(self.run_command('git', '--git-dir', str(self.remote), 'tag').stdout.strip(), tag)
+        self.assertEqual(self.run_command('git', '--git-dir', str(self.remote),
+                                          'cat-file', '-t', tag).stdout.strip(), 'tag')
+        self.assertEqual(self.run_command('git', '--git-dir', str(self.remote),
+                                          'rev-parse', f'{tag}^{{commit}}').stdout.strip(), head)
         self.assertEqual(self.run_command('git', 'show', '--format=%s', '--no-patch').stdout.strip(),
-                         'ops: released v1.1.42')
+                         f'ops: released {tag}')
 
     def test_minor_release_resets_patch(self):
         self.release('minor')
-        self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.2.0')
         self.assertEqual((self.root / '.fixture/gates').read_text(), '1.2.0\n')
-        self.assertEqual(self.run_command('git', '--git-dir', str(self.remote), 'tag').stdout.strip(), 'v1.2.0')
+        self.assert_published_release('1.2.0')
+
+    def assert_fast_release(self, kind, version):
+        self.run_command('git', 'tag', 'unrelated-local-tag')
+        self.release(kind, fast=True, FAIL_GATE='1', DIRTY_GATE='1')
+        self.assertFalse((self.root / '.fixture/gates').exists())
+        self.assert_published_release(version)
+
+    def test_fast_release_publishes_patch_without_gate(self):
+        self.assert_fast_release('patch', '1.1.42')
+
+    def test_fast_minor_release_publishes_minor_without_gate(self):
+        self.assert_fast_release('minor', '1.2.0')
+
+    def test_invalid_skip_arguments_do_not_change_release(self):
+        for args in (('patch', '--skip-test'), ('minor', '--skip-tests', 'extra'),
+                     ('check', '--skip-tests')):
+            with self.subTest(args=args):
+                result = self.run_command('bash', 'assets/scripts/release.sh', *args, ok=False)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.41')
+                self.assertEqual(self.run_command('git', 'status', '--porcelain').stdout, '')
+                self.assertFalse((self.root / '.fixture/gates').exists())
+                self.assertEqual(self.remote_head(), self.initial)
 
     def test_release_check_does_not_bump_or_run_gate(self):
         self.release('check')
@@ -169,6 +203,7 @@ class ReleaseTests(unittest.TestCase):
                 else:
                     self.run_command('git', 'checkout', '--detach', '-q')
                 self.assertNotEqual(self.release(ok=False).returncode, 0)
+                self.assertNotEqual(self.release(ok=False, fast=True).returncode, 0)
                 self.assertEqual(self.remote_head(), self.initial)
                 self.assertFalse((self.root / '.fixture/gates').exists())
                 # Fixture-only cleanup; no command here targets the working repository.
@@ -182,6 +217,7 @@ class ReleaseTests(unittest.TestCase):
         self.run_command('git', 'commit', '-qm', 'ops: fixture version drift')
         head = self.run_command('git', 'rev-parse', 'HEAD').stdout.strip()
         self.assertNotEqual(self.release(ok=False).returncode, 0)
+        self.assertNotEqual(self.release(ok=False, fast=True).returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.40')
         self.assertFalse((self.root / '.fixture/gates').exists())
         self.assertEqual(self.run_command('git', 'rev-parse', 'HEAD').stdout.strip(), head)
@@ -211,9 +247,11 @@ class ReleaseTests(unittest.TestCase):
     def test_existing_local_or_remote_tag_fails_before_bump(self):
         self.run_command('git', 'tag', 'v1.1.42')
         self.assertNotEqual(self.release(ok=False).returncode, 0)
+        self.assertNotEqual(self.release(ok=False, fast=True).returncode, 0)
         self.run_command('git', 'push', '-q', 'origin', 'v1.1.42')
         self.run_command('git', 'tag', '-d', 'v1.1.42')
         self.assertNotEqual(self.release(ok=False).returncode, 0)
+        self.assertNotEqual(self.release(ok=False, fast=True).returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.41')
         self.assertFalse((self.root / '.fixture/gates').exists())
         self.assertEqual(self.remote_head(), self.initial)
@@ -226,15 +264,22 @@ class ReleaseTests(unittest.TestCase):
         remote = self.remote_head()
         self.run_command('git', 'reset', '--hard', '-q', self.initial)
         self.assertNotEqual(self.release(ok=False).returncode, 0)
+        self.assertNotEqual(self.release(ok=False, fast=True).returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.41')
         self.assertFalse((self.root / '.fixture/gates').exists())
         self.assertEqual(self.remote_head(), remote)
 
     def test_atomic_push_cannot_publish_main_without_tag(self):
+        self.assert_atomic_push_rejected(fast=False)
+
+    def test_fast_release_atomic_push_cannot_publish_main_without_tag(self):
+        self.assert_atomic_push_rejected(fast=True)
+
+    def assert_atomic_push_rejected(self, fast):
         hook = self.remote / 'hooks/update'
         hook.write_text('#!/bin/sh\ncase "$1" in refs/tags/*) exit 1 ;; esac\nexit 0\n')
         hook.chmod(0o755)
-        self.assertNotEqual(self.release(ok=False).returncode, 0)
+        self.assertNotEqual(self.release(ok=False, fast=fast).returncode, 0)
         self.assertEqual(self.remote_head(), self.initial)
         self.assertEqual(self.run_command('git', '--git-dir', str(self.remote), 'tag').stdout, '')
         self.assertEqual(self.run_command('git', 'tag').stdout.strip(), 'v1.1.42')

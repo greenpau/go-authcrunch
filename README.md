@@ -53,6 +53,8 @@ session tests and `make build` for `bin/authdb` and `bin/authdbctl`.
 Repository guidance lives in [repo-local skills](.codex/skills).
 [Release and versioning](.codex/skills/release-and-versioning/SKILL.md) describes
 `make release` (patch) and `make minor-release`, which publish a release.
+Use `make fast-release` or `make fast-minor-release` to skip the local quality
+gate, including tests; GitHub release validation still runs.
 
 ## Issues
 

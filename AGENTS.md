@@ -145,8 +145,9 @@ commands and their retry policy stay in `cmd/authdbctl`.
 Use `release-and-versioning` for the fixed `1.<minor>.<patch>` namespace,
 version synchronization, versioned CI artifacts, and patch/minor releases.
 `make test` uses pinned `tested`; `make ci-check` is the complete quality gate.
-`make release` and `make minor-release` publish commits and tags and are only
-run when an actual release is requested.
+`make release`, `make minor-release`, `make fast-release`, and
+`make fast-minor-release` publish commits and tags and are only run when an
+actual release is requested.
 
 ## Identity Public Keys
 

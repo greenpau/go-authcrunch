@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Release only the checked main commit and its exact annotated version tag.
+# Release only main and its exact annotated version tag.
 set -euo pipefail
 
 script_dir=$(cd -- "$(dirname -- "$0")" && pwd)
@@ -8,6 +8,12 @@ kind=${1:-patch}
 case "$kind" in patch|minor|check) ;; *) echo "Expected patch, minor, or check" >&2; exit 1 ;; esac
 
 fail() { echo "Release stopped: $*" >&2; exit 1; }
+skip_tests=false
+if [ "$#" -gt 1 ]; then
+    [ "$#" -eq 2 ] && [ "$2" = --skip-tests ] && [ "$kind" != check ] || \
+        fail "usage: release.sh [patch|minor [--skip-tests]|check]"
+    skip_tests=true
+fi
 clean_tree() {
     [ -z "$(git status --porcelain --untracked-files=all)" ] || fail "working tree and index must be clean"
 }
@@ -31,8 +37,12 @@ clean_tree
 go tool versioned "-${kind}"
 make version-sync
 [ "$(cat VERSION)" = "$version" ] || fail "versioned produced an unexpected version"
-# Run the full gate once against the synchronized release contents.
-make ci-check
+# Checked releases run the full gate once against the synchronized contents.
+if [ "$skip_tests" = true ]; then
+    echo "Skipping local ci-check (--skip-tests); GitHub release validation still runs."
+else
+    make ci-check
+fi
 
 # Stage only the version authority and its declared projections.
 git diff --cached --quiet || fail "validation staged unexpected changes"
