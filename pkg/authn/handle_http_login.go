@@ -405,10 +405,6 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 				)
 			}
 		}
-		cookie.Value = ""
-		cookie.MaxAge = -1
-		cookie.Expires = time.Unix(0, 0)
-		http.SetCookie(w, cookie)
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
 	}
 	if redirectLocation == "" {

@@ -59,6 +59,15 @@ Keep name, host-only/Domain, Path, Secure, HttpOnly, and SameSite consistent.
 Deletion strings now use Go's standard cookie serialization; consumers should
 parse attributes instead of depending on attribute order or trailing semicolons.
 
+Return-cookie consumption in `grantAccess` and `handleHTTPPortalScreen` uses
+`GetDeleteRefererCookie` once for each consumed cookie, including ignored or
+malformed return destinations. Do not construct an additional deletion by
+mutating `r.Cookie`: request cookies carry names and values, without their
+original scope or security attributes. The factory owns the host-only portal
+mount scope and preserves the configured security policy. Keep trusted redirects,
+ignored destinations, cookie removal, and unrelated-cookie preservation covered
+through the real login and authenticated portal routes.
+
 Reserved prefixes remain optional and are matched case-insensitively.
 `__Secure-` requires Secure; `__Host-` also requires no Domain and explicit
 `Path=/`. Validate configured scopes through `Config.Validate`; portal mounts
@@ -127,6 +136,10 @@ accepted by a gatekeeper in `pkg/authz/cookie_names_test.go`.
 `pkg/authn/cookie/factory_e2e_test.go` verifies configured domain stripping,
 path boundaries, sharing between subdomains, and matching deletion with a TLS
 listener and a public-suffix-aware cookie jar.
+`pkg/authn/referer_cookie_cleanup_e2e_test.go` verifies successful login and
+authenticated portal consumption of trusted, untrusted, and malformed return
+cookies, including a nested custom-prefix mount and root `__Host-` cookies in
+Chrome. Keep exactly one matching deletion and preserve unrelated cookies.
 `pkg/authn/cookie_browser_e2e_test.go` and its dependency-free CDP driver run
 headless Chrome with a temporary profile and a TLS test-certificate SPKI allowlist,
 following the [browser engine policy](../testing-and-ci/SKILL.md#browser-engine).
