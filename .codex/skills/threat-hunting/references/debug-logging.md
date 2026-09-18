@@ -19,17 +19,17 @@ Inspect the actual call and data flow:
 
 - `zap.Logger.Debug` and `zap.SugaredLogger.Debug`, `Debugf`, and `Debugw` are the
   explicit levels recognized by the CodeQL exception.
-- Outside the structured realm-name/error/user and ACL rule exceptions below,
-  Info, Warn, Error, DPanic, Panic, Fatal, standard-library logging and dynamic
+- Outside the structured realm, error, user, claims, and ACL rule exceptions
+  below, Info, Warn, Error, DPanic, Panic, Fatal, standard-library logging and dynamic
   levels remain eligible for findings. A debug-enabled logger does not make an
   Info or Warn call a debug diagnostic.
 - `With` and `WithOptions` attach fields that may outlive one debug call. They
   remain eligible even when followed by Debug; trace their later uses. A direct
-  realm-name, typed-error, or user-payload field may independently qualify for
-  the exceptions below.
-- Claims are not globally sanitized data. The same value may be accepted at a
-  debug sink and reportable at a Warn sink. Keep other queries, including log
-  injection at Debug calls, active.
+  realm-name, typed-error, user-payload, or claims field may independently
+  qualify for the exceptions below.
+- Claims are accepted at the structured sinks described below, not globally
+  sanitized data. Other loggers and unrelated fields remain analyzed. Keep
+  other queries, including log injection at Debug calls, active.
 
 Portal profile warnings require separate review. Historical alert line numbers
 may refer to older code; inspect the alert revision before equating it with
@@ -93,11 +93,38 @@ do not infer an exception from a variable name or the log message.
 Suppress only that individual field for `go/clear-text-logging`. Separate
 password, token, session, and other payload fields in the same call remain
 analyzed unless they independently qualify for an accepted exception. Other
-keys (including `claims`), constructors, dynamic keys, wrappers, sugared calls,
-`WithOptions`, and unrelated loggers keep their existing analysis. Do not
+keys outside the claims exception below, constructors, dynamic keys, wrappers,
+sugared calls, `WithOptions`, and unrelated loggers keep their existing analysis. Do not
 globally sanitize claims or user objects; other destinations and queries,
 including log injection, remain in scope. This policy preserves intentional
 diagnostics and does not authorize adding new secrets to user payloads.
+
+## Claims and individual claim fields
+
+Claims and the fields inside them are accepted troubleshooting diagnostics at
+ordinary Zap Logger levels as well as Debug. Suppress `go/clear-text-logging`
+for `zap.Any("claims", payload)`, including claim maps, and for a direct Zap
+field constructor with a constant key whose value is AuthCrunch's
+`github.com/greenpau/go-authcrunch/pkg/user.Claims` or a direct read within it.
+This includes `zap.String("jti", parsedUser.Claims.ID)`, whole claims under
+other keys, nested struct fields, map/slice elements, slices, type assertions,
+parentheses, and pointer operations. A typed claims variable retains this
+recognition; arbitrary functions and expressions combining claims with other
+values do not.
+
+Recognize the qualified claims type and actual Zap targets, not a variable or
+unrelated struct/type named `Claims`. A password string merely labeled `jti`
+or `claims` does not qualify. Direct `Logger.With` fields qualify; dynamic
+keys, wrappers, sugared calls, `WithOptions`, and other loggers retain their
+existing analysis. As with user payloads, the explicit `zap.Any("claims", ...)`
+form identifies the aggregate diagnostic by its constant key.
+
+Apply the exception to each individual logging field. Neighboring request or
+session identifiers, credentials, and other payloads remain analyzed unless
+they independently qualify. Do not sanitize the claims source or remove it
+from the upstream flow model. Log injection and other queries remain active.
+Alert 1651's profile warning logs the JTI claim at Warn level and qualifies
+under this policy; it does not require changing runtime logging or severity.
 
 ## ACL rule logging
 

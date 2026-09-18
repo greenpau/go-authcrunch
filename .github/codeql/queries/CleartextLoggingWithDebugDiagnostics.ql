@@ -1,7 +1,7 @@
 /**
  * @name Clear-text logging of sensitive information
  * @description Logging sensitive information outside accepted administrator debug,
- *              realm-name, error, user and ACL rule diagnostics can expose it to an attacker.
+ *              realm-name, error, user, claims and ACL rule diagnostics can expose it to an attacker.
  * @kind path-problem
  * @problem.severity error
  * @security-severity 7.5
@@ -28,6 +28,7 @@ where
   not isRealmDiagnosticSink(sink.getNode()) and
   not isErrorDiagnosticSink(sink.getNode()) and
   not isUserDiagnosticSink(sink.getNode()) and
+  not isClaimsDiagnosticSink(sink.getNode()) and
   // This exact file is an accepted logging surface at every level. Other
   // queries and flows from this file to logging sinks elsewhere stay active.
   not sink.getNode().getLocation().getFile().getRelativePath() = "pkg/acl/rule.go"

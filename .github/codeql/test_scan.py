@@ -18,6 +18,7 @@ import (
     "net/http"
     "os"
 
+    "github.com/greenpau/go-authcrunch/pkg/user"
     "go.uber.org/zap"
 )
 
@@ -37,13 +38,13 @@ func diagnostics(logger *zap.Logger, request *http.Request) {
     logger.Sugar().Debug(password) // exempt: sugared
     logger.Sugar().Debugf("claims: %s", password) // exempt: formatted
     logger.Sugar().Debugw("claims", "user", claims) // exempt: structured
-    logger.Info("claims", zap.Any("claims", claims)) // retain: info
-    logger.Warn("claims", zap.Any("claims", claims)) // retain: warn
-    logger.Error("claims", zap.Any("claims", claims)) // retain: error
-    logger.DPanic("claims", zap.Any("claims", claims)) // retain: dpanic
+    logger.Info("claims", zap.Any("payload", claims)) // retain: info
+    logger.Warn("claims", zap.Any("payload", claims)) // retain: warn
+    logger.Error("claims", zap.Any("payload", claims)) // retain: error
+    logger.DPanic("claims", zap.Any("payload", claims)) // retain: dpanic
     logger.Sugar().Infow("claims", "user", claims) // retain: sugared-info
     logger.Sugar().Warnf("claims: %s", password) // retain: formatted-warn
-    logger.With(zap.Any("claims", claims)).Debug("claims") // retain: attached-field
+    logger.With(zap.Any("payload", claims)).Debug("claims") // retain: attached-field
     logger.WithOptions(zap.Fields(zap.Any("user", claims))).Debug("claims") // retain: attached-option
     log.Print(password) // retain: standard-logger
     diagnosticWriter{}.Debug(password)
@@ -179,7 +180,7 @@ func userDiagnostics(logger *zap.Logger, request *http.Request) {
         zap.String("password", getPassword()), // retain: user-neighbor-password
     )
     logger.Warn("user", zap.Any("user", &realmRequest{Password: getPassword()})) // exempt: user-object
-    logger.Warn("claims", zap.Any("claims", payload)) // retain: other-user-key
+    logger.Warn("claims", zap.Any("payload", payload)) // retain: other-user-key
     logger.Warn("user", zap.Any(request.URL.Query().Get("key"), payload)) // retain: dynamic-user-key
     logger.Warn("user", errorFieldFactory{}.Any("user", payload)) // retain: unrelated-user-method
     logger.Warn("credential", zap.String("user", getPassword())) // retain: user-string-field
@@ -198,6 +199,78 @@ func fatalUserDiagnostic(logger *zap.Logger) {
 func userLogInjection(logger *zap.Logger, request *http.Request) {
     logger.Warn("user", zap.Any("user", request.URL.Query().Get("user"))) // injection: user-log-injection
 }
+
+// The canonical qualified Claims type matters, not a matching field/type name.
+type Claims struct { ID string }
+type unrelatedClaimsUser struct { Claims *Claims }
+
+func claimsDiagnostics(logger *zap.Logger, request *http.Request) {
+    claims := &user.Claims{
+        ID: request.Header.Get("Authorization"),
+        Email: getPassword(),
+        Roles: []string{getPassword()},
+        Metadata: map[string]interface{}{"nested": map[string]interface{}{"value": getPassword()}},
+        AccessList: &user.AccessListClaim{Paths: map[string]interface{}{"path": getPassword()}},
+    }
+    usr := &user.User{Claims: claims}
+    logger.Info("claims", zap.Any("claims", map[string]interface{}{"password": getPassword()})) // exempt: claims-map
+    logger.Info("claims", zap.Any("details", usr.Claims)) // exempt: typed-claims
+    logger.Warn("jti session not found", zap.String("jti", usr.Claims.ID)) // exempt: profile-jti
+    logger.Error("claims", zap.String("email", claims.Email)) // exempt: claims-error
+    logger.DPanic("claims", zap.Strings("roles", claims.Roles)) // exempt: claims-dpanic
+    logger.With(zap.String("jti", claims.ID)).Warn("claims") // exempt: claims-attached-field
+    logger.With(zap.Any("claims", map[string]interface{}{"password": getPassword()})).Info("claims") // exempt: claims-map-attached
+    logger.Warn("claims", zap.String("role", claims.Roles[0])) // exempt: claims-slice-element
+    logger.Warn("claims", zap.Strings("roles", claims.Roles[:1])) // exempt: claims-slice
+    logger.Warn("claims", zap.Stringp("jti", &claims.ID)) // exempt: claims-field-address
+    logger.Warn("claims", zap.String("metadata", claims.Metadata["nested"].(map[string]interface{})["value"].(string))) // exempt: claims-nested-map
+    logger.Warn("claims", zap.Any("path", claims.AccessList.Paths["path"])) // exempt: claims-nested-struct
+    logger.Warn("claims", zap.Reflect("details", *claims)) // exempt: claims-dereference
+    logger.Warn("claims and credentials",
+        zap.String("jti", usr.Claims.ID), // exempt: claims-mixed-jti
+        zap.String("password", getPassword()), // retain: claims-neighbor-password
+    )
+    logger.Warn("credential", zap.String("jti", getPassword())) // retain: mislabeled-jti
+    logger.Warn("credential", zap.String("claims", getPassword())) // retain: mislabeled-claims-string
+    logger.Warn("claims", zap.String("jti", (&unrelatedClaimsUser{Claims: &Claims{ID: getPassword()}}).Claims.ID)) // retain: unrelated-claims-type
+    logger.Warn("combined", zap.String("value", claims.ID + getPassword())) // retain: mixed-claims-expression
+    logger.Warn("claims", zap.String(request.URL.Query().Get("key"), claims.ID)) // retain: dynamic-claim-key
+    logger.Warn("claims", realmFieldFactory{}.String("jti", claims.ID)) // retain: unrelated-claims-constructor
+    logger.WithOptions(zap.Fields(zap.String("jti", claims.ID))).Warn("claims") // retain: claims-attached-option
+    logger.Sugar().Warnw("claims", "jti", claims.ID) // retain: sugared-claims
+    log.Print(zap.String("jti", claims.ID)) // retain: standard-claims-field
+    log.Print(claims.ID) // retain: standard-claims-value
+}
+
+func panicClaimsDiagnostic(logger *zap.Logger) {
+    claims := &user.Claims{ID: getPassword()}
+    logger.Panic("claims", zap.String("jti", claims.ID)) // exempt: claims-panic
+}
+
+func fatalClaimsDiagnostic(logger *zap.Logger) {
+    logger.Fatal("claims", zap.Any("claims", map[string]string{"password": getPassword()})) // exempt: claims-fatal
+}
+
+func claimsLogInjection(logger *zap.Logger, request *http.Request) {
+    claims := &user.Claims{ID: request.URL.Query().Get("jti")}
+    logger.Warn("claims", zap.String("jti", claims.ID)) // injection: claims-field-log-injection
+    logger.Warn("claims", zap.Any("claims", request.URL.Query().Get("claims"))) // injection: claims-map-log-injection
+}
+'''
+
+# Minimal fixture-owned models reproduce the real qualified type and nested
+# reads without pulling the entire application into the scanner fixture.
+USER_FIXTURE = '''package user
+
+type User struct { Claims *Claims }
+type Claims struct {
+    ID string
+    Email string
+    Roles []string
+    Metadata map[string]interface{}
+    AccessList *AccessListClaim
+}
+type AccessListClaim struct { Paths map[string]interface{} }
 '''
 
 ADJACENT_FIXTURE = '''package acl
@@ -215,6 +288,7 @@ func adjacentDiagnostic(logger *zap.Logger) {
 # file receives its sensitive value from the exempt file to test sink scoping.
 FIXTURES = {
     "main.go": FIXTURE,
+    "pkg/user/claims.go": USER_FIXTURE,
     "pkg/acl/rule.go": FIXTURE.replace("package fixture", "package acl", 1)
                               .replace("// retain:", "// exempt:"),
     "pkg/acl/rule_extra.go": ADJACENT_FIXTURE,
@@ -269,7 +343,7 @@ def main():
     zap_version = re.search(r"go\.uber\.org/zap (v\S+)", module).group(1)
     go_version = re.search(r"(?m)^go (\S+)", module).group(1)
     (root / "go.mod").write_text(
-        f"module example.com/authcrunch-codeql-fixture\n\ngo {go_version}\n\n"
+        f"module github.com/greenpau/go-authcrunch\n\ngo {go_version}\n\n"
         f"require go.uber.org/zap {zap_version}\n")
     run(["go", "mod", "tidy"], root)
     run(["gofmt", "-w", *FIXTURES], root)
@@ -310,9 +384,9 @@ def main():
     extra = results_by_rule(output / "log-injection.sarif")
     if not expected["injection"] <= extra.get("go/log-injection", set()):
         raise AssertionError("Debug, structured and ACL logging must remain subject to log injection")
-    print(f"PASS: {len(expected['exempt'])} debug/realm/error/user/ACL cases excepted; "
+    print(f"PASS: {len(expected['exempt'])} debug/realm/error/user/claims/ACL cases excepted; "
           f"{len(expected['retain'])} other logging cases, all default rules and "
-          "explicitly selected debug/realm/error/user/ACL log injection retained.")
+          "explicitly selected debug/realm/error/user/claims/ACL log injection retained.")
 
 
 if __name__ == "__main__":
