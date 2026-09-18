@@ -1,10 +1,10 @@
-# CodeQL scans and debug diagnostics
+# CodeQL scans and diagnostic logging exceptions
 
 ## Query ownership
 
 `.github/workflows/codeql.yml` is the advanced setup workflow for Go,
 JavaScript/TypeScript, Python and Actions. Keep those languages when changing
-the Go exception. Only the Go initialization loads
+the Go exceptions. Only the Go initialization loads
 `.github/codeql/codeql-config.yml`; the other languages use the standard suite.
 Go builds with the repository CI toolchain and `go build` rather than test,
 release or maintenance targets.
@@ -22,12 +22,20 @@ when all its logging uses qualify. The filter applies to the final logging
 sink, never to the source claims or the upstream flow model. This preserves
 non-debug uses of the same data and findings from other rules.
 
+The replacement query also excludes `go/clear-text-logging` sinks whose
+repository-relative path is exactly `pkg/acl/rule.go`, regardless of logger
+or level. Keep this equality check on the sink's location; prefix/suffix
+matching or extraction exclusions would expand the accepted scope. Other
+rules still inspect this file, and flows from it to sinks elsewhere remain
+reportable.
+
 The [threat-hunting owner](../../threat-hunting/references/debug-logging.md)
-defines the accepted administrator diagnostic behavior and its limits. Keep
-that policy there rather than broadening scanner exclusions to entire files,
-directories, queries, or severity levels. Check query resolution after upstream
-pack updates; an upstream path change should fail the fixture, not silently
-broaden the filter. Keep `queries/codeql-pack.lock.yml` under version control.
+defines the accepted diagnostic behavior and its limits. Keep that policy there
+and preserve the explicit rule/file boundary. Do not expand the ACL exception
+to directories, other queries or global severity levels. Check query resolution
+after upstream pack updates; an upstream path change should fail the fixture,
+not silently broaden the filter. Keep `queries/codeql-pack.lock.yml` under
+version control.
 
 ## GitHub activation
 
@@ -51,9 +59,9 @@ dismissed a hosted alert.
 Inspect existing alerts after the first successful advanced scan. An alert can
 have instances from multiple analysis configurations; changing configurations
 may leave historical instances needing separate review. Dismiss only verified
-administrator debug diagnostics, with a rationale identifying this policy.
-Do not bulk-dismiss every alert with the clear-text logging title: non-debug
-ACL variants and portal warnings remain in scope for review.
+debug diagnostics or exact ACL rule/file matches, with a rationale identifying
+this policy. Do not bulk-dismiss every alert with the clear-text logging title:
+non-debug logging outside the exempt ACL file remains in scope for review.
 
 GitHub documents [custom query configuration](https://docs.github.com/en/code-security/reference/code-scanning/workflow-configuration-options)
 and [query suite filtering](https://docs.github.com/en/code-security/tutorials/customize-code-scanning/create-query-suites).
@@ -85,11 +93,13 @@ module with the library's Zap version. It exercises the real helper, CodeQL
 extraction, configured default/replacement queries and SARIF, then compares the
 complete upstream default suite on the same database, including its rule IDs.
 It verifies structured claims, headers, token-like values and sugared debug
-calls disappear, while ordinary
-levels, attached fields and unrelated loggers remain. It separately selects
+calls disappear, and all logging levels in `pkg/acl/rule.go` are excepted.
+It preserves ordinary levels, attached fields and unrelated loggers elsewhere,
+including a neighboring file that receives sensitive data from the exempt
+file and a nested path with the same suffix. It separately selects
 the extended-suite log-injection query alongside the replacement and verifies
-that Debug remains a sink for that rule; it does not enable the extended suite
-in the production configuration.
+that Debug and the exempt ACL file remain sinks for that rule; it does not
+enable the extended suite in the production configuration.
 The fixture and scan evidence stay in `.coverage/codeql/exception-e2e-*`.
 
 The CodeQL workflow runs this regression after the primary analysis has

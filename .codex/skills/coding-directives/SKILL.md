@@ -300,11 +300,11 @@ tests assert them.
 This repository handles tokens, cookies, API keys, passwords, TOTP secrets,
 private keys, OAuth client secrets, LDAP credentials, and identity data. Keep
 secret values out of errors, test diffs and command output. For logging, apply
-the [administrator debug logging exception](../threat-hunting/references/debug-logging.md)
+the [diagnostic logging exceptions](../threat-hunting/references/debug-logging.md)
 to intentional claims and authentication diagnostics.
 
 When adding `zap` logs, include the operation, package context, realm/name, and
-non-sensitive identifiers. Outside that explicit debug diagnostic boundary,
+non-sensitive identifiers. Outside those accepted diagnostic boundaries,
 redact or omit token bodies and full credential structs. Continue omitting
 password material, private keys and unrelated shared secrets even when older
 code logs something similar. Do not remove intentional diagnostic visibility

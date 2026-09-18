@@ -61,6 +61,27 @@ func fatalDiagnostic(logger *zap.Logger) {
 }
 '''
 
+ADJACENT_FIXTURE = '''package acl
+
+import "go.uber.org/zap"
+
+func adjacentDiagnostic(logger *zap.Logger) {
+    password := getPassword()
+    logger.Info("claims", zap.String("token", password)) // retain: adjacent-file
+}
+'''
+
+# The exact ACL file accepts all levels. Neighboring files and a nested path
+# with the same suffix retain the normal debug-only exception. The adjacent
+# file receives its sensitive value from the exempt file to test sink scoping.
+FIXTURES = {
+    "main.go": FIXTURE,
+    "pkg/acl/rule.go": FIXTURE.replace("package fixture", "package acl", 1)
+                              .replace("// retain:", "// exempt:"),
+    "pkg/acl/rule_extra.go": ADJACENT_FIXTURE,
+    "nested/pkg/acl/rule.go": FIXTURE,
+}
+
 
 def run(command, cwd, env=None):
     subprocess.run(command, cwd=cwd, env=env, check=True, timeout=1200)
@@ -72,8 +93,8 @@ def results_by_rule(path):
     for scan in document["runs"]:
         for result in scan.get("results", []):
             location = result["locations"][0]["physicalLocation"]
-            if location["artifactLocation"]["uri"] == "main.go":
-                results.setdefault(result["ruleId"], set()).add(location["region"]["startLine"])
+            point = (location["artifactLocation"]["uri"], location["region"]["startLine"])
+            results.setdefault(result["ruleId"], set()).add(point)
     return results
 
 
@@ -100,7 +121,10 @@ def main():
         shutil.copy2(REPO / name, destination)
     shutil.copytree(REPO / ".github/codeql/queries", root / ".github/codeql/queries",
                     ignore=shutil.ignore_patterns("*.qlx", "*.bqrs", ".cache"))
-    (root / "main.go").write_text(FIXTURE)
+    for name, source in FIXTURES.items():
+        destination = root / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(source)
     # Use the same Zap dependency as the library, without changing its manifests.
     module = (REPO / "go.mod").read_text()
     zap_version = re.search(r"go\.uber\.org/zap (v\S+)", module).group(1)
@@ -109,16 +133,19 @@ def main():
         f"module example.com/authcrunch-codeql-fixture\n\ngo {go_version}\n\n"
         f"require go.uber.org/zap {zap_version}\n")
     run(["go", "mod", "tidy"], root)
-    run(["gofmt", "-w", "main.go"], root)
-    source = (root / "main.go").read_text().splitlines()
-    expected = {kind: {line for line, text in enumerate(source, 1) if f"// {kind}:" in text}
-                for kind in ("exempt", "retain", "injection")}
+    run(["gofmt", "-w", *FIXTURES], root)
+    expected = {
+        kind: {(name, line) for name in FIXTURES
+               for line, text in enumerate((root / name).read_text().splitlines(), 1)
+               if f"// {kind}:" in text}
+        for kind in ("exempt", "retain", "injection")
+    }
     output = root / ".coverage" / "scan"
     env = {**os.environ, "CODEQL": codeql, "CODEQL_OUTPUT_DIR": str(output)}
     run(["bash", "assets/scripts/run_codeql_scan.sh"], root, env)
     filtered = results_by_rule(output / "results.sarif")
     if filtered.get(RULE, set()) != expected["retain"]:
-        raise AssertionError(f"Expected reportable lines {sorted(expected['retain'])}; "
+        raise AssertionError(f"Expected reportable locations {sorted(expected['retain'])}; "
                              f"received {sorted(filtered.get(RULE, set()))}")
     # Compare the complete unmodified default suite on the same database.
     run([codeql, "database", "analyze", str(output / "database"),
@@ -135,7 +162,7 @@ def main():
         raise AssertionError("The exception changed results from another default query")
 
     # Log injection belongs to the extended suite. Select it explicitly alongside
-    # the replacement to verify its debug sinks stay intact when it is enabled.
+    # the replacement to verify debug and ACL-file sinks stay intact when enabled.
     run([codeql, "database", "analyze", str(output / "database"),
          str(root / ".github/codeql/queries/CleartextLoggingWithDebugDiagnostics.ql"),
          "codeql/go-queries:Security/CWE-117/LogInjection.ql",
@@ -143,10 +170,10 @@ def main():
          f"--output={output / 'log-injection.sarif'}"], root)
     extra = results_by_rule(output / "log-injection.sarif")
     if not expected["injection"] <= extra.get("go/log-injection", set()):
-        raise AssertionError("Debug logging must remain subject to the log-injection query")
-    print(f"PASS: {len(expected['exempt'])} debug cases excepted; "
-          f"{len(expected['retain'])} non-debug cases, all default rules and "
-          "explicitly selected debug log injection retained.")
+        raise AssertionError("Debug and ACL logging must remain subject to log injection")
+    print(f"PASS: {len(expected['exempt'])} debug/ACL cases excepted; "
+          f"{len(expected['retain'])} other logging cases, all default rules and "
+          "explicitly selected debug/ACL log injection retained.")
 
 
 if __name__ == "__main__":

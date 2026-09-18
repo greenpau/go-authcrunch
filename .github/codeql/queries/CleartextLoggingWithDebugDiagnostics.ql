@@ -1,7 +1,7 @@
 /**
  * @name Clear-text logging of sensitive information
- * @description Logging sensitive information outside intentional administrator debug
- *              diagnostics can expose it to an attacker.
+ * @description Logging sensitive information outside accepted administrator debug
+ *              and ACL rule diagnostics can expose it to an attacker.
  * @kind path-problem
  * @problem.severity error
  * @security-severity 7.5
@@ -19,10 +19,13 @@ import CleartextLogging::Flow::PathGraph
 import DebugDiagnostics
 
 // Retain the upstream flow model, rule ID, locations and message. Only the
-// accepted debug sinks differ from Security/CWE-312/CleartextLogging.ql.
+// accepted debug and ACL rule sinks differ from the upstream query.
 from CleartextLogging::Flow::PathNode source, CleartextLogging::Flow::PathNode sink
 where
   CleartextLogging::Flow::flowPath(source, sink) and
-  not isAdminDebugSink(sink.getNode())
+  not isAdminDebugSink(sink.getNode()) and
+  // This exact file is an accepted logging surface at every level. Other
+  // queries and flows from this file to logging sinks elsewhere stay active.
+  not sink.getNode().getLocation().getFile().getRelativePath() = "pkg/acl/rule.go"
 select sink.getNode(), source, sink, "$@ flows to a logging call.", source.getNode(),
   "Sensitive data returned by " + source.getNode().(CleartextLogging::Source).describe()

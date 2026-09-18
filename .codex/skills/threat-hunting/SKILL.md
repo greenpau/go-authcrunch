@@ -276,10 +276,10 @@ when changing injected identity headers, token stripping or credential caches.
 - JWT algorithm confusion: `RS256` public key accepted as `HS256` HMAC secret
 - `alg: none` acceptance or missing algorithm allowlist
 - Missing `kid` validation allowing key-set confusion
-- Apply the [administrator debug logging exception](references/debug-logging.md)
+- Apply the [diagnostic logging exceptions](references/debug-logging.md)
   to intentional claims, identity/session, ACL and OAuth/OIDC diagnostics.
-  Check the actual logger level and deployment boundary before reporting or
-  dismissing a clear-text logging alert; the exception is not file-wide.
+  Check the actual logger level, deployment boundary and explicitly accepted
+  rule/file scope before reporting or dismissing a clear-text logging alert.
 
 **Cookies:**
 - Manual cookie string construction instead of `http.Cookie`

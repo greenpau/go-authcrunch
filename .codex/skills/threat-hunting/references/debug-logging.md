@@ -1,4 +1,6 @@
-# Administrator debug logging
+# Accepted diagnostic logging
+
+## Administrator debug logging
 
 AuthCrunch intentionally exposes user claims and authentication diagnostics to
 administrators troubleshooting a portal. Claims, identity payloads, session and
@@ -17,19 +19,36 @@ Inspect the actual call and data flow:
 
 - `zap.Logger.Debug` and `zap.SugaredLogger.Debug`, `Debugf`, and `Debugw` are the
   explicit levels recognized by the CodeQL exception.
-- Info, Warn, Error, DPanic, Panic, Fatal, standard-library logging and dynamic
-  levels remain eligible for findings. A debug-enabled logger does not make an
-  Info or Warn call a debug diagnostic.
+- Outside the ACL rule exception below, Info, Warn, Error, DPanic, Panic,
+  Fatal, standard-library logging and dynamic levels remain eligible for
+  findings. A debug-enabled logger does not make an Info or Warn call a debug
+  diagnostic.
 - `With` and `WithOptions` attach fields that may outlive one debug call. They
   remain eligible even when followed by Debug; trace their later uses.
 - Claims are not globally sanitized data. The same value may be accepted at a
   debug sink and reportable at a Warn sink. Keep other queries, including log
   injection at Debug calls, active.
 
-`pkg/acl/rule.go` contains explicit Debug/Info/Warn/Error variants. Never exempt
-that whole file or infer the level from a type name. Portal profile warnings
-also require separate review. Historical alert line numbers may refer to older
-code; inspect the alert revision before equating it with the current checkout.
+Portal profile warnings require separate review. Historical alert line numbers
+may refer to older code; inspect the alert revision before equating it with
+the current checkout.
+
+## ACL rule logging
+
+Suppress all `go/clear-text-logging` findings whose logging sink is in exactly
+`pkg/acl/rule.go`, at every logging level. This is an explicit accepted
+diagnostic surface, including the Info/Warn/Error ACL rule variants; do not
+restrict this file's exception to Debug or redact its payloads to clear those
+alerts.
+
+The exception applies only to that rule and exact repository-relative file.
+Other rules still analyze the file. Adjacent files, similarly named files and
+nested paths ending in `pkg/acl/rule.go` do not qualify. Data originating in
+the exempt file and logged elsewhere remains subject to the destination's
+normal checks. Implement this as a sink-location filter in the custom query,
+never by omitting the file from extraction or marking its data sanitized.
+
+## Scope and maintenance
 
 This policy does not authorize adding passwords, private signing keys or
 unrelated secrets to logs. Use the least diagnostic data needed, and review the
@@ -39,7 +58,7 @@ use password taint to exercise the upstream query, not real credentials.
 
 For GitHub activation, the exact query replacement, local scans and regression
 tests, use the [CodeQL workflow](../../scripts-and-automation/references/codeql.md).
-Do not disable `go/clear-text-logging` globally or add file/path-wide exclusions.
-Classify qualifying existing alerts as accepted administrator diagnostics;
-do not claim their data flow is absent or that a hosted alert was dismissed
-without observing the remote result.
+Do not disable `go/clear-text-logging` globally or broaden the exact ACL
+rule/file exception to other files or queries. Classify qualifying existing
+alerts as accepted diagnostics; do not claim their data flow is absent or
+that a hosted alert was dismissed without observing the remote result.
