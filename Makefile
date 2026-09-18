@@ -17,7 +17,7 @@ export TEST TEST_DIR TEST_TIMEOUT QUICK_TEST_DIR COVERAGE_DIR MINIMUM_COVERAGE
 export APP_VERSION GIT_COMMIT GIT_BRANCH BUILD_USER BUILD_DATE
 export PYTHONDONTWRITEBYTECODE := 1
 
-.PHONY: all info build linter dep install-test-tools test run-tests qtest run-quick-tests run-reports test-ui test-automation ci-check brand-assets brand-assets-check version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release release-git-check release-update-version release-git-commit
+.PHONY: all info build linter dep install-test-tools test run-tests qtest run-quick-tests run-reports test-ui test-automation test-codeql ci-check brand-assets brand-assets-check version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release release-git-check release-update-version release-git-commit
 
 all: info build
 
@@ -74,6 +74,9 @@ test-ui:
 
 test-automation:
 	@$(PYTHON) -m unittest discover -s assets/scripts/tests -p '*_test.py' -v
+
+test-codeql:
+	@$(PYTHON) .github/codeql/test_scan.py
 
 brand-assets:
 	@$(PYTHON) assets/scripts/update_brand_assets.py

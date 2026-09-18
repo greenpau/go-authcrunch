@@ -1,33 +1,32 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-export CODEQL_SCAN_ID=$(date "+%Y%m%d_%H%M%S")
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$repo_root"
+codeql_cmd="${CODEQL:-codeql}"
+if ! command -v "$codeql_cmd" >/dev/null 2>&1; then
+  printf 'CodeQL CLI not found: %s\n' "$codeql_cmd" >&2
+  exit 1
+fi
 
-printf "CodeQL Scan ID: ${CODEQL_SCAN_ID}\n";
+if [[ -n "${CODEQL_OUTPUT_DIR:-}" ]]; then
+  mkdir -p "$CODEQL_OUTPUT_DIR"
+  output_dir="$(cd -- "$CODEQL_OUTPUT_DIR" && pwd)"
+else
+  mkdir -p .coverage/codeql
+  output_dir="$(mktemp -d "$repo_root/.coverage/codeql/scan.XXXXXXXX")"
+fi
 
-mkdir -p $HOME/.local/codeql/databases
-cd $HOME/.local/codeql/databases
-codeql database create \
-  --language="go" \
-  --source-root="${GOPATH}/src/github.com/greenpau/go-authcrunch" \
-  -- ./go-authcrunch-${CODEQL_SCAN_ID}
+"$codeql_cmd" pack install .github/codeql/queries
+"$codeql_cmd" pack download codeql/go-queries
+"$codeql_cmd" database create "$output_dir/database" \
+  --language=go --source-root="$repo_root" \
+  --codescanning-config="$repo_root/.github/codeql/codeql-config.yml" \
+  --command='go build -mod=readonly ./...'
+"$codeql_cmd" database analyze "$output_dir/database" \
+  --threads=2 --ram=5922 --format=sarif-latest \
+  --output="$output_dir/results.sarif"
+"$codeql_cmd" database interpret-results "$output_dir/database" \
+  --format=csv --output="$output_dir/results.csv"
 
-cd $HOME/.local/codeql
-codeql database run-queries --ram=5922 --threads=2 --verbose \
-  --additional-packs . \
-  -- ./databases/go-authcrunch-${CODEQL_SCAN_ID} \
-  ./queries-go/ql/src/codeql-suites/go-code-scanning.qls
-
-cd $HOME/.local/codeql
-mkdir -p ./results/go-authcrunch
-codeql database interpret-results --format csv \
-  --output ./results/go-authcrunch/codeql_results_${CODEQL_SCAN_ID}.csv \
-  -- ./databases/go-authcrunch-${CODEQL_SCAN_ID}
-
-printf "CodeQL Scan Results (CSV): "`pwd`"/results/go-authcrunch/codeql_results_${CODEQL_SCAN_ID}.csv\n"
-
-codeql database interpret-results --format sarif-latest \
-  --output ./results/go-authcrunch/codeql_results_${CODEQL_SCAN_ID}_sarif.json \
-  -- ./databases/go-authcrunch-${CODEQL_SCAN_ID}
-
-printf "CodeQL Scan Results (SARIF): "`pwd`"/results/go-authcrunch/codeql_results_${CODEQL_SCAN_ID}_sarif.json\n"
+printf 'CodeQL scan results: %s\n' "$output_dir"

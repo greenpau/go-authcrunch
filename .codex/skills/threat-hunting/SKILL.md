@@ -276,10 +276,10 @@ when changing injected identity headers, token stripping or credential caches.
 - JWT algorithm confusion: `RS256` public key accepted as `HS256` HMAC secret
 - `alg: none` acceptance or missing algorithm allowlist
 - Missing `kid` validation allowing key-set confusion
-- Treat debug-level OAuth/OIDC token, code, and userinfo logging as intentional
-  admin diagnostics in AuthCrunch. Do not report it as a finding unless the
-  data is logged outside debug level, exposed to non-admins, enabled in an
-  untrusted sink by default, or returned in user-visible responses.
+- Apply the [administrator debug logging exception](references/debug-logging.md)
+  to intentional claims, identity/session, ACL and OAuth/OIDC diagnostics.
+  Check the actual logger level and deployment boundary before reporting or
+  dismissing a clear-text logging alert; the exception is not file-wide.
 
 **Cookies:**
 - Manual cookie string construction instead of `http.Cookie`
@@ -317,10 +317,8 @@ errors for malformed user input.
   audience, token signature, key use, and algorithm allowlist
 - Treat provider-specific disabled controls as explicit compatibility risks —
   document them
-- Recognize that portal admins intentionally need debug-level visibility into
-  raw token responses, ID tokens, access tokens, codes, and userinfo bodies.
-  Report sensitive OAuth/OIDC logging only when it escapes the admin debug
-  boundary or contradicts the configured trust model.
+- Preserve the [administrator debug diagnostic boundary](references/debug-logging.md)
+  when reviewing raw token responses, ID/access tokens, codes and userinfo.
 - Verify that the JWKS endpoint is fetched from a trusted, config-pinned URI
 - Check that key rollover does not create a window of accepting revoked keys
 

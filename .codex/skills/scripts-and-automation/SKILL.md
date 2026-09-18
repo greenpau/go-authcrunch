@@ -29,6 +29,7 @@ boundary for these workflows.
 | `make run-reports` | Rebuild presentations from the existing tested evidence bundle |
 | `make test-ui` | Node spec-reported login and refresh client tests (`*_client_test.cjs`) |
 | `make test-automation` | Verbose Python automation/version/release fixture tests |
+| `make test-codeql` | Real CodeQL fixture scan verifying the debug logging exception and retained alerts; requires CodeQL CLI |
 | `make brand-assets` / `make brand-assets-check` | Regenerate SVG branding and shared colors from the palette, or check drift without writes |
 | `make ci-check` | Sequential version, brand-asset consistency, automation, lint, Go tests, UI tests, and build gates |
 | `make version-check` / `make version-sync` | Check or explicitly synchronize version-bearing Go defaults |
@@ -100,9 +101,11 @@ explicit embedded-profile asset refresh with a frontend build available at
 It does not own the handwritten login or refresh scripts under
 `pkg/authn/ui/core/js` or the shared portal theme styles.
 
-`assets/scripts/run_codeql_scan.sh` assumes CodeQL CLI/query packs under
-`$HOME/.local/codeql`, uses the GOPATH checkout, and writes its database/results
-under that tool directory. Use it for an explicit local CodeQL scan.
+`assets/scripts/run_codeql_scan.sh` scans this checkout with the same Go query
+configuration as `.github/workflows/codeql.yml`. It uses `CODEQL` or `codeql`
+on PATH and writes database/SARIF/CSV evidence under `.coverage/codeql` by
+default. Read the [CodeQL workflow](references/codeql.md) when running or changing
+scans, query exceptions, regression fixtures, or GitHub default/advanced setup.
 
 ## Generated Output
 

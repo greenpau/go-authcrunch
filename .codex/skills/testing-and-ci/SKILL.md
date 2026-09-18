@@ -190,6 +190,13 @@ lower the reporting severity, or disable checks to obtain a clean result.
 Avoid repository-wide autofixes or toolchain, dependency, and editor-setting
 changes just to remove diagnostics.
 
+The explicit [administrator debug logging exception](../threat-hunting/references/debug-logging.md)
+is an accepted behavior policy, not a general diagnostic suppression. Changes
+to its CodeQL implementation require `make test-codeql`, which exercises the
+real scanner and checks both excepted and retained findings. Follow the
+[CodeQL workflow](../scripts-and-automation/references/codeql.md) for activation
+and evidence; passing local scans do not prove GitHub accepted an upload.
+
 After a fix, format the edited code and rerun the affected diagnostics until
 confirmed in-scope problems are resolved. Run the corresponding tests and
 required E2E coverage under the rules above. At completion, record the

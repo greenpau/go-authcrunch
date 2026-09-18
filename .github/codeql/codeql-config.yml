@@ -1,0 +1,11 @@
+name: AuthCrunch security analysis
+
+queries:
+  - uses: ./.github/codeql/queries
+
+query-filters:
+  # Replace only the upstream query. The local query retains the same rule ID
+  # and reports every upstream flow except explicit Zap debug diagnostics.
+  - exclude:
+      id: go/clear-text-logging
+      query path: Security/CWE-312/CleartextLogging.ql
