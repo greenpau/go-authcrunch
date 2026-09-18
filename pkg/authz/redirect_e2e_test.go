@@ -17,6 +17,7 @@ package authz_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -127,30 +128,39 @@ func TestE2EAuthorizationRedirectBoundaries(t *testing.T) {
 		client := server.Client()
 		client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 		client.Timeout = 5 * time.Second
-		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"//evil.example/private", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		req.Header.Set("X-Forwarded-Host", "evil.example")
-		req.Header.Set("X-Forwarded-Proto", "https")
-		resp, err := client.Do(req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, _ = io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
-		if resp.StatusCode != http.StatusFound {
-			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusFound)
-		}
-		location, err := url.Parse(resp.Header.Get("Location"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if location.Scheme != "https" || location.Host != "auth.example" || location.Path != "/login" {
-			t.Fatalf("redirect destination = %q, want https://auth.example/login", location.String())
-		}
-		if got := location.Query().Get("return_url"); got != "https://evil.example//evil.example/private" {
-			t.Fatalf("return_url = %q, want forwarded request URL", got)
+		for _, tc := range []struct {
+			name, target, forwardedHost, wantReturnURL string
+		}{
+			{"origin form", "/private", "public.service.test", "https://public.service.test/private"},
+			{"origin form double slash", "//tenant.example/private", "public.service.test", "https://public.service.test//tenant.example/private"},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+tc.target, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				req.Header.Set("X-Forwarded-Host", tc.forwardedHost)
+				req.Header.Set("X-Forwarded-Proto", "https")
+				resp, err := client.Do(req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, _ = io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+				if resp.StatusCode != http.StatusFound {
+					t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusFound)
+				}
+				location, err := url.Parse(resp.Header.Get("Location"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if location.Scheme != "https" || location.Host != "auth.example" || location.Path != "/login" {
+					t.Fatalf("redirect destination = %q, want https://auth.example/login", location.String())
+				}
+				if got := location.Query().Get("return_url"); got != tc.wantReturnURL {
+					t.Fatalf("return_url = %q, want %q", got, tc.wantReturnURL)
+				}
+			})
 		}
 	})
 
@@ -217,6 +227,34 @@ func authzChromeExecutable(t *testing.T) string {
 	return ""
 }
 
+// Chrome startup on loaded CI runners must not consume the redirect budget.
+// The first fixture request establishes readiness; only the final callback
+// completes the journey. Keep process exit and cancellation visible in both phases.
+func waitForAuthorizationRedirectBrowser(ctx context.Context, started, completed <-chan struct{}, exited <-chan error) error {
+	for _, phase := range []struct {
+		name    string
+		ready   <-chan struct{}
+		timeout time.Duration
+	}{
+		{"startup", started, 45 * time.Second},
+		{"redirect journey", completed, 15 * time.Second},
+	} {
+		phaseCtx, cancel := context.WithTimeout(ctx, phase.timeout)
+		select {
+		case <-phase.ready:
+			cancel()
+		case err := <-exited:
+			cancel()
+			return fmt.Errorf("Chrome exited before %s completed (exit error: %v)", phase.name, err)
+		case <-phaseCtx.Done():
+			err := phaseCtx.Err()
+			cancel()
+			return fmt.Errorf("Chrome %s did not complete: %w", phase.name, err)
+		}
+	}
+	return nil
+}
+
 func TestE2EAuthorizationRedirectBrowserOrigin(t *testing.T) {
 	gate, err := authz.NewGatekeeper(&authz.PolicyConfig{
 		Name:            "browser-redirect-boundary",
@@ -236,10 +274,15 @@ func TestE2EAuthorizationRedirectBrowserOrigin(t *testing.T) {
 	var visits []string
 	var finalStatus int
 	var finalLocation string
+	started := make(chan struct{}, 1)
 	completed := make(chan struct{}, 1)
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/start":
+			select {
+			case started <- struct{}{}:
+			default:
+			}
 			w.Header().Set("Location", "/.//evil.example/landed-double-slash")
 			w.WriteHeader(http.StatusSeeOther)
 		case strings.Contains(r.RequestURI, "landed-double-slash"):
@@ -261,7 +304,7 @@ func TestE2EAuthorizationRedirectBrowserOrigin(t *testing.T) {
 			http.SetCookie(w, &http.Cookie{Name: "access_token", Value: token, Path: "/", Secure: true, HttpOnly: true})
 			w.Header().Set("Location", "/evil.example/callback")
 			w.WriteHeader(http.StatusSeeOther)
-		default:
+		case r.URL.Path == "/evil.example/callback":
 			recorder := httptest.NewRecorder()
 			_ = gate.Authenticate(recorder, r, requests.NewAuthorizationRequest())
 			mu.Lock()
@@ -279,13 +322,15 @@ func TestE2EAuthorizationRedirectBrowserOrigin(t *testing.T) {
 			case completed <- struct{}{}:
 			default:
 			}
+		default:
+			http.NotFound(w, r)
 		}
 	}))
 	server.Config.ErrorLog = log.New(io.Discard, "", 0)
 	server.StartTLS()
 	defer server.Close()
 
-	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, authzChromeExecutable(t),
 		"--headless=new",
@@ -294,6 +339,15 @@ func TestE2EAuthorizationRedirectBrowserOrigin(t *testing.T) {
 		"--disable-background-networking",
 		"--disable-gpu",
 		"--no-first-run",
+		"--no-default-browser-check",
+		"--disable-component-update",
+		"--disable-default-apps",
+		"--disable-sync",
+		"--disable-breakpad",
+		"--disable-crash-reporter",
+		"--no-proxy-server",
+		"--password-store=basic",
+		"--use-mock-keychain",
 		"--user-data-dir="+t.TempDir(),
 		server.URL+"/start",
 	)
@@ -305,34 +359,26 @@ func TestE2EAuthorizationRedirectBrowserOrigin(t *testing.T) {
 		t.Fatalf("start Chrome: %v", err)
 	}
 	waited := make(chan error, 1)
-	go func() { waited <- cmd.Wait() }()
-	select {
-	case <-completed:
-	case err := <-waited:
-		t.Fatalf("Chrome exited before completing redirect journey: %v\n%s", err, diagnostic.String())
-	case <-ctx.Done():
-		if cmd.Process != nil {
-			_ = cmd.Process.Kill()
-		}
-		select {
-		case <-waited:
-			t.Fatalf("Chrome redirect journey timed out: %v\n%s", ctx.Err(), diagnostic.String())
-		case <-time.After(3 * time.Second):
-			t.Fatalf("Chrome redirect journey timed out and the process did not exit: %v", ctx.Err())
-		}
-	}
+	go func() {
+		waited <- cmd.Wait()
+		close(waited)
+	}()
+	journeyErr := waitForAuthorizationRedirectBrowser(ctx, started, completed, waited)
 	if cmd.Process != nil {
 		_ = cmd.Process.Kill()
 	}
 	select {
 	case <-waited:
 	case <-time.After(3 * time.Second):
-		t.Fatal("Chrome did not exit after redirect journey")
+		t.Fatalf("Chrome did not exit after redirect journey (journey error: %v)", journeyErr)
 	}
 	mu.Lock()
 	gotVisits := append([]string(nil), visits...)
 	gotFinalStatus, gotFinalLocation := finalStatus, finalLocation
 	mu.Unlock()
+	if journeyErr != nil {
+		t.Fatalf("%v\nlocal redirect visits: %v\n%s", journeyErr, gotVisits, diagnostic.String())
+	}
 	if len(gotVisits) != 3 {
 		t.Fatalf("local redirect visits = %v, want three", gotVisits)
 	}

@@ -16,12 +16,13 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 	"html/template"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 )
 
 var jsRedirTmpl = template.Must(template.New("js_redir").Parse(`
@@ -109,7 +110,14 @@ func configureRedirect(w http.ResponseWriter, r *http.Request, rr *requests.Auth
 		return
 	}
 
-	if strings.HasPrefix(r.RequestURI, "/") {
+	if r.URL == nil {
+		rr.Redirect.Enabled = false
+		return
+	}
+
+	// Origin-form and authority-looking paths remain return data on the current
+	// service. Only an absolute-form request target already carries its origin.
+	if !r.URL.IsAbs() {
 		u, err := addrutil.GetCurrentURLWithSuffix(r, "")
 		if err != nil {
 			return

@@ -311,6 +311,13 @@ code logs something similar. Do not remove intentional diagnostic visibility
 solely to silence CodeQL, promote debug payloads to ordinary logging levels,
 or treat claims as globally safe to log.
 
+`pkg/util/random.go` supplies session identifiers, nonces, and credential data
+to multiple authentication flows. Keep it cryptographically secure without a
+`math/rand` fallback. Follow the existing Go 1.26 `crypto/rand.Read` contract:
+fill the buffer or terminate on unrecoverable entropy failure. Preserve helper
+length/charset contracts and unbiased bounded sampling. Verify failure behavior
+in isolated subprocesses, never by replacing `rand.Reader` in parallel tests.
+
 Prefer explicit permission bits already used in the repo for sensitive files
 and directories, such as `0600` for token files and `0700` for private
 directories.

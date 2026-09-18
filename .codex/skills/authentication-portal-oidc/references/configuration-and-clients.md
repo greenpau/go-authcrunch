@@ -122,6 +122,13 @@ not expand CORS origins. Native apps redeem directly without a browser Origin.
 Bearer-only UserInfo and public discovery support CORS without credentialed
 cookies.
 
+Validate the effective callback before creating pending authorization state,
+then repeat client lookup and URI validation in `authorizationResponse` before
+either a query redirect or a `form_post` action is emitted. Missing clients,
+unregistered callbacks, and malformed URIs fail locally without a redirect.
+Both success and error responses use this same final boundary; retain the
+exact registered URI and the narrow native-loopback port exception above.
+
 Clients obtain an opaque access token and signed ID token using the authorization
 code. Verify the ID token's signature, issuer, audience, expiration, and nonce
 with discovery/JWKS. Send the opaque access token in `Authorization: Bearer ...`

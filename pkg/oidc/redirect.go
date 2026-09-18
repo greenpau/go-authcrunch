@@ -79,10 +79,10 @@ func loopbackRedirectWithoutPort(raw string) (string, bool) {
 	return raw[:start] + host + raw[start+len(u.Host):], true
 }
 
-// allowsRedirectURI is called only for validated, immutable registrations.
+// isValidRedirectURI is called only for validated, immutable registrations.
 // A public HTTP loopback registration declares the supported native client
 // subset; all other registrations require a byte-for-byte exact match.
-func (c *ClientConfig) allowsRedirectURI(raw string) bool {
+func (c *ClientConfig) isValidRedirectURI(raw string) bool {
 	if slices.Contains(c.RedirectURIs, raw) {
 		return true
 	}

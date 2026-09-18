@@ -1217,12 +1217,36 @@ M.guid = function () {
 }();
 
 /**
- * Escapes hash from special characters
+ * Escapes a URL hash as a CSS ID selector.
  * @param {string} hash  String returned from this.hash
  * @returns {string}
  */
 M.escapeHash = function (hash) {
-  return hash.replace(/(:|\.|\[|\]|,|=|\/)/g, '\\$1');
+  if (typeof hash !== 'string' || hash.charAt(0) !== '#' ||
+      !window.CSS || typeof window.CSS.escape !== 'function') {
+    return '';
+  }
+  try {
+    return '#' + window.CSS.escape(decodeURIComponent(hash.slice(1)));
+  } catch (e) {
+    return '';
+  }
+};
+
+/**
+ * Returns the element identified by a URL hash without parsing it as a selector.
+ * @param {string} hash  String returned from this.hash
+ * @returns {Element|null}
+ */
+M.getHashElement = function (hash) {
+  if (typeof hash !== 'string' || hash.charAt(0) !== '#') {
+    return null;
+  }
+  try {
+    return document.getElementById(decodeURIComponent(hash.slice(1)));
+  } catch (e) {
+    return null;
+  }
 };
 
 M.elementOrParentIsFixed = function (element) {
@@ -4119,7 +4143,7 @@ $jscomp.polyfill = function (e, r, p, m) {
 
         // Update the variables with the new link and content
         this.$activeTabLink = tabLink;
-        this.$content = $(M.escapeHash(tabLink[0].hash));
+        this.$content = $(M.getHashElement(tabLink[0].hash));
         this.$tabLinks = this.$el.children('li.tab').children('a');
 
         // Make the tab active.
@@ -4206,7 +4230,7 @@ $jscomp.polyfill = function (e, r, p, m) {
         this.index = Math.max(this.$tabLinks.index(this.$activeTabLink), 0);
 
         if (this.$activeTabLink.length) {
-          this.$content = $(M.escapeHash(this.$activeTabLink[0].hash));
+          this.$content = $(M.getHashElement(this.$activeTabLink[0].hash));
           this.$content.addClass('active');
         }
       }
@@ -4227,7 +4251,7 @@ $jscomp.polyfill = function (e, r, p, m) {
 
         var $tabsContent = $();
         this.$tabLinks.each(function (link) {
-          var $currContent = $(M.escapeHash(link.hash));
+          var $currContent = $(M.getHashElement(link.hash));
           $currContent.addClass('carousel-item');
           $tabsContent = $tabsContent.add($currContent);
         });
@@ -4285,7 +4309,7 @@ $jscomp.polyfill = function (e, r, p, m) {
         // Hide Tabs Content
         this.$tabLinks.not(this.$activeTabLink).each(function (link) {
           if (!!link.hash) {
-            var $currContent = $(M.escapeHash(link.hash));
+            var $currContent = $(M.getHashElement(link.hash));
             if ($currContent.length) {
               $currContent[0].style.display = 'none';
             }
@@ -4303,7 +4327,7 @@ $jscomp.polyfill = function (e, r, p, m) {
         // show Tabs Content
         this.$tabLinks.each(function (link) {
           if (!!link.hash) {
-            var $currContent = $(M.escapeHash(link.hash));
+            var $currContent = $(M.getHashElement(link.hash));
             if ($currContent.length) {
               $currContent[0].style.display = '';
             }

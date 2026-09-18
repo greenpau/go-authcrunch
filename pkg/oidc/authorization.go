@@ -47,11 +47,12 @@ func (o *Provider) authorize(w *oidcHTTPResponse, r *http.Request) {
 	}
 	// Validate the effective redirect against this registration before any
 	// redirect. Native loopback clients may vary only the callback port.
-	if !client.allowsRedirectURI(params.Get("redirect_uri")) {
+	redirectURI := params.Get("redirect_uri")
+	if !client.isValidRedirectURI(redirectURI) {
 		oidcError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
-	request := &oidcAuthorization{clientID: client.ClientID, redirectURI: params.Get("redirect_uri"), state: params.Get("state"), nonce: params.Get("nonce"), responseMode: "query", created: o.now(), expires: o.now().Add(oidcRequestLifetime * time.Second)}
+	request := &oidcAuthorization{clientID: client.ClientID, redirectURI: redirectURI, state: params.Get("state"), nonce: params.Get("nonce"), responseMode: "query", created: o.now(), expires: o.now().Add(oidcRequestLifetime * time.Second)}
 	if params.Get("response_mode") == "form_post" {
 		request.responseMode = "form_post"
 	}
@@ -292,6 +293,17 @@ func (o *Provider) issueCode(w *oidcHTTPResponse, r *http.Request, request *oidc
 }
 
 func (o *Provider) authorizationResponse(w *oidcHTTPResponse, r *http.Request, request *oidcAuthorization, code, failure string) {
+	client := o.clients[request.clientID]
+	redirectURI := request.redirectURI
+	if client == nil || !client.isValidRedirectURI(redirectURI) {
+		oidcError(w, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	target, err := parseOIDCRedirectURI(redirectURI)
+	if err != nil {
+		oidcError(w, http.StatusBadRequest, "invalid_request")
+		return
+	}
 	values := url.Values{"iss": {o.config.Issuer}}
 	if request.state != "" {
 		values.Set("state", request.state)
@@ -303,10 +315,9 @@ func (o *Provider) authorizationResponse(w *oidcHTTPResponse, r *http.Request, r
 	}
 	if request.responseMode == "form_post" {
 		w.page = &Page{Kind: "form_post", Title: "Continue to application",
-			ClientName: o.clients[request.clientID].ClientName, Action: request.redirectURI, Values: values}
+			ClientName: client.ClientName, Action: redirectURI, Values: values}
 		return
 	}
-	target, _ := url.Parse(request.redirectURI)
 	query := target.Query()
 	maps.Copy(query, values)
 	target.RawQuery = query.Encode()

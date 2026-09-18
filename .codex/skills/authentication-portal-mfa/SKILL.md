@@ -37,6 +37,13 @@ Sandbox first-factor enrollment requires no enabled existing factor and current
 identity evidence. After successful enrollment require a new completed login;
 never advance the original sandbox's evidence version to allow token issuance.
 
+Keep `mfa_add_app.js` and `sandbox_mfa_add_app.js` aligned when changing TOTP
+enrollment rendering. Encode each OTP label/query component independently and
+the QR payload as one URL path segment. Resolve the QR endpoint against the
+portal origin and require same-origin HTTP(S) before assigning the image URL.
+DOM text must remain data throughout link and image construction. Cover both
+scripts with the MFA DOM client tests and the real Chrome rendering fixture.
+
 WebAuthn enrollment state is local to the portal: 5-minute expiry, 4096-entry
 bound, single use, discarded on Close/restart. Bind it to realm, canonical account,
 immutable ID, backend/credential versions, session, origin and profile/sandbox

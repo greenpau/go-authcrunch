@@ -97,16 +97,23 @@ function updateQRCode() {
   let period = document.getElementById('period').value;
   let barcodeURI = document.getElementById('barcode_uri').value;
   let tokenLink = document.getElementById('mfa-no-camera-link').childNodes[1]
-  let tokenURL = 'otpauth://totp/' + encodeURI(issuer + ':' + email) +
-                 '?secret=' + encodeBase32(secret, false) + '&issuer=' + encodeURI(issuer) +
-                 '&digits=' + digits + '&period=' + period;
+  let tokenURL = 'otpauth://totp/' + encodeURIComponent(issuer) + ':' + encodeURIComponent(email) +
+                 '?secret=' + encodeURIComponent(encodeBase32(secret, false)) +
+                 '&issuer=' + encodeURIComponent(issuer) +
+                 '&digits=' + encodeURIComponent(digits) + '&period=' + encodeURIComponent(period);
   if (tokenURL.localeCompare(tokenLink.href) != 0) {
     tokenLink.href = tokenURL;
     let imageDiv = document.getElementById('mfa-qr-code-image');
     let curImageNode = imageDiv.childNodes[1];
-    let barcodeURL = barcodeURI + '/' + encodeBase64(tokenURL) + '.png';
+    let barcodeBaseURL = new URL(barcodeURI, window.location.origin);
+    if (barcodeBaseURL.origin !== window.location.origin ||
+        (barcodeBaseURL.protocol !== 'http:' && barcodeBaseURL.protocol !== 'https:')) {
+      return;
+    }
+    barcodeBaseURL.pathname = barcodeBaseURL.pathname.replace(/\/$/, '') + '/' +
+                              encodeURIComponent(encodeBase64(tokenURL)) + '.png';
     let newImageNode = document.createElement("img");
-    newImageNode.setAttribute("src", barcodeURL);
+    newImageNode.setAttribute("src", barcodeBaseURL.href);
     newImageNode.setAttribute("alt", "QR Code");
     imageDiv.insertBefore(newImageNode, curImageNode);
     imageDiv.removeChild(curImageNode);

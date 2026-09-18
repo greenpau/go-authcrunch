@@ -90,6 +90,20 @@ semantics, response policies, and browser validation. These pages use their own
 and ordinary portal views share the `--brand-*` tokens in `basic.css`.
 Form-post continuation and the portal refresh `session` page are separate flows.
 
+Materialize tab fragments resolve directly to decoded element IDs through
+`M.getHashElement`; do not reinterpret them as generic selectors. Preserve the
+`M.escapeHash` compatibility helper's CSS escaping contract. Keep the readable
+and minified Materialize assets synchronized and verify the served minified
+asset in the MFA DOM Chrome fixture when changing this boundary.
+
+Regenerate the paired asset with the pinned minifier:
+
+```sh
+npx -y terser@5.51.2 pkg/authn/ui/core/materialize-css/js/materialize.js \
+  --compress --mangle \
+  --output pkg/authn/ui/core/materialize-css/js/materialize.min.js
+```
+
 ## Source of Truth
 
 Paths below are relative to the repository root:

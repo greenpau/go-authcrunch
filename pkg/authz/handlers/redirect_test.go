@@ -166,7 +166,12 @@ func TestLocationHeaderRedirectKeepsRequestURLInQuery(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, "https://service.example/private", nil)
+			requestTarget, err := url.ParseRequestURI(tc.requestURI)
+			if err != nil {
+				t.Fatalf("parse request target: %v", err)
+			}
 			r.RequestURI = tc.requestURI
+			r.URL = requestTarget
 			for name, values := range tc.headers {
 				for _, value := range values {
 					r.Header.Add(name, value)
@@ -209,9 +214,31 @@ func TestLocationHeaderRedirectWithoutQueryUsesConfiguredDestination(t *testing.
 	}
 }
 
+func TestLocationHeaderRedirectRejectsMissingParsedURL(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "https://service.example/private", nil)
+	r.URL = nil
+	rr := requests.NewAuthorizationRequest()
+	rr.Redirect.AuthURL = "https://auth.example/login"
+	rr.Redirect.QueryParameter = "return_url"
+	w := httptest.NewRecorder()
+
+	HandleLocationHeaderRedirect(w, r, rr)
+	if rr.Redirect.Enabled {
+		t.Fatal("redirect enabled without a parsed request URL")
+	}
+	if location := w.Header().Get("Location"); location != "" {
+		t.Fatalf("Location = %q, want empty", location)
+	}
+}
+
 func TestJavascriptRedirectKeepsRequestURLInEncodedParameter(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "https://service.example/private", nil)
 	r.RequestURI = "//evil.example/private"
+	requestTarget, err := url.ParseRequestURI(r.RequestURI)
+	if err != nil {
+		t.Fatalf("parse request target: %v", err)
+	}
+	r.URL = requestTarget
 	rr := requests.NewAuthorizationRequest()
 	rr.Redirect.AuthURL = "https://auth.example/login"
 	rr.Redirect.QueryParameter = "return_url"

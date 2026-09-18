@@ -83,6 +83,7 @@ type standaloneResponse struct {
 }
 
 func TestE2EStandaloneProvider(t *testing.T) {
+	const registeredRedirectURI = "https://rp.example.test/callback?registered=one"
 	keyFile := filepath.Join(t.TempDir(), "oidc signer.pem")
 	if err := oidc.GenerateSigningKeyFile(keyFile); err != nil {
 		t.Fatal(err)
@@ -101,7 +102,7 @@ func TestE2EStandaloneProvider(t *testing.T) {
 			verifier := &standaloneIdentityVerifier{}
 			registration, err := oidcparser.NewOIDCClientConfigFromDirectives("Standalone application", []string{
 				"token_endpoint_auth_method " + tc.method,
-				"redirect_uri https://rp.example.test/callback",
+				"redirect_uri " + registeredRedirectURI,
 				"scopes openid profile email",
 			})
 			if err != nil {
@@ -234,7 +235,7 @@ func TestE2EStandaloneProvider(t *testing.T) {
 			expect(request("POST", "/sign-in", nil, http.Header{"Origin": {"https://other.test"}}), http.StatusForbidden)
 			const verifierValue = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 			challenge := sha256.Sum256([]byte(verifierValue))
-			parameters := url.Values{"client_id": {registration.ClientID}, "redirect_uri": {"https://rp.example.test/callback"}, "response_type": {"code"}, "scope": {"openid profile email"}, "nonce": {"standalone-nonce"}, "state": {"standalone-state"}, "code_challenge_method": {"S256"}, "code_challenge": {base64.RawURLEncoding.EncodeToString(challenge[:])}}
+			parameters := url.Values{"client_id": {registration.ClientID}, "redirect_uri": {registeredRedirectURI}, "response_type": {"code"}, "scope": {"openid profile email"}, "nonce": {"standalone-nonce"}, "state": {"standalone-state"}, "code_challenge_method": {"S256"}, "code_challenge": {base64.RawURLEncoding.EncodeToString(challenge[:])}}
 			authenticate := func(fresh bool) map[string]any {
 				t.Helper()
 				if fresh {
@@ -265,10 +266,10 @@ func TestE2EStandaloneProvider(t *testing.T) {
 				approved := request("POST", "/oidc/continue", url.Values{"csrf": {html.UnescapeString(string(match[1]))}, "decision": {"allow"}}, headers)
 				expect(approved, http.StatusFound)
 				callback, err := url.Parse(approved.header.Get("Location"))
-				if err != nil || callback.Query().Get("code") == "" || callback.Query().Get("state") != "standalone-state" {
+				if err != nil || callback.Scheme != "https" || callback.Host != "rp.example.test" || callback.Path != "/callback" || callback.Query().Get("registered") != "one" || callback.Query().Get("code") == "" || callback.Query().Get("state") != "standalone-state" {
 					t.Fatal("standalone code callback invalid")
 				}
-				form := url.Values{"grant_type": {"authorization_code"}, "client_id": {registration.ClientID}, "code": {callback.Query().Get("code")}, "redirect_uri": {"https://rp.example.test/callback"}}
+				form := url.Values{"grant_type": {"authorization_code"}, "client_id": {registration.ClientID}, "code": {callback.Query().Get("code")}, "redirect_uri": {registeredRedirectURI}}
 				tokenHeaders := make(http.Header)
 				setSecret := func(secret string) {
 					switch registration.TokenEndpointAuthMethod {

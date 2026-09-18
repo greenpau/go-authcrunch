@@ -19,10 +19,109 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 )
+
+func TestOIDCAuthorizationResponseUsesRegisteredRedirect(t *testing.T) {
+	const registered = "https://client.example.test/callback?registered=one"
+	client := &ClientConfig{
+		ClientID:     "client",
+		ClientSecret: strings.Repeat("s", 32),
+		RedirectURIs: []string{registered},
+	}
+	if err := client.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	provider := &Provider{
+		config:  Config{Issuer: "https://auth.example.test/auth"},
+		clients: map[string]*ClientConfig{client.ClientID: client},
+	}
+	r := httptest.NewRequest(http.MethodGet, provider.config.Issuer+"/oidc/authorize", nil)
+
+	for _, mode := range []string{"query", "form_post"} {
+		t.Run(mode, func(t *testing.T) {
+			for _, outcome := range []struct {
+				name, code, failure, parameter, value string
+			}{
+				{"code", "opaque-code", "", "code", "opaque-code"},
+				{"error", "", "access_denied", "error", "access_denied"},
+			} {
+				t.Run(outcome.name, func(t *testing.T) {
+					w := &oidcHTTPResponse{header: make(http.Header)}
+					request := &oidcAuthorization{clientID: client.ClientID, redirectURI: registered, state: "opaque-state", responseMode: mode}
+					provider.authorizationResponse(w, r, request, outcome.code, outcome.failure)
+					if mode == "form_post" {
+						if w.page == nil || w.page.Action != registered || w.page.ClientName != client.ClientName {
+							t.Fatalf("form_post page = %#v, want registered action and client", w.page)
+						}
+						if w.page.Values.Get(outcome.parameter) != outcome.value || w.page.Values.Get("state") != "opaque-state" || w.page.Values.Get("iss") != provider.config.Issuer {
+							t.Fatalf("form_post values = %v, want authorization response", w.page.Values)
+						}
+						return
+					}
+					if w.status != http.StatusFound {
+						t.Fatalf("status = %d, want %d", w.status, http.StatusFound)
+					}
+					target, err := url.Parse(w.header.Get("Location"))
+					if err != nil {
+						t.Fatal(err)
+					}
+					if target.Scheme != "https" || target.Host != "client.example.test" || target.Path != "/callback" || target.Query().Get("registered") != "one" {
+						t.Fatalf("redirect destination = %q, want registered callback", target.String())
+					}
+					if target.Query().Get(outcome.parameter) != outcome.value || target.Query().Get("state") != "opaque-state" || target.Query().Get("iss") != provider.config.Issuer {
+						t.Fatalf("redirect query = %v, want authorization response", target.Query())
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestOIDCAuthorizationResponseRejectsUnregisteredRedirect(t *testing.T) {
+	client := &ClientConfig{
+		ClientID:     "client",
+		ClientSecret: strings.Repeat("s", 32),
+		RedirectURIs: []string{"https://client.example.test/callback"},
+	}
+	if err := client.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	provider := &Provider{
+		config:  Config{Issuer: "https://auth.example.test/auth"},
+		clients: map[string]*ClientConfig{client.ClientID: client},
+	}
+	r := httptest.NewRequest(http.MethodGet, provider.config.Issuer+"/oidc/authorize", nil)
+
+	for _, tc := range []struct {
+		name, clientID, redirectURI string
+	}{
+		{"unknown client", "other-client", client.RedirectURIs[0]},
+		{"unregistered callback", client.ClientID, "https://alternate.example.test/callback"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, mode := range []string{"query", "form_post"} {
+				t.Run(mode, func(t *testing.T) {
+					w := &oidcHTTPResponse{header: make(http.Header)}
+					request := &oidcAuthorization{clientID: tc.clientID, redirectURI: tc.redirectURI, responseMode: mode}
+					provider.authorizationResponse(w, r, request, "opaque-code", "")
+					if w.status != http.StatusBadRequest || w.errorCode != "invalid_request" {
+						t.Fatalf("response status=%d error=%q, want 400 invalid_request", w.status, w.errorCode)
+					}
+					if location := w.header.Get("Location"); location != "" {
+						t.Fatalf("Location = %q, want empty", location)
+					}
+					if w.page != nil {
+						t.Fatalf("page = %#v, want nil", w.page)
+					}
+				})
+			}
+		})
+	}
+}
 
 func TestOIDCLoopbackRedirectMatching(t *testing.T) {
 	for _, tc := range []struct {
@@ -58,7 +157,7 @@ func TestOIDCLoopbackRedirectMatching(t *testing.T) {
 			if err := c.Validate(); err != nil {
 				t.Fatal(err)
 			}
-			if got := c.allowsRedirectURI(tc.requested); got != tc.allowed {
+			if got := c.isValidRedirectURI(tc.requested); got != tc.allowed {
 				t.Fatalf("redirect match=%t, want %t", got, tc.allowed)
 			}
 		})
@@ -84,7 +183,7 @@ func TestOIDCLoopbackRedirectRejections(t *testing.T) {
 			if err := candidate.Validate(); err == nil {
 				t.Fatal("invalid native callback registered")
 			}
-			if c.allowsRedirectURI(raw) {
+			if c.isValidRedirectURI(raw) {
 				t.Fatal("invalid native callback accepted")
 			}
 		})
@@ -146,7 +245,7 @@ func FuzzOIDCLoopbackRedirect(f *testing.F) {
 		for _, host := range []string{"127.0.0.1", "[::1]"} {
 			registered := "http://" + host + ":43111/callback?q=a%20b"
 			c := &ClientConfig{TokenEndpointAuthMethod: "none", RequirePKCE: true, RedirectURIs: []string{registered}}
-			if !c.allowsRedirectURI(raw) {
+			if !c.isValidRedirectURI(raw) {
 				continue
 			}
 			// Independently require exact prefix/suffix and a decimal usable port.
