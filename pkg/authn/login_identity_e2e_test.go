@@ -255,6 +255,14 @@ func TestE2ELoginIdentityTransform(t *testing.T) {
 						}
 					}
 					claims := loginIdentityClaims(t, f, token, "alice")
+					expectedMethods := "[pwd]"
+					if mfa {
+						expectedMethods = "[pwd otp]"
+					}
+					if fmt.Sprint(claims["amr"]) != expectedMethods {
+						t.Fatal("signed access token lost verified methods")
+					}
+
 					if claims["email"] != "alias@example.test" || claims["origin"] != realm {
 						t.Fatal("signed token lost transformed email or canonical realm")
 					}
@@ -264,6 +272,10 @@ func TestE2ELoginIdentityTransform(t *testing.T) {
 						rotation := f.jsonRequest(t, "/api/refresh_token", map[string]any{}, "", http.Header{"Origin": {f.server.URL}, "X-Authcrunch-Refresh": {"1"}})
 						oidcE2EStatus(t, rotation, http.StatusOK)
 						renewed := loginIdentityClaims(t, f, loginIdentityCookie(f, "AUTHP_ACCESS_TOKEN"), "alice")
+						if fmt.Sprint(renewed["amr"]) != expectedMethods {
+							t.Fatal("renewal changed verified methods")
+						}
+
 						if renewed["email"] != "alias@example.test" || renewed["sid"] != claims["sid"] {
 							t.Fatal("refresh changed identity or lost transformation")
 						}

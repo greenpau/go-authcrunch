@@ -99,6 +99,13 @@ Use `authentication-portal-themes` for custom portal templates, CSS, branding
 assets, theme configuration, built-in page styling, and compatibility with
 current portal pages, including OIDC consent, continuation, and browser errors.
 
+## Authentication Challenge Policies
+
+Use `authentication-portal-challenges` for conditional `require auth challenges`
+selection, reusable challenge/user-transform directive parsers, registered-factor
+inventory, verified `amr` claims, and policy revalidation during login and issuance.
+Factor verification and enrollment remain with `authentication-portal-mfa`.
+
 ## Local Password Authentication
 
 Use `local-password-authentication` for local password creation, imports,
@@ -161,7 +168,8 @@ Portal signing-key publication and admin private-key export belong to
 Use `local-identity-database` for file locking, atomic persistence, cross-instance
 revocation, TOTP state and identity-bound operations. Use
 `authentication-portal-profile` for local self-service authorization, canonical
-identity and API browser-origin checks. Use `authentication-portal-mfa` for
+identity, API browser-origin checks, and per-user authentication-flow selection
+through the Profile API. Use `authentication-portal-mfa` for
 TOTP/WebAuthn checkpoints and enrollment.
 
 ## SAML Identity Providers

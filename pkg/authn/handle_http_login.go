@@ -16,6 +16,7 @@ package authn
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/authchal"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
@@ -254,10 +256,29 @@ func (p *Portal) identifyUserRequest(rr *requests.Request, identity map[string]s
 }
 
 func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
+	var usr *user.User
+	issue := func() error {
+		var err error
+		usr, err = p.authorizeLoginUser(ctx, r, rr)
+		return err
+	}
+	var err error
+	if rr.Upstream.Method == "local" || rr.Upstream.Method == "ldap" {
+		err = p.withDirectAuthenticationIdentity(ctx, rr, issue)
+	} else {
+		err = issue()
+	}
+	if err != nil {
+		return err
+	}
+	return p.grantAccess(ctx, w, r, rr, usr)
+}
+
+func (p *Portal) authorizeLoginUser(ctx context.Context, r *http.Request, rr *requests.Request) (*user.User, error) {
 	backend := p.getAuthenticatorByRealm(rr.Upstream.Realm)
 	if backend == nil {
 		rr.Response.Code = http.StatusBadRequest
-		return fmt.Errorf("no matching realm found")
+		return nil, fmt.Errorf("no matching realm found")
 	}
 
 	m := make(map[string]interface{})
@@ -269,7 +290,7 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 			m = pm
 			// Process groups, group, role, roles.
 		default:
-			return fmt.Errorf("response payload not a map")
+			return nil, fmt.Errorf("response payload not a map")
 		}
 		combineGroupRoles(m)
 	default:
@@ -295,13 +316,19 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 
 	// Perform user claim transformation if necessary.
 	if err := p.transformUser(ctx, rr, m); err != nil {
-		return err
+		return nil, err
+	}
+	if rr.Upstream.Method == "local" || rr.Upstream.Method == "ldap" {
+		if err := p.checkDirectAuthenticationPolicy(rr, m, []string{"password"}); err != nil {
+			return nil, err
+		}
+		m["amr"] = []string{"pwd"}
 	}
 	injectPortalRoles(m, p.config)
 	usr, err := user.NewUser(m)
 	if err != nil {
 		rr.Response.Code = http.StatusUnauthorized
-		return err
+		return nil, err
 	}
 	if err := p.keystore.SignToken(nil, nil, usr); err != nil {
 		p.logger.Warn(
@@ -312,7 +339,7 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 			zap.Error(err),
 		)
 		rr.Response.Code = http.StatusInternalServerError
-		return err
+		return nil, err
 	}
 	usr.Authenticator.Name = backend["name"]
 	usr.Authenticator.Realm = backend["realm"]
@@ -329,7 +356,7 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 				zap.Error(err),
 			)
 			rr.Response.Code = http.StatusInternalServerError
-			return err
+			return nil, err
 		}
 	}
 
@@ -340,7 +367,7 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 		zap.Any("backend", usr.Authenticator),
 		zap.Any("user", m),
 	)
-	return p.grantAccess(ctx, w, r, rr, usr)
+	return usr, nil
 }
 
 func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
@@ -514,7 +541,8 @@ func (p *Portal) transformUser(_ context.Context, rr *requests.Request, m map[st
 	if rr.Upstream.Realm != "" {
 		m["realm"] = rr.Upstream.Realm
 	}
-	if err := p.transformer.Transform(m); err != nil {
+	selected, err := p.transformer.TransformWithAuthMethods(m, rr.User.AuthMethods)
+	if err != nil {
 		p.logger.Warn(
 			"user transformation failed",
 			zap.String("session_id", rr.Upstream.SessionID),
@@ -522,12 +550,16 @@ func (p *Portal) transformUser(_ context.Context, rr *requests.Request, m map[st
 			zap.Any("user", m),
 			zap.Error(err),
 		)
-		if strings.HasSuffix(err.Error(), "block/deny") {
+		if strings.HasSuffix(err.Error(), "block/deny") || stderrors.Is(err, transformer.ErrAuthChallengesUnavailable) {
 			rr.Response.Code = http.StatusForbidden
 		} else {
 			rr.Response.Code = http.StatusInternalServerError
 		}
 		return err
+	}
+	if selected != nil {
+		rr.User.Challenges = selected
+		rr.User.AuthChallengePolicy = true
 	}
 	p.logger.Debug(
 		"user transformation ended",

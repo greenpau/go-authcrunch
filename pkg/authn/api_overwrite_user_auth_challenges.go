@@ -16,6 +16,7 @@ package authn
 
 import (
 	"context"
+	"maps"
 	"net/http"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
@@ -24,47 +25,48 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
-// OverwriteUserAuthChallenges overwrites authentication challenge rules for user identity.
+// OverwriteUserAuthChallenges atomically replaces a bound local user's rules.
+// An empty list restores defaults. Success revokes the current login evidence
+// and returns reauthentication_required; the client must perform a fresh login.
 func (p *Portal) OverwriteUserAuthChallenges(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 	rr *requests.Request,
-	parsedUser *user.User,
-	resp map[string]interface{},
+	_ *user.User,
+	resp map[string]any,
 	usr *user.User,
 	backend ids.IdentityStore,
-	bodyData map[string]interface{}) error {
+	bodyData map[string]any) error {
 
-	var challenges []string
-	if v, exists := bodyData["challenges"]; exists {
-		switch exp := v.(type) {
-		case []interface{}:
-			for _, ch := range exp {
-				if s, ok := ch.(string); ok {
-					challenges = append(challenges, s)
-				}
-			}
-		default:
-			resp["message"] = "Profile API did find key challenges in the request payload, but it is malformed"
-			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
-		}
-	} else {
-		resp["message"] = "Profile API did not find key challenges in the request payload"
+	challenges, err := parseProfileAuthChallenges(bodyData)
+	if err != nil {
+		resp["message"] = err.Error()
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
-
-	if len(challenges) < 1 {
-		resp["message"] = "Profile API found empty challenges in the request payload"
+	current, err := profileAuthChallengeUser(backend, rr)
+	if err != nil {
+		return profileAuthChallengeBackendError(w, rr, resp, err)
+	}
+	// Only the detached candidate changes during validation. A successful bound
+	// write below must still authenticate the same immutable credential version.
+	candidate := *current
+	if err := candidate.OverwriteAuthChallengeRules(challenges); err != nil {
+		resp["message"] = "Profile API received an invalid authentication policy"
+		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+	}
+	policy, err := p.profileAuthChallengePolicy(ctx, r, rr, usr, &candidate)
+	if err != nil {
+		resp["message"] = "Profile API cannot select a supported flow with the current credentials and portal policy"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 
 	rr.User.Challenges = challenges
 	if err := backend.Request(operator.OverwriteAuthChallengeRules, rr); err != nil {
-		resp["message"] = "Profile API failed to overwrite user authentication challenge rules"
-		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
+		return profileAuthChallengeBackendError(w, rr, resp, err)
 	}
 
-	resp["entries"] = rr.Response.Payload
+	maps.Copy(resp, policy)
+	resp["reauthentication_required"] = true
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }

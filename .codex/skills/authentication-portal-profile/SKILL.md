@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-profile
-description: Maintain authenticated local profile APIs, canonical account selection, atomic identity-bound operations, browser origin checks, and credential-management TLS tests.
+description: Maintain authenticated local profile APIs, user authentication-flow preferences and UI integration, canonical account selection, atomic identity-bound operations, browser origin checks, and credential-management TLS tests.
 ---
 
 # Authentication Portal Profile
@@ -24,6 +24,14 @@ The local adapter delegates to `Database.RequestWithIdentity`. Follow
 snapshot, operation allowlist, locking, rollback and detached response contract.
 The generic trusted `IdentityStore.Request` API remains a separate provisioning
 boundary; do not substitute it for authenticated self-service.
+
+For reading, selecting, or resetting a user's authentication flow, follow the
+[profile authentication-flow API contract](references/authentication-flows.md).
+It owns the existing `fetch_user_auth_challenges` and
+`overwrite_user_auth_challenges` operations, strict parser integration,
+registered/effective policy metadata, administrative precedence, and immediate
+fresh-login navigation after a successful save. Use it when preparing backend
+support for the separately maintained Profile UI.
 
 `api_origin.go` checks Origin and Sec-Fetch-Site before unsafe portal API actions.
 Reject foreign, null, empty or duplicate Origin, and cross-site/same-site fetch
@@ -49,7 +57,9 @@ journey; signed synthetic WebAuthn assertions exercise the factor checkpoints.
 
 Validation belongs in `profile_identity_test.go`, `api_origin_test.go`,
 `profile_identity_e2e_test.go`, `identity_alias_e2e_test.go`, and the identity
-request tests. Preserve real TLS login, two accounts with different credentials,
+request tests. Flow selection adds `profile_auth_challenges_test.go` and
+`profile_auth_challenges_e2e_test.go`. Preserve real TLS login, two accounts
+with different credentials,
 subject/email transformations naming the other account, revoked/deleted/recreated
 identities, role removal, refresh renewal, cross-origin cookie submissions,
 and persistence checks showing rejected operations changed no credentials.

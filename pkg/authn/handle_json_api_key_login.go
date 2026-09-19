@@ -21,6 +21,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 )
 
@@ -31,7 +32,7 @@ func (p *Portal) handleJSONAPIKeyLogin(ctx context.Context, w http.ResponseWrite
 	// This exchange delivers credentials in JSON and does not establish cookies.
 	w.Header().Del("Set-Cookie")
 	proxyRequest := &authproxy.Request{Realm: request.Realm, Secret: request.APIKey, Address: addrutil.GetSourceAddress(r)}
-	if err := p.APIKeyAuth(proxyRequest); err != nil {
+	if err := p.apiKeyAuth(ctx, proxyRequest, util.GetIssuerURL(r)); err != nil {
 		return p.handleJSONError(ctx, w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 	}
 	response := apiauth.AuthResponse{

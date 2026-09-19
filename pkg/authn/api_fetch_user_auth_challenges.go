@@ -16,31 +16,35 @@ package authn
 
 import (
 	"context"
+	"maps"
 	"net/http"
 
-	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
-	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
-// FetchUserAuthChallenges fetches authentication challenge rules from user identity.
+// FetchUserAuthChallenges returns stored rules and a preview of the effective
+// login policy for the bound local identity and the current request context.
 func (p *Portal) FetchUserAuthChallenges(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 	rr *requests.Request,
-	parsedUser *user.User,
-	resp map[string]interface{},
+	_ *user.User,
+	resp map[string]any,
 	usr *user.User,
 	backend ids.IdentityStore) error {
 
-	if err := backend.Request(operator.GetUser, rr); err != nil {
-		resp["message"] = "Profile API failed to get user authentication challenge rules"
-		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
+	current, err := profileAuthChallengeUser(backend, rr)
+	if err != nil {
+		return profileAuthChallengeBackendError(w, rr, resp, err)
 	}
-	u := rr.Response.Payload.(*identity.User)
-	resp["entries"] = u.GetAuthChallengeRules()
+	policy, err := p.profileAuthChallengePolicy(ctx, r, rr, usr, current)
+	if err != nil {
+		resp["message"] = "Profile API could not resolve the current authentication policy"
+		return handleAPIProfileResponse(w, rr, http.StatusConflict, resp)
+	}
+	maps.Copy(resp, policy)
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }

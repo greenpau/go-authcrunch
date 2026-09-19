@@ -41,12 +41,8 @@ func (p *Portal) authenticateBasicAuthRequest(_ context.Context, _ http.Response
 		return err
 	}
 
-	if len(rr.User.Challenges) != 1 {
-		return fmt.Errorf("detected too many auth challenges")
-	}
-	if rr.User.Challenges[0] != "password" {
-		return fmt.Errorf("detected unsupported auth challenges")
-	}
+	// authorizeLoginRequest applies the portal's replacement and additive
+	// requirements before comparing them with the verified password method.
 	if err := p.authenticatePassword(addrutil.GetSourceAddress(r), func() error {
 		return backend.Request(operator.Authenticate, rr)
 	}); err != nil {

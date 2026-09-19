@@ -1,0 +1,4 @@
+interface:
+  display_name: "Authentication Challenge Policies"
+  short_description: "Conditional login policies, directive parsers, and verified AMR"
+  default_prompt: "Use $authentication-portal-challenges to maintain challenge selection, directive parsers, verified authentication methods, and consumer tests."

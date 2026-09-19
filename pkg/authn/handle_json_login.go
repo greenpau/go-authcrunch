@@ -153,6 +153,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				zap.String("checkpoint_type", checkpoint.Type),
 			)
 			checkpoint.Passed = true
+			checkpoint.Method = "pwd"
 			prevCheckpointPassed = true
 		case checkpoint.Type == "totp" || (checkpoint.Type == "mfa" && challengeContainsOnlyNumbers):
 			rr.Authentication = usr.LoginEvidence
@@ -216,6 +217,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				zap.String("checkpoint_type", checkpoint.Type),
 			)
 			checkpoint.Passed = true
+			checkpoint.Method = "otp"
 			prevCheckpointPassed = true
 		case (checkpoint.Type == "u2f" || checkpoint.Type == "mfa") && authRequest.ChallengeResponse == "webauthn":
 			rr.Flags.Enabled = true
@@ -268,6 +270,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				return fmt.Errorf("no u2f tokens found")
 			}
 
+			checkpoint.Type = "u2f"
 			usr.Authenticator.TempChallenge = util.GetRandomString(64)
 			webauthChallenge := make(map[string]any)
 			webauthChallenge["challenge"] = usr.Authenticator.TempChallenge
@@ -284,7 +287,12 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				return fmt.Errorf("failed to marshal webauth challenge to JSON: %v", err)
 			}
 			usr.Authenticator.NextChallenge = "mfa:u2f:" + base64.StdEncoding.EncodeToString(jsonChallenge)
+			// Issuing an assertion challenge does not finish this checkpoint.
+			// Wait for its signed response before visiting subsequent factors.
+			return nil
 		case checkpoint.Type == "u2f":
+			rr.WebAuthn.Request = authRequest.ChallengeResponse
+			rr.Authentication = usr.LoginEvidence
 			if err := backend.Request(operator.CheckMfaLockout, rr); err != nil {
 				p.logger.Warn(
 					"user locked out due to too many failed MFA attempts",
@@ -334,6 +342,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				zap.String("checkpoint_type", checkpoint.Type),
 			)
 			checkpoint.Passed = true
+			checkpoint.Method = "hwk"
 			prevCheckpointPassed = true
 		default:
 			return fmt.Errorf("authentication checkpoint type %s is unsupported", checkpoint.Type)

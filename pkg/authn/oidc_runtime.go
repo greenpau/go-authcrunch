@@ -117,12 +117,17 @@ func (v *portalOIDCIdentityVerifier) WithIdentity(ctx context.Context, proof oid
 		}
 		rr := requests.NewRequest()
 		rr.Upstream.Realm = proof.Realm
+		rr.User.AuthMethods = append([]string(nil), current.AuthMethods...)
+		rr.User.Challenges = append([]string(nil), current.Challenges...)
 		claims := map[string]any{"sub": current.Username, "name": current.Name, "email": current.Email, "roles": current.Roles, "origin": proof.Realm}
+		if metadata, ok := oidc.RequestMetadataFromContext(ctx); ok {
+			claims["iss"], claims["addr"] = metadata.URL, metadata.SourceAddress
+		}
 		if err := v.portal.transformUser(ctx, rr, claims); err != nil {
 			return oidc.ErrIdentityDenied
 		}
 		candidate := &user.User{}
-		if err := v.portal.injectUserChallenges(candidate, claims, current.Challenges); err != nil {
+		if err := v.portal.injectUserChallenges(candidate, claims, rr.User.Challenges); err != nil {
 			return oidc.ErrIdentityDenied
 		}
 		for _, required := range candidate.Checkpoints {

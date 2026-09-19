@@ -30,6 +30,7 @@ var (
 
 	inputDataTypes = map[string]dataType{
 		"roles":  dataTypeListStr,
+		"amr":    dataTypeListStr,
 		"email":  dataTypeStr,
 		"origin": dataTypeStr,
 		"name":   dataTypeStr,

@@ -164,7 +164,7 @@ func TestConfigureWithAuthChallengeRules(t *testing.T) {
 				},
 			},
 			shouldErr: true,
-			err:       errors.ErrUpdateUser.WithArgs(fmt.Errorf("unsupported challenge type: sms")),
+			err:       errors.ErrUpdateUser.WithArgs(fmt.Errorf("authentication challenge directive at line 1: unsupported challenge type")),
 		},
 	}
 	for _, tc := range testcases {

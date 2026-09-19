@@ -341,6 +341,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					zap.String("checkpoint_type", checkpoint.Type),
 				)
 				checkpoint.Passed = true
+				checkpoint.Method = "pwd"
 				checkpoint.FailedAttempts = 0
 				verifiedCount++
 				m["view"] = "redirect"
@@ -439,6 +440,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 						zap.String("checkpoint_type", checkpoint.Type),
 					)
 					checkpoint.Passed = true
+					checkpoint.Method = "otp"
 					checkpoint.FailedAttempts = 0
 					verifiedCount++
 					m["view"] = "redirect"
@@ -478,6 +480,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					rr.Authentication = usr.LoginEvidence
 					backend.Request(operator.ResetMfaFailedAttempts, rr)
 					checkpoint.Passed = true
+					checkpoint.Method = "hwk"
 					checkpoint.FailedAttempts = 0
 					verifiedCount++
 					m["view"] = "redirect"

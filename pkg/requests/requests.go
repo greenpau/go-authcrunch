@@ -47,6 +47,8 @@ type AuthenticationEvidence struct {
 	CredentialVersion      uint64 `json:"-" xml:"-" yaml:"-"`
 	AuthenticatedAt        int64  `json:"-" xml:"-" yaml:"-"`
 	Method                 string `json:"-" xml:"-" yaml:"-"`
+	// APIKeyID binds direct key issuance to the exact verified credential.
+	APIKeyID string `json:"-" xml:"-" yaml:"-"`
 }
 
 // Response hold the response associated with identity database
@@ -99,14 +101,19 @@ type Query struct {
 
 // User hold user attributes.
 type User struct {
-	Username    string   `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
-	Email       string   `json:"email,omitempty" xml:"email,omitempty" yaml:"email,omitempty"`
-	Password    string   `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
-	OldPassword string   `json:"old_password,omitempty" xml:"old_password,omitempty" yaml:"old_password,omitempty"`
-	FullName    string   `json:"full_name,omitempty" xml:"full_name,omitempty" yaml:"full_name,omitempty"`
-	Roles       []string `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
-	Disabled    bool     `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
-	Challenges  []string `json:"challenges,omitempty" xml:"challenges,omitempty" yaml:"challenges,omitempty"`
+	// AuthMethods is the backend's registered-method inventory, not login evidence.
+	AuthMethods []string `json:"-" xml:"-" yaml:"-"`
+	// AuthChallengePolicy records an explicit backend policy or selection by a
+	// matching portal transform; it distinguishes policy from backend defaults.
+	AuthChallengePolicy bool     `json:"-" xml:"-" yaml:"-"`
+	Username            string   `json:"username,omitempty" xml:"username,omitempty" yaml:"username,omitempty"`
+	Email               string   `json:"email,omitempty" xml:"email,omitempty" yaml:"email,omitempty"`
+	Password            string   `json:"password,omitempty" xml:"password,omitempty" yaml:"password,omitempty"`
+	OldPassword         string   `json:"old_password,omitempty" xml:"old_password,omitempty" yaml:"old_password,omitempty"`
+	FullName            string   `json:"full_name,omitempty" xml:"full_name,omitempty" yaml:"full_name,omitempty"`
+	Roles               []string `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
+	Disabled            bool     `json:"disabled,omitempty" xml:"disabled,omitempty" yaml:"disabled,omitempty"`
+	Challenges          []string `json:"challenges,omitempty" xml:"challenges,omitempty" yaml:"challenges,omitempty"`
 }
 
 // Key holds crypto key attributes.

@@ -57,7 +57,7 @@ func TestProfileIdentityUsesServerProofOnEveryOperation(t *testing.T) {
 	// The adapter holds its own identity snapshot; later mutable user/request
 	// fields cannot redirect an operation to another account or upgrade proof.
 	usr.LoginUsername, usr.LoginEvidence.UserID = "bob", "immutable-bob"
-	for _, op := range []operator.Type{operator.GetUser, operator.AddAPIKey, operator.DeleteMfaToken} {
+	for _, op := range []operator.Type{operator.GetUser, operator.AddAPIKey, operator.DeleteMfaToken, operator.OverwriteAuthChallengeRules} {
 		rr := &requests.Request{User: requests.User{Username: "bob", Email: "bob@example.test"}}
 		if err := bound.Request(op, rr); err != nil {
 			t.Fatal(err)

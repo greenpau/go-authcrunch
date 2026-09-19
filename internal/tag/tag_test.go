@@ -28,7 +28,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
-	"github.com/greenpau/go-authcrunch/pkg/authchal"
+	authchalconfig "github.com/greenpau/go-authcrunch/pkg/authchal/config"
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	authncache "github.com/greenpau/go-authcrunch/pkg/authn/cache"
@@ -36,6 +36,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
+	transformerconfig "github.com/greenpau/go-authcrunch/pkg/authn/transformer/config"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
@@ -85,6 +86,7 @@ func TestTagCompliance(t *testing.T) {
 		{name: "test oidc.Options struct", entry: &oidc.Options{}, opts: &Options{}},
 		{name: "test oidc.Authentication struct", entry: &oidc.Authentication{}, opts: &Options{}},
 		{name: "test oidc.Identity struct", entry: &oidc.Identity{}, opts: &Options{}},
+		{name: "test oidc.RequestMetadata struct", entry: &oidc.RequestMetadata{}, opts: &Options{}},
 		{name: "test identity.Profile struct", entry: &identity.Profile{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"profile": true}}},
 		{name: "test identity.Address struct", entry: &identity.Address{}, opts: &Options{}},
 		{name: "test oidc.AuthenticationContext struct", entry: &oidc.AuthenticationContext{}, opts: &Options{}},
@@ -793,9 +795,10 @@ func TestTagCompliance(t *testing.T) {
 			entry: &saml.IdentityProvider{},
 			opts:  &Options{},
 		},
+		{name: "test transformerconfig.RuntimeConfig struct", entry: &transformerconfig.RuntimeConfig{}, opts: &Options{}},
 		{
-			name:  "test transformer.Config struct",
-			entry: &transformer.Config{},
+			name:  "test transformerconfig.Config struct",
+			entry: &transformerconfig.Config{},
 			opts:  &Options{},
 		},
 		{
@@ -919,13 +922,13 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
-			name:  "test authchal.Rule struct",
-			entry: &authchal.Rule{},
+			name:  "test authchalconfig.Rule struct",
+			entry: &authchalconfig.Rule{},
 			opts:  &Options{},
 		},
 		{
-			name:  "test authchal.Ruleset struct",
-			entry: &authchal.Ruleset{},
+			name:  "test authchalconfig.AuthenticationChallengeConfig struct",
+			entry: &authchalconfig.AuthenticationChallengeConfig{},
 			opts:  &Options{},
 		},
 		{

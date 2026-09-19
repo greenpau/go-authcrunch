@@ -246,7 +246,7 @@ func TestTransformData(t *testing.T) {
 			err: fmt.Errorf(
 				"failed transforming %q field for %q action in %v: %v",
 				"_couchdb.roles", "add", []string{"add", "_couchdb.roles", "_admin", "as", "foo"},
-				"unsupported \"foo\" data type",
+				"unsupported custom field type",
 			),
 		},
 		{

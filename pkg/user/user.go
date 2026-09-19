@@ -94,6 +94,7 @@ func (u *User) Clone() *User {
 
 	if u.Claims != nil {
 		claims := *u.Claims
+		claims.AuthenticationMethods = cloneStringSlice(u.Claims.AuthenticationMethods)
 		claims.Audience = cloneStringSlice(u.Claims.Audience)
 		claims.Roles = cloneStringSlice(u.Claims.Roles)
 		claims.Scopes = cloneStringSlice(u.Claims.Scopes)
@@ -190,6 +191,8 @@ func cloneInterfaceValue(src interface{}) interface{} {
 // could be the acceptance of the terms of use, multi-factor authentication,
 // etc.
 type Checkpoint struct {
+	// Method is set only after a backend verifies this checkpoint.
+	Method         string `json:"-" xml:"-" yaml:"-"`
 	ID             int    `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
 	Name           string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	Type           string `json:"type,omitempty" xml:"type,omitempty" yaml:"type,omitempty"`
@@ -212,24 +215,26 @@ type Authenticator struct {
 
 // Claims represents custom and standard JWT claims associated with User.
 type Claims struct {
-	Audience      []string               `json:"aud,omitempty" xml:"aud,omitempty" yaml:"aud,omitempty"`
-	ExpiresAt     int64                  `json:"exp,omitempty" xml:"exp,omitempty" yaml:"exp,omitempty"`
-	ID            string                 `json:"jti,omitempty" xml:"jti,omitempty" yaml:"jti,omitempty"`
-	IssuedAt      int64                  `json:"iat,omitempty" xml:"iat,omitempty" yaml:"iat,omitempty"`
-	Issuer        string                 `json:"iss,omitempty" xml:"iss,omitempty" yaml:"iss,omitempty"`
-	NotBefore     int64                  `json:"nbf,omitempty" xml:"nbf,omitempty" yaml:"nbf,omitempty"`
-	Subject       string                 `json:"sub,omitempty" xml:"sub,omitempty" yaml:"sub,omitempty"`
-	Name          string                 `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	Email         string                 `json:"email,omitempty" xml:"email,omitempty" yaml:"email,omitempty"`
-	Roles         []string               `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
-	Origin        string                 `json:"origin,omitempty" xml:"origin,omitempty" yaml:"origin,omitempty"`
-	Scopes        []string               `json:"scopes,omitempty" xml:"scopes,omitempty" yaml:"scopes,omitempty"`
-	Organizations []string               `json:"org,omitempty" xml:"org,omitempty" yaml:"org,omitempty"`
-	AccessList    *AccessListClaim       `json:"acl,omitempty" xml:"acl,omitempty" yaml:"acl,omitempty"`
-	Address       string                 `json:"addr,omitempty" xml:"addr,omitempty" yaml:"addr,omitempty"`
-	PictureURL    string                 `json:"picture,omitempty" xml:"picture,omitempty" yaml:"picture,omitempty"`
-	Metadata      map[string]interface{} `json:"metadata,omitempty" xml:"metadata,omitempty" yaml:"metadata,omitempty"`
-	custom        map[string]interface{}
+	// AuthenticationMethods contains verified RFC 8176 method references.
+	AuthenticationMethods []string         `json:"amr,omitempty" xml:"amr,omitempty" yaml:"amr,omitempty"`
+	Audience              []string         `json:"aud,omitempty" xml:"aud,omitempty" yaml:"aud,omitempty"`
+	ExpiresAt             int64            `json:"exp,omitempty" xml:"exp,omitempty" yaml:"exp,omitempty"`
+	ID                    string           `json:"jti,omitempty" xml:"jti,omitempty" yaml:"jti,omitempty"`
+	IssuedAt              int64            `json:"iat,omitempty" xml:"iat,omitempty" yaml:"iat,omitempty"`
+	Issuer                string           `json:"iss,omitempty" xml:"iss,omitempty" yaml:"iss,omitempty"`
+	NotBefore             int64            `json:"nbf,omitempty" xml:"nbf,omitempty" yaml:"nbf,omitempty"`
+	Subject               string           `json:"sub,omitempty" xml:"sub,omitempty" yaml:"sub,omitempty"`
+	Name                  string           `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Email                 string           `json:"email,omitempty" xml:"email,omitempty" yaml:"email,omitempty"`
+	Roles                 []string         `json:"roles,omitempty" xml:"roles,omitempty" yaml:"roles,omitempty"`
+	Origin                string           `json:"origin,omitempty" xml:"origin,omitempty" yaml:"origin,omitempty"`
+	Scopes                []string         `json:"scopes,omitempty" xml:"scopes,omitempty" yaml:"scopes,omitempty"`
+	Organizations         []string         `json:"org,omitempty" xml:"org,omitempty" yaml:"org,omitempty"`
+	AccessList            *AccessListClaim `json:"acl,omitempty" xml:"acl,omitempty" yaml:"acl,omitempty"`
+	Address               string           `json:"addr,omitempty" xml:"addr,omitempty" yaml:"addr,omitempty"`
+	PictureURL            string           `json:"picture,omitempty" xml:"picture,omitempty" yaml:"picture,omitempty"`
+	Metadata              map[string]any   `json:"metadata,omitempty" xml:"metadata,omitempty" yaml:"metadata,omitempty"`
+	custom                map[string]any
 }
 
 // AccessListClaim represents custom acl/paths claim
@@ -1005,6 +1010,10 @@ func NewUser(data interface{}) (*User, error) {
 			if err := c.unpackRoles(v); err != nil {
 				return nil, err
 			}
+		case "amr":
+			if err := c.unpackAuthenticationMethods(v, mkv, tkv); err != nil {
+				return nil, err
+			}
 		case "scopes", "scope":
 			if err := c.unpackScopes(v, mkv, tkv); err != nil {
 				return nil, err
@@ -1045,7 +1054,7 @@ func NewUser(data interface{}) (*User, error) {
 			if err := c.unpackMetadata(k, v, mkv); err != nil {
 				return nil, err
 			}
-		case "frontend_links", "challenges":
+		case "frontend_links", "challenges", "auth_methods":
 		default:
 			if c.custom == nil {
 				c.custom = make(map[string]interface{})

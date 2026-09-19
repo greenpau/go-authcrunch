@@ -16,6 +16,7 @@ package identity
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -512,6 +513,7 @@ func (user *User) LookupAPIKey(r *requests.Request) error {
 				return errors.ErrLookupAPIKeyFailed
 			}
 			if k.Match(r.Key.Payload) {
+				r.Key.ID = k.ID
 				return nil
 			}
 			return errors.ErrLookupAPIKeyFailed
@@ -618,22 +620,32 @@ func (user *User) GetMetadata() *UserMetadata {
 	return m
 }
 
+// GetRegisteredAuthMethods returns enabled credential types without collapsing
+// multiple factors into mfa. It describes availability, never successful login.
+func (user *User) GetRegisteredAuthMethods() []string {
+	methods := []string{authchal.PasswordKeyword}
+	seen := map[string]bool{}
+	for _, token := range user.MfaTokens {
+		if token == nil || token.Disabled {
+			continue
+		}
+		switch token.Type {
+		case authchal.TotpKeyword, authchal.U2fKeyword, authchal.EmailKeyword:
+			if !seen[token.Type] {
+				methods = append(methods, token.Type)
+				seen[token.Type] = true
+			}
+		}
+	}
+	return methods
+}
+
 // GetChallenges returns a list of challenges that should be
 // satisfied prior to successfully authenticating a user.
 func (user *User) GetChallenges() ([]string, error) {
 	registeredTypes := make(map[string]bool)
-	for _, token := range user.MfaTokens {
-		if token.Disabled {
-			continue
-		}
-		switch token.Type {
-		case authchal.TotpKeyword:
-			registeredTypes[authchal.TotpKeyword] = true
-		case authchal.U2fKeyword:
-			registeredTypes[authchal.U2fKeyword] = true
-		case authchal.EmailKeyword:
-			registeredTypes[authchal.EmailKeyword] = true
-		}
+	for _, method := range user.GetRegisteredAuthMethods() {
+		registeredTypes[method] = true
 	}
 
 	if user.HasAuthChallengeRules() {
@@ -644,6 +656,7 @@ func (user *User) GetChallenges() ([]string, error) {
 		if challenges := rs.ResolveChallenges(registeredTypes); len(challenges) > 0 {
 			return challenges, nil
 		}
+		return nil, fmt.Errorf("no authentication challenge rule matches registered methods")
 	}
 
 	var mfaTypes []string
@@ -667,27 +680,24 @@ func (user *User) GetChallenges() ([]string, error) {
 
 // OverwriteAuthChallengeRules overwrites auth challenge rules for a user.
 func (user *User) OverwriteAuthChallengeRules(rules []string) error {
-	user.AuthChallengeRules = []string{}
-	user.authChallengeRuleset = nil
-	for _, rule := range rules {
-		if err := user.AddAuthChallengeRule(rule); err != nil {
+	var statements []string
+	if len(rules) > 0 {
+		parsed, err := authchal.NewRuleset(rules)
+		if err != nil {
 			return err
 		}
+		statements = append([]string(nil), parsed.Statements...)
 	}
+	user.AuthChallengeRules = statements
+	user.authChallengeRuleset = nil
 	user.Revise()
 	return nil
 }
 
-// AddAuthChallengeRule adds an auth challenge rule statement.
+// AddAuthChallengeRule appends a rule after validating the entire resulting policy.
 func (user *User) AddAuthChallengeRule(s string) error {
-	// Validate the rule by parsing it.
-	if _, err := authchal.NewRuleset([]string{s}); err != nil {
-		return err
-	}
-	user.AuthChallengeRules = append(user.AuthChallengeRules, s)
-	user.authChallengeRuleset = nil
-	user.Revise()
-	return nil
+	rules := append(append([]string(nil), user.AuthChallengeRules...), s)
+	return user.OverwriteAuthChallengeRules(rules)
 }
 
 // GetAuthChallengeRules returns the auth challenge rule statements.

@@ -36,14 +36,18 @@ func (p *Portal) authenticateAPIKeyAuthRequest(_ context.Context, _ http.Respons
 	rr.Upstream.Realm = backend.GetRealm()
 
 	if err := backend.Request(operator.LookupAPIKey, rr); err != nil {
+		rr.Response.Code = http.StatusUnauthorized
 		return errors.ErrAPIKeyAuthFailed
 	}
 
+	proof := rr.Authentication
 	if err := backend.Request(operator.IdentifyUser, rr); err != nil {
 		rr.Response.Code = http.StatusUnauthorized
 		return err
 	}
 
+	// Identification must not replace evidence of the verified API key.
+	rr.Authentication = proof
 	rr.Response.Code = http.StatusOK
 	return nil
 }

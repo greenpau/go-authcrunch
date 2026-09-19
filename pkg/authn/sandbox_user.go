@@ -26,9 +26,10 @@ import (
 	"go.uber.org/zap"
 )
 
-func (p *Portal) createSandboxUser(ctx context.Context, _ http.ResponseWriter, r *http.Request, rr *requests.Request) (*user.User, error) {
-	username, email := rr.User.Username, rr.User.Email
-	m := make(map[string]interface{})
+// sandboxLoginClaims is shared with the profile policy preview. Its inputs are
+// current backend attributes, never transformed token or request-body claims.
+func sandboxLoginClaims(r *http.Request, rr *requests.Request) map[string]any {
+	m := make(map[string]any)
 	m["sub"] = rr.User.Username
 	m["email"] = rr.User.Email
 	if rr.User.FullName != "" {
@@ -48,6 +49,12 @@ func (p *Portal) createSandboxUser(ctx context.Context, _ http.ResponseWriter, r
 	m["addr"] = addrutil.GetSourceAddress(r)
 
 	combineGroupRoles(m)
+	return m
+}
+
+func (p *Portal) createSandboxUser(ctx context.Context, _ http.ResponseWriter, r *http.Request, rr *requests.Request) (*user.User, error) {
+	username, email := rr.User.Username, rr.User.Email
+	m := sandboxLoginClaims(r, rr)
 
 	// Perform user claim transformation if necessary.
 	if err := p.transformUser(ctx, rr, m); err != nil {

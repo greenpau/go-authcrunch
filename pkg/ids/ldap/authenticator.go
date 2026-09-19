@@ -303,6 +303,7 @@ func (sa *Authenticator) IdentifyUser(r *requests.Request) error {
 				r.User.Username = "nobody"
 				r.User.Email = "nobody@localhost"
 				r.User.Challenges = []string{"password"}
+				r.User.AuthMethods = []string{"password"}
 				return nil
 			}
 			r.Response.Code = 401
@@ -760,6 +761,7 @@ func (sa *Authenticator) findUser(ldapConnection *ldap.Conn, server *AuthServer,
 	)
 
 	r.User.Challenges = []string{"password"}
+	r.User.AuthMethods = []string{"password"}
 	r.Response.Code = 200
 	return nil
 }

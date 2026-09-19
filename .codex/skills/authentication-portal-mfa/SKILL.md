@@ -11,6 +11,17 @@ description: Maintain portal TOTP and WebAuthn login checkpoints and enrollment,
 Use [local database transactions](../local-identity-database/SKILL.md) and
 [canonical login evidence](../refresh-token-identity/SKILL.md) at those boundaries.
 
+Use [authentication challenge policies](../authentication-portal-challenges/SKILL.md)
+for conditional selection, user-transform/parser APIs, and AMR issuance. Successful
+verification sets the server-only `Checkpoint.Method`; enrollment never does.
+JSON hardware authentication must retain its server challenge and pass the actual
+assertion to the backend, including when U2F is the first checkpoint.
+After generating a JSON WebAuthn assertion challenge, return immediately and
+wait for its signed response. Do not visit later password/TOTP checkpoints or
+set authentication evidence during challenge issuance. Cover WebAuthn before,
+after, and between other factors through HTML and JSON, including generic MFA
+selection and additive password requirements.
+
 Keep required factor types distinct. A totp checkpoint cannot pass with U2F,
 and a u2f checkpoint cannot pass with TOTP; only generic mfa permits selection.
 Seed every MFA backend operation with the original server-held LoginEvidence,
@@ -31,6 +42,13 @@ logins need a fresh step; do not weaken persistent replay protection for tests.
 Login WebAuthn requires the server challenge and exact expected origin, RP hash,
 client-data type, signature and user presence. Trusted request metadata derives
 the origin; forwarded-header normalization belongs to the embedding server.
+
+The current `u2f` route supports account-first WebAuthn, including as the sole
+authentication checkpoint. It requests `user_verification: "discouraged"` and
+requires user presence; it does not require the authenticator's UV flag. Do not
+describe factor-only selection as username-free/discoverable-credential login
+or a guarantee of PIN/biometric verification. Those capabilities need separate
+protocol/configuration work and browser/authenticator validation.
 
 Enrollment is a credential mutation, never authentication with the new factor.
 Sandbox first-factor enrollment requires no enabled existing factor and current

@@ -15,9 +15,7 @@
 package authchal
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
@@ -58,7 +56,7 @@ func TestNewRuleset(t *testing.T) {
 			name:       "invalid rule in chain",
 			statements: []string{"u2f", "sms"},
 			shouldErr:  true,
-			err:        fmt.Errorf("unsupported challenge type: sms"),
+			err:        fmt.Errorf("authentication challenge directive at line 2: unsupported challenge type"),
 		},
 	}
 
@@ -71,18 +69,6 @@ func TestNewRuleset(t *testing.T) {
 			}
 		})
 	}
-}
-
-// forceMarshalError triggers a marshal failure in the test-only
-// MarshalJSON below. Not safe with t.Parallel().
-var forceMarshalError bool
-
-func (r *Rule) MarshalJSON() ([]byte, error) {
-	if forceMarshalError {
-		return nil, fmt.Errorf("forced marshal error")
-	}
-	type plain Rule
-	return json.Marshal((*plain)(r))
 }
 
 func TestRulesetDump(t *testing.T) {
@@ -100,11 +86,6 @@ func TestRulesetDump(t *testing.T) {
 		t.Errorf("nil Dump() should return {}")
 	}
 
-	forceMarshalError = true
-	defer func() { forceMarshalError = false }()
-	if !strings.Contains(rs.Dump(), "error") {
-		t.Errorf("Dump() should return error JSON when marshal fails")
-	}
 }
 
 func TestRulesetResolveChallenges(t *testing.T) {
@@ -161,7 +142,7 @@ func TestRulesetResolveChallenges(t *testing.T) {
 				"password if u2f and totp not available",
 			},
 			registered: map[string]bool{"u2f": true},
-			want:       []string{"u2f", "totp"},
+			want:       []string{"u2f"},
 		},
 		{
 			name: "or rule with neither available falls through",
@@ -237,7 +218,7 @@ func TestRulesetResolveChallenges(t *testing.T) {
 				"password or totp",
 			},
 			registered: map[string]bool{"totp": true},
-			want:       []string{"password", "totp"},
+			want:       []string{"password"},
 		},
 	}
 

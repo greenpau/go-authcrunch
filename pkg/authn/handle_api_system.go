@@ -17,14 +17,17 @@ package authn
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/system"
 	"github.com/greenpau/go-authcrunch/pkg/user"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 	"go.uber.org/zap"
 )
 
@@ -53,7 +56,7 @@ func readSystemAPIRequestBody(w http.ResponseWriter, r *http.Request) ([]byte, e
 	return io.ReadAll(http.MaxBytesReader(w, r.Body, maxSystemAPIRequestBodySize))
 }
 
-func (p *Portal) handleAPIExtractUserIdentity(ctx context.Context, rr *requests.Request, m map[string]any) error {
+func (p *Portal) handleAPIExtractUserIdentity(ctx context.Context, rr *requests.Request, m map[string]any, completed []string) error {
 	switch rr.Upstream.Method {
 	case "oauth2", "saml":
 		return fmt.Errorf("upstream authentication method %q is not supported", rr.Upstream.Method)
@@ -75,7 +78,16 @@ func (p *Portal) handleAPIExtractUserIdentity(ctx context.Context, rr *requests.
 		return err
 	}
 
+	if err := p.checkDirectAuthenticationPolicy(rr, m, completed); err != nil {
+		return err
+	}
+	delete(m, "amr")
+	if slices.Contains(completed, "password") {
+		m["amr"] = []string{"pwd"}
+	}
 	injectPortalRoles(m, p.config)
+	delete(m, "challenges")
+	delete(m, "auth_methods")
 
 	delete(m, "frontend_links")
 
@@ -85,6 +97,10 @@ func (p *Portal) handleAPIExtractUserIdentity(ctx context.Context, rr *requests.
 func (p *Portal) handleAPISystem(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, _ *user.User) error {
 	body, err := readSystemAPIRequestBody(w, r)
 	if err != nil {
+		rr.Response.Code = http.StatusBadRequest
+		if _, oversized := errors.AsType[*http.MaxBytesError](err); oversized {
+			rr.Response.Code = http.StatusRequestEntityTooLarge
+		}
 		return handleAPISystemError(ctx, w, r, rr)
 	}
 
@@ -185,42 +201,7 @@ func (p *Portal) handleAPISystem(ctx context.Context, w http.ResponseWriter, r *
 			return handleAPISystemError(ctx, w, r, rr)
 		}
 
-		userIdentity := make(map[string]any)
-		userIdentity["addr"] = msg.Address
-		if err := p.handleAPIExtractUserIdentity(ctx, rr, userIdentity); err != nil {
-			p.logger.Warn(
-				"malformed request",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.String("api_endpoint", "system"),
-				zap.String("phase", "authorize"),
-				zap.Error(err),
-			)
-			return handleAPISystemError(ctx, w, r, rr)
-		}
-
-		respMsg := system.AuthResponseMessage{
-			ID:            rr.ID,
-			Kind:          system.AuthResponseKindKeyword,
-			Authenticated: true,
-			UserData:      userIdentity,
-			Timestamp:     time.Now().UTC().Format(time.RFC3339Nano),
-		}
-
-		encryptedRespMsg, err := encryptor.EncryptMessage(&respMsg)
-		if err != nil {
-			rr.Response.Code = http.StatusInternalServerError
-			p.logger.Warn(
-				"malformed request",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.String("api_endpoint", "system"),
-				zap.String("phase", "build_response"),
-				zap.Error(err),
-			)
-			return handleAPISystemError(ctx, w, r, rr)
-		}
-		return handleAPISystemResponse(ctx, w, []byte(encryptedRespMsg))
+		return p.respondSystemAuthentication(ctx, w, r, rr, encryptor, msg.Address, []string{"password"})
 	case *system.APIKeyAuthRequestMessage:
 		if err := p.authenticateAPIKeyAuthRequest(ctx, w, r, rr, msg.Realm, msg.APIKey); err != nil {
 			p.logger.Warn(
@@ -234,42 +215,7 @@ func (p *Portal) handleAPISystem(ctx context.Context, w http.ResponseWriter, r *
 			return handleAPISystemError(ctx, w, r, rr)
 		}
 
-		userIdentity := make(map[string]any)
-		userIdentity["addr"] = msg.Address
-		if err := p.handleAPIExtractUserIdentity(ctx, rr, userIdentity); err != nil {
-			p.logger.Warn(
-				"malformed request",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.String("api_endpoint", "system"),
-				zap.String("phase", "authorize"),
-				zap.Error(err),
-			)
-			return handleAPISystemError(ctx, w, r, rr)
-		}
-
-		respMsg := system.AuthResponseMessage{
-			ID:            rr.ID,
-			Kind:          system.AuthResponseKindKeyword,
-			Authenticated: true,
-			UserData:      userIdentity,
-			Timestamp:     time.Now().UTC().Format(time.RFC3339Nano),
-		}
-
-		encryptedRespMsg, err := encryptor.EncryptMessage(&respMsg)
-		if err != nil {
-			rr.Response.Code = http.StatusInternalServerError
-			p.logger.Warn(
-				"malformed request",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.String("api_endpoint", "system"),
-				zap.String("phase", "build_response"),
-				zap.Error(err),
-			)
-			return handleAPISystemError(ctx, w, r, rr)
-		}
-		return handleAPISystemResponse(ctx, w, []byte(encryptedRespMsg))
+		return p.respondSystemAuthentication(ctx, w, r, rr, encryptor, msg.Address, nil)
 	case nil:
 		rr.Response.Code = http.StatusBadRequest
 		p.logger.Warn(
@@ -293,4 +239,31 @@ func (p *Portal) handleAPISystem(ctx context.Context, w http.ResponseWriter, r *
 		)
 		return handleAPISystemError(ctx, w, r, rr)
 	}
+}
+
+// respondSystemAuthentication commits the encrypted authentication assertion
+// under the same identity transaction used by direct access-token issuance.
+func (p *Portal) respondSystemAuthentication(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, encryptor *system.Encryptor, address string, completed []string) error {
+	var encrypted string
+	err := p.withDirectAuthenticationIdentity(ctx, rr, func() error {
+		claims := map[string]any{"addr": address, "iss": util.GetIssuerURL(r)}
+		if err := p.handleAPIExtractUserIdentity(ctx, rr, claims, completed); err != nil {
+			return err
+		}
+		message := &system.AuthResponseMessage{
+			ID: rr.ID, Kind: system.AuthResponseKindKeyword, Authenticated: true,
+			UserData: claims, Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+		}
+		var err error
+		encrypted, err = encryptor.EncryptMessage(message)
+		if err != nil {
+			rr.Response.Code = http.StatusInternalServerError
+		}
+		return err
+	})
+	if err != nil {
+		p.logger.Warn("system authentication authorization failed", zap.String("request_id", rr.ID), zap.Error(err))
+		return handleAPISystemError(ctx, w, r, rr)
+	}
+	return handleAPISystemResponse(ctx, w, []byte(encrypted))
 }

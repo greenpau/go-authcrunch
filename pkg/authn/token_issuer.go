@@ -96,7 +96,7 @@ func (p *Portal) issueSandboxTokens(ctx context.Context, r *http.Request, rr *re
 	}
 	u, err := p.issueSandboxAccessToken(ctx, r, rr, proof, identity.RefreshIdentity{
 		Username: rr.User.Username, Email: rr.User.Email, Name: rr.User.FullName,
-		Roles: rr.User.Roles, Challenges: rr.User.Challenges,
+		Roles: rr.User.Roles, Challenges: rr.User.Challenges, AuthMethods: rr.User.AuthMethods,
 	})
 	return u, nil, err
 }
@@ -110,12 +110,14 @@ func (p *Portal) issueSandboxAccessToken(ctx context.Context, r *http.Request, r
 	m := map[string]any{"sub": current.Username, "email": current.Email, "name": current.Name, "roles": current.Roles, "origin": proof.Authenticator.Realm, "realm": proof.Authenticator.Realm, "iss": util.GetIssuerURL(r), "addr": addrutil.GetSourceAddress(r)}
 	now := time.Now().Unix()
 	m["jti"], m["iat"], m["nbf"], m["exp"] = rr.Upstream.SessionID, now, now-60, now+int64(p.keystore.GetTokenLifetime(nil, nil))
+	rr.User.Challenges = append([]string(nil), current.Challenges...)
+	rr.User.AuthMethods = append([]string(nil), current.AuthMethods...)
 	if err := p.transformUser(ctx, rr, m); err != nil {
 		return nil, err
 	}
 	// Current policy may require additional factors since this sandbox began.
 	candidate := &user.User{}
-	if err := p.injectUserChallenges(candidate, m, current.Challenges); err != nil {
+	if err := p.injectUserChallenges(candidate, m, rr.User.Challenges); err != nil {
 		return nil, tokenrefresh.ErrDenied
 	}
 	completed := make([]string, 0, len(proof.Checkpoints))
@@ -129,6 +131,10 @@ func (p *Portal) issueSandboxAccessToken(ctx context.Context, r *http.Request, r
 		if !satisfiedRefreshChallenge(required, completed) {
 			return nil, tokenrefresh.ErrDenied
 		}
+	}
+	delete(m, "amr")
+	if len(proof.LoginMethods) > 0 {
+		m["amr"] = append([]string(nil), proof.LoginMethods...)
 	}
 	injectPortalRoles(m, p.config)
 	u, err := user.NewUser(m)

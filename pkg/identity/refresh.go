@@ -30,9 +30,10 @@ var ErrRefreshIdentityDenied = stderrors.New("refresh identity denied")
 
 // RefreshIdentity contains fresh non-secret attributes of an immutable record.
 type RefreshIdentity struct {
-	Profile               *Profile `json:"-" xml:"-" yaml:"-"`
-	Username, Email, Name string   `json:"-" xml:"-" yaml:"-"`
-	Roles, Challenges     []string `json:"-" xml:"-" yaml:"-"`
+	Profile                        *Profile `json:"-" xml:"-" yaml:"-"`
+	Username, Email, Name          string   `json:"-" xml:"-" yaml:"-"`
+	Roles, Challenges, AuthMethods []string `json:"-" xml:"-" yaml:"-"`
+	AuthChallengePolicy            bool     `json:"-" xml:"-" yaml:"-"`
 }
 
 func (db *Database) authenticationEvidence(u *User) requests.AuthenticationEvidence {
@@ -84,11 +85,25 @@ func (db *Database) withRefreshIdentityUnlocked(ctx context.Context, proof reque
 	if u.Lockout != nil && u.Lockout.IsLocked() {
 		return ErrRefreshIdentityDenied
 	}
+	if proof.Method == "api_key" {
+		// Key revocation is independent of the password/MFA credential version.
+		// Recheck the exact key that was verified, without a second bcrypt pass.
+		var active bool
+		for _, key := range u.APIKeys {
+			if key != nil && key.ID == proof.APIKeyID && !key.Disabled && !key.Expired {
+				active = true
+				break
+			}
+		}
+		if proof.APIKeyID == "" || !active {
+			return ErrRefreshIdentityDenied
+		}
+	}
 	challenges, err := u.GetChallenges()
 	if err != nil {
 		return err
 	}
-	return apply(RefreshIdentity{Profile: u.Profile.Clone(), Username: u.Username, Email: u.GetMailClaim(), Name: u.GetNameClaim(), Roles: u.GetRolesClaim(), Challenges: append([]string(nil), challenges...)})
+	return apply(RefreshIdentity{Profile: u.Profile.Clone(), Username: u.Username, Email: u.GetMailClaim(), Name: u.GetNameClaim(), Roles: u.GetRolesClaim(), Challenges: append([]string(nil), challenges...), AuthMethods: u.GetRegisteredAuthMethods(), AuthChallengePolicy: u.HasAuthChallengeRules()})
 }
 
 // RevokeUserSessions invalidates refresh families and pending login evidence for

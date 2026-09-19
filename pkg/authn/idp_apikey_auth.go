@@ -16,18 +16,22 @@ package authn
 
 import (
 	"context"
-	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
-	"github.com/greenpau/go-authcrunch/pkg/user"
 	"go.uber.org/zap"
 )
 
 // APIKeyAuth performs API key authentication.
 func (p *Portal) APIKeyAuth(r *authproxy.Request) error {
+	return p.apiKeyAuth(context.Background(), r, "authp")
+}
+
+// apiKeyAuth preserves the caller's policy context. HTTP login supplies its
+// current issuer URL and cancellation; the public proxy API has no HTTP request.
+func (p *Portal) apiKeyAuth(ctx context.Context, r *authproxy.Request, issuer string) error {
 	if r.Realm == "" {
 		return errors.ErrAPIKeyAuthFailedRealmNotSet
 	}
@@ -60,6 +64,7 @@ func (p *Portal) APIKeyAuth(r *authproxy.Request) error {
 		return errors.ErrAPIKeyAuthFailed
 	}
 
+	proof := rr.Authentication
 	if err := backend.Request(operator.IdentifyUser, rr); err != nil {
 		p.logger.Warn(
 			"user lookup following api key lookup failed",
@@ -71,54 +76,12 @@ func (p *Portal) APIKeyAuth(r *authproxy.Request) error {
 		return errors.ErrAPIKeyAuthFailed
 	}
 
-	m := make(map[string]interface{})
-	m["sub"] = rr.User.Username
-	m["email"] = rr.User.Email
-	if rr.User.FullName != "" {
-		m["name"] = rr.User.FullName
-	}
-	if len(rr.User.Roles) > 0 {
-		m["roles"] = rr.User.Roles
-	}
+	// Retain credential verification evidence; IdentifyUser only binds a lookup.
+	rr.Authentication = proof
 
-	// m["jti"] = rr.Upstream.SessionID
-	m["exp"] = time.Now().Add(time.Duration(p.keystore.GetTokenLifetime(nil, nil)) * time.Second).UTC().Unix()
-	m["iat"] = time.Now().UTC().Unix()
-	m["nbf"] = time.Now().Add(time.Duration(60) * time.Second * -1).UTC().Unix()
-	if _, exists := m["origin"]; !exists {
-		m["origin"] = r.Realm
-	}
-	m["iss"] = "authp"
-	m["addr"] = r.Address
-
-	// Perform user claim transformation if necessary.
-	if err := p.transformUser(context.Background(), rr, m); err != nil {
-		return err
-	}
-
-	// Inject portal specific roles
-	injectPortalRoles(m, p.config)
-
-	// Create a new user and sign the token.
-	usr, err := user.NewUser(m)
+	usr, err := p.issueDirectAuthenticationToken(ctx, rr, issuer, r.Address, nil)
 	if err != nil {
-		p.logger.Warn(
-			"user build following user lookup failed",
-			zap.String("source_address", r.Address),
-			zap.String("custom_auth", "apikey"),
-			zap.String("realm", r.Realm),
-			zap.Error(err),
-		)
-		return errors.ErrAPIKeyAuthFailed
-	}
-	if err := p.keystore.SignToken(nil, nil, usr); err != nil {
-		p.logger.Warn(
-			"user token signing failed",
-			zap.String("source_address", r.Address),
-			zap.String("custom_auth", "apikey"),
-			zap.String("realm", r.Realm),
-			zap.Error(err),
-		)
+		p.logger.Warn("direct authentication token issuance failed", zap.String("realm", r.Realm), zap.Error(err))
 		return errors.ErrAPIKeyAuthFailed
 	}
 

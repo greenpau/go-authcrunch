@@ -102,6 +102,12 @@ transformed access-token subject. Follow
 when changing shared login; OIDC UserInfo still returns current backend
 attributes and its subject remains bound to the immutable local record.
 
+The adapter re-evaluates
+[authentication challenge policies](../authentication-portal-challenges/SKILL.md)
+with the current registered-method inventory and selected sequence. Do not
+reintroduce backend password defaults after a valid U2F-only transformation.
+OIDC and portal access tokens derive AMR from the same completed method evidence.
+
 OIDC browser credentials use the portal cookie factory's configurable names:
 `AUTHP_OIDC_SESSION_ID` and `AUTHP_OIDC_REQUEST_ID` by default. They honor
 `cookie_config.cookie_name_prefix` and explicit name overrides. Use the
@@ -135,6 +141,21 @@ commit inside the identity transaction. Network response writes occur after
 state locks are released, through `oidcHTTPResponse`.
 
 ## Protocol Invariants
+
+`RequestMetadataFromContext(ctx)` exposes a detached, server-only
+`RequestMetadata` value to `IdentityVerifier.WithIdentity`: `URL` is the current
+endpoint URL without query/fragment, and `SourceAddress` follows the shared
+address utilities. `HandleHTTP`/`ServeHTTP` and `CompleteLogin` populate it,
+including when the reusable provider is embedded without the portal router.
+It retains cancellation and is neither serialized nor cached in session proof.
+Forwarded-header normalization remains the embedding server's responsibility.
+The portal maps these fields to transform-time `iss`/`addr`, so request-dependent
+challenge policies apply on login completion and every subsequent OIDC check.
+Backchannel requests use the relying party's current address, not the browser's
+original login address. Missing context must not be filled from JWT claims.
+`request_metadata_test.go`, standalone provider TLS tests, and the portal's
+`authentication_challenges_context_e2e_test.go` cover this integration, including
+denial when a later operation requires a factor absent from the original proof.
 
 Provisioning is explicit: `NewClientConfig` generates missing credentials and
 enables S256 PKCE. `Validate`, `Config.AddClient`, and `NewProvider` never generate

@@ -44,6 +44,16 @@ changes advance CredentialVersion. Deletion/recreation changes immutable ID;
 reload changes the backend epoch. Role removal must invalidate cached profile
 and renewable authority even if the access JWT retains its ordinary lifetime.
 
+Successful `LookupAPIKey` captures server-only `AuthenticationEvidence` with
+method `api_key` and the exact `APIKeyID`; failed lookups clear old evidence.
+Direct issuance preserves that proof across `IdentifyUser`, which only captures
+an identification snapshot. `WithRefreshIdentity` checks that this exact key is
+still present, enabled and unexpired while holding the issuance transaction.
+Key deletion does not revoke unrelated password/MFA evidence. Never replace
+the verified key proof with a newer identification version, or repeat bcrypt
+outside the transaction as a substitute for protecting issuance. The `api_key`
+marker is internal proof, not a password/MFA AMR claim or renewable session.
+
 TOTP acceptance persists a monotonic `LastTOTPCounter` before success. Replay
 and earlier counters fail, including across processes, restart and symlink
 aliases. Failure increments, resets and expired-lockout clearing are fresh
@@ -62,3 +72,10 @@ sharing a file, revoked passwords/API keys, pending TOTP/WebAuthn, refresh
 revocation, shared lockout, role removal, conflicting writes and backup continuity.
 Use deterministic synchronization for verification/issuance races. Compile-only
 Windows/illumos checks are not runtime filesystem-lock evidence.
+
+`api_key_evidence_test.go` covers proof capture, failed-lookup clearing, exact
+key ID, disablement/expiry/deletion, and unrelated password-proof continuity.
+The portal's `authentication_challenges_transaction_e2e_test.go` checks those
+issuance boundaries through real TLS direct-login consumers; see
+[authentication challenge policies](../authentication-portal-challenges/SKILL.md)
+for current policy, inventory, and direct issuance rules.

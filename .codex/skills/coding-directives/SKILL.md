@@ -40,6 +40,8 @@ identity transactions, [authentication-portal-profile](../authentication-portal-
 for self-service credential operations, [authentication-portal-mfa](../authentication-portal-mfa/SKILL.md)
 for factor checkpoints/enrollment, and [saml-identity-provider](../saml-identity-provider/SKILL.md)
 for upstream SAML trust and browser binding.
+Use [authentication-portal-challenges](../authentication-portal-challenges/SKILL.md)
+for challenge selection/parsers, registered-method inventory and verified AMR.
 Use `authentication-client` for reusable portal login clients and CLI credential
 handling. Use `authdbctl` for CLI commands, terminal behavior, and executable E2E
 tests. Use [authdb](../authdb/SKILL.md) for the standalone HTTP server, listener

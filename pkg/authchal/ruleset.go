@@ -15,42 +15,15 @@
 package authchal
 
 import (
-	"encoding/json"
-	"fmt"
+	"github.com/greenpau/go-authcrunch/pkg/authchal/config"
+	"github.com/greenpau/go-authcrunch/pkg/authchal/parser"
 )
 
-// Ruleset holds parsed auth challenge rules.
-type Ruleset struct {
-	Rules      []*Rule  `json:"rules,omitempty" xml:"rules,omitempty" yaml:"rules,omitempty"`
-	Statements []string `json:"statements,omitempty" xml:"statements,omitempty" yaml:"statements,omitempty"`
-}
+// Ruleset is an ordered authentication challenge policy.
+type Ruleset = config.AuthenticationChallengeConfig
 
-// NewRuleset parses a list of auth challenge rule statements.
+// NewRuleset preserves the encoded rule-body API. New configuration consumers
+// should use parser.NewAuthenticationChallengeConfigFromDirectives directly.
 func NewRuleset(statements []string) (*Ruleset, error) {
-	if len(statements) == 0 {
-		return nil, fmt.Errorf("no auth challenge rule statements found")
-	}
-	rs := &Ruleset{
-		Statements: statements,
-	}
-	for _, s := range statements {
-		r, err := parseRule(s)
-		if err != nil {
-			return nil, err
-		}
-		rs.Rules = append(rs.Rules, r)
-	}
-	return rs, nil
-}
-
-// Dump returns the JSON string representation of Ruleset.
-func (rs *Ruleset) Dump() string {
-	if rs == nil {
-		return "{}"
-	}
-	b, err := json.MarshalIndent(rs, "", "  ")
-	if err != nil {
-		return "{\"error\": \"" + err.Error() + "\"}"
-	}
-	return string(b)
+	return parser.NewAuthenticationChallengeConfigFromDirectives(statements)
 }

@@ -37,6 +37,7 @@ func (o *Provider) HandleHTTP(w http.ResponseWriter, r *http.Request) bool {
 	if !mounted || (endpoint != oidcDiscoveryPath && !strings.HasPrefix(endpoint, "/oidc/")) {
 		return false
 	}
+	r = r.WithContext(withRequestMetadata(r.Context(), r))
 	// Release state and identity locks before writing to a potentially slow peer.
 	response := &oidcHTTPResponse{header: make(http.Header)}
 	defer o.sendResponse(w, r, response, endpoint == "/oidc/authorize" || endpoint == "/oidc/continue")

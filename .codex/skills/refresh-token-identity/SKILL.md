@@ -55,6 +55,13 @@ transformed claims cannot supply or upgrade this evidence. Keep
 `requests.AuthenticationEvidence` and the private fields on `user.User` out of
 JSON/XML/YAML; preserve the relevant fields when cloning a user.
 
+Challenge selection and AMR belong to
+[authentication challenge policies](../authentication-portal-challenges/SKILL.md).
+`RefreshIdentity.AuthMethods` carries current registered-factor inventory separately
+from completed methods. Access, refresh, and OIDC adapters pass that inventory to
+transforms and check the selected replacement sequence plus additive requirements.
+`recordLoginEvidence` collects `Checkpoint.Method` for access-only logins too.
+
 Every required checkpoint must pass before redemption and issuance. MFA
 enrollment mutates credentials and is not proof of authentication with the new
 factor: require a new completed login. A reset or policy change between password

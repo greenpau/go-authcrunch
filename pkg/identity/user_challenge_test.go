@@ -84,7 +84,7 @@ func TestGetChallengesCorruptRuleReturnsError(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error for corrupt rule")
 	}
-	tests.EvalErrWithLog(t, err, "GetChallenges", true, fmt.Errorf("unsupported challenge type: valid_rule_this_is_not"), msgs)
+	tests.EvalErrWithLog(t, err, "GetChallenges", true, fmt.Errorf("authentication challenge directive at line 1: unsupported challenge type"), msgs)
 }
 
 func TestOverwriteAuthChallengeRules(t *testing.T) {
@@ -115,14 +115,14 @@ func TestOverwriteAuthChallengeRulesInvalid(t *testing.T) {
 	user := &User{}
 	msgs := []string{"invalid rule should return error"}
 	err := user.OverwriteAuthChallengeRules([]string{"sms"})
-	tests.EvalErrWithLog(t, err, "OverwriteAuthChallengeRules", true, fmt.Errorf("unsupported challenge type: sms"), msgs)
+	tests.EvalErrWithLog(t, err, "OverwriteAuthChallengeRules", true, fmt.Errorf("authentication challenge directive at line 1: unsupported challenge type"), msgs)
 }
 
 func TestAddAuthChallengeRuleInvalid(t *testing.T) {
 	user := &User{}
 	msgs := []string{"invalid rule should return error"}
 	err := user.AddAuthChallengeRule("sms")
-	tests.EvalErrWithLog(t, err, "AddAuthChallengeRule", true, fmt.Errorf("unsupported challenge type: sms"), msgs)
+	tests.EvalErrWithLog(t, err, "AddAuthChallengeRule", true, fmt.Errorf("authentication challenge directive at line 1: unsupported challenge type"), msgs)
 }
 
 func TestGetChallengesEmail(t *testing.T) {

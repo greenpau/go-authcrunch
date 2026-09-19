@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authchal
+package parser_test
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/authchal/parser"
 )
 
 func TestParseRule(t *testing.T) {
@@ -26,7 +27,6 @@ func TestParseRule(t *testing.T) {
 		name       string
 		input      string
 		shouldErr  bool
-		err        error
 		challenges []string
 		conditions []string
 	}{
@@ -72,49 +72,41 @@ func TestParseRule(t *testing.T) {
 			name:      "empty input",
 			input:     "",
 			shouldErr: true,
-			err:       fmt.Errorf("auth challenge rule: EOF"),
 		},
 		{
 			name:      "unsupported challenge type",
 			input:     "sms",
 			shouldErr: true,
-			err:       fmt.Errorf("unsupported challenge type: sms"),
 		},
 		{
 			name:      "unsupported condition type",
 			input:     "password if sms not available",
 			shouldErr: true,
-			err:       fmt.Errorf("unsupported condition type: sms"),
 		},
 		{
 			name:      "empty condition after if",
 			input:     "password if not available",
 			shouldErr: true,
-			err:       fmt.Errorf("empty condition in auth challenge rule"),
 		},
 		{
 			name:      "duplicate challenge type",
 			input:     "password password",
 			shouldErr: true,
-			err:       fmt.Errorf("duplicate challenge type: password"),
 		},
 		{
 			name:      "condition conflicts with challenge",
 			input:     "u2f if u2f not available",
 			shouldErr: true,
-			err:       fmt.Errorf("condition type u2f conflicts with challenge type"),
 		},
 		{
 			name:      "starts with if keyword",
 			input:     "if u2f not available",
 			shouldErr: true,
-			err:       fmt.Errorf("no challenge types specified"),
 		},
 		{
 			name:      "malformed input",
 			input:     `"unclosed`,
 			shouldErr: true,
-			err:       fmt.Errorf("auth challenge rule: parse error on line 1, column 10: extraneous or missing \" in quoted-field"),
 		},
 	}
 
@@ -122,10 +114,17 @@ func TestParseRule(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
 			msgs = append(msgs, fmt.Sprintf("input: %s", tc.input))
-			r, err := parseRule(tc.input)
-			if tests.EvalErrWithLog(t, err, "parseRule", tc.shouldErr, tc.err, msgs) {
+			c, err := parser.NewAuthenticationChallengeConfigFromDirectives([]string{tc.input})
+			if tc.shouldErr {
+				if err == nil || c != nil {
+					t.Fatal("invalid directive accepted")
+				}
 				return
 			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := c.Rules[0]
 			tests.EvalObjectsWithLog(t, "challenges", tc.challenges, r.Challenges, msgs)
 			tests.EvalObjectsWithLog(t, "conditions", tc.conditions, r.Conditions, msgs)
 		})

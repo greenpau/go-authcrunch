@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authchal
+package config
+
+import "slices"
 
 // ResolveChallenges returns the challenge list from the first matching
 // rule, or nil if no rules match.
-func (rs *Ruleset) ResolveChallenges(registeredTypes map[string]bool) []string {
+func (rs *AuthenticationChallengeConfig) ResolveChallenges(registeredTypes map[string]bool) []string {
+	if rs == nil {
+		return nil
+	}
 	for _, r := range rs.Rules {
 		if r == nil || len(r.Challenges) == 0 {
 			continue
@@ -24,13 +29,17 @@ func (rs *Ruleset) ResolveChallenges(registeredTypes map[string]bool) []string {
 		if !challengesAvailable(r, registeredTypes) {
 			continue
 		}
-		if len(r.Conditions) == 0 {
-			return r.Challenges
-		}
 		if hasRegisteredCondition(r.Conditions, registeredTypes) {
 			continue
 		}
-		return r.Challenges
+		if r.HasOr {
+			for _, ch := range r.Challenges {
+				if isTypeRegistered(ch, registeredTypes) {
+					return []string{ch}
+				}
+			}
+		}
+		return slices.Clone(r.Challenges)
 	}
 	return nil
 }
@@ -59,12 +68,9 @@ func hasAllChallenges(challenges []string, registeredTypes map[string]bool) bool
 }
 
 // hasAnyChallenges checks whether the user has at least one
-// non-password challenge type registered.
+// challenge type registered (password is always available).
 func hasAnyChallenges(challenges []string, registeredTypes map[string]bool) bool {
 	for _, ch := range challenges {
-		if ch == PasswordKeyword {
-			continue
-		}
 		if isTypeRegistered(ch, registeredTypes) {
 			return true
 		}
@@ -75,6 +81,9 @@ func hasAnyChallenges(challenges []string, registeredTypes map[string]bool) bool
 // isTypeRegistered checks whether a challenge type is registered.
 // The mfa type is a logical union of totp, u2f, and email.
 func isTypeRegistered(ch string, registeredTypes map[string]bool) bool {
+	if ch == PasswordKeyword {
+		return true
+	}
 	if ch == MfaKeyword {
 		return registeredTypes[TotpKeyword] || registeredTypes[U2fKeyword] || registeredTypes[EmailKeyword]
 	}
@@ -85,7 +94,7 @@ func isTypeRegistered(ch string, registeredTypes map[string]bool) bool {
 // registered, meaning the "not available" condition is not met.
 func hasRegisteredCondition(conditions []string, registeredTypes map[string]bool) bool {
 	for _, cond := range conditions {
-		if registeredTypes[cond] {
+		if isTypeRegistered(cond, registeredTypes) {
 			return true
 		}
 	}

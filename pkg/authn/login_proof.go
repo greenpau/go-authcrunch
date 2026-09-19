@@ -15,6 +15,7 @@
 package authn
 
 import (
+	"slices"
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
@@ -35,10 +36,7 @@ func passedCheckpointCount(u *user.User) int {
 // recordLoginEvidence runs only under a sandbox lease, after actual checkpoint
 // verification. Never advance the original authentication time after MFA.
 func (p *Portal) recordLoginEvidence(u *user.User, rr *requests.Request, before int) error {
-	if !p.refreshRealm(u.Authenticator.Realm) && !p.oidcRealm(u.Authenticator.Realm) {
-		return nil
-	}
-	if u.LoginEvidence.UserID == "" {
+	if u.LoginEvidence.UserID == "" && (p.refreshRealm(u.Authenticator.Realm) || p.oidcRealm(u.Authenticator.Realm)) {
 		return tokenrefresh.ErrDenied
 	}
 	if evidence := rr.Authentication; evidence.UserID != "" {
@@ -49,18 +47,26 @@ func (p *Portal) recordLoginEvidence(u *user.User, rr *requests.Request, before 
 	if passedCheckpointCount(u) <= before {
 		return nil
 	}
-	method := ""
-	switch {
-	case rr.User.Password != "":
-		method = "pwd"
-	case rr.MfaToken.Passcode != "":
-		method = "otp"
-	case rr.WebAuthn.Request != "":
-		method = "hwk"
-	}
-	// Enrollment alone is not proof of possession for a renewable session.
-	if method == "" {
-		return tokenrefresh.ErrDenied
+	var methods []string
+	for _, c := range u.Checkpoints {
+		if !c.Passed {
+			continue
+		}
+		// Enrollment and a client-supplied response are not verified methods.
+		if !slices.Contains([]string{"pwd", "otp", "hwk"}, c.Method) {
+			return tokenrefresh.ErrDenied
+		}
+		if !slices.Contains(methods, c.Method) {
+			methods = append(methods, c.Method)
+		}
+		if c.Type == "mfa" {
+			switch c.Method {
+			case "otp":
+				c.Type = "totp"
+			case "hwk":
+				c.Type = "u2f"
+			}
+		}
 	}
 	if u.LoginEvidence.AuthenticatedAt == 0 {
 		u.LoginEvidence.AuthenticatedAt = time.Now().Unix()
@@ -68,17 +74,6 @@ func (p *Portal) recordLoginEvidence(u *user.User, rr *requests.Request, before 
 			u.LoginEvidence.AuthenticatedAt = rr.Authentication.AuthenticatedAt
 		}
 	}
-	u.LoginMethods = append(u.LoginMethods, method)
-	// Record the concrete factor when the generic MFA checkpoint was selected.
-	for _, c := range u.Checkpoints {
-		if c.Passed && c.Type == "mfa" {
-			if method == "otp" {
-				c.Type = "totp"
-			}
-			if method == "hwk" {
-				c.Type = "u2f"
-			}
-		}
-	}
+	u.LoginMethods = methods
 	return nil
 }

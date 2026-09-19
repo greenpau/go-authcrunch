@@ -1345,6 +1345,7 @@ func (db *Database) UpdateUserPassword(r *requests.Request) error {
 // satisfied prior to successfully authenticating a user.
 func (db *Database) IdentifyUser(r *requests.Request) error {
 	r.Authentication = requests.AuthenticationEvidence{}
+	r.User.AuthChallengePolicy = false
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	if err := db.refreshPersistedSnapshotUnlocked(); err != nil {
@@ -1355,12 +1356,14 @@ func (db *Database) IdentifyUser(r *requests.Request) error {
 		r.User.Username = "nobody"
 		r.User.Email = "nobody@localhost"
 		r.User.Challenges = []string{"password"}
+		r.User.AuthMethods = []string{"password"}
 		return nil
 	}
 	if user.Disabled {
 		r.User.Username = "nobody"
 		r.User.Email = "nobody@localhost"
 		r.User.Challenges = []string{"password"}
+		r.User.AuthMethods = []string{"password"}
 		return nil
 	}
 	if r.Flags.Enabled {
@@ -1376,6 +1379,8 @@ func (db *Database) IdentifyUser(r *requests.Request) error {
 		return err
 	}
 	r.User.Challenges = challenges
+	r.User.AuthMethods = user.GetRegisteredAuthMethods()
+	r.User.AuthChallengePolicy = user.HasAuthChallengeRules()
 	r.Response.Code = 200
 	return nil
 }
@@ -1383,6 +1388,7 @@ func (db *Database) IdentifyUser(r *requests.Request) error {
 // LookupAPIKey returns username and email associated with the provided API
 // key.
 func (db *Database) LookupAPIKey(r *requests.Request) error {
+	r.Authentication = requests.AuthenticationEvidence{}
 	if r.Key.Payload == "" {
 		return errors.ErrLookupAPIKeyPayloadEmpty
 	}
@@ -1430,6 +1436,10 @@ func (db *Database) lookupAPIKeyUnlocked(r *requests.Request) error {
 	if err := user.LookupAPIKey(r); err != nil {
 		return err
 	}
+	r.Authentication = db.authenticationEvidence(user)
+	r.Authentication.AuthenticatedAt = time.Now().Unix()
+	r.Authentication.Method = "api_key"
+	r.Authentication.APIKeyID = r.Key.ID
 	r.User.Username = user.Username
 	r.User.Email = user.GetMailClaim()
 	r.Response.Code = 200

@@ -55,6 +55,10 @@ func (v *standaloneIdentityVerifier) WithIdentity(ctx context.Context, proof oid
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	metadata, ok := oidc.RequestMetadataFromContext(ctx)
+	if !ok || metadata.SourceAddress == "" || !strings.HasPrefix(metadata.URL, "https://") || strings.Contains(metadata.URL, "?") {
+		return oidc.ErrIdentityDenied
+	}
 	if v.disabled || proof.Backend != "staff-directory" || proof.Realm != "employees" || proof.Username != "alice" || proof.Evidence.UserID != "immutable-alice" || proof.Evidence.CredentialVersion != 1 || proof.Evidence.BackendVersion != "v1" {
 		return oidc.ErrIdentityDenied
 	}

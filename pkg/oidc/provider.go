@@ -232,7 +232,7 @@ func (o *Provider) CompleteLogin(ctx context.Context, w http.ResponseWriter, r *
 	if len(o.sessions) >= o.config.MaxSessions {
 		return fmt.Errorf("oidc session capacity reached")
 	}
-	return o.withIdentity(ctx, s, func(map[string]any) error {
+	return o.withIdentity(withRequestMetadata(ctx, r), s, func(map[string]any) error {
 		credential := oidcRandom()
 		hash := sha256.Sum256([]byte(credential))
 		o.sessions[hash] = s

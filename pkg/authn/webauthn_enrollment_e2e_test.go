@@ -376,7 +376,7 @@ func TestE2EWebAuthnSandboxEnrollmentUsesServerChallenge(t *testing.T) {
 	registration := webAuthnEnrollmentRegistration(t, key, credentialID, portalURL.Hostname(), challenge, f.server.URL, false)
 	oidcE2EStatus(t, f.request(t, http.MethodPost, endpoint, url.Values{
 		"webauthn_register": {registration}, "webauthn_challenge": {challenge},
-	}, origin), http.StatusSeeOther)
+	}, origin), http.StatusUnauthorized)
 	oidcE2EStatus(t, f.request(t, http.MethodGet, sandbox, nil, origin), http.StatusUnauthorized)
 	if loginIdentityCookie(f, "AUTHP_ACCESS_TOKEN") != "" {
 		t.Fatal("first-factor enrollment was treated as login proof")

@@ -16,149 +16,145 @@ package transformer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authchal"
+	"github.com/greenpau/go-authcrunch/pkg/authn/transformer/config"
+	"github.com/greenpau/go-authcrunch/pkg/authn/transformer/parser"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
-// Config represents a common set of configuration settings
-// applicable to the cookies issued by authn.Authenticator.
-type Config struct {
-	Matchers []string `json:"matchers,omitempty" xml:"matchers,omitempty" yaml:"matchers,omitempty"`
-	Actions  []string `json:"actions,omitempty" xml:"actions,omitempty" yaml:"actions,omitempty"`
-}
+// Config preserves the serialized transform configuration shared with parser.
+type Config = config.Config
 
 type transform struct {
-	matcher *acl.AccessList
-	actions [][]string
+	matcher        *acl.AccessList
+	actions        [][]string
+	challengeRules *authchal.Ruleset
 }
 
-// Factory holds configuration and associated finctions
-// for the cookies issued by authn.Authenticator.
+// Factory applies an ordered, immutable snapshot of user transformations.
 type Factory struct {
-	configs    []*Config
 	transforms []*transform
 }
 
-// NewFactory returns an instance of cookie factory.
+// NewFactory validates and snapshots matcher/action configuration.
 func NewFactory(cfgs []*Config) (*Factory, error) {
-	f := &Factory{}
 	if len(cfgs) == 0 {
 		return nil, fmt.Errorf("transformer has no config")
 	}
-	f.configs = cfgs
-
+	f := &Factory{}
 	for _, cfg := range cfgs {
-		if len(cfg.Matchers) < 1 {
-			return nil, fmt.Errorf("transformer has no matchers: %v", cfg)
-		}
-		if len(cfg.Actions) < 1 {
-			return nil, fmt.Errorf("transformer has no actions: %v", cfg)
-		}
-
-		var actions [][]string
-		for _, encodedArgs := range cfg.Actions {
-			args, err := cfgutil.DecodeArgs(encodedArgs)
-			if err != nil {
-				return nil, fmt.Errorf("transformer for %q erred during arg decoding: %v", encodedArgs, err)
-			}
-			switch args[0] {
-			case "require":
-				actions = append(actions, args)
-			case "block", "deny":
-				actions = append(actions, args)
-			case "ui":
-				if len(args) < 4 {
-					return nil, fmt.Errorf("transformer for %q erred: ui config too short", encodedArgs)
-				}
-				switch args[1] {
-				case "link":
-					actions = append(actions, args[1:])
-				default:
-					return nil, fmt.Errorf("transformer for %q erred: invalid ui config", encodedArgs)
-				}
-			case "add", "overwrite", "drop":
-				if len(args) < 3 {
-					return nil, fmt.Errorf("transformer for %q erred: invalid add/overwrite config", encodedArgs)
-				}
-				actions = append(actions, args)
-			case "delete":
-				if len(args) < 2 {
-					return nil, fmt.Errorf("transformer for %q erred: invalid delete config", encodedArgs)
-				}
-				actions = append(actions, args)
-			case "action":
-				if len(args) < 3 {
-					return nil, fmt.Errorf("transformer for %q erred: action config too short", encodedArgs)
-				}
-				switch args[1] {
-				case "add", "overwrite", "delete", "drop":
-				default:
-					return nil, fmt.Errorf("transformer for %q erred: invalid action config", encodedArgs)
-				}
-				actions = append(actions, args[1:])
-			default:
-				return nil, fmt.Errorf("transformer has unsupported action: %v", args)
-			}
-		}
-		matcher := acl.NewAccessList()
-		matchRuleConfigs := []*acl.RuleConfiguration{
-			{
-				Conditions: cfg.Matchers,
-				Action:     "allow",
-			},
-		}
-		if err := matcher.AddRules(context.Background(), matchRuleConfigs); err != nil {
+		compiled, err := parser.CompileUserTransformerConfig(cfg)
+		if err != nil {
 			return nil, err
 		}
-		tr := &transform{
-			matcher: matcher,
-			actions: actions,
-		}
-		f.transforms = append(f.transforms, tr)
+		f.transforms = append(f.transforms, &transform{matcher: compiled.Matcher, actions: compiled.Actions, challengeRules: compiled.AuthenticationChallenges})
 	}
 	return f, nil
 }
 
-// Transform performs user data transformation.
-func (f *Factory) Transform(m map[string]interface{}) error {
-	var challenges, frontendLinks []string
-	if _, exists := m["mail"]; exists {
-		m["email"] = m["mail"].(string)
+// ErrAuthChallengesUnavailable means no matched policy can be satisfied by the
+// identified backend's registered methods. It must never fall back to defaults.
+var ErrAuthChallengesUnavailable = errors.New("no authentication challenge rule matches registered methods")
+
+// Transform performs claim transformations. Callers using authentication policy
+// supply a server-owned []string under auth_methods; it is consumed, never issued.
+// Portal integrations should prefer TransformWithAuthMethods to separate evidence
+// from claims. Selected challenges precede additive legacy requirements here.
+func (f *Factory) Transform(m map[string]any) error {
+	methods, _ := m["auth_methods"].([]string)
+	selected, err := f.TransformWithAuthMethods(m, methods)
+	if err != nil {
+		return err
+	}
+	if selected != nil {
+		additional, _ := m["challenges"].([]string)
+		m["challenges"] = append(selected, additional...)
+	}
+	return nil
+}
+
+// TransformWithAuthMethods transforms claims and returns a replacement backend
+// challenge sequence, or nil when no matching transform declares such a policy.
+// Legacy require actions remain additive in m["challenges"]. The first eligible
+// rule across matching transforms wins; later claim and deny actions still run.
+// Registered methods must come from the backend, never JWT or client claims.
+func (f *Factory) TransformWithAuthMethods(m map[string]any, methods []string) ([]string, error) {
+	if m == nil {
+		return nil, fmt.Errorf("nil transformer claims")
+	}
+	registered := make(map[string]bool, len(methods))
+	for _, method := range methods {
+		// The portal has no email checkpoint implementation.
+		if method != authchal.EmailKeyword {
+			registered[method] = true
+		}
+	}
+	delete(m, "auth_methods")
+	delete(m, "challenges")
+	defer delete(m, "auth_methods")
+	var selected, challenges, frontendLinks []string
+	var policySeen bool
+	if mail, exists := m["mail"]; exists {
+		value, ok := mail.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid mail claim")
+		}
+		m["email"] = value
 		delete(m, "mail")
 	}
 	for _, transform := range f.transforms {
-		if matched := transform.matcher.Allow(context.Background(), m); !matched {
+		if !transform.matcher.Allow(context.Background(), m) {
 			continue
+		}
+		if transform.challengeRules != nil {
+			policySeen = true
+			if selected == nil && len(methods) > 0 {
+				selected = transform.challengeRules.ResolveChallenges(registered)
+			}
 		}
 		for _, args := range transform.actions {
 			switch args[0] {
 			case "block", "deny":
-				return fmt.Errorf("transformer action is block/deny")
+				return nil, fmt.Errorf("transformer action is block/deny")
 			case "require":
+				if len(args) >= 3 && args[1] == "auth" && args[2] == "challenges" {
+					continue
+				}
 				challenges = append(challenges, cfgutil.EncodeArgs(args[1:]))
 			case "link":
 				frontendLinks = append(frontendLinks, cfgutil.EncodeArgs(args[1:]))
 			default:
 				if err := transformData(args, m, transform.matcher); err != nil {
-					return fmt.Errorf("transformer for %v erred: %v", args, err)
+					return nil, fmt.Errorf("transformer action failed: %w", err)
 				}
 			}
 		}
 	}
+	if policySeen && selected == nil {
+		return nil, ErrAuthChallengesUnavailable
+	}
+	// Only require actions may create challenge policy. Custom claims cannot inject it.
+	delete(m, "challenges")
 	if len(challenges) > 0 {
 		m["challenges"] = challenges
 	}
 	if len(frontendLinks) > 0 {
 		m["frontend_links"] = frontendLinks
 	}
-
-	return nil
+	return selected, nil
 }
 
 func transformData(args []string, m map[string]interface{}, matcher *acl.AccessList) error {
+	if len(args) == 2 && args[0] == "delete" {
+		field, _ := acl.GetFieldDataType(args[1])
+		delete(m, field)
+		return nil
+	}
 	if len(args) < 3 {
 		return fmt.Errorf("too short")
 	}
@@ -190,16 +186,21 @@ func transformData(args []string, m map[string]interface{}, matcher *acl.AccessL
 			default:
 				return fmt.Errorf("unsupported %q field type %T with value: %v in %v", k, val, val, args)
 			}
+			existing := len(entries)
 			entries = append(entries, args[2:]...)
 			entryMap := make(map[string]bool)
-			for _, e := range entries {
+			for i, e := range entries {
 				e = strings.TrimSpace(e)
 				if e == "" {
 					continue
 				}
-				v, err := repl(m, e)
-				if err != nil {
-					return err
+				v := e
+				if i >= existing {
+					var err error
+					v, err = repl(m, e)
+					if err != nil {
+						return err
+					}
 				}
 				if _, exists := entryMap[v]; exists {
 					continue
@@ -209,30 +210,24 @@ func transformData(args []string, m map[string]interface{}, matcher *acl.AccessL
 			}
 			m[k] = newEntries
 		case "str":
-			var e string
-			switch val := m[k].(type) {
-			case string:
-				e = val + " " + strings.Join(args[2:], " ")
-			case nil:
-				e = strings.Join(args[2:], " ")
-			}
-
-			v, err := repl(m, e)
+			// Existing claim text is data; only configured additions are templates.
+			v, err := repl(m, strings.Join(args[2:], " "))
 			if err != nil {
 				return err
+			}
+			if current, ok := m[k].(string); ok {
+				v = current + " " + v
 			}
 			m[k] = v
 		default:
 			// Handle custom fields.
 			if args[1] == "nested" {
-				nestedKeys, nestedValues, err := parseCustomNestedFieldValues(args[2:])
+				nestedKeys, nestedValues, err := parser.ParseCustomNestedFieldValues(args[2:])
 				if err != nil {
 					return fmt.Errorf("failed transforming %q field for %q action in %v: %v", k, args[0], args, err)
 				}
 
-				// Use pointers to create nested map.
-				var mp map[string]interface{}
-				mp = m
+				mp := m
 				for i, v := range nestedKeys {
 					if i == len(nestedKeys)-1 {
 						// Handle last element.
@@ -241,11 +236,16 @@ func transformData(args []string, m map[string]interface{}, matcher *acl.AccessL
 					}
 					mv, exists := mp[v]
 					if !exists {
-						mp[v] = make(map[string]interface{})
-						mp = mp[v].(map[string]interface{})
+						next := make(map[string]any)
+						mp[v] = next
+						mp = next
 						continue
 					}
-					mp = mv.(map[string]interface{})
+					next, ok := mv.(map[string]any)
+					if !ok || next == nil {
+						return fmt.Errorf("nested claim parent must be an object")
+					}
+					mp = next
 				}
 				break
 			}
@@ -309,94 +309,19 @@ func transformData(args []string, m map[string]interface{}, matcher *acl.AccessL
 	return nil
 }
 
-func parseCustomFieldValues(m map[string]interface{}, args []string) (interface{}, error) {
-	var x int
-	for i, arg := range args {
-		if arg == "as" {
-			x = i
-			break
-		}
+func parseCustomFieldValues(m map[string]any, args []string) (any, error) {
+	raw, err := parser.ParseCustomFieldValues(args)
+	if err != nil {
+		return nil, err
 	}
-	if x == 0 {
-		return nil, fmt.Errorf("as type directive not found")
+	switch value := raw.(type) {
+	case string:
+		return repl(m, value)
+	case []string:
+		return replArr(m, value)
+	default:
+		return nil, fmt.Errorf("unsupported custom field value")
 	}
-	if len(args[x:]) < 2 {
-		return nil, fmt.Errorf("as type directive is too short")
-	}
-	dt := strings.Join(args[x+1:], "_")
-	switch dt {
-	case "string_list", "list":
-		values, err := replArr(m, args[:x])
-		if err != nil {
-			return nil, err
-		}
-		return values, nil
-	case "string":
-		value, err := repl(m, args[x-1])
-		if err != nil {
-			return nil, err
-		}
-		return value, nil
-	}
-	return nil, fmt.Errorf("unsupported %q data type", dt)
-}
-
-func parseCustomNestedFieldValues(args []string) ([]string, interface{}, error) {
-	var x, y int
-	for i, arg := range args {
-		if arg == "with" {
-			y = i
-		}
-		if arg == "as" {
-			x = i
-			break
-		}
-	}
-	if x == 0 {
-		return nil, nil, fmt.Errorf("as type directive not found")
-	}
-	if len(args[x:]) < 2 {
-		return nil, nil, fmt.Errorf("as type directive is too short")
-	}
-
-	dt := strings.Join(args[x+1:], "_")
-	args = args[:x]
-
-	if (dt != "map") && (y < 1) {
-		return nil, nil, fmt.Errorf("the with keyword not found")
-	}
-
-	switch dt {
-	case "string_list", "list":
-		return args[:y], args[y+1:], nil
-	case "string":
-		return args[:y], args[y+1], nil
-	case "map":
-		m := make(map[string]interface{})
-		return args, m, nil
-	}
-	return nil, nil, fmt.Errorf("unsupported %q data type", dt)
-}
-
-func hasReplPattern(s string) bool {
-	if !strings.ContainsRune(s, '{') {
-		return false
-	}
-	if !strings.ContainsRune(s, '}') {
-		return false
-	}
-	return true
-}
-
-func getReplPattern(s string) string {
-	i := strings.IndexRune(s, '{')
-	j := strings.IndexRune(s, '}')
-	return string(s[i : j+1])
-}
-
-func getReplKey(s string) string {
-	i := strings.IndexRune(s, '.')
-	return string(s[i+1 : len(s)-1])
 }
 
 func getReplValue(m map[string]interface{}, s string) (string, error) {
@@ -414,22 +339,38 @@ func getReplValue(m map[string]interface{}, s string) (string, error) {
 	return value, nil
 }
 
-func repl(m map[string]interface{}, s string) (string, error) {
+// repl expands only placeholders in the configured template. Claim values are
+// written literally, so recursive references cannot loop or become instructions.
+func repl(m map[string]any, template string) (string, error) {
+	var out strings.Builder
 	for {
-		if !hasReplPattern(s) {
-			break
+		start := strings.IndexByte(template, '{')
+		if start < 0 {
+			out.WriteString(template)
+			return out.String(), nil
 		}
-		ptrn := getReplPattern(s)
-		if !strings.HasPrefix(ptrn, "{claims.") {
-			return "", fmt.Errorf("transform replace pattern %q is unsupported", ptrn)
+		end := strings.IndexByte(template[start:], '}')
+		if end < 0 {
+			out.WriteString(template)
+			return out.String(), nil
 		}
-		v, err := getReplValue(m, getReplKey(ptrn))
+		end += start
+		pattern := template[start : end+1]
+		if !strings.HasPrefix(pattern, "{claims.") {
+			return "", fmt.Errorf("unsupported transform replacement pattern")
+		}
+		key := pattern[len("{claims.") : len(pattern)-1]
+		if key == "" || strings.ContainsAny(key, "{}") {
+			return "", fmt.Errorf("invalid transform replacement field")
+		}
+		value, err := getReplValue(m, key)
 		if err != nil {
 			return "", err
 		}
-		s = strings.ReplaceAll(s, ptrn, v)
+		out.WriteString(template[:start])
+		out.WriteString(value)
+		template = template[end+1:]
 	}
-	return s, nil
 }
 
 func replArr(m map[string]interface{}, arr []string) ([]string, error) {

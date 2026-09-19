@@ -26,6 +26,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 )
 
@@ -142,9 +143,12 @@ func (a *portalRefreshAdapter) WithIdentity(ctx context.Context, principal token
 		}
 		rr := requests.NewRequest()
 		rr.Upstream.Realm = principal.Realm
+		rr.User.Challenges = append([]string(nil), current.Challenges...)
+		rr.User.AuthMethods = append([]string(nil), current.AuthMethods...)
 		claims := map[string]any{"sub": current.Username, "email": current.Email, "name": current.Name, "roles": current.Roles, "origin": principal.Realm}
 		if r, ok := ctx.Value(refreshRequestContextKey{}).(*http.Request); ok {
 			claims["addr"] = addrutil.GetSourceAddress(r)
+			claims["iss"] = util.GetIssuerURL(r)
 		}
 		// Always transform fresh backend attributes, once per issuance.
 		if err := p.transformUser(ctx, rr, claims); err != nil {
@@ -155,7 +159,7 @@ func (a *portalRefreshAdapter) WithIdentity(ctx context.Context, principal token
 		}
 		injectPortalRoles(claims, p.config)
 		candidate := &user.User{}
-		if err := p.injectUserChallenges(candidate, claims, current.Challenges); err != nil {
+		if err := p.injectUserChallenges(candidate, claims, rr.User.Challenges); err != nil {
 			return tokenrefresh.ErrDenied
 		}
 		for _, challenge := range candidate.Checkpoints {
