@@ -28,6 +28,9 @@ import (
 func (s *Server) persistentStateBinding(config *Config) (string, error) {
 	snapshot := *config
 	snapshot.State = nil
+	// Diagnostic suppression carries no authentication or authorization policy.
+	// Changing it must not retire otherwise valid persisted sessions.
+	snapshot.Logging = nil
 	binding, err := state.Binding(&snapshot)
 	if err != nil {
 		return "", err

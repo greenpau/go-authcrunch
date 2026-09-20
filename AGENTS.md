@@ -71,6 +71,11 @@ findings and remediation plans.
 Use the repo-local `source-code-management` skill for commit message rules and
 for the workflow used when asked to create a commit message for a change.
 
+## Logging
+
+Use `logging` for diagnostic skip rules, their reusable directive parser, Zap
+filtering, root server logger wiring, and host logging integration contracts.
+
 ## Repository Knowledge
 
 This repository has no `docs/` directory. Keep durable implementation,

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Logging Filters"
+  short_description: "Maintain logging directives and Zap skip filters"
+  default_prompt: "Use $logging to maintain AuthCrunch logging filters and their public directive parser."

@@ -12,6 +12,7 @@ that a downstream configuration language already recognizes a directive.
 
 | Surface | Public parser | Apply to production configuration |
 | --- | --- | --- |
+| Logging block body | `pkg/logging/parser.NewLoggingConfigFromDirectives(statements)` | `Config.Logging` before `NewServer`; wrap independently owned host loggers through `logging.Filter` |
 | Runtime state body | `pkg/state/parser.NewStateConfigFromDirectives(statements)` | `Config.State` before `NewServer` |
 | Standalone HTTP listener body | `pkg/httpserver/parser.NewHTTPServerConfigFromDirectives(statements)` | `httpserver.Serve` with the root security configuration |
 | `oauth application <nickname>` | `pkg/oidc/parser.NewOAuthApplicationConfigFromDirectives(header, statements, persisted)` | `Config.AddOAuthApplication` |

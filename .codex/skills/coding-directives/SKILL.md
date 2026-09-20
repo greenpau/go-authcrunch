@@ -52,6 +52,8 @@ configuration/parser, portal routing, TLS, and process lifecycle.
 
 Use [runtime-state](../runtime-state/SKILL.md) for opt-in durable runtime keys and
 sessions, configuration epochs, local storage ownership, and restart consumers.
+Use [logging](../logging/SKILL.md) for diagnostic skip rules, their public parser,
+immutable Zap filters, and component/host logger boundaries.
 
 ## Repository Scope
 

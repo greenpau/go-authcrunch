@@ -300,6 +300,10 @@ and server construction across credentials, messaging, identity stores,
 identity providers, authentication portals, authorization policies, OAuth keys,
 and validation phases. Use these when a change affects cross-package wiring.
 
+Logging tests use [logging](../logging/SKILL.md) for the directive parser,
+immutable Zap filter, and root TLS journeys that verify actual JSON log output
+while preserving denial and successful authentication behavior.
+
 Authentication tests live under `pkg/authn`, including HTTP login/logout,
 external logout, response handling, cache sandbox behavior, cookie settings,
 transformers, icons, and embedded UI pages/static assets. Use `httptest` and

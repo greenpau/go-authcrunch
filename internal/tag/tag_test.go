@@ -56,6 +56,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/ids/ldap"
 	"github.com/greenpau/go-authcrunch/pkg/ids/local"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
+	"github.com/greenpau/go-authcrunch/pkg/logging"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
@@ -79,6 +80,9 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test logging.Config struct", entry: &logging.Config{}, opts: &Options{}},
+		{name: "test logging.Filter struct", entry: &logging.Filter{}, opts: &Options{}},
+		{name: "test logging.SkipRule struct", entry: &logging.SkipRule{}, opts: &Options{}},
 		{name: "test state.Config struct", entry: &state.Config{}, opts: &Options{}},
 		{name: "test state.Store struct", entry: &state.Store{}, opts: &Options{}},
 		{name: "test state.Record struct", entry: &state.Record{}, opts: &Options{}},

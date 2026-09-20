@@ -26,6 +26,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"github.com/greenpau/go-authcrunch/pkg/logging"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
@@ -35,6 +36,8 @@ import (
 
 // Config is a configuration of Server.
 type Config struct {
+	// Logging configures diagnostic suppression for this runtime's components.
+	Logging *logging.Config `json:"logging,omitempty" xml:"logging,omitempty" yaml:"logging,omitempty"`
 	// State enables host-independent durable keys and authenticated sessions.
 	State                 *state.Config                     `json:"state,omitempty" xml:"state,omitempty" yaml:"state,omitempty"`
 	Credentials           *credentials.Config               `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
@@ -125,6 +128,11 @@ func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
 func (cfg *Config) Validate() error {
 	if cfg == nil {
 		return fmt.Errorf("config is nil")
+	}
+	if cfg.Logging != nil {
+		if err := cfg.Logging.Validate(); err != nil {
+			return err
+		}
 	}
 	if cfg.State != nil {
 		if err := cfg.State.Validate(); err != nil {

@@ -75,8 +75,8 @@ An unchanged normalized security configuration restores state. A changed
 configuration opened against the same directory creates a new session epoch,
 conservatively requiring fresh login;
 this includes unrelated settings, ordering, clients, policies or provider changes.
-The storage path is excluded, so a coherent directory move with unchanged
-configuration can retain sessions. Removing and later reintroducing a component
+The storage path and diagnostic-only logging rules are excluded, so a coherent
+directory move or logging-only change can retain sessions. Removing and later reintroducing a component
 cannot revive its old sessions. Generated KMS keys persist independently across
 configuration changes; explicit key-configuration changes still apply normally.
 

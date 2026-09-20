@@ -28,6 +28,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"github.com/greenpau/go-authcrunch/pkg/logging"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
 	"github.com/greenpau/go-authcrunch/pkg/state"
@@ -82,6 +83,14 @@ func NewServer(config *Config, logger *zap.Logger) (_ *Server, err error) {
 	}
 	var authenticators []authproxy.Authenticator
 	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+	filter, err := logging.NewFilter(config.Logging)
+	if err != nil {
+		return nil, err
+	}
+	logger, err = filter.WrapLogger(logger)
+	if err != nil {
 		return nil, err
 	}
 

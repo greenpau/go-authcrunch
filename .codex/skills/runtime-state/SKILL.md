@@ -69,8 +69,10 @@ Deletion and terminal revocation must remain possible at the record limit.
 ## Runtime integration
 
 `server_persistent_state.go` binds sessions to a random configuration epoch stored
-under the digest of the complete normalized security configuration, excluding
-only the storage path. Every observed configuration transition within that
+under the digest of the normalized security configuration, excluding the storage
+path and diagnostic-only `Logging` settings. Logging rule additions, changes,
+and removal must preserve valid persisted sessions; `server_logging_e2e_test.go`
+exercises that invariant through real TLS restarts. Every other observed configuration transition within that
 directory changes the epoch, including removal of a component; returning to an older configuration cannot
 restore that component's old authority. Reordering or unrelated configuration
 changes can conservatively require login. Stable generated KMS keys use separate

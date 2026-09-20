@@ -43,7 +43,11 @@ func TestE2EOIDCPersistentCapacityRefusalPreservesAuthority(t *testing.T) {
 		t.Fatal(err)
 	}
 	f := newProviderFixture(t)
-	now := time.Now()
+	// Capacity setup can exceed the code lifetime on race-enabled CI runners.
+	// Keep protocol time fixed across setup, requests, and provider restarts.
+	now := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+	clock := func() time.Time { return now }
+	f.provider.now = clock
 	sessionCredential, accessCredential, refreshCredential, codeCredential := oidcRandom(), oidcRandom(), oidcRandom(), oidcRandom()
 	sessionHash := sha256.Sum256([]byte(sessionCredential))
 	request := persistentOIDCAuthorization{ClientID: "client", RedirectURI: "https://client.example.test/callback", State: strings.Repeat("s", 12000), Scopes: []string{"openid", "profile", "offline_access"}, Created: now, Expires: now.Add(time.Minute), Session: sessionHash}
@@ -188,7 +192,10 @@ func TestE2EOIDCPersistentCapacityRefusalPreservesAuthority(t *testing.T) {
 		t.Fatal(err)
 	}
 	codeResponse.Body.Close()
-	if codeResponse.StatusCode != http.StatusServiceUnavailable || f.provider.grants[sha256.Sum256([]byte(codeCredential))].redeemed {
+	if codeResponse.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("code redemption at capacity: status=%d, want %d", codeResponse.StatusCode, http.StatusServiceUnavailable)
+	}
+	if f.provider.grants[sha256.Sum256([]byte(codeCredential))].redeemed {
 		t.Fatal("refused code redemption was not rolled back")
 	}
 	refreshRequest, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL+"/auth/oidc/token", strings.NewReader(refreshForm.Encode()))
@@ -222,6 +229,7 @@ func TestE2EOIDCPersistentCapacityRefusalPreservesAuthority(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	f.provider.now = clock
 	if err = f.provider.ConfigurePersistentState(record); err != nil {
 		t.Fatal(err)
 	}
@@ -317,6 +325,7 @@ func TestE2EOIDCPersistentCapacityRefusalPreservesAuthority(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	f.provider.now = clock
 	if err = f.provider.ConfigurePersistentState(record); err != nil {
 		t.Fatal(err)
 	}
@@ -347,6 +356,7 @@ func TestE2EOIDCPersistentCapacityRefusalPreservesAuthority(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer f.provider.Close()
+	f.provider.now = clock
 	if err = f.provider.ConfigurePersistentState(record); err != nil {
 		t.Fatal(err)
 	}
