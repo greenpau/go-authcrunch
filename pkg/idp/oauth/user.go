@@ -20,7 +20,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -30,6 +30,7 @@ import (
 )
 
 const (
+	maxUserInfoResponseSize = 1 << 20
 	// GithubEmailURLStr is the GitHub API endpoint for user emails
 	GithubEmailURLStr = "https://api.github.com/user/emails"
 )
@@ -71,7 +72,7 @@ func (b *IdentityProvider) fetchGithubUserInfo(params map[string]interface{}) (*
 	if err != nil {
 		return nil, err
 	}
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
 		return nil, err
@@ -84,10 +85,10 @@ func (b *IdentityProvider) fetchGithubUserInfo(params map[string]interface{}) (*
 		return nil, err
 	}
 	for _, org := range orgs {
-		if _, exists := org["login"]; !exists {
+		orgName, exists := org["login"].(string)
+		if !exists || strings.TrimSpace(orgName) == "" {
 			continue
 		}
-		orgName := org["login"].(string)
 		// Exclude org from processing if it does not match org filters.
 		included := false
 		for _, rp := range b.userOrgFilters {
@@ -116,13 +117,10 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 	var req *http.Request
 	var err error
 
-	for _, k := range []string{"access_token"} {
-		if _, exists := tokenData[k]; !exists {
-			return nil, fmt.Errorf("token response has no %s field", k)
-		}
+	tokenString, exists := tokenData["access_token"].(string)
+	if !exists || tokenString == "" {
+		return nil, fmt.Errorf("token response has no valid access_token field")
 	}
-
-	tokenString := tokenData["access_token"].(string)
 
 	cli, err := b.newBrowser()
 	if err != nil {
@@ -182,11 +180,16 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 	if err != nil {
 		return nil, err
 	}
-
-	respBody, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("user info endpoint returned HTTP status %d", resp.StatusCode)
+	}
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxUserInfoResponseSize+1))
 	if err != nil {
 		return nil, err
+	}
+	if len(respBody) > maxUserInfoResponseSize {
+		return nil, fmt.Errorf("user info response exceeds %d bytes", maxUserInfoResponseSize)
 	}
 
 	b.logger.Debug(
@@ -200,57 +203,8 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 		return nil, err
 	}
 
-	switch b.config.Driver {
-	case "linkedin":
-		if _, exists := data["sub"]; !exists {
-			return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, profile field not found")
-		}
-	case "gitlab":
-		if _, exists := data["profile"]; !exists {
-			return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, profile field not found")
-		}
-	case "github":
-		if _, exists := data["message"]; exists {
-			return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, error: %s", data["message"].(string))
-		}
-		if _, exists := data["login"]; !exists {
-			return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, login field not found")
-		}
-	case "discord":
-		if _, exists := data["id"]; !exists {
-			return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, id field not found")
-		}
-	case "facebook":
-		if _, exists := data["error"]; exists {
-			switch data["error"].(type) {
-			case map[string]interface{}:
-				var fbError strings.Builder
-				errMsg := data["error"].(map[string]interface{})
-				if v, exists := errMsg["code"]; exists {
-					errCode := strconv.FormatFloat(v.(float64), 'f', 0, 64)
-					fbError.WriteString("code=")
-					fbError.WriteString(errCode)
-				}
-				for _, k := range []string{"fbtrace_id", "message", "type"} {
-					if v, exists := errMsg[k]; exists {
-						fbError.WriteString(", ")
-						fbError.WriteString(k)
-						fbError.WriteString("=")
-						fbError.WriteString(v.(string))
-					}
-				}
-				return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, error: %s", fbError.String())
-			default:
-				return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, error: %v", data["error"])
-			}
-		}
-		for _, k := range []string{"name", "id"} {
-			if _, exists := data[k]; !exists {
-				return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, field %s not found, data: %v", k, data)
-			}
-		}
-	default:
-		return nil, fmt.Errorf("unsupported provider: %s", b.config.Driver)
+	if err := b.validateFetchedClaims(data); err != nil {
+		return nil, err
 	}
 
 	m := make(map[string]interface{})
@@ -291,8 +245,12 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 		}
 
 		if orgURL, exists := data["organizations_url"]; exists && len(b.userOrgFilters) > 0 {
+			orgURLString, ok := orgURL.(string)
+			if !ok || strings.TrimSpace(orgURLString) == "" {
+				return nil, fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, organizations_url field is invalid")
+			}
 			params := map[string]interface{}{
-				"url":      orgURL.(string),
+				"url":      orgURLString,
 				"method":   "GET",
 				"token":    tokenString,
 				"username": data["login"].(string),
@@ -361,7 +319,8 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 			zap.Any("data", m),
 		)
 	case "discord":
-		m["sub"] = "discord.com/" + data["id"].(string)
+		id := data["id"].(string)
+		m["sub"] = "discord.com/" + id
 		m["name"] = data["username"]
 		if v, exists := data["discriminator"]; exists {
 			m["discriminator"] = v
@@ -412,6 +371,75 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 	return m, nil
 }
 
+func (b *IdentityProvider) validateFetchedClaims(data map[string]any) error {
+	switch b.config.Driver {
+	case "linkedin":
+		if _, exists := data["sub"]; !exists {
+			return fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, profile field not found")
+		}
+	case "gitlab":
+		if _, exists := data["profile"]; !exists {
+			return fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, profile field not found")
+		}
+	case "github":
+		if _, exists := data["message"]; exists {
+			return fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token: provider returned an error")
+		}
+		if login, exists := data["login"].(string); !exists || strings.TrimSpace(login) == "" {
+			return fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, login field not found")
+		}
+		if orgURL, exists := data["organizations_url"]; exists && len(b.userOrgFilters) > 0 {
+			if value, ok := orgURL.(string); !ok || strings.TrimSpace(value) == "" {
+				return fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, organizations_url field is invalid")
+			}
+		}
+	case "discord":
+		if id, exists := data["id"].(string); !exists || strings.TrimSpace(id) == "" {
+			return fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, id field not found")
+		}
+	case "facebook":
+		if rawError, exists := data["error"]; exists {
+			errMsg, ok := rawError.(map[string]any)
+			if !ok {
+				return fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token: provider returned an error")
+			}
+			var fbError strings.Builder
+			if v, exists := errMsg["code"]; exists {
+				fbError.WriteString("code=")
+				switch code := v.(type) {
+				case float64:
+					fbError.WriteString(strconv.FormatFloat(code, 'f', 0, 64))
+				case string:
+					fbError.WriteString(code)
+				default:
+					fbError.WriteString("invalid")
+				}
+			}
+			for _, k := range []string{"fbtrace_id", "message", "type"} {
+				if v, exists := errMsg[k]; exists {
+					fbError.WriteString(", ")
+					fbError.WriteString(k)
+					fbError.WriteString("=")
+					if text, ok := v.(string); ok {
+						fbError.WriteString(text)
+					} else {
+						fbError.WriteString("invalid")
+					}
+				}
+			}
+			return fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, error: %s", fbError.String())
+		}
+		for _, k := range []string{"name", "id"} {
+			if value, exists := data[k].(string); !exists || strings.TrimSpace(value) == "" {
+				return fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, field %s not found", k)
+			}
+		}
+	default:
+		return fmt.Errorf("unsupported provider: %s", b.config.Driver)
+	}
+	return nil
+}
+
 func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, error) {
 	var req *http.Request
 	reqURL := "https://discord.com/api/v10/users/@me/guilds"
@@ -435,7 +463,7 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 	if err != nil {
 		return nil, err
 	}
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
 		return nil, err
@@ -501,7 +529,7 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 				return nil, err
 			}
 
-			respBody, err = ioutil.ReadAll(resp.Body)
+			respBody, err = io.ReadAll(resp.Body)
 			resp.Body.Close()
 			if err != nil {
 				return nil, err

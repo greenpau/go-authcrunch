@@ -180,7 +180,7 @@ func NewServer(config *Config, logger *zap.Logger) (_ *Server, err error) {
 	}
 
 	for _, cfg := range config.AuthorizationPolicies {
-		if len(cfg.AccessTokenCookieNames) == 0 {
+		if cfg.OAuth == nil && len(cfg.AccessTokenCookieNames) == 0 {
 			// Authorization policy has no cookie names configured.
 			// The following code discovers the applicable cookie names from the portals.
 			for _, portal := range srv.portals {
@@ -195,7 +195,7 @@ func NewServer(config *Config, logger *zap.Logger) (_ *Server, err error) {
 			}
 		}
 
-		gatekeeper, err := authz.NewGatekeeper(cfg, logger)
+		gatekeeper, err := authz.NewGatekeeperWithIdentityProviders(cfg, srv.identityProviders, logger)
 		if err != nil {
 			return nil, err
 		}

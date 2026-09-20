@@ -328,6 +328,12 @@ defines their adversarial matrix and unit/fuzz coverage.
 test crypto key stores, test users, ACL helpers, and exact source/match
 expectations.
 
+Direct OAuth policy tests use [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md).
+Root `server_oauth_authorization_e2e_test.go` exercises both public parsers,
+configuration restoration, shared provider dispatch and TLS gatekeeper journeys
+without a portal or identity database. Keep callback consumption, ACL checks,
+opaque sessions, logout cancellation and lifecycle distinct from portal JWT tests.
+
 Identity and store tests live under `pkg/identity`, `pkg/ids`,
 `pkg/ids/local`, `pkg/ids/ldap`, and `pkg/registry`. They rely on temporary
 identity databases, registration/user JSON fixtures, domain restriction cases,

@@ -175,6 +175,10 @@ func (cfg *Config) Validate() error {
 		}
 	}
 
+	if err := cfg.validateOAuthAuthorizationPolicies(); err != nil {
+		return err
+	}
+
 	// Validate auth portal configurations.
 	for _, portalCfg := range cfg.AuthenticationPortals {
 		// If there are no excplicitly specified identity stores and providers in a portal, add all of them.

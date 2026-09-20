@@ -30,11 +30,13 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/kms"
 )
 
 // Gatekeeper is an auth.
 type Gatekeeper struct {
+	oauth          *oauthAuthorization
 	closeOnce      sync.Once
 	closed         atomic.Bool
 	id             string
@@ -53,6 +55,15 @@ type Gatekeeper struct {
 
 // NewGatekeeper returns an instance of Gatekeeper.
 func NewGatekeeper(cfg *PolicyConfig, logger *zap.Logger) (*Gatekeeper, error) {
+	return NewGatekeeperWithIdentityProviders(cfg, nil, logger)
+}
+
+// NewGatekeeperWithIdentityProviders constructs a gatekeeper that can select a
+// shared OAuth identity provider. Providers must already be configured. The
+// caller owns their lifecycle and must drain requests before closing them.
+// Direct OAuth providers must also implement CancelLogin(string, [32]byte,
+// string) bool, as the built-in OAuth provider does, to release canceled logins.
+func NewGatekeeperWithIdentityProviders(cfg *PolicyConfig, providers []idp.IdentityProvider, logger *zap.Logger) (*Gatekeeper, error) {
 	if logger == nil {
 		return nil, errors.ErrNewGatekeeperLoggerNil
 	}
@@ -66,6 +77,13 @@ func NewGatekeeper(cfg *PolicyConfig, logger *zap.Logger) (*Gatekeeper, error) {
 		id:     uuid.New().String(),
 		config: cfg,
 		logger: logger,
+	}
+	if cfg.OAuth != nil {
+		var err error
+		p.oauth, err = newOAuthAuthorization(cfg.OAuth, providers)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if err := p.configure(); err != nil {
 		p.Close()
@@ -257,5 +275,6 @@ func (g *Gatekeeper) Close() {
 	g.closeOnce.Do(func() {
 		g.closed.Store(true)
 		g.tokenValidator.Close()
+		g.oauth.close()
 	})
 }

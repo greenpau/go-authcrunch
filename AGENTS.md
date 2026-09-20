@@ -118,6 +118,13 @@ shared provider configuration dispatch, OAuth/OIDC discovery, JWKS and static
 public PEM verification, EdDSA/Ed25519 validation, key refresh, and real portal
 OAuth E2E tests.
 
+## OAuth Authorization Without a Portal
+
+Use `authorization-policy-oauth` for direct OAuth provider selection in an
+authorization policy, reusable directives, gatekeeper callbacks and opaque
+sessions, ACL revalidation, logout, lifecycle, and Caddy integration handoff.
+Upstream protocol verification remains with `oauth-identity-provider`.
+
 ## Portal OpenID Provider
 
 Use `authentication-portal-oidc` for downstream OIDC discovery, registered clients,

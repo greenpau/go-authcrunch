@@ -15,6 +15,7 @@
 package oauth
 
 import (
+	"crypto/sha256"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -163,6 +164,47 @@ func TestStateBindingRequiresBrowserAndCallback(t *testing.T) {
 			}
 			if sm.exists(stateBindingState) {
 				t.Fatal("rejected addLogin() published state")
+			}
+		})
+	}
+}
+
+func TestStateBindingCancellationRequiresExactOwner(t *testing.T) {
+	for _, claimed := range []bool{false, true} {
+		t.Run(map[bool]string{false: "pending", true: "claimed"}[claimed], func(t *testing.T) {
+			sm := newStateManager()
+			addStateBinding(t, sm, stateBindingState)
+			if claimed && !sm.beginCallback(stateBindingState, stateBindingSession, stateBindingCallback) {
+				t.Fatal("failed claiming test transaction")
+			}
+			sessionHash := sha256.Sum256([]byte(stateBindingSession))
+			wrongHash := sha256.Sum256([]byte("wrong-browser"))
+			for _, tc := range []struct {
+				state    string
+				hash     [32]byte
+				callback string
+			}{
+				{state: "wrong-state", hash: sessionHash, callback: stateBindingCallback},
+				{state: stateBindingState, hash: wrongHash, callback: stateBindingCallback},
+				{state: stateBindingState, hash: sessionHash, callback: "https://portal.example/wrong"},
+			} {
+				if sm.cancelLogin(tc.state, tc.hash, tc.callback) {
+					t.Fatal("mismatched cancellation succeeded")
+				}
+				if !sm.exists(stateBindingState) {
+					t.Fatal("mismatched cancellation consumed transaction")
+				}
+			}
+			if !sm.cancelLogin(stateBindingState, sessionHash, stateBindingCallback) {
+				t.Fatal("matching cancellation failed")
+			}
+			if sm.exists(stateBindingState) || sm.cancelLogin(stateBindingState, sessionHash, stateBindingCallback) {
+				t.Fatal("cancellation was not idempotent")
+			}
+			sm.mux.Lock()
+			defer sm.mux.Unlock()
+			if len(sm.nonces)+len(sm.codes)+len(sm.status)+len(sm.verifiers)+len(sm.bindings) != 0 {
+				t.Fatal("cancellation retained transaction data")
 			}
 		})
 	}

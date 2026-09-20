@@ -25,6 +25,9 @@ for shared cookie directives, prefix/name configuration, and consumer behavior.
 Use [oauth-identity-provider](../oauth-identity-provider/SKILL.md) for upstream
 OAuth directive parsers and shared configuration adapters, OAuth/OIDC token
 trust, and key ingestion and refresh.
+Use [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md) for
+authorization-policy login without a portal, provider selection and session HTTP
+boundaries. Policy cookies are owned by that feature, separate from portal roles.
 Use [authentication-portal-jwks](../authentication-portal-jwks/SKILL.md) for
 portal public signing-key discovery, reusable admin API directive configuration,
 opt-in private-key export, issuer selection, and JWK serialization.

@@ -49,6 +49,11 @@ func (g *Gatekeeper) Authenticate(w http.ResponseWriter, r *http.Request, ar *re
 		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 		return nil
 	}
+	ar.Response.Authorized = false
+	ar.Response.Bypassed = false
+	if g.oauth != nil && g.oauth.ownsEndpoint(r) {
+		return g.authenticateOAuth(w, r, ar)
+	}
 	// Perform authorization bypass checks
 	if g.bypassEnabled && bypass.Match(r, g.config.BypassConfigs) {
 		ar.Response.Authorized = false
@@ -64,6 +69,9 @@ func (g *Gatekeeper) Authenticate(w http.ResponseWriter, r *http.Request, ar *re
 		return nil
 	}
 
+	if g.oauth != nil {
+		return g.authenticateOAuth(w, r, ar)
+	}
 	g.parseSessionID(r, ar)
 
 	usr, err := g.tokenValidator.Authorize(context.Background(), r, ar)

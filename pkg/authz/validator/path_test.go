@@ -86,7 +86,7 @@ func TestAuthorizeRequestPathInterpretations(t *testing.T) {
 					req.RemoteAddr = "192.0.2.1:1234"
 					before := *req.URL
 					uri := req.RequestURI
-					err := v.authorizeRequest(t.Context(), req, usr)
+					err := v.AuthorizeUser(t.Context(), req, usr)
 					wantAllowed := target.allowed || !(tc.method || tc.claim)
 					if wantAllowed && err != nil {
 						t.Fatalf("safe request rejected: %v", err)
@@ -105,12 +105,21 @@ func TestAuthorizeRequestPathInterpretations(t *testing.T) {
 					}
 				})
 			}
+			for _, invalid := range []*user.User{nil, {}} {
+				if err := v.AuthorizeUser(t.Context(), httptest.NewRequest(http.MethodGet, "/", nil), invalid); err == nil {
+					t.Fatal("missing authenticated identity accepted")
+				}
+			}
 			if tc.method || tc.claim {
 				for _, req := range []*http.Request{nil, {}, {URL: &url.URL{Path: "/public/%2e/%zz"}}} {
-					if err := v.authorizeRequest(t.Context(), req, usr); err == nil {
+					if err := v.AuthorizeUser(t.Context(), req, usr); err == nil {
 						t.Fatal("invalid request accepted")
 					}
 				}
+			}
+			v.Close()
+			if err := v.AuthorizeUser(t.Context(), httptest.NewRequest(http.MethodGet, "/", nil), usr); err == nil {
+				t.Fatal("closed identity authorizer accepted request")
 			}
 		})
 	}

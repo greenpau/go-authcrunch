@@ -15,6 +15,7 @@
 package oauth
 
 import (
+	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
 	"sync"
@@ -99,6 +100,32 @@ func (sm *stateManager) beginCallback(state, sessionID, callback string) bool {
 	}
 	binding.claimed = true
 	sm.bindings[state] = binding
+	return true
+}
+
+// cancelLogin deletes a login only when every browser-binding component
+// matches. It is safe after a callback is claimed: later transaction reads fail
+// closed, and the callback's deferred deletion remains idempotent.
+func (sm *stateManager) cancelLogin(state string, sessionIDHash [32]byte, callback string) bool {
+	sm.mux.Lock()
+	defer sm.mux.Unlock()
+	if state == "" || callback == "" {
+		return false
+	}
+	binding, exists := sm.bindings[state]
+	if !exists || binding.callback != callback {
+		return false
+	}
+	storedHash := sha256.Sum256([]byte(binding.sessionID))
+	if subtle.ConstantTimeCompare(storedHash[:], sessionIDHash[:]) != 1 {
+		return false
+	}
+	delete(sm.nonces, state)
+	delete(sm.states, state)
+	delete(sm.codes, state)
+	delete(sm.status, state)
+	delete(sm.verifiers, state)
+	delete(sm.bindings, state)
 	return true
 }
 

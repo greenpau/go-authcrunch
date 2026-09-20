@@ -16,6 +16,7 @@ package oauth
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -214,6 +215,35 @@ func TestE2EOAuthTokenCallbackStateBinding(t *testing.T) {
 	identity, ok := valid.Response.Payload.(map[string]any)
 	if !ok || identity["sub"] != "ed-user" {
 		t.Fatal("matching callback did not return signed identity")
+	}
+
+	// A consumer can release an abandoned transaction without retaining the
+	// browser credential itself. Wrong ownership cannot cancel it, and an exact
+	// cancellation makes the callback fail closed while releasing capacity.
+	canceledLogin := newRequest(browserSession, nil)
+	if err := provider.Authenticate(canceledLogin); err != nil || canceledLogin.Response.Code != http.StatusFound {
+		t.Fatalf("initiate canceled login: code=%d error=%v", canceledLogin.Response.Code, err)
+	}
+	canceledRedirect, err := url.Parse(canceledLogin.Response.RedirectURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	canceledState := canceledRedirect.Query().Get("state")
+	callbackURL := canceledRedirect.Query().Get("redirect_uri")
+	if callbackURL == "" {
+		t.Fatal("authorization redirect omitted callback URL")
+	}
+	wrongHash := sha256.Sum256([]byte("different-browser"))
+	if provider.CancelLogin(canceledState, wrongHash, callbackURL) {
+		t.Fatal("wrong browser canceled provider login")
+	}
+	browserHash := sha256.Sum256([]byte(browserSession))
+	if !provider.CancelLogin(canceledState, browserHash, callbackURL) || provider.CancelLogin(canceledState, browserHash, callbackURL) {
+		t.Fatal("provider cancellation was not exact and idempotent")
+	}
+	canceledCallback := newRequest(browserSession, url.Values{"state": {canceledState}, "code": {"unused"}})
+	if err := provider.Authenticate(canceledCallback); err == nil || err.Error() != autherrors.ErrIdentityProviderOauthAuthorizationStateNotFound.Error() {
+		t.Fatalf("canceled callback error = %v", err)
 	}
 
 	// A disabled-nonce transaction accepts an independently signed identity

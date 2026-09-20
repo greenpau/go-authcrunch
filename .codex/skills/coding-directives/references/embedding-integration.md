@@ -18,6 +18,7 @@ that a downstream configuration language already recognizes a directive.
 | `token refresh` body | `pkg/authn/token_refresh/parser.NewTokenRefreshConfigFromDirectives(statements)` | `PortalConfig.RefreshTokens` |
 | Admin API statements | `pkg/authn/admin_api/parser.NewAdminAPIConfigFromDirectives(statements)` | `PortalConfig.ConfigureAdminAPI` preserves profile API configuration |
 | Complete `cookie ...` statements | `pkg/authn/cookie/parser.NewCookieConfigFromDirectives(statements)` | `PortalConfig.ConfigureCookies` |
+| Direct OAuth authorization statements | `pkg/authz/oauth/parser.NewOAuthAuthorizationConfigFromDirectives(policyName, statements)` | `PolicyConfig.ConfigureOAuth`; root `NewServer` resolves shared providers |
 | Upstream OAuth provider body | `pkg/idp/parser.NewOAuthIdentityProviderConfigFromDirectives(name, statements)` | `Config.IdentityProviders`; this adapter delegates grammar to `pkg/idp/oauth/parser` |
 | Native login client body | `pkg/authclient/parser.NewAuthenticationClientConfigFromDirectives(statements)` | `authclient.NewClient` with explicit refresh body transport |
 
@@ -55,7 +56,7 @@ as construction succeeds and unwinds errors in reverse order, including the
 component whose configuration failed. `Server.Close() error` is public,
 idempotent, and concurrent-safe; it waits for the same disposal and joins
 cleanup errors. Optional component `Close()`/`Close() error` methods preserve
-existing dispatcher interfaces. Shared providers are closed once, after portals.
+existing dispatcher interfaces. Shared providers are closed once, after portals and gatekeepers.
 Registries receive independent runtime copies through
 `LocalUserRegistryProvider.NewRuntime`; configuration never owns their caches.
 
@@ -69,8 +70,8 @@ Coordinate shared identity-file writers during replacement; lifecycle ownership
 does not add multi-process database transactions or a live configuration editor.
 
 `Portal.Close` stops and awaits its session, sandbox, and token-validator caches,
-and closes refresh/OIDC state. `Gatekeeper.Close` owns its validator, not shared
-authenticators. `oauth.IdentityProvider.Close` cancels and awaits owned delayed
+and closes refresh/OIDC state. `Gatekeeper.Close` owns its validator and direct OAuth session/login state, not
+shared authenticators or identity providers. `oauth.IdentityProvider.Close` cancels and awaits owned delayed
 or synchronous discovery, metadata/JWKS requests, retries, and state maintenance.
 A closed provider cannot restart or publish readiness afterward. Cache Run/Stop
 APIs that already support restarting retain it, while disposed runtimes do not.
@@ -110,3 +111,10 @@ When the host disables authorization redirects, handle an error returned by
 to the protected handler or leave an unwritten response as an implicit 200.
 The composed fixture maps these authentication errors to 401 and verifies that
 OIDC ID tokens and opaque access tokens cannot authorize portal resources.
+
+Direct OAuth authorization requires no authentication portal. Route protected
+resources and the policy's callback/logout namespace through the same gatekeeper;
+only `Authorized`/`Bypassed` permits downstream execution. Read the
+[policy owner](../../authorization-policy-oauth/SKILL.md) for its session/transport
+contract and the [Caddy handoff](../../authorization-policy-oauth/references/caddy-security-handoff.md)
+for the three-outcome handler integration required by that consumer.

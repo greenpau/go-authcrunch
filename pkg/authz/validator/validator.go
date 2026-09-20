@@ -501,3 +501,24 @@ func (v *TokenValidator) Close() {
 		v.cache.Close()
 	})
 }
+
+// AuthorizeUser evaluates an already authenticated identity against the same
+// ACL, method/path, path-claim and source-address checks as token authorization.
+// It does not authenticate input, parse credentials or cache the result. Callers
+// must Configure the validator, establish identity and enforce their session
+// lifetime before calling. Incomplete configuration returns an error.
+func (v *TokenValidator) AuthorizeUser(ctx context.Context, r *http.Request, usr *user.User) error {
+	if v.closed.Load() {
+		return fmt.Errorf("token validator is closed")
+	}
+	if v.opts == nil || v.guardian == nil {
+		return fmt.Errorf("token validator is not configured")
+	}
+	if r == nil {
+		return fmt.Errorf("HTTP request is required")
+	}
+	if usr == nil || usr.Claims == nil {
+		return fmt.Errorf("authenticated user is required")
+	}
+	return v.authorizeRequest(ctx, r, usr)
+}

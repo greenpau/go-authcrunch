@@ -196,6 +196,14 @@ func (b *IdentityProvider) GetConfig() map[string]interface{} {
 	return m
 }
 
+// CancelLogin removes an OAuth login transaction owned by the exact browser
+// session and callback. sessionIDHash is SHA-256 of the SessionID supplied when
+// authentication began. The method is idempotent and cannot consume another
+// browser's or callback endpoint's transaction.
+func (b *IdentityProvider) CancelLogin(state string, sessionIDHash [32]byte, callback string) bool {
+	return b.state.cancelLogin(state, sessionIDHash, callback)
+}
+
 // ScopeExists returns true if any of the provided scopes exist.
 func (b *IdentityProvider) ScopeExists(scopes ...string) bool {
 	for _, scope := range scopes {

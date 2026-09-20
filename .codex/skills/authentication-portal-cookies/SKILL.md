@@ -102,14 +102,21 @@ Reject duplicate callback cookies so a sibling Domain cookie cannot win by
 header ordering. An optional `__Host-` configured name adds browser-enforced
 Domain protection; do not require that prefix for compatibility.
 
-Gatekeepers default to `AUTHP_SESSION_ID` and accept `AUTHP_ACCESS_TOKEN` along
+Ordinary JWT gatekeepers default to `AUTHP_SESSION_ID` and accept `AUTHP_ACCESS_TOKEN` along
 with the existing `access_token` and `jwt_access_token` token-source aliases.
 Set `PolicyConfig.SessionIDCookieName` and `AccessTokenCookieNames` to match a
 portal using overrides. Header/query aliases are not emitted cookie names.
 The aggregate `authcrunch.NewServer` discovers portal access-cookie names when
-a policy leaves `AccessTokenCookieNames` empty. Supply an explicit list, including
+a JWT policy leaves `AccessTokenCookieNames` empty. Supply an explicit list, including
 an explicit default name when appropriate, to prevent cross-portal discovery.
 The cookie parser itself does not rewrite policies or other portals.
+
+Policies using [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md)
+use separate policy-owned opaque session/login cookies and are excluded from
+portal access-cookie discovery. Their cookie overrides belong to
+`OAuthAuthorizationConfig`, not `cookie.Config`; portal and upstream identity
+cookies cannot authenticate those policies. Do not reuse portal cookie names
+for direct-policy overrides on the same host.
 
 Upstream OAuth identity cookies default to `AUTHP_ID_TOKEN`. A configured
 `oauth.Config.IdentityTokenCookieName` governs issuance, Whoami, and external

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Authorization Policy OAuth"
+  short_description: "Maintain OAuth login in policies without a portal"
+  default_prompt: "Use $authorization-policy-oauth to maintain direct OAuth authorization policies, secure callbacks and sessions, parser APIs, TLS E2E coverage, and embedding guidance."

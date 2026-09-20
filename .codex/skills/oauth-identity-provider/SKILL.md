@@ -1,9 +1,13 @@
 ---
 name: oauth-identity-provider
-description: Maintain upstream OAuth identity-provider directive parsers, shared configuration dispatch, OAuth/OIDC discovery, JWKS and static public PEM verification, EdDSA/Ed25519 token validation, key refresh, and real portal OAuth E2E tests. Excludes portal signing-key publication.
+description: Maintain upstream OAuth identity-provider directive parsers, shared configuration dispatch, OAuth/OIDC discovery, JWKS and static public PEM verification, EdDSA/Ed25519 token validation, key refresh, and real portal OAuth E2E tests. Excludes portal signing-key publication and gatekeeper-owned direct OAuth sessions.
 ---
 
 # OAuth Identity Provider
+
+Use [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md) for
+policy-selected login without a portal, its parser, callbacks and opaque sessions.
+That consumer reuses this provider's authentication protocol and trust checks.
 
 ## Ownership and Entry Points
 
@@ -151,6 +155,14 @@ and exact callback URL. Claim it atomically before processing any code or direct
 token; delete it on every completion/error path. State is distinct from the
 browser cookie, and a supplied state must never create its own browser binding.
 
+`IdentityProvider.CancelLogin(state, sessionIDHash, callback)` atomically removes
+state only for the exact callback and SHA-256 of its initiating SessionID. It is
+idempotent and supports pending or claimed transactions. Keep this optional
+provider capability separate from the shared `idp.IdentityProvider` interface;
+direct authorization consumers require it to release canceled transactions.
+Consumers must still prevent session issuance after their own logout or closure;
+removing state does not promise to interrupt an already-running HTTP exchange.
+
 Capture nonce policy when login starts. `NonceDisabled` omits nonce from the
 authorization URL (including a preconfigured nonce parameter) and skips only the
 nonce-claim check for that transaction. An enabled transaction requires its exact
@@ -173,6 +185,25 @@ Do not turn optional legacy claims into new requirements without an explicit
 compatibility decision. Malformed nonce/name values must return errors, not
 panic. Several named drivers intentionally use UserInfo-oriented fetchClaims
 instead of the common JWT path; preserve that dispatch.
+Named-driver `fetchClaims` requires a nonempty string access token, a successful
+UserInfo HTTP status, and at most 1 MiB of response JSON. Reject oversized bodies
+instead of truncating into an accepted identity, and do not panic on malformed
+token response types. Synthetic TLS tests cover these boundaries without calling
+the named provider's live service.
+Keep required/error JSON field validation in `validateFetchedClaims` before
+mapping. Incorrect GitHub login/organization fields, Discord IDs and Facebook
+identity/error types must not panic. Tests must distinguish parser rejection from
+transport failure: include valid controls and observe the expected TLS request
+and error, not just a nonnil error.
+
+`provider_direct_authorization_e2e_test.go` covers provider cancellation capacity
+and a synthetic LinkedIn authorization-policy journey. Named hard-coded hosts
+are intercepted only in an isolated test subprocess with a local CONNECT proxy;
+do not install a production transport override to enable the fixture.
+`user_claims_named_driver_e2e_test.go` shares that isolated TLS fixture for malformed
+named-driver JSON. Keep proxy targets fixed, clients bounded and hijacked
+connections closed; setting a proxy after `ProxyFromEnvironment` has cached its
+configuration does not reliably isolate a test in the main process.
 
 Signed UserInfo/JWE, new grants, private_key_jwt, request objects, and a complete
 OIDC at_hash/c_hash conformance upgrade are separate features.

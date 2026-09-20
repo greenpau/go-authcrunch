@@ -24,6 +24,9 @@ claims into falsifiable checks, then test or inspect the exact runtime behavior.
 
 Use the repo-local `coding-directives` skill for fixes, `testing-and-ci` for
 test selection, and `scripts-and-automation` for repository tooling.
+Use [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md) for
+direct-policy callback ownership, opaque sessions, origin/browser binding,
+logout cancellation and shared-provider lifecycle without a portal.
 Use [local-password-authentication](../local-password-authentication/SKILL.md)
 when reviewing local password enumeration, bcrypt costs, or dummy comparisons.
 Use [local identity database](../local-identity-database/SKILL.md) for persisted

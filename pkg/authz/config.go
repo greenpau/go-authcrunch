@@ -16,6 +16,7 @@ package authz
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
@@ -34,11 +35,13 @@ const DefaultAuthRealmHeaderName = "X-Auth-Realm"
 
 // PolicyConfig is Gatekeeper configuration.
 type PolicyConfig struct {
-	Name                       string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	AuthURLPath                string `json:"auth_url_path,omitempty" xml:"auth_url_path,omitempty" yaml:"auth_url_path,omitempty"`
-	AuthRedirectDisabled       bool   `json:"disable_auth_redirect,omitempty" xml:"disable_auth_redirect,omitempty" yaml:"disable_auth_redirect,omitempty"`
-	AuthRedirectQueryDisabled  bool   `json:"disable_auth_redirect_query,omitempty" xml:"disable_auth_redirect_query,omitempty" yaml:"disable_auth_redirect_query,omitempty"`
-	AuthRedirectQueryParameter string `json:"auth_redirect_query_param,omitempty" xml:"auth_redirect_query_param,omitempty" yaml:"auth_redirect_query_param,omitempty"`
+	// OAuth enables direct provider login without an authentication portal.
+	OAuth                      *OAuthAuthorizationConfig `json:"oauth,omitempty" xml:"oauth,omitempty" yaml:"oauth,omitempty"`
+	Name                       string                    `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	AuthURLPath                string                    `json:"auth_url_path,omitempty" xml:"auth_url_path,omitempty" yaml:"auth_url_path,omitempty"`
+	AuthRedirectDisabled       bool                      `json:"disable_auth_redirect,omitempty" xml:"disable_auth_redirect,omitempty" yaml:"disable_auth_redirect,omitempty"`
+	AuthRedirectQueryDisabled  bool                      `json:"disable_auth_redirect_query,omitempty" xml:"disable_auth_redirect_query,omitempty" yaml:"disable_auth_redirect_query,omitempty"`
+	AuthRedirectQueryParameter string                    `json:"auth_redirect_query_param,omitempty" xml:"auth_redirect_query_param,omitempty" yaml:"auth_redirect_query_param,omitempty"`
 	// The status code for the HTTP redirect for non-authorized users.
 	AuthRedirectStatusCode int `json:"auth_redirect_status_code,omitempty" xml:"auth_redirect_status_code,omitempty" yaml:"auth_redirect_status_code,omitempty"`
 	// Enable the redirect with Javascript, as opposed to HTTP redirect.
@@ -142,6 +145,14 @@ func (cfg *PolicyConfig) parseRawAuthProxyConfig() error {
 
 // Validate validates PolicyConfig.
 func (cfg *PolicyConfig) Validate() error {
+	if cfg.OAuth != nil {
+		if err := cfg.OAuth.Validate(cfg.Name); err != nil {
+			return err
+		}
+		if len(cfg.RawCryptoKeyStoreConfig) != 0 || hasMeaningfulOAuthCryptoKeyStoreConfig(cfg.CryptoKeyStoreConfig) || len(cfg.AllowedTokenSources) != 0 || len(cfg.AuthProxyRawConfig) != 0 || cfg.AuthProxyConfig != nil || len(cfg.AccessTokenCookieNames) != 0 || cfg.SessionIDCookieName != "" || cfg.ValidateBearerHeader {
+			return fmt.Errorf("direct OAuth policies use their own cookies and cannot configure JWT keys, token sources or auth proxies")
+		}
+	}
 	if cfg.validated {
 		return nil
 	}
@@ -209,4 +220,20 @@ func (cfg *PolicyConfig) Validate() error {
 
 	cfg.validated = true
 	return nil
+}
+
+// Policy validation derives this exact key-store default for the shared token
+// validator used to evaluate ACLs. Accept it on repeated validation and after
+// JSON restoration, while rejecting operator-supplied JWT key settings.
+func hasMeaningfulOAuthCryptoKeyStoreConfig(cfg *kms.CryptoKeyStoreConfig) bool {
+	if cfg == nil {
+		return false
+	}
+	if cfg.TokenName != "" || cfg.TokenLifetime != 0 || len(cfg.RawKeyConfigs) != 0 {
+		return true
+	}
+	if cfg.AutoGenerateTag != "" && cfg.AutoGenerateTag != "default" {
+		return true
+	}
+	return cfg.AutoGenerateAlgo != "" && cfg.AutoGenerateAlgo != "ES512"
 }

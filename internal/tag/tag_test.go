@@ -78,6 +78,7 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test authz.OAuthAuthorizationConfig struct", entry: &authz.OAuthAuthorizationConfig{}, opts: &Options{}},
 		{name: "test httpserver.Config struct", entry: &httpserver.Config{}, opts: &Options{}},
 		{name: "test httpserver.PortalRoute struct", entry: &httpserver.PortalRoute{}, opts: &Options{}},
 		{name: "test oidc.Provider struct", entry: &oidc.Provider{}, opts: &Options{}},
@@ -936,7 +937,8 @@ func TestTagCompliance(t *testing.T) {
 			entry: &authz.PolicyConfig{},
 			opts: &Options{
 				AllowFieldMismatch: true,
-				AllowedFields: map[string]interface{}{
+				AllowedFields: map[string]any{
+					"oauth":                       true, // OAuth is one protocol name.
 					"disable_auth_redirect":       true,
 					"disable_auth_redirect_query": true,
 					"auth_redirect_query_param":   true,
