@@ -37,6 +37,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/jwtutil"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/shared"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	"github.com/greenpau/go-authcrunch/pkg/system"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
@@ -631,9 +632,6 @@ func generateKey(cfg *CryptoKeyConfig, tag, algo string) (*CryptoKey, error) {
 		if err != nil {
 			return nil, err
 		}
-		if !c.IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y) {
-			return nil, err
-		}
 		derBytes, err := x509.MarshalECPrivateKey(priv)
 		if err != nil {
 			return nil, err
@@ -659,7 +657,22 @@ func generateKey(cfg *CryptoKeyConfig, tag, algo string) (*CryptoKey, error) {
 	default:
 		return nil, errors.ErrCryptoKeyStoreAutoGenerateAlgo.WithArgs(algo)
 	}
-	for i := 1; i < 5; i++ {
+	var record *state.Record
+	if cfg.state != nil {
+		var err error
+		record, err = cfg.state.OpenRecord("keys/"+tag, signingMethods[algo])
+		if err != nil {
+			return nil, err
+		}
+		material, err := record.Load()
+		if err != nil {
+			return nil, err
+		}
+		if len(material) != 0 {
+			kb, generated = string(material), true
+		}
+	}
+	for i := 1; !generated && i < 5; i++ {
 		pemBytes, err := generateKey()
 		if err != nil || pemBytes == nil {
 			// try again
@@ -672,7 +685,11 @@ func generateKey(cfg *CryptoKeyConfig, tag, algo string) (*CryptoKey, error) {
 	if !generated {
 		return nil, errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs("failed")
 	}
-	if err := shared.Buffer.Add(tag, kb); err != nil {
+	if record != nil {
+		if err := record.Save([]byte(kb)); err != nil {
+			return nil, err
+		}
+	} else if err := shared.Buffer.Add(tag, kb); err != nil {
 		if err.Error() != "not empty" {
 			return nil, errors.ErrCryptoKeyStoreAutoGenerateFailed.WithArgs(err)
 		}

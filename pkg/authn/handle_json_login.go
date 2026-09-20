@@ -30,6 +30,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
@@ -39,18 +40,26 @@ import (
 const tokenRefreshDiscardTimeout = 5 * time.Second
 
 func (p *Portal) handleIssueTokens(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, proof *user.User) (_ *apiauth.AuthResponse, err error) {
+	responseHeaders := w.Header().Clone()
 	u, tokens, err := p.issueSandboxTokens(ctx, r, rr, proof)
+	cacheAdded := false
 	defer func() {
-		if err == nil || tokens == nil {
+		if err == nil {
 			return
 		}
-		// Issuance has committed, but JSON completion has not delivered this
-		// credential. Release its family even if a later step canceled the
-		// request. Previously replaced families remain revoked.
-		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), tokenRefreshDiscardTimeout)
-		defer cancel()
-		if cleanupErr := p.refresh.Logout(cleanupCtx, tokens.RefreshToken, proof.RefreshTransport); cleanupErr != nil {
-			err = errors.Join(err, fmt.Errorf("discard undelivered refresh token: %w: %w", tokenrefresh.ErrUnavailable, cleanupErr))
+		clear(w.Header())
+		for name, values := range responseHeaders {
+			w.Header()[name] = append([]string(nil), values...)
+		}
+		if cacheAdded {
+			if cleanupErr := p.sessions.Delete(u.Claims.ID); cleanupErr != nil {
+				err = errors.Join(err, cleanupErr)
+			}
+		}
+		if tokens != nil {
+			if cleanupErr := p.discardUndeliveredRefresh(ctx, tokens, proof.RefreshTransport); cleanupErr != nil {
+				err = errors.Join(err, cleanupErr)
+			}
 		}
 	}()
 	if err != nil {
@@ -64,26 +73,41 @@ func (p *Portal) handleIssueTokens(ctx context.Context, w http.ResponseWriter, r
 			return nil, fmt.Errorf("%w: %w", tokenrefresh.ErrUnavailable, err)
 		}
 	}
+	if proof.RefreshTransport == tokenrefresh.CookieTransport && (tokens != nil || browserReplacement) {
+		u.Authorized = true
+		if err := p.sessions.Add(u.Claims.ID, u); err != nil {
+			return nil, err
+		}
+		cacheAdded = true
+	}
 	if err := p.finishOIDCLogin(ctx, w, r, proof); err != nil {
 		return nil, err
 	}
 	if tokens == nil {
 		if browserReplacement {
-			u.Authorized = true
-			if err := p.sessions.Add(u.Claims.ID, u); err != nil {
-				return nil, err
-			}
 			w.Header().Add("Set-Cookie", p.cookie.GetAccessTokenCookie(addrutil.GetSourceHost(r), u.Token))
 		}
 		return &apiauth.AuthResponse{Authenticated: true, AccessToken: u.Token, AccessTokenName: p.config.TokenGrantorOptions.AccessTokenCookieName}, nil
 	}
 	if proof.RefreshTransport == tokenrefresh.CookieTransport {
-		if err := p.sessions.Add(u.Claims.ID, u); err != nil {
-			return nil, err
-		}
 		p.deliverRefreshCookies(w, r, tokens)
 	}
 	return p.refreshResponse(tokens, proof.RefreshTransport), nil
+}
+
+func (p *Portal) discardUndeliveredRefresh(ctx context.Context, tokens *tokenrefresh.Result, transport string) error {
+	if tokens == nil {
+		return nil
+	}
+	// Issuance has committed, but completion has not delivered this credential.
+	// Release its family even if a later step canceled the request. Previously
+	// replaced families remain revoked.
+	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), tokenRefreshDiscardTimeout)
+	defer cancel()
+	if err := p.refresh.Logout(cleanupCtx, tokens.RefreshToken, transport); err != nil {
+		return fmt.Errorf("discard undelivered refresh token: %w: %w", tokenrefresh.ErrUnavailable, err)
+	}
+	return nil
 }
 
 func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.Request, rr *requests.Request, usr *user.User, authRequest *apiauth.AuthRequest) error {
@@ -476,7 +500,7 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 				if errors.Is(err, tokenrefresh.ErrDenied) {
 					return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Reauthentication required")
 				}
-				if p.refreshRealm(proof.Authenticator.Realm) || errors.Is(err, tokenrefresh.ErrUnavailable) {
+				if p.refreshRealm(proof.Authenticator.Realm) || errors.Is(err, tokenrefresh.ErrUnavailable) || errors.Is(err, state.ErrCapacity) {
 					return p.refreshError(ctx, w, err)
 				}
 				p.logger.Warn(

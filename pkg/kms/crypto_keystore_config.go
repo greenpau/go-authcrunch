@@ -19,11 +19,13 @@ import (
 	"strconv"
 
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 // CryptoKeyStoreConfig holds crypto key store configuration settings.
 type CryptoKeyStoreConfig struct {
+	state *state.Store
 	// TokenName is the token name associated with the key store.
 	TokenName string `json:"token_name,omitempty" xml:"token_name,omitempty" yaml:"token_name,omitempty"`
 	// TokenLifetime is the expected token grant lifetime in seconds.
@@ -96,3 +98,7 @@ func NewCryptoKeyStoreConfig(statements []string) (*CryptoKeyStoreConfig, error)
 
 	return cfg, nil
 }
+
+// SetStateStore binds generated keys to persistent runtime storage. Configure it
+// before construction; explicit file/environment keys remain authoritative.
+func (c *CryptoKeyStoreConfig) SetStateStore(store *state.Store) { c.state = store }

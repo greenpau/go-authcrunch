@@ -30,6 +30,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	"go.uber.org/zap"
 )
 
@@ -44,6 +45,7 @@ type refMap struct {
 
 // Server represents AAA SF server.
 type Server struct {
+	state             *state.Store
 	closeOnce         sync.Once
 	closed            atomic.Bool
 	closeErr          error
@@ -94,6 +96,26 @@ func NewServer(config *Config, logger *zap.Logger) (_ *Server, err error) {
 		}
 	}()
 
+	if config.State != nil {
+		srv.state, err = state.Open(config.State)
+		if err != nil {
+			return nil, err
+		}
+		srv.own(srv.state)
+		for _, cfg := range config.AuthenticationPortals {
+			if err := cfg.Validate(); err != nil {
+				return nil, err
+			}
+			cfg.CryptoKeyStoreConfig.SetStateStore(srv.state)
+		}
+		for _, cfg := range config.AuthorizationPolicies {
+			if err := cfg.Validate(); err != nil {
+				return nil, err
+			}
+			cfg.CryptoKeyStoreConfig.SetStateStore(srv.state)
+		}
+	}
+
 	for _, cfg := range config.IdentityProviders {
 		provider, err := idp.NewIdentityProvider(cfg, logger)
 		if err != nil {
@@ -121,6 +143,13 @@ func NewServer(config *Config, logger *zap.Logger) (_ *Server, err error) {
 		}
 		if err := store.Configure(); err != nil {
 			return nil, errors.ErrNewServer.WithArgs("failed configuring identity store", err)
+		}
+		if srv.state != nil {
+			if persistent, ok := store.(interface{ ConfigurePersistentState(*state.Store) error }); ok {
+				if err := persistent.ConfigurePersistentState(srv.state); err != nil {
+					return nil, err
+				}
+			}
 		}
 		srv.nameRefs.identityStores[store.GetName()] = store
 		srv.identityStores = append(srv.identityStores, store)
@@ -232,6 +261,22 @@ func NewServer(config *Config, logger *zap.Logger) (_ *Server, err error) {
 		}
 	}
 
+	if srv.state != nil {
+		binding, err := srv.persistentStateBinding(config)
+		if err != nil {
+			return nil, err
+		}
+		for _, portal := range srv.portals {
+			if err := portal.ConfigurePersistentState(srv.state, binding); err != nil {
+				return nil, err
+			}
+		}
+		for _, gatekeeper := range srv.gatekeepers {
+			if err := gatekeeper.ConfigurePersistentState(srv.state, binding); err != nil {
+				return nil, err
+			}
+		}
+	}
 	return srv, nil
 }
 

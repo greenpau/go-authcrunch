@@ -28,7 +28,7 @@ import (
 
 // BasicAuth performs password authentication subject to the effective policy.
 func (p *Portal) BasicAuth(r *authproxy.Request) error {
-	if p.closed.Load() {
+	if p.closed.Load() || p.persistentStateErr() != nil {
 		return errors.ErrBasicAuthFailed
 	}
 	if r.Realm == "" {

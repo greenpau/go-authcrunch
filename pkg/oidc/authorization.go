@@ -18,6 +18,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
+	"errors"
 	"maps"
 	"net/http"
 	"net/url"
@@ -25,6 +26,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/state"
 )
 
 func (o *Provider) authorize(w *oidcHTTPResponse, r *http.Request) {
@@ -66,6 +69,7 @@ func (o *Provider) authorize(w *oidcHTTPResponse, r *http.Request) {
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
+	defer o.persistResponse(w)
 	o.sweep()
 	if o.closed {
 		oidcError(w, http.StatusServiceUnavailable, "temporarily_unavailable")
@@ -87,11 +91,11 @@ func (o *Provider) authorize(w *oidcHTTPResponse, r *http.Request) {
 			o.authorizationResponse(w, r, request, "", "consent_required")
 			return
 		}
-		o.issueCode(w, r, request)
+		_ = o.issueCode(w, r, request)
 		return
 	}
 	if authenticated && !fresh && o.hasConsent(s, request) && !request.promptConsent {
-		o.issueCode(w, r, request)
+		_ = o.issueCode(w, r, request)
 		return
 	}
 	if len(o.pending) >= o.config.MaxPendingRequests {
@@ -205,6 +209,7 @@ func (o *Provider) continueAuthorization(w *oidcHTTPResponse, r *http.Request) {
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
+	defer o.persistResponse(w)
 	o.sweep()
 	hash := oidcCookieHash(r, o.requestCookie)
 	request := o.pending[hash]
@@ -233,6 +238,8 @@ func (o *Provider) continueAuthorization(w *oidcHTTPResponse, r *http.Request) {
 		return
 	}
 	approved := o.hasConsent(o.sessions[session], request) && !request.promptConsent
+	var previousConsent []string
+	previousConsentExists := false
 	if r.Method == http.MethodPost {
 		if !o.sameOrigin(r) || subtle.ConstantTimeCompare([]byte(params.Get("csrf")), []byte(request.consent)) != 1 {
 			oidcError(w, http.StatusForbidden, "invalid_request")
@@ -252,6 +259,8 @@ func (o *Provider) continueAuthorization(w *oidcHTTPResponse, r *http.Request) {
 		if s.consents == nil {
 			s.consents = make(map[string][]string)
 		}
+		previousConsent, previousConsentExists = s.consents[request.clientID]
+		previousConsent = slices.Clone(previousConsent)
 		for _, scope := range request.consentItems() {
 			if !slices.Contains(s.consents[request.clientID], scope) {
 				s.consents[request.clientID] = append(s.consents[request.clientID], scope)
@@ -262,7 +271,13 @@ func (o *Provider) continueAuthorization(w *oidcHTTPResponse, r *http.Request) {
 	if approved {
 		delete(o.pending, hash)
 		o.cookie(w, o.requestCookie, "", -1)
-		o.issueCode(w, r, request)
+		if err := o.issueCode(w, r, request); err != nil && r.Method == http.MethodPost {
+			if previousConsentExists {
+				o.sessions[session].consents[request.clientID] = previousConsent
+			} else {
+				delete(o.sessions[session].consents, request.clientID)
+			}
+		}
 		return
 	}
 	o.consentPage(w, r, request)
@@ -270,26 +285,33 @@ func (o *Provider) continueAuthorization(w *oidcHTTPResponse, r *http.Request) {
 
 // issueCode is called under the provider lock. Commit occurs inside the local
 // identity transaction so revocation cannot interleave with code issuance.
-func (o *Provider) issueCode(w *oidcHTTPResponse, r *http.Request, request *oidcAuthorization) {
+func (o *Provider) issueCode(w *oidcHTTPResponse, r *http.Request, request *oidcAuthorization) error {
 	if len(o.grants) >= o.config.MaxGrants {
 		o.authorizationResponse(w, r, request, "", "temporarily_unavailable")
-		return
+		return errOIDCAdmission
 	}
 	if s := o.sessions[request.session]; s == nil || !o.satisfiesClaims(s, request) {
 		o.authorizationResponse(w, r, request, "", "access_denied")
-		return
+		return ErrIdentityDenied
 	}
 	code := oidcRandom()
+	hash := sha256.Sum256([]byte(code))
 	err := o.withIdentity(r.Context(), o.sessions[request.session], func(map[string]any) error {
 		now := o.now()
-		o.grants[sha256.Sum256([]byte(code))] = &oidcGrant{request: *request, session: request.session, codeExpires: now.Add(oidcCodeLifetime * time.Second), expires: now.Add(time.Duration(oidcCodeLifetime+o.config.TokenLifetimeSeconds) * time.Second)}
-		return nil
+		o.grants[hash] = &oidcGrant{request: *request, session: request.session, codeExpires: now.Add(oidcCodeLifetime * time.Second), expires: now.Add(time.Duration(oidcCodeLifetime+o.config.TokenLifetimeSeconds) * time.Second)}
+		return o.persistState()
 	})
 	if err != nil {
-		o.authorizationResponse(w, r, request, "", "login_required")
-		return
+		delete(o.grants, hash)
+		if errors.Is(err, state.ErrCapacity) {
+			o.authorizationResponse(w, r, request, "", "temporarily_unavailable")
+		} else {
+			o.authorizationResponse(w, r, request, "", "login_required")
+		}
+		return err
 	}
 	o.authorizationResponse(w, r, request, code, "")
+	return nil
 }
 
 func (o *Provider) authorizationResponse(w *oidcHTTPResponse, r *http.Request, request *oidcAuthorization, code, failure string) {

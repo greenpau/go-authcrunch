@@ -48,7 +48,7 @@ func (o *Provider) HandleHTTP(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 	o.mu.Lock()
-	closed := o.closed
+	closed := o.closed || (o.state != nil && o.state.Err() != nil)
 	o.mu.Unlock()
 	if closed {
 		oidcError(w, http.StatusServiceUnavailable, "temporarily_unavailable")

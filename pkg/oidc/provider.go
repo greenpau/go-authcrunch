@@ -28,15 +28,19 @@ import (
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 )
 
 // ErrIdentityDenied reports stale, revoked, or otherwise ineligible login evidence.
 var ErrIdentityDenied = errors.New("oidc identity denied")
 
+var errOIDCAdmission = errors.New("oidc admission unavailable")
+
 // Provider implements an OpenID Provider backed by an IdentityVerifier.
 // Construct it with NewProvider; a Provider must not be copied after use.
 type Provider struct {
+	state                                       *state.Record
 	verifier                                    IdentityVerifier
 	loginURL                                    string
 	config                                      Config
@@ -216,6 +220,9 @@ func (o *Provider) CompleteLogin(ctx context.Context, w http.ResponseWriter, r *
 	o.sweep()
 	previous := oidcCookieHash(r, o.sessionCookie)
 	delete(o.sessions, previous)
+	if err := o.persistState(); err != nil {
+		return err
+	}
 	o.cookie(w, o.sessionCookie, "", -1)
 	if !o.SupportsRealm(proof.Realm) {
 		return nil
@@ -236,6 +243,12 @@ func (o *Provider) CompleteLogin(ctx context.Context, w http.ResponseWriter, r *
 		credential := oidcRandom()
 		hash := sha256.Sum256([]byte(credential))
 		o.sessions[hash] = s
+		if err := o.persistState(); err != nil {
+			if errors.Is(err, state.ErrCapacity) {
+				delete(o.sessions, hash)
+			}
+			return err
+		}
 		o.cookie(w, o.sessionCookie, credential, o.config.SessionLifetimeSeconds)
 		if pending := o.pending[oidcCookieHash(r, o.requestCookie)]; pending != nil && o.now().Before(pending.expires) {
 			pending.session, pending.fresh = hash, false
@@ -248,19 +261,43 @@ func (o *Provider) CompleteLogin(ctx context.Context, w http.ResponseWriter, r *
 // Logout revokes the browser session and pending authorization, then clears both cookies.
 // The embedding application must authorize the logout request before calling it.
 func (o *Provider) Logout(w http.ResponseWriter, r *http.Request) {
+	if o.LogoutWithError(w, r) != nil {
+		oidcError(w, http.StatusServiceUnavailable, "temporarily_unavailable")
+	}
+}
+
+// LogoutWithError reports persistence failures to hosts composing logout with
+// other session protocols. No success cookies are published before commit.
+func (o *Provider) LogoutWithError(w http.ResponseWriter, r *http.Request) error {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	delete(o.sessions, oidcCookieHash(r, o.sessionCookie))
 	delete(o.pending, oidcCookieHash(r, o.requestCookie))
+	if err := o.persistState(); err != nil {
+		return err
+	}
 	o.cookie(w, o.sessionCookie, "", -1)
 	o.cookie(w, o.requestCookie, "", -1)
+	return nil
 }
 
 // ClearSession revokes a browser session while retaining its pending authorization.
 // Use it when beginning a fresh interactive login.
 func (o *Provider) ClearSession(w http.ResponseWriter, r *http.Request) {
+	if o.ClearSessionWithError(w, r) != nil {
+		oidcError(w, http.StatusServiceUnavailable, "temporarily_unavailable")
+	}
+}
+
+// ClearSessionWithError retires a browser session durably before a replacement
+// login. Pending authorization is retained; the host must stop on an error.
+func (o *Provider) ClearSessionWithError(w http.ResponseWriter, r *http.Request) error {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	delete(o.sessions, oidcCookieHash(r, o.sessionCookie))
+	if err := o.persistState(); err != nil {
+		return err
+	}
 	o.cookie(w, o.sessionCookie, "", -1)
+	return nil
 }

@@ -19,6 +19,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 )
 
 // WithRefreshIdentity implements the optional portal refresh capability. The
@@ -34,4 +35,11 @@ func (b *IdentityStore) RevokeUserSessions(ctx context.Context, userID string) e
 	b.authenticator.mux.Lock()
 	defer b.authenticator.mux.Unlock()
 	return b.authenticator.db.RevokeUserSessions(ctx, userID)
+}
+
+// ConfigurePersistentState restores the file-bound identity epoch before use.
+func (b *IdentityStore) ConfigurePersistentState(store *state.Store) error {
+	b.authenticator.mux.Lock()
+	defer b.authenticator.mux.Unlock()
+	return b.authenticator.db.ConfigurePersistentState(store)
 }

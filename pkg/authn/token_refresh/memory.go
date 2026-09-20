@@ -16,9 +16,12 @@ package tokenrefresh
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/state"
 )
 
 type family struct {
@@ -26,12 +29,13 @@ type family struct {
 	digests [][32]byte
 }
 
-// MemoryStore is bounded, volatile, and safe for concurrent use in one process.
-// Cleanup is opportunistic; it starts no background goroutines. Restarts require
-// reauthentication unless an embedding application retains this store. Terminal
+// MemoryStore is bounded and safe for concurrent use in one process. It is
+// volatile unless ConfigurePersistentState is called before use. Cleanup is
+// opportunistic; it starts no background goroutines. Terminal
 // families are removed in full; live families retain every spent digest. Memory
 // is bounded by capacity families and capacity * (maxRotations + 1) digests.
 type MemoryStore struct {
+	state                  *state.Record
 	closed                 bool
 	mu                     sync.Mutex
 	families               map[string]*family
@@ -74,9 +78,27 @@ func (s *MemoryStore) Create(ctx context.Context, v Session, accessExpiry int64)
 // exact binding and commits the staged fresh login. Unknown credentials and
 // other bindings are ignored. Validation or capacity failure preserves every
 // live family. Expired families are reclaimed during admission.
-func (s *MemoryStore) CreateReplacing(ctx context.Context, v Session, accessExpiry int64, previous [][32]byte) error {
+func (s *MemoryStore) CreateReplacing(ctx context.Context, v Session, accessExpiry int64, previous [][32]byte) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	var f *family
+	retired := make(map[*family]struct{})
+	defer func() {
+		if !s.closed {
+			if persistErr := s.persist(); persistErr != nil {
+				if errors.Is(persistErr, state.ErrCapacity) && f != nil {
+					s.remove(f)
+					for old := range retired {
+						s.families[old.session.ID] = old
+						for _, digest := range old.digests {
+							s.tokens[digest] = old
+						}
+					}
+				}
+				err = persistErr
+			}
+		}
+	}()
 	if s.closed {
 		return ErrUnavailable
 	}
@@ -94,7 +116,6 @@ func (s *MemoryStore) CreateReplacing(ctx context.Context, v Session, accessExpi
 	if _, ok := s.tokens[v.Current]; ok {
 		return ErrUnavailable
 	}
-	retired := make(map[*family]struct{})
 	for _, d := range previous {
 		if f, ok := s.tokens[d]; ok && f.session.Binding == v.Binding {
 			retired[f] = struct{}{}
@@ -103,7 +124,7 @@ func (s *MemoryStore) CreateReplacing(ctx context.Context, v Session, accessExpi
 	if len(s.families)-len(retired) >= s.capacity {
 		return ErrUnavailable
 	}
-	f := &family{session: cloneSession(v), digests: [][32]byte{v.Current}}
+	f = &family{session: cloneSession(v), digests: [][32]byte{v.Current}}
 	for old := range retired {
 		s.remove(old)
 	}
@@ -129,9 +150,17 @@ func (s *MemoryStore) lookup(d [32]byte, b Binding) (*family, error) {
 }
 
 // Lookup authenticates a credential independently of access-token expiry.
-func (s *MemoryStore) Lookup(ctx context.Context, d [32]byte, b Binding) (Session, error) {
+func (s *MemoryStore) Lookup(ctx context.Context, d [32]byte, b Binding) (result Session, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	defer func() {
+		if !s.closed {
+			if persistErr := s.persist(); persistErr != nil {
+				err = persistErr
+				result = Session{}
+			}
+		}
+	}()
 	if s.closed {
 		return Session{}, ErrUnavailable
 	}
@@ -146,9 +175,24 @@ func (s *MemoryStore) Lookup(ctx context.Context, d [32]byte, b Binding) (Sessio
 }
 
 // Rotate commits exactly one descendant; a competing old token revokes it.
-func (s *MemoryStore) Rotate(ctx context.Context, previous Session, next [32]byte, idleExpiry, accessExpiry int64) error {
+func (s *MemoryStore) Rotate(ctx context.Context, previous Session, next [32]byte, idleExpiry, accessExpiry int64) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	var rotated *family
+	var priorSession Session
+	var priorDigestCount int
+	defer func() {
+		if !s.closed {
+			if persistErr := s.persist(); persistErr != nil {
+				if errors.Is(persistErr, state.ErrCapacity) && rotated != nil {
+					delete(s.tokens, next)
+					rotated.session = priorSession
+					rotated.digests = rotated.digests[:priorDigestCount]
+				}
+				err = persistErr
+			}
+		}
+	}()
 	if s.closed {
 		return ErrUnavailable
 	}
@@ -176,6 +220,9 @@ func (s *MemoryStore) Rotate(ctx context.Context, previous Session, next [32]byt
 	if _, ok := s.tokens[next]; ok {
 		return ErrUnavailable
 	}
+	rotated = f
+	priorSession = cloneSession(f.session)
+	priorDigestCount = len(f.digests)
 	f.session.Current = next
 	f.session.Revision++
 	f.session.IdleExpiresAt = idleExpiry
@@ -185,9 +232,16 @@ func (s *MemoryStore) Rotate(ctx context.Context, previous Session, next [32]byt
 }
 
 // Revoke accepts current or spent credentials, making logout idempotent.
-func (s *MemoryStore) Revoke(ctx context.Context, d [32]byte, b Binding) error {
+func (s *MemoryStore) Revoke(ctx context.Context, d [32]byte, b Binding) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	defer func() {
+		if !s.closed {
+			if persistErr := s.persist(); persistErr != nil {
+				err = persistErr
+			}
+		}
+	}()
 	if s.closed {
 		return ErrUnavailable
 	}

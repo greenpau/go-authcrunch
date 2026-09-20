@@ -1,0 +1,4 @@
+interface:
+  display_name: "Runtime State"
+  short_description: "Maintain durable keys, sessions, and replay protection"
+  default_prompt: "Use $runtime-state to maintain host-independent encrypted persistence, configuration parsing, lifecycle boundaries, restart E2E tests, and embedding contracts."

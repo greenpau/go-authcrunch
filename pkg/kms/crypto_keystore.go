@@ -92,6 +92,7 @@ func (ks *CryptoKeyStore) GetKeysInfo() []*CryptoKeyInfo {
 // signing and verifying tokens.
 func (ks *CryptoKeyStore) AutoGenerate() error {
 	keyCfg := &CryptoKeyConfig{
+		state:         ks.config.state,
 		ID:            "0",
 		Usage:         "sign-verify",
 		TokenName:     "access_token",
@@ -143,6 +144,9 @@ func (ks *CryptoKeyStore) GetVerifyKeys() []*CryptoKey {
 // AddKeysWithConfigs adds CryptoKey instances by providing their
 // configurations to CryptoKeyStore.
 func (ks *CryptoKeyStore) AddKeysWithConfigs(cfgs []*CryptoKeyConfig) error {
+	for _, cfg := range cfgs {
+		cfg.state = ks.config.state
+	}
 	keys, err := GetKeysFromConfigs(cfgs)
 	if err != nil {
 		return err

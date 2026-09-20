@@ -12,6 +12,7 @@ that a downstream configuration language already recognizes a directive.
 
 | Surface | Public parser | Apply to production configuration |
 | --- | --- | --- |
+| Runtime state body | `pkg/state/parser.NewStateConfigFromDirectives(statements)` | `Config.State` before `NewServer` |
 | Standalone HTTP listener body | `pkg/httpserver/parser.NewHTTPServerConfigFromDirectives(statements)` | `httpserver.Serve` with the root security configuration |
 | `oauth application <nickname>` | `pkg/oidc/parser.NewOAuthApplicationConfigFromDirectives(header, statements, persisted)` | `Config.AddOAuthApplication` |
 | OIDC provider body | `pkg/oidc/parser.NewOIDCProviderConfigFromDirectives(statements, applications)` | `PortalConfig.ConfigureOIDCProvider`; root `Config.ConfigureOIDCProvider` resolves registered applications through this parser |
@@ -45,11 +46,14 @@ does not grant OIDC participation. When refresh and OIDC coexist, they require
 the same canonical HTTPS origin and mount. Provider signing keys must remain
 separate from ordinary access-token verification keys.
 
-Persisted configuration is not session persistence. The portal allocates its
-own in-memory refresh store; OIDC sessions, pending requests, codes, and access
-grants are also process-local. Reloads invalidate that runtime state even when
-client credentials and signing keys survive. A standalone refresh `Store`
-implementation does not by itself expose distributed storage through a portal.
+Persisted configuration alone is not session persistence. Omitted `Config.State`
+keeps volatile runtime behavior. Opt-in [runtime state](../../runtime-state/SKILL.md)
+retains generated keys, completed portal/direct-OAuth sessions, refresh families
+and OIDC grants. Pending interactions still require fresh login. It is local
+single-owner storage: drain and close the old runtime before opening its
+replacement. New-before-old-close fails; no distributed or overlapping reload
+contract is implied. Provisioned registrations and explicit key files remain
+host-owned configuration resources.
 
 Resource ownership follows construction. `NewServer` records components as soon
 as construction succeeds and unwinds errors in reverse order, including the
@@ -88,7 +92,9 @@ The external root fixtures `server_composition_e2e_test.go` and
 listeners. They cover persisted application identity and secret rotation, both
 local realms, effective cookie names, native body credentials, separate signing
 purposes, private export opt-in, browser refresh/logout, and volatile state loss
-on root replacement.
+on root replacement with persistence omitted.
+`server_persistent_state_e2e_test.go` covers opt-in durable state, configuration
+changes, removed/reintroduced policies, and replay protection after replacement.
 The upstream fixture checks explicit issuer and access-token audience after
 shared parser adaptation and JSON restoration. An invalid identity token fails
 login; an unusable supplemental access token contributes no claims, preserving
@@ -116,5 +122,4 @@ Direct OAuth authorization requires no authentication portal. Route protected
 resources and the policy's callback/logout namespace through the same gatekeeper;
 only `Authorized`/`Bypassed` permits downstream execution. Read the
 [policy owner](../../authorization-policy-oauth/SKILL.md) for its session/transport
-contract and the [Caddy handoff](../../authorization-policy-oauth/references/caddy-security-handoff.md)
-for the three-outcome handler integration required by that consumer.
+contract and the three authentication outcomes that every host must preserve.

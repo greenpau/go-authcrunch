@@ -69,6 +69,7 @@ func (db *Database) WithRefreshIdentity(ctx context.Context, proof requests.Auth
 			db.LoadedAt = time.Now().UTC()
 		}
 		target.LoadedAt = db.LoadedAt
+		target.state = db.state
 		db.adoptMfaMutationSnapshot(target)
 		return target.withRefreshIdentityUnlocked(ctx, proof, apply)
 	})
@@ -101,6 +102,9 @@ func (db *Database) withRefreshIdentityUnlocked(ctx context.Context, proof reque
 	}
 	challenges, err := u.GetChallenges()
 	if err != nil {
+		return err
+	}
+	if err := db.persistEpoch(); err != nil {
 		return err
 	}
 	return apply(RefreshIdentity{Profile: u.Profile.Clone(), Username: u.Username, Email: u.GetMailClaim(), Name: u.GetNameClaim(), Roles: u.GetRolesClaim(), Challenges: append([]string(nil), challenges...), AuthMethods: u.GetRegisteredAuthMethods(), AuthChallengePolicy: u.HasAuthChallengeRules()})

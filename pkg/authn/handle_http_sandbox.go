@@ -16,6 +16,7 @@ package authn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -24,6 +25,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
@@ -195,14 +197,38 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		if err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
 		}
+		responseHeaders := w.Header().Clone()
 		if err := p.grantAccess(ctx, w, r, rr, issued); err != nil {
-			return err
+			cleanupErr := p.discardUndeliveredRefresh(ctx, tokens, proof.RefreshTransport)
+			clear(w.Header())
+			for name, values := range responseHeaders {
+				w.Header()[name] = append([]string(nil), values...)
+			}
+			rr.Response.Authenticated = false
+			status := http.StatusUnauthorized
+			if errors.Is(err, state.ErrCapacity) || cleanupErr != nil {
+				status = http.StatusServiceUnavailable
+			}
+			return p.handleHTTPError(ctx, w, r, rr, status)
 		}
 		if tokens != nil {
 			p.deliverRefreshCookies(w, r, tokens)
 		}
-		if err := p.finishOIDCLogin(ctx, w, r, proof); err != nil {
-			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
+		if completionErr := p.finishOIDCLogin(ctx, w, r, proof); completionErr != nil {
+			cleanupErr := p.sessions.Delete(issued.Claims.ID)
+			if refreshErr := p.discardUndeliveredRefresh(ctx, tokens, proof.RefreshTransport); refreshErr != nil {
+				cleanupErr = errors.Join(cleanupErr, refreshErr)
+			}
+			clear(w.Header())
+			for name, values := range responseHeaders {
+				w.Header()[name] = append([]string(nil), values...)
+			}
+			rr.Response.Authenticated = false
+			status := http.StatusUnauthorized
+			if errors.Is(completionErr, state.ErrCapacity) || cleanupErr != nil {
+				status = http.StatusServiceUnavailable
+			}
+			return p.handleHTTPError(ctx, w, r, rr, status)
 		}
 		w.WriteHeader(rr.Response.Code)
 		return nil

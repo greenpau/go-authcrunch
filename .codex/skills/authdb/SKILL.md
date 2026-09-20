@@ -125,6 +125,14 @@ portal logging and stderr output. Keep credential-redaction assertions active
 in the executable TLS login journey with debug enabled. E2E subprocesses remove
 ambient `AUTHDB_*` variables and add only their own configuration environment.
 
+## Persistent Runtime State
+
+`security.state` passes directly to `authcrunch.Config.State`; use
+[runtime-state](../runtime-state/SKILL.md) for its directory/parser and lifecycle
+contract. `persistent_state_e2e_test.go` runs inside `TestE2EAuthdb`, kills the built
+process after real login, and verifies JWKS, old JWT and browser session continuity.
+Keep the omitted-state behavior documented separately.
+
 ## Validation
 
 `cmd/authdb/e2e_test.go` builds the real executable with the race detector and

@@ -77,6 +77,11 @@ func newDirectOAuthFixture(t *testing.T, settings ...[]string) *directOAuthFixtu
 
 func newDirectOAuthFixtureWithPolicy(t *testing.T, configure func(*authz.PolicyConfig), settings ...[]string) *directOAuthFixture {
 	t.Helper()
+	return newDirectOAuthFixtureWithRoot(t, configure, nil, settings...)
+}
+
+func newDirectOAuthFixtureWithRoot(t *testing.T, configure func(*authz.PolicyConfig), configureRoot func(*authcrunch.Config), settings ...[]string) *directOAuthFixture {
+	t.Helper()
 	f := &directOAuthFixture{codes: make(map[string]url.Values), gatekeepers: make(map[string]*authz.Gatekeeper)}
 	pub, private, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -222,6 +227,9 @@ func newDirectOAuthFixtureWithPolicy(t *testing.T, configure func(*authz.PolicyC
 			t.Fatal(err)
 		}
 		cfg.AuthorizationPolicies = append(cfg.AuthorizationPolicies, policy)
+	}
+	if configureRoot != nil {
+		configureRoot(cfg)
 	}
 	f.config, err = json.Marshal(cfg)
 	if err != nil {

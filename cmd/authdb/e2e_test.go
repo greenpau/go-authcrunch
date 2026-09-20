@@ -57,6 +57,7 @@ func TestE2EAuthdb(t *testing.T) {
 	if output, err := exec.CommandContext(buildContext, "go", "build", "-mod=readonly", "-race", "-o", binary, ".").CombinedOutput(); err != nil {
 		t.Fatalf("build authdb: %v\n%s", err, output)
 	}
+	t.Run("persistent state survives process death", func(t *testing.T) { testAuthdbPersistentProcessRestart(t, binary) })
 	t.Run("commands", func(t *testing.T) {
 		for _, tc := range []struct {
 			args []string

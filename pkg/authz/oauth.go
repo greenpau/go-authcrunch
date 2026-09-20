@@ -18,6 +18,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -31,6 +32,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz/internal/uri"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 )
@@ -55,13 +57,15 @@ type oauthLoginCanceler interface {
 }
 
 type oauthAuthorization struct {
-	config   OAuthAuthorizationConfig
-	provider idp.IdentityProvider
-	canceler oauthLoginCanceler
-	mu       sync.Mutex
-	closed   bool
-	logins   map[[32]byte]oauthLogin
-	sessions map[[32]byte]oauthSession
+	state      *state.Record
+	stateStore *state.Store
+	config     OAuthAuthorizationConfig
+	provider   idp.IdentityProvider
+	canceler   oauthLoginCanceler
+	mu         sync.Mutex
+	closed     bool
+	logins     map[[32]byte]oauthLogin
+	sessions   map[[32]byte]oauthSession
 }
 
 func newOAuthAuthorization(cfg *OAuthAuthorizationConfig, providers []idp.IdentityProvider) (*oauthAuthorization, error) {
@@ -213,6 +217,9 @@ func oauthResponse(w http.ResponseWriter, status int) error {
 
 func (g *Gatekeeper) authenticateOAuth(w http.ResponseWriter, r *http.Request, ar *requests.AuthorizationRequest) error {
 	o := g.oauth
+	if o.stateStore != nil && o.stateStore.Err() != nil {
+		return oauthResponse(w, http.StatusServiceUnavailable)
+	}
 	origin, valid := o.origin(r)
 	if !valid {
 		return oauthResponse(w, http.StatusBadRequest)
@@ -443,8 +450,11 @@ func (g *Gatekeeper) completeOAuth(w http.ResponseWriter, r *http.Request, origi
 		return oauthResponse(w, http.StatusBadRequest)
 	}
 	previousKey := sha256.Sum256([]byte(previous))
-	if s, ok := o.sessions[previousKey]; ok && s.origin == origin {
+	previousSession, previousSessionExists := o.sessions[previousKey]
+	if previousSessionExists && previousSession.origin == origin {
 		delete(o.sessions, previousKey)
+	} else {
+		previousSessionExists = false
 	}
 	if o.closed || len(o.sessions) >= o.config.MaxSessions {
 		o.mu.Unlock()
@@ -453,7 +463,18 @@ func (g *Gatekeeper) completeOAuth(w http.ResponseWriter, r *http.Request, origi
 	}
 	expires := time.Now().Add(time.Duration(o.config.SessionLifetime) * time.Second)
 	o.sessions[sessionKey] = oauthSession{origin: origin, user: usr, expires: expires}
+	err = o.persistSessions()
+	if errors.Is(err, state.ErrCapacity) {
+		delete(o.sessions, sessionKey)
+		if previousSessionExists {
+			o.sessions[previousKey] = previousSession
+		}
+	}
 	o.mu.Unlock()
+	if err != nil {
+		o.cancelLogins(expiredLogins)
+		return oauthResponse(w, http.StatusServiceUnavailable)
+	}
 	o.cancelLogins(expiredLogins)
 	setOAuthCookie(w, o.config.SessionCookieName, credential, o.config.SessionLifetime)
 	w.Header().Set("Cache-Control", "no-store")
@@ -526,9 +547,13 @@ func (g *Gatekeeper) logoutOAuth(w http.ResponseWriter, r *http.Request, origin 
 	} else {
 		removed = false
 	}
+	err := o.persistSessions()
 	o.mu.Unlock()
 	if removed {
 		o.cancelLogin(loginKey, removedLogin)
+	}
+	if err != nil {
+		return oauthResponse(w, http.StatusServiceUnavailable)
 	}
 	setOAuthCookie(w, o.config.SessionCookieName, "", -1)
 	setOAuthCookie(w, o.config.LoginCookieName, "", -1)

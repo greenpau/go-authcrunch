@@ -150,3 +150,37 @@ func TestTokenRefreshJSONOIDCCapacityRecovery(t *testing.T) {
 		t.Fatalf("login after capacity recovery returned %d", retry.Code)
 	}
 }
+
+func TestTokenRefreshJSONSessionCacheCapacityRecovery(t *testing.T) {
+	f := newRefreshPortal(t, true, false)
+	p := f.portal
+	p.refreshStore.Close()
+	p.config.RefreshTokens.MaxSessions = 1
+	if err := p.configureRefresh(); err != nil {
+		t.Fatal(err)
+	}
+	p.config.OIDCProvider = oidcTestConfig()
+	if err := p.configureOIDC(); err != nil {
+		t.Fatal(err)
+	}
+	preloadID := preloadSessionCacheNearCapacity(t, p)
+	failed := f.login(t, "cookie")
+	if failed.Code != http.StatusServiceUnavailable {
+		t.Fatalf("cache capacity refusal returned %d, want %d", failed.Code, http.StatusServiceUnavailable)
+	}
+	for _, cookie := range failed.Result().Cookies() {
+		if (cookie.Name == p.cookie.AccessTokenCookieName || cookie.Name == p.cookie.RefreshTokenCookieName || cookie.Name == p.cookie.OIDCSessionIDCookieName) && cookie.Value != "" {
+			t.Fatalf("cache capacity refusal delivered credential cookie %q", cookie.Name)
+		}
+	}
+	if failed.Header().Get("Authorization") != "" || failed.Header().Get("Location") != "" {
+		t.Fatal("cache capacity refusal delivered credential headers")
+	}
+	if err := p.sessions.Delete(preloadID); err != nil {
+		t.Fatal(err)
+	}
+	retry := f.login(t, "cookie")
+	if retry.Code != http.StatusOK {
+		t.Fatalf("healthy retry returned %d", retry.Code)
+	}
+}

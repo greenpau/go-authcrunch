@@ -334,6 +334,11 @@ configuration restoration, shared provider dispatch and TLS gatekeeper journeys
 without a portal or identity database. Keep callback consumption, ACL checks,
 opaque sessions, logout cancellation and lifecycle distinct from portal JWT tests.
 
+Persistent-state tests use [runtime-state](../runtime-state/SKILL.md), including
+root TLS portal-free OAuth and portal/OIDC/refresh restart journeys and an actual
+built `authdb` process killed without cleanup. Verify old credentials and replay
+revocations after reopening; graceful Close alone is insufficient crash evidence.
+
 Identity and store tests live under `pkg/identity`, `pkg/ids`,
 `pkg/ids/local`, `pkg/ids/ldap`, and `pkg/registry`. They rely on temporary
 identity databases, registration/user JSON fixtures, domain restriction cases,

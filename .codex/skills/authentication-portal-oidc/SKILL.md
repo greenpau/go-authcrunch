@@ -314,7 +314,12 @@ unregistered callback variation before redirecting, including equivalent host,
 port, and path/query encodings. It checks the response destination and query
 values, binds each code to its authorized callback, and tests unselected clients
 with their own registered callback on every reload. Runtime sessions
-and grants remain process-local even when client credentials survive reloads.
+and grants remain volatile by default even when client credentials survive
+reloads. Opt-in [runtime-state](../runtime-state/SKILL.md) retains completed sessions,
+consent and complete grant/replay families. `Provider.ConfigurePersistentState`
+supports independent Go hosts; the root portal adapter wires it automatically.
+Pending interactive requests are not restored. Use `LogoutWithError` and
+`ClearSessionWithError` when composing responses, stopping on commit errors.
 `pkg/authn/oidc_config_parser_e2e_test.go` checks discovery, selected clients,
 session/token lifetimes, all capacity limits, and disabled routing through
 a real TLS portal. Root `server_oidc_config_test.go` checks parsed configuration

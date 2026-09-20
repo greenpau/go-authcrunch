@@ -62,6 +62,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	"github.com/greenpau/go-authcrunch/pkg/system"
 	"github.com/greenpau/go-authcrunch/pkg/tagging"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
@@ -78,6 +79,9 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test state.Config struct", entry: &state.Config{}, opts: &Options{}},
+		{name: "test state.Store struct", entry: &state.Store{}, opts: &Options{}},
+		{name: "test state.Record struct", entry: &state.Record{}, opts: &Options{}},
 		{name: "test authz.OAuthAuthorizationConfig struct", entry: &authz.OAuthAuthorizationConfig{}, opts: &Options{}},
 		{name: "test httpserver.Config struct", entry: &httpserver.Config{}, opts: &Options{}},
 		{name: "test httpserver.PortalRoute struct", entry: &httpserver.PortalRoute{}, opts: &Options{}},

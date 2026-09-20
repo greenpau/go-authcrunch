@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
@@ -35,6 +36,8 @@ type SessionCacheEntry struct {
 
 // SessionCache contains cached tokens
 type SessionCache struct {
+	state       *state.Record
+	stateFailed bool
 	lifecycleMu sync.Mutex
 	done        chan struct{}
 	mu          sync.RWMutex
@@ -134,17 +137,39 @@ func (c *SessionCache) GetCleanupInterval() int {
 	return c.cleanupInternal
 }
 
+// Err reports whether this cache can still make authentication decisions.
+func (c *SessionCache) Err() error {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.stateFailed {
+		return state.ErrUnavailable
+	}
+	if c.state != nil {
+		return c.state.Err()
+	}
+	return nil
+}
+
 // Add adds user to the cache.
 func (c *SessionCache) Add(sessionID string, u *user.User) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.Entries == nil {
+	if c.Entries == nil || c.stateFailed {
 		return errors.New("session cache is not available")
 	}
+	previous, replaced := c.Entries[sessionID]
 	c.Entries[sessionID] = &SessionCacheEntry{
 		sessionID: sessionID,
 		createdAt: time.Now().UTC(),
 		user:      u,
+	}
+	if err := c.persist(); err != nil {
+		if replaced {
+			c.Entries[sessionID] = previous
+		} else {
+			delete(c.Entries, sessionID)
+		}
+		return err
 	}
 	return nil
 }
@@ -153,7 +178,7 @@ func (c *SessionCache) Add(sessionID string, u *user.User) error {
 func (c *SessionCache) Delete(sessionID string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.Entries == nil {
+	if c.Entries == nil || c.stateFailed {
 		return errors.New("session cache is not available")
 	}
 	_, exists := c.Entries[sessionID]
@@ -161,7 +186,7 @@ func (c *SessionCache) Delete(sessionID string) error {
 		return errors.New("cached session id not found")
 	}
 	delete(c.Entries, sessionID)
-	return nil
+	return c.persist()
 }
 
 // Get returns cached user entry.
@@ -170,6 +195,16 @@ func (c *SessionCache) Get(sessionID string) (*user.User, error) {
 		return nil, err
 	}
 	c.mu.RLock()
+	if c.stateFailed {
+		c.mu.RUnlock()
+		return nil, state.ErrUnavailable
+	}
+	if c.state != nil {
+		if err := c.state.Err(); err != nil {
+			c.mu.RUnlock()
+			return nil, err
+		}
+	}
 	entry, exists := c.Entries[sessionID]
 	c.mu.RUnlock()
 	if !exists {
@@ -189,7 +224,7 @@ func (c *SessionCache) Get(sessionID string) (*user.User, error) {
 func (c *SessionCache) deleteEntry(sessionID string, entry *SessionCacheEntry) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.Entries == nil {
+	if c.Entries == nil || c.stateFailed {
 		return
 	}
 	if currentEntry, exists := c.Entries[sessionID]; exists && currentEntry == entry {

@@ -456,7 +456,9 @@ and immutable user ID; attribute updates do not redefine identity.
 | `Logout` | Revokes the browser session and pending interaction, then clears both cookies. The host must first authorize logout. |
 | `SupportsRealm` | Reports whether a realm is configured. |
 | `Discovery`, `JWKS` | Return fresh public metadata maps. |
-| `Close` | Invalidates process-local sessions and grants; safe to call repeatedly. |
+| `Close` | Releases runtime sessions/grants; retains attached durable snapshots; safe to call repeatedly. |
+| `ConfigurePersistentState` | Attaches a trusted `*state.Record` before use; standalone hosts own storage and bindings. |
+| `LogoutWithError`, `ClearSessionWithError` | Error-returning composition APIs; stop before success when persistence fails. |
 
 The host owns its login page, credential parsing, required challenges, and logout
 authorization. Call `ValidateLoginRequest` before handling browser credentials,
@@ -465,10 +467,31 @@ browser cookies; native credential transports should not call them. The host
 also owns trusted proxy normalization. Keep protocol requests behind the public
 HTTP dispatcher, which applies issuer, method, parsing, and CORS checks.
 
-Provider state is bounded and process-local. Restarting requires new browser
-authentication. The standalone E2E example is
+Provider state is bounded and volatile by default. Restarting then requires new
+browser authentication. [Runtime state](../../runtime-state/SKILL.md) provides an
+opt-in encrypted local snapshot through `ConfigurePersistentState`. Restore before
+publication, retain spent history, and drain/close before another storage owner
+opens. Bind records to current issuer/client/identity/key configuration. The
+standalone E2E example is
 `pkg/oidc/provider_e2e_test.go`; it implements the host using only `pkg/oidc` and
 the standard library.
+
+Persistent admission uses `Record.PrepareEncode` to reject an oversized candidate
+without disabling shared storage. On `state.ErrCapacity`, undo new browser
+sessions, grants, consent additions, and token rotation mutations; retain the old
+access credential, refresh digest/history, and pre-narrowing scopes. HTTP code
+issuance and token endpoints return `temporarily_unavailable`. Failed disk commits
+still fail closed. Keep revocation encoding the same size for live and revoked
+grants so replay revocation does not need extra capacity. The initial supported
+grant DTO uses nonzero `Revocation` markers 1 (live) and 2 (revoked); zero or
+unknown markers fail restoration. Test actual record limits,
+restart, unrelated record writes, and durable revocation over TLS.
+
+A host composing `CompleteLogin` with its own credential issuance must clean up
+undelivered authority and suppress staged success headers on any completion error,
+including recoverable capacity errors. The AuthCrunch portal deletes its new
+session and revokes its undelivered refresh family using bounded cleanup that
+survives request cancellation. Preserve prior completed revocations.
 
 For an existing AuthCrunch portal, `Portal.GetOIDCProvider()` returns the public
 interface, or nil when disabled. The portal keeps its existing `oidc_provider`

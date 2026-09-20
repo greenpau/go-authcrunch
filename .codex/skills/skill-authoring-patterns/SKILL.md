@@ -35,6 +35,10 @@ and `README.md` to human onboarding and common commands. This repository has
 no `docs/` directory. Put configuration, client integration, operational, and
 validation guidance in the owning skill or its linked references.
 
+Follow the [repository scope](../coding-directives/SKILL.md#repository-scope)
+rule for Caddy agent handoff placement. Preserve reusable library contracts in
+skills when moving consumer-specific handoff notes to `tmp/`.
+
 Before retiring standalone guidance, audit every inbound reference and assign
 each durable statement to its authoritative declaration or owning skill.
 Remove obsolete prose and links only after that transfer. Do not mirror the

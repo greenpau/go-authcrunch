@@ -118,11 +118,17 @@ shared provider configuration dispatch, OAuth/OIDC discovery, JWKS and static
 public PEM verification, EdDSA/Ed25519 validation, key refresh, and real portal
 OAuth E2E tests.
 
+## Persistent Runtime State
+
+Use `runtime-state` for host-independent durable keys and authenticated sessions,
+its reusable directory parser, refresh/OIDC replay history, local identity epochs,
+restart E2E tests, and embedding lifecycle contracts.
+
 ## OAuth Authorization Without a Portal
 
 Use `authorization-policy-oauth` for direct OAuth provider selection in an
 authorization policy, reusable directives, gatekeeper callbacks and opaque
-sessions, ACL revalidation, logout, lifecycle, and Caddy integration handoff.
+sessions, ACL revalidation, logout, lifecycle, and embedding contracts.
 Upstream protocol verification remains with `oauth-identity-provider`.
 
 ## Portal OpenID Provider

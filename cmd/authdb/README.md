@@ -292,8 +292,10 @@ Access-token signing keys are separate from the listener's TLS key. When
 tokens must remain verifiable across restarts, configure persistent keys in
 the portal's `raw_crypto_key_store_config`, for example
 `crypto key portal sign-verify from file /etc/authdb/access-signing.pem`.
-The example uses default key provisioning and does not provide existing-token
-continuity across restarts.
+Alternatively, set `security.state.directory` to a private absolute path such as
+`/var/lib/authcrunch/runtime`. This preserves generated signing keys and completed
+sessions across restarts. The quick-start example omits this setting and retains
+volatile runtime behavior.
 
 For refresh, set `public_origin` to the external HTTPS origin and `base_path`
 to the mount. Native refresh requires explicit `body_transport_enabled`. For
@@ -319,8 +321,18 @@ nonzero exit status.
 
 Restart after changing configuration or replacing TLS certificates. There is
 no certificate hot reload, seamless runtime replacement, or distributed
-session store. Identity databases and configured key files survive restart;
-process-local refresh and OIDC sessions require a new login.
+session store. Identity databases and configured key files survive restart.
+With `security.state` omitted, process-local sessions require a new login.
+To preserve completed portal, refresh and OIDC sessions, add this to `security`:
+
+```json
+"state": {"directory": "/var/lib/authcrunch/runtime"}
+```
+
+Use one live process per directory. Keep it with the identity database,
+configuration and explicit key files; pending login/MFA interactions restart.
+See [runtime-state operations](../../.codex/skills/runtime-state/references/configuration-and-operations.md)
+for the local Unix storage, permissions, configuration-change and backup contract.
 
 | Symptom | Check |
 | --- | --- |

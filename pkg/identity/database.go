@@ -29,6 +29,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
 	"github.com/greenpau/versioned"
@@ -109,6 +110,7 @@ type UserPolicy struct {
 
 // Database is user identity database.
 type Database struct {
+	state           *state.Record
 	mu              *sync.RWMutex
 	Version         string    `json:"version,omitempty" xml:"version,omitempty" yaml:"version,omitempty"`
 	Policy          Policy    `json:"policy,omitempty" xml:"policy,omitempty" yaml:"policy,omitempty"`
@@ -648,6 +650,7 @@ func (db *Database) AuthenticateUser(r *requests.Request) error {
 			db.LoadedAt = time.Now().UTC()
 		}
 		target.LoadedAt = db.LoadedAt
+		target.state = db.state
 		result = target.authenticateUserUnlocked(r, proof)
 		db.adoptMfaMutationSnapshot(target)
 		return nil
@@ -800,6 +803,7 @@ func (db *Database) updateMfaFailureStateUnlocked(r *requests.Request, update fu
 			return errors.ErrDatabaseCommit.WithArgs(db.path, err)
 		}
 		target.LoadedAt = db.LoadedAt
+		target.state = db.state
 		user, err := target.getUser(r.User.Username)
 		if err != nil {
 			db.adoptMfaMutationSnapshot(target)
@@ -941,7 +945,7 @@ func (db *Database) writeSnapshotUnlocked() error {
 	if err := writeDatabaseFileAtomically(db.path, data); err != nil {
 		return errors.ErrDatabaseCommit.WithArgs(db.path, err)
 	}
-	return nil
+	return db.persistEpoch()
 }
 
 func (db *Database) mergePersistedTOTPCounters() error {
@@ -1418,6 +1422,7 @@ func (db *Database) LookupAPIKey(r *requests.Request) error {
 			db.LoadedAt = time.Now().UTC()
 		}
 		target.LoadedAt = db.LoadedAt
+		target.state = db.state
 		result = target.lookupAPIKeyUnlocked(r)
 		db.adoptMfaMutationSnapshot(target)
 		return nil
@@ -1515,6 +1520,7 @@ func (db *Database) mutateMfaToken(r *requests.Request, enrollment bool) error {
 		// cached snapshot here could overwrite unrelated changes from a realm
 		// which shares this database file.
 		target.LoadedAt = db.LoadedAt
+		target.state = db.state
 		return target.addMfaTokenUnlocked(r, enrollment, func() error {
 			if err := target.commitUnlocked(); err != nil {
 				return err
@@ -1733,6 +1739,7 @@ func (db *Database) consumeMfaTOTPWithTime(r *requests.Request, ts time.Time) er
 			return errors.ErrMfaTokenInvalidPasscode.WithArgs("failed")
 		}
 		target.LoadedAt = db.LoadedAt
+		target.state = db.state
 		return target.consumeMfaTOTPUnlocked(r, ts, func() error {
 			if err := target.commitUnlocked(); err != nil {
 				return err

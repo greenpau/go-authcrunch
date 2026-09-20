@@ -1,6 +1,6 @@
 ---
 name: authorization-policy-oauth
-description: Maintain authorization-policy OAuth login without an authentication portal, including provider selection, directive parsing, gatekeeper callbacks, opaque sessions, ACL checks, logout, lifecycle, TLS E2E tests, and Caddy integration guidance. Upstream protocol and JWT verification remain with oauth-identity-provider.
+description: Maintain authorization-policy OAuth login without an authentication portal, including provider selection, directive parsing, gatekeeper callbacks, opaque sessions, ACL checks, logout, lifecycle, TLS E2E tests, and embedding contracts. Upstream protocol and JWT verification remain with oauth-identity-provider.
 ---
 
 # Authorization Policy OAuth
@@ -15,7 +15,9 @@ encoded statements. Empty input disables the feature; nonempty input requires
 exactly one `use oauth identity provider NAME`. Apply the returned snapshot with
 `ConfigureOAuth`; other policy settings and ACL rules remain independent.
 
-`pkg/authz/oauth.go` owns HTTP orchestration and bounded process-local state.
+`pkg/authz/oauth.go` owns HTTP orchestration and bounded session state.
+`pkg/authz/oauth_state.go` integrates opt-in [runtime-state](../runtime-state/SKILL.md)
+persistence for completed sessions; unfinished upstream transactions stay volatile.
 `authz.NewGatekeeperWithIdentityProviders(config, providers, logger)` selects a
 configured shared OAuth provider. `NewGatekeeper` remains compatible for ordinary
 JWT policies and rejects OAuth configuration without a provider. The root
@@ -26,10 +28,13 @@ Root validation rejects missing, disabled, wrong-kind and ambiguous references,
 overlapping OAuth endpoint namespaces, and cookie collisions between policies.
 
 Read [configuration and operation](references/configuration.md) for exact grammar,
-transport semantics, deployment constraints, and examples. Read the
-[Caddy agent handoff](references/caddy-security-handoff.md) when integrating this
-library into `caddy-security`; parser availability alone does not enable Caddyfile
-syntax. Do not modify or run tooling in sibling repositories during work here.
+transport semantics, deployment constraints, and examples. Hosts must adapt
+their configuration syntax and preserve all three authentication outcomes:
+`Authorized`/`Bypassed` permits downstream execution; an error denies access;
+otherwise the gatekeeper handled the response and the host must preserve it
+without invoking downstream handlers. Parser availability alone does not enable
+host configuration syntax. Do not modify or run tooling in sibling repositories
+during work here.
 
 ## Authentication and authorization boundaries
 
@@ -101,8 +106,19 @@ does not replace the local final admission check after an in-flight exchange.
 
 `Gatekeeper.Close` clears owned OAuth state and closes its validator, never the
 shared provider. Root `Server.Close` owns provider disposal. Hosts must drain
-requests before disposal. Reload/restart loses sessions and pending transactions;
-multiple instances need sticky routing for this in-memory mode.
+requests before disposal. Without `Config.State`, reload/restart loses sessions
+and pending transactions; multiple instances need sticky routing in this mode.
+With persistence, completed sessions and successful logout survive restart;
+pending transactions do not. A state directory has one owner: drain and Close
+before replacement. Keep the runtime-state restart/ACL/configuration-epoch E2E
+journeys alongside volatile lifecycle tests.
+
+Session count and upstream response bounds do not guarantee the aggregate
+snapshot fits its record limit. Use `Record.PrepareEncode` for admission and
+roll back a refused new session or replacement on `state.ErrCapacity`, preserving
+prior authority and shared-store health. Send no credential cookie or success
+redirect for the refused callback. Keep logout durable at capacity, and cover
+prior-cookie usability, unrelated record writes, and restart over TLS.
 
 ## Validation
 

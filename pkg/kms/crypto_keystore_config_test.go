@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
@@ -137,7 +138,9 @@ func TestNewCryptoKeyStoreConfig(t *testing.T) {
 			if tests.EvalErrWithLog(t, err, nil, tc.shouldErr, tc.err, msgs) {
 				return
 			}
-			tests.EvalObjects(t, "NewCryptoKeyStoreConfig", tc.want, got)
+			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(CryptoKeyStoreConfig{}, CryptoKeyConfig{})); diff != "" {
+				t.Fatalf("NewCryptoKeyStoreConfig mismatch (-want +got):\n%s", diff)
+			}
 		})
 	}
 }

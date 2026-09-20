@@ -208,7 +208,9 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 			}
 		}
 		if transport == tokenrefresh.CookieTransport {
-			p.revokeOIDCBrowser(w, r)
+			if err := p.revokeOIDCBrowser(w, r); err != nil {
+				return p.refreshError(ctx, w, err)
+			}
 			p.deleteRefreshCookies(w, r)
 		}
 		rr.Response.Code = http.StatusOK
@@ -230,6 +232,9 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 			return p.refreshError(ctx, w, err)
 		}
 		if err := p.sessions.Add(u.Claims.ID, u); err != nil {
+			if cleanupErr := p.discardUndeliveredRefresh(ctx, tokens, transport); cleanupErr != nil {
+				err = errors.Join(err, cleanupErr)
+			}
 			return p.refreshError(ctx, w, err)
 		}
 		p.deliverRefreshCookies(w, r, tokens)

@@ -220,15 +220,20 @@ Authorization codes live for 60 seconds; interactive requests for 600 seconds.
 ID/access token expiry is bounded by the browser session's remaining lifetime.
 `auth_time` is the original verified login time, never a refresh/issuance time.
 
-Provider state is bounded and process-local. Restarting/closing the portal
-invalidates browser sessions, pending requests, codes, consent records, and
-opaque tokens. Deploy one active provider process for an issuer; active/active
-replicas and distributed grant persistence are not implemented. Browser affinity
+Provider state is bounded and volatile by default. With `Config.State` omitted,
+restarting/closing the portal invalidates browser sessions, pending requests,
+codes, consent records and opaque tokens. Opt-in
+[runtime state](../../runtime-state/SKILL.md) preserves completed browser sessions,
+consent and complete code/access/refresh families; pending interactive requests
+are discarded. Deploy one active owner per state directory/issuer; drain and
+close before replacement. Active/active replicas and distributed grant
+persistence are not implemented. Browser affinity
 alone does not route a relying party's backchannel token exchange to the same
 process. Ordinary portal refresh sessions remain independent.
 
 Account disablement, password reset, deletion, changed credential/challenge
-policy, and local database reload invalidate OIDC credentials. UserInfo checks
+policy, and incompatible local database reload invalidate OIDC credentials.
+Persistent mode retains the proof epoch only for an unchanged identity file. UserInfo checks
 current identity on every request. Portal logout revokes the provider browser
 session and its dependent opaque tokens. With a portal refresh cookie, GET logout
 displays confirmation and the protected POST performs revocation. Already issued

@@ -158,9 +158,14 @@ an exchange currently in progress, but does not log the user out of the provider
 Already-issued sessions are not instantly revoked by upstream account/key changes;
 choose the configured lifetime accordingly.
 
-State is in memory, bounded by the configured limits. Reload/restart invalidates
+With root `state` omitted, state is in memory, bounded by the configured limits. Reload/restart invalidates
 sessions and pending callbacks. Multiple processes require sticky routing for the
 whole login and session lifetime; there is no distributed-store API in this mode.
 Keep the runtime alive for all assigned requests, drain it before `Close`, and
 let the root server close shared providers once. Standalone gatekeeper consumers
 own and close their providers after draining and closing all consumers.
+
+Root [runtime state](../../runtime-state/references/configuration-and-operations.md)
+optionally preserves completed sessions and logout across restart without a
+portal. Pending logins still restart. One storage directory has one live owner;
+this feature does not add active/active session sharing.

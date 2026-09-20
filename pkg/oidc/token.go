@@ -18,10 +18,13 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/url"
 	"slices"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/state"
 )
 
 func (o *Provider) authenticateClient(r *http.Request, params url.Values) *ClientConfig {
@@ -100,6 +103,7 @@ func (o *Provider) token(w http.ResponseWriter, r *http.Request) {
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
+	defer o.persistResponse(w)
 	o.sweep()
 	grant := o.grants[sha256.Sum256([]byte(params.Get("code")))]
 	if o.closed || grant == nil || grant.request.clientID != client.ClientID {
@@ -124,7 +128,11 @@ func (o *Provider) token(w http.ResponseWriter, r *http.Request) {
 	response, err := o.issueTokens(r, grant, client, false)
 
 	if err != nil {
-		oidcError(w, http.StatusBadRequest, "invalid_grant")
+		if errors.Is(err, state.ErrCapacity) {
+			oidcError(w, http.StatusServiceUnavailable, "temporarily_unavailable")
+		} else {
+			oidcError(w, http.StatusBadRequest, "invalid_grant")
+		}
 		return
 	}
 	oidcJSON(w, r, response)
@@ -179,6 +187,7 @@ func (o *Provider) userinfo(w http.ResponseWriter, r *http.Request) {
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
+	defer o.persistResponse(w)
 	o.sweep()
 	grant := o.access[sha256.Sum256([]byte(credential))]
 	if o.closed || len(credential) != 43 || grant == nil || !o.now().Before(grant.accessExpires) || grant.revoked {
@@ -226,6 +235,7 @@ func (o *Provider) revoke(w http.ResponseWriter, r *http.Request) {
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
+	defer o.persistResponse(w)
 	hash := sha256.Sum256([]byte(params.Get("token")))
 	if grant := o.access[hash]; grant != nil && grant.request.clientID == client.ClientID {
 		o.revokeGrant(grant)

@@ -30,10 +30,13 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 )
 
 // Config is a configuration of Server.
 type Config struct {
+	// State enables host-independent durable keys and authenticated sessions.
+	State                 *state.Config                     `json:"state,omitempty" xml:"state,omitempty" yaml:"state,omitempty"`
 	Credentials           *credentials.Config               `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
 	Messaging             *messaging.Config                 `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
 	UserRegistration      *registry.Config                  `json:"user_registration,omitempty" xml:"user_registration,omitempty" yaml:"user_registration,omitempty"`
@@ -122,6 +125,11 @@ func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
 func (cfg *Config) Validate() error {
 	if cfg == nil {
 		return fmt.Errorf("config is nil")
+	}
+	if cfg.State != nil {
+		if err := cfg.State.Validate(); err != nil {
+			return err
+		}
 	}
 	if _, err := cfg.GetOAuthApplications(); err != nil {
 		return err

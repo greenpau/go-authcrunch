@@ -96,16 +96,27 @@ and rules against looking up an uncertain credential.
 
 ## Lifetime and Extension
 
-The portal currently constructs its own bounded memory store. Capacity fails
-closed; exhausted rotation limits require login. Cleanup occurs on creation,
-not through an extra refresh goroutine. Restart, portal replacement, and local
-identity database reload require fresh authentication. Quiesce requests before
+The portal constructs its bounded `MemoryStore`. Capacity fails closed; exhausted
+rotation limits require login. Cleanup occurs on creation, not through an extra
+refresh goroutine. Without `Config.State`, restart, portal replacement, and local
+identity database reload require fresh authentication. Opt-in
+[runtime-state](../runtime-state/SKILL.md) attaches durable snapshots before use,
+retaining complete live families and spent history, with a matching local identity
+epoch. Storage errors fail closed; Close discards memory but preserves snapshots. Quiesce requests before
 `Portal.Close()`; failed construction must stop and await owned cache workers as
 well. `Server.Close()` owns portal disposal and reverse construction cleanup;
 standalone portal consumers still call Close themselves after draining requests.
 Closed portal HTTP/BasicAuth entry points reject new work. See the
 [embedding lifecycle](../coding-directives/references/embedding-integration.md)
 for host ownership and replacement boundaries.
+
+The serialized record limit can be reached below the configured family/rotation
+counts. Prepare a candidate with `Record.PrepareEncode`; on capacity refusal,
+leave the old current digest, revision, deadlines, and history intact. Restore
+every replacement target on refused fresh issuance. Keep the shared store usable
+and permit logout/replay revocation to remove whole families. A disk commit error
+still disables the component. Test capacity against actual encoded size,
+including restart and unrelated record writes.
 
 `MemoryStore` removes a whole family immediately on explicit/replay/identity
 revocation or rotation exhaustion. Creation reclaims idle- or absolutely expired
@@ -130,7 +141,7 @@ previous token, an adapter lacking this optional interface returns
 Portal browser issuance supplies the effective refresh-cookie values, including
 duplicate paths, to this transaction. Native/API-key login stays independent.
 Subsequent cookie deletion and OIDC completion are outside the store transaction.
-JSON completion discards a newly committed, undelivered refresh family on error,
+HTML and JSON completion discard a newly committed, undelivered refresh family on error,
 including OIDC capacity or identity failure. Cleanup uses a bounded context
 independent of request cancellation; cleanup failure remains an unavailable
 error. Previously replaced families remain revoked. This releases admission for
@@ -144,8 +155,9 @@ TLS form/JSON logout/relogin/replacement coverage at capacity one.
 A distributed adapter must satisfy the `Store` atomicity contract across all
 instances and coordinate identity changes with issuance. Implementing an
 interface alone does not expose configurable distributed storage. Do not promise
-restart continuity, upstream refresh, or immediate revocation of stateless
-access JWTs without implementing their separate integration boundaries.
+distributed continuity, upstream refresh, or immediate revocation of stateless
+access JWTs. Local restart continuity is supplied by the runtime-state integration,
+not by the Store interface alone.
 
 ## Validation
 

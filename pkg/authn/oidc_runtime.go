@@ -161,14 +161,26 @@ func (p *Portal) finishOIDCLogin(ctx context.Context, w http.ResponseWriter, r *
 	return p.oidc.CompleteLogin(ctx, w, r, authentication)
 }
 
-func (p *Portal) revokeOIDCBrowser(w http.ResponseWriter, r *http.Request) {
+func (p *Portal) revokeOIDCBrowser(w http.ResponseWriter, r *http.Request) error {
+	if provider, ok := p.oidc.(interface {
+		LogoutWithError(http.ResponseWriter, *http.Request) error
+	}); ok {
+		return provider.LogoutWithError(w, r)
+	}
 	if p.oidc != nil {
 		p.oidc.Logout(w, r)
 	}
+	return nil
 }
 
-func (p *Portal) replaceOIDCBrowserSession(w http.ResponseWriter, r *http.Request) {
+func (p *Portal) replaceOIDCBrowserSession(w http.ResponseWriter, r *http.Request) error {
+	if provider, ok := p.oidc.(interface {
+		ClearSessionWithError(http.ResponseWriter, *http.Request) error
+	}); ok {
+		return provider.ClearSessionWithError(w, r)
+	}
 	if p.oidc != nil {
 		p.oidc.ClearSession(w, r)
 	}
+	return nil
 }

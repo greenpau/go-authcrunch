@@ -242,14 +242,20 @@ func (f *serverCompositionFixture) replace(t *testing.T, export bool, secret str
 	if json.Unmarshal(data, &restored) != nil {
 		t.Fatal("restore composition config")
 	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	old := f.active
+	if restored.State != nil && old != nil {
+		if err := old.Close(); err != nil {
+			t.Fatal(err)
+		}
+		old = nil
+	}
 	runtime, err := authcrunch.NewServer(&restored, zap.NewNop())
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.mu.Lock()
-	old := f.active
 	f.active = runtime
-	f.mu.Unlock()
 	if old != nil {
 		if err := old.Close(); err != nil {
 			t.Fatal(err)

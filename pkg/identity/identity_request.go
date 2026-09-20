@@ -107,6 +107,7 @@ func (db *Database) newIdentityRequestTarget(persisted []byte) (*Database, error
 		return nil, errors.ErrDatabaseCommit.WithArgs(db.path, err)
 	}
 	target.LoadedAt = db.LoadedAt
+	target.state = db.state
 	return target, nil
 }
 
@@ -123,6 +124,7 @@ func (db *Database) cloneIdentityRequestTarget(target *Database) (*Database, err
 		return nil, errors.ErrDatabaseCommit.WithArgs(db.path, err)
 	}
 	clone.LoadedAt = db.LoadedAt
+	clone.state = db.state
 	return clone, nil
 }
 

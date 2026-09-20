@@ -16,11 +16,14 @@ package authz
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -29,6 +32,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	"go.uber.org/zap"
 )
 
@@ -39,6 +43,234 @@ type oauthProviderStub struct {
 	unconfigured bool
 	closed       bool
 	reply        func(*requests.Request) error
+}
+
+func TestE2EOAuthPersistentRestoreIsAtomic(t *testing.T) {
+	g := newOAuthUnitGatekeeper(t, &oauthProviderStub{})
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ar := requests.NewAuthorizationRequest()
+		if err := g.Authenticate(w, r, ar); err != nil {
+			t.Errorf("authenticate: %v", err)
+			return
+		}
+		if ar.Response.Authorized {
+			w.WriteHeader(http.StatusNoContent)
+		}
+	}))
+	defer server.Close()
+	storage, err := state.Open(&state.Config{Directory: filepath.Join(t.TempDir(), "state")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = storage.Close() })
+	record, err := storage.OpenRecord("oauth-sessions/policy", "binding")
+	if err != nil {
+		t.Fatal(err)
+	}
+	usr, err := g.oauth.identity(map[string]any{"sub": "alice"}, oauthUnitRequest("GET", "https://app.test/", nil), "https://app.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := usr.MarshalSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+	credential := oauthCredential()
+	entries := []oauthSessionState{
+		{Hash: sha256.Sum256([]byte(credential)), Origin: server.URL, User: data, Expires: time.Now().Add(time.Hour)},
+		{Hash: sha256.Sum256([]byte("invalid")), Origin: server.URL, User: []byte("invalid"), Expires: time.Now().Add(time.Hour)},
+	}
+	if err = record.Encode(entries); err != nil {
+		t.Fatal(err)
+	}
+	if err = g.ConfigurePersistentState(storage, "binding"); err == nil {
+		t.Fatal("invalid persistent state accepted")
+	}
+	if len(g.oauth.sessions) != 0 || g.oauth.state != nil || g.oauth.stateStore != nil {
+		t.Fatal("failed restore published partial OAuth authority")
+	}
+	request, err := http.NewRequest(http.MethodPost, server.URL+"/private", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.AddCookie(&http.Cookie{Name: g.oauth.config.SessionCookieName, Value: credential})
+	response, err := server.Client().Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusUnauthorized {
+		t.Fatal("failed restore authorized a partially restored OAuth session")
+	}
+	if err = record.Encode(entries[:1]); err != nil {
+		t.Fatal(err)
+	}
+	if err = g.ConfigurePersistentState(storage, "binding"); err != nil {
+		t.Fatalf("gatekeeper was not retryable after atomic restore failure: %v", err)
+	}
+	response, err = server.Client().Do(request.Clone(t.Context()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusNoContent {
+		t.Fatal("healthy restored OAuth session was not authorized")
+	}
+}
+
+func TestE2EOAuthPersistentCapacityRefusalPreservesAuthority(t *testing.T) {
+	p := &oauthProviderStub{}
+	g := newOAuthUnitGatekeeper(t, p)
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ar := requests.NewAuthorizationRequest()
+		if err := g.Authenticate(w, r, ar); err != nil {
+			t.Errorf("authenticate: %v", err)
+			return
+		}
+		if ar.Response.Authorized {
+			w.WriteHeader(http.StatusNoContent)
+		}
+	}))
+	defer server.Close()
+	client := server.Client()
+	client.Timeout = 60 * time.Second
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	directory := filepath.Join(t.TempDir(), "state")
+	storage, err := state.Open(&state.Config{Directory: directory})
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, err := storage.OpenRecord("oauth-sessions/policy", "binding")
+	if err != nil {
+		t.Fatal(err)
+	}
+	userData := func(size int) []byte {
+		usr, userErr := g.oauth.identity(map[string]any{"sub": "alice", "name": strings.Repeat("x", size)}, oauthUnitRequest("GET", server.URL+"/", nil), server.URL)
+		if userErr != nil {
+			t.Fatal(userErr)
+		}
+		data, marshalErr := usr.MarshalSession()
+		if marshalErr != nil {
+			t.Fatal(marshalErr)
+		}
+		return data
+	}
+	oldCredential := oauthCredential()
+	now := time.Now()
+	entries := []oauthSessionState{{Hash: sha256.Sum256([]byte(oldCredential)), Origin: server.URL, User: userData(0), Expires: now.Add(time.Hour)}}
+	full := userData(512 << 10)
+	low, high := 0, min(200, g.oauth.config.MaxSessions-len(entries))
+	for low < high {
+		mid := low + (high-low+1)/2
+		candidate := slices.Clone(entries)
+		for i := range mid {
+			candidate = append(candidate, oauthSessionState{Hash: sha256.Sum256(fmt.Appendf(nil, "filler-%d", i)), Origin: server.URL, User: full, Expires: now.Add(time.Hour)})
+		}
+		if _, prepareErr := record.PrepareEncode(candidate); errors.Is(prepareErr, state.ErrCapacity) {
+			high = mid - 1
+		} else if prepareErr != nil {
+			t.Fatal(prepareErr)
+		} else {
+			low = mid
+		}
+	}
+	for i := range low {
+		entries = append(entries, oauthSessionState{Hash: sha256.Sum256(fmt.Appendf(nil, "filler-%d", i)), Origin: server.URL, User: full, Expires: now.Add(time.Hour)})
+	}
+	if err = record.Encode(entries); err != nil {
+		t.Fatal(err)
+	}
+	if err = g.ConfigurePersistentState(storage, "binding"); err != nil {
+		t.Fatal(err)
+	}
+	request := func(method, path string, cookies ...*http.Cookie) *http.Response {
+		t.Helper()
+		req, reqErr := http.NewRequestWithContext(t.Context(), method, server.URL+path, nil)
+		if reqErr != nil {
+			t.Fatal(reqErr)
+		}
+		for _, cookie := range cookies {
+			req.AddCookie(cookie)
+		}
+		response, doErr := client.Do(req)
+		if doErr != nil {
+			t.Fatal(doErr)
+		}
+		response.Body.Close()
+		return response
+	}
+	oldCookie := &http.Cookie{Name: g.oauth.config.SessionCookieName, Value: oldCredential}
+	if response := request(http.MethodPost, "/private", oldCookie); response.StatusCode != http.StatusNoContent {
+		t.Fatal("existing OAuth session was not restored")
+	}
+	p.reply = func(r *requests.Request) error {
+		if r.Upstream.Request.URL.Path != g.oauth.config.CallbackPath() {
+			r.Response.Code = http.StatusFound
+			r.Response.RedirectURL = "https://provider.test/authorize?state=provider-state"
+			return nil
+		}
+		r.Response.Code = http.StatusOK
+		r.Response.Payload = map[string]any{"sub": "replacement", "name": strings.Repeat("x", 512<<10)}
+		return nil
+	}
+	begin := request(http.MethodGet, "/replacement")
+	var loginCookie *http.Cookie
+	for _, cookie := range begin.Cookies() {
+		if cookie.Name == g.oauth.config.LoginCookieName && cookie.MaxAge > 0 {
+			loginCookie = cookie
+		}
+	}
+	if begin.StatusCode != http.StatusFound || loginCookie == nil {
+		t.Fatal("replacement OAuth login did not begin")
+	}
+	callback := request(http.MethodGet, g.oauth.config.CallbackPath()+"?state=provider-state&code=synthetic", loginCookie, oldCookie)
+	positiveSession := false
+	for _, cookie := range callback.Cookies() {
+		positiveSession = positiveSession || (cookie.Name == g.oauth.config.SessionCookieName && cookie.MaxAge > 0)
+	}
+	if callback.StatusCode != http.StatusServiceUnavailable || positiveSession || storage.Err() != nil {
+		t.Fatal("OAuth capacity refusal published replacement authority or poisoned storage")
+	}
+	if response := request(http.MethodPost, "/private", oldCookie); response.StatusCode != http.StatusNoContent {
+		t.Fatal("OAuth capacity refusal revoked the previous session")
+	}
+	unrelated, err := storage.OpenRecord("unrelated", "binding")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = unrelated.Encode(map[string]string{"healthy": "yes"}); err != nil {
+		t.Fatal("OAuth capacity refusal poisoned unrelated state", err)
+	}
+	logoutRequest, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL+g.oauth.config.LogoutPath(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logoutRequest.Header.Set("Origin", server.URL)
+	logoutRequest.AddCookie(oldCookie)
+	logoutResponse, err := client.Do(logoutRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logoutResponse.Body.Close()
+	if logoutResponse.StatusCode != http.StatusNoContent {
+		t.Fatal("OAuth logout failed after capacity refusal")
+	}
+	g.Close()
+	if err = storage.Close(); err != nil {
+		t.Fatal(err)
+	}
+	storage, err = state.Open(&state.Config{Directory: directory})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer storage.Close()
+	g = newOAuthUnitGatekeeper(t, p)
+	if err = g.ConfigurePersistentState(storage, "binding"); err != nil {
+		t.Fatal(err)
+	}
+	if response := request(http.MethodPost, "/private", oldCookie); response.StatusCode != http.StatusUnauthorized {
+		t.Fatal("OAuth logout was not durable after capacity refusal")
+	}
 }
 
 func (p *oauthProviderStub) GetName() string  { return "provider" }

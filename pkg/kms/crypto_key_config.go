@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 
 	"os"
 	"sort"
@@ -59,6 +60,7 @@ var (
 
 // CryptoKeyConfig is common token-related configuration settings.
 type CryptoKeyConfig struct {
+	state *state.Store
 	// Seq is the order in which a key would be processed.
 	Seq int `json:"seq,omitempty" xml:"seq,omitempty" yaml:"seq,omitempty"`
 	// ID is the key ID, aka kid.

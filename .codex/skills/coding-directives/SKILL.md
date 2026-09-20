@@ -50,6 +50,9 @@ handling. Use `authdbctl` for CLI commands, terminal behavior, and executable E2
 tests. Use [authdb](../authdb/SKILL.md) for the standalone HTTP server, listener
 configuration/parser, portal routing, TLS, and process lifecycle.
 
+Use [runtime-state](../runtime-state/SKILL.md) for opt-in durable runtime keys and
+sessions, configuration epochs, local storage ownership, and restart consumers.
+
 ## Repository Scope
 
 Keep all repository changes inside `go-authcrunch`. Never change sibling
@@ -67,6 +70,12 @@ Provide reusable APIs and test their public workflows in this repository.
 References to dependencies, consumer wiring, or compatible directive syntax
 are context only. Describe any remaining consumer integration as separate
 work; do not perform it or request to expand this task into sibling directories.
+
+Write Caddy integration agent handoff notes only in the repository-root ignored
+`tmp/` directory. Do not commit them or store them in package code, tracked
+documentation, skill bodies, or skill reference files. Keep reusable,
+host-independent library contracts in their owning skills; temporary handoffs
+may link to those contracts, but skills must not depend on temporary handoffs.
 
 For embedding-server configuration and reload work, read the
 [integration boundaries](references/embedding-integration.md). They identify

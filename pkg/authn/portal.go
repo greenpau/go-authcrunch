@@ -35,6 +35,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
+	"github.com/greenpau/go-authcrunch/pkg/state"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 
@@ -55,6 +56,7 @@ const (
 
 // Portal is an authentication portal.
 type Portal struct {
+	state             *state.Store
 	closeOnce         sync.Once
 	closed            atomic.Bool
 	oidc              oidc.OpenIDProvider

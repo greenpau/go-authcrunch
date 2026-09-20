@@ -17,11 +17,14 @@ package oidc
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/url"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/greenpau/go-authcrunch/pkg/state"
 )
 
 // Each code owns one family. Spent refresh hashes remain until the absolute
@@ -39,6 +42,7 @@ func (o *Provider) refreshToken(w http.ResponseWriter, r *http.Request, params u
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
+	defer o.persistResponse(w)
 	o.sweep()
 	hash := sha256.Sum256([]byte(credential))
 	grant := o.refresh[hash]
@@ -68,15 +72,24 @@ func (o *Provider) refreshToken(w http.ResponseWriter, r *http.Request, params u
 	grant.request.scopes = slices.Clone(scopes)
 	response, err := o.issueTokens(r, grant, client, true)
 	if err != nil {
-		grant.request.scopes = original
-		o.revokeGrant(grant)
-		oidcError(w, http.StatusBadRequest, "invalid_grant")
+		if errors.Is(err, state.ErrCapacity) {
+			grant.request.scopes = original
+			oidcError(w, http.StatusServiceUnavailable, "temporarily_unavailable")
+		} else {
+			grant.request.scopes = original
+			o.revokeGrant(grant)
+			oidcError(w, http.StatusBadRequest, "invalid_grant")
+		}
 		return
 	}
 	oidcJSON(w, r, response)
 }
 func (o *Provider) issueTokens(r *http.Request, grant *oidcGrant, client *ClientConfig, refresh bool) (map[string]any, error) {
 	session := o.sessions[grant.session]
+	previous := *grant
+	previous.request.scopes = slices.Clone(grant.request.scopes)
+	previous.refreshHashes = slices.Clone(grant.refreshHashes)
+	previousAccess := o.access[grant.accessHash]
 	var response map[string]any
 	err := o.withIdentity(r.Context(), session, func(current map[string]any) error {
 		now := o.now()
@@ -133,7 +146,17 @@ func (o *Provider) issueTokens(r *http.Request, grant *oidcGrant, client *Client
 		delete(o.access, grant.accessHash)
 		grant.redeemed, grant.accessHash, grant.accessExpires = true, digest, expires
 		o.access[digest] = grant
-		return nil
+		return o.persistState()
 	})
+	if errors.Is(err, state.ErrCapacity) {
+		delete(o.access, grant.accessHash)
+		for _, hash := range grant.refreshHashes[len(previous.refreshHashes):] {
+			delete(o.refresh, hash)
+		}
+		*grant = previous
+		if previousAccess != nil {
+			o.access[previous.accessHash] = previousAccess
+		}
+	}
 	return response, err
 }

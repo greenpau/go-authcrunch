@@ -41,7 +41,14 @@ programmatic/admin API, not a browser authorization mechanism.
 
 Password, MFA, role, account status, challenge policy and explicit revocation
 changes advance CredentialVersion. Deletion/recreation changes immutable ID;
-reload changes the backend epoch. Role removal must invalidate cached profile
+reload changes the backend epoch unless [runtime-state](../runtime-state/SKILL.md)
+restores it for the exact committed database digest. Propagate the state record
+to self-service and MFA transaction targets; update its digest under the file lock
+after the database write. A copied database must not alter the source record.
+When attaching runtime persistence, adopt the identity file read under its lock
+before associating that digest with the backend epoch. Construction may have
+loaded an older snapshot before another instance committed a mutation.
+Role removal must invalidate cached profile
 and renewable authority even if the access JWT retains its ordinary lifetime.
 
 Successful `LookupAPIKey` captures server-only `AuthenticationEvidence` with

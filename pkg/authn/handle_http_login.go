@@ -378,7 +378,9 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	if err := p.revokeRefreshOnLogin(ctx, w, r); err != nil {
 		return err
 	}
-	p.replaceOIDCBrowserSession(w, r)
+	if err := p.replaceOIDCBrowserSession(w, r); err != nil {
+		return err
+	}
 
 	h := addrutil.GetSourceHost(r)
 

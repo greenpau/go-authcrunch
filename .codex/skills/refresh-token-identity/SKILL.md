@@ -80,9 +80,11 @@ mutations advance it without rewriting every existing account in bulk.
 In `pkg/identity/database.go`, password change/reset/update, MFA add/delete,
 account disable/enable, role changes, and challenge-rule changes must invalidate captured
 versions. Explicit session revocation uses the same boundary. Deletion denies
-lookup; recreating a username must not reuse its immutable ID. Database reload
-changes `LoadedAt` evidence so restoring an older file cannot restore refresh
-eligibility.
+lookup; recreating a username must not reuse its immutable ID. Volatile database
+reload changes `LoadedAt` evidence. With [runtime-state](../runtime-state/SKILL.md),
+only the exact last committed file digest can retain that epoch; a replaced or
+rolled-back identity file still invalidates old evidence. Keep private proof
+serialization separate from public user/config JSON.
 
 Read current account state and re-evaluate required challenges on every
 issuance. Role changes advance CredentialVersion and require a new login; otherwise

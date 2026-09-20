@@ -24,8 +24,20 @@ import (
 )
 
 // ServeHTTP is a gateway for the authentication portal.
-func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
-	if p.closed.Load() {
+func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) (err error) {
+	if p.state != nil {
+		response := &persistentResponseWriter{ResponseWriter: w, health: p.persistentStateErr}
+		defer func() {
+			response.finish()
+			if response.failed {
+				rr.Response.Authenticated = false
+				rr.Response.Code = http.StatusServiceUnavailable
+				err = nil // The storage failure has already produced its HTTP response.
+			}
+		}()
+		w = response
+	}
+	if p.closed.Load() || p.persistentStateErr() != nil {
 		rr.Response.Authenticated = false
 		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 		return nil
