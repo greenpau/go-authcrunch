@@ -194,7 +194,21 @@ func (p *Portal) userFromRefresh(ctx context.Context, tokens *tokenrefresh.Resul
 	u.LoginEvidence = evidence
 	u.LoginUsername, u.LoginEmail = current.Username, current.Email
 	u.LoginMethods = append([]string(nil), principal.Methods...)
-	if v, ok := tokens.Claims["frontend_links"]; ok {
+	// Signed claims are canonical and never carry frontend_links, so re-run
+	// the user transforms against the fresh backend attributes, mirroring the
+	// refresh adapter's issuance transform, and keep only the derived links.
+	rr := requests.NewRequest()
+	rr.Upstream.Realm = principal.Realm
+	rr.User.Challenges = append([]string(nil), current.Challenges...)
+	rr.User.AuthMethods = append([]string(nil), current.AuthMethods...)
+	m := map[string]interface{}{"sub": current.Username, "email": current.Email, "name": current.Name, "roles": current.Roles, "origin": principal.Realm}
+	if err := p.transformUser(ctx, rr, m); err != nil {
+		if rr.Response.Code == 403 {
+			return nil, tokenrefresh.ErrDenied
+		}
+		return nil, err
+	}
+	if v, ok := m["frontend_links"]; ok {
 		if err := u.AddFrontendLinks(v); err != nil {
 			return nil, err
 		}
