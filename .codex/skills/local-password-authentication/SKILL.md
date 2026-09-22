@@ -1,6 +1,6 @@
 ---
 name: local-password-authentication
-description: Maintain local password creation, bcrypt imports, duplicate detection, changes, resets, credential revocation, and server-side authentication in pkg/identity, including bcrypt work equalization and timing-enumeration regression tests.
+description: Maintain local bcrypt and Argon2id password generation, prefixed imports, reusable hashing configuration/parser, duplicate detection, changes, resets, credential revocation, and authentication work equalization.
 ---
 
 # Local Password Authentication
@@ -9,7 +9,7 @@ description: Maintain local password creation, bcrypt imports, duplicate detecti
 
 `pkg/identity/database.go` owns `Database.AuthenticateUser` and identity lookup.
 `pkg/identity/password_verifier.go` owns `passwordVerifier`,
-`newPasswordVerifier`, and `activePasswordCost`. Keep enumeration defenses at
+`newPasswordVerifier`, `activePasswordCost`, and `activeArgon2Password`. Keep enumeration defenses at
 this shared database boundary so HTML, JSON, and other authentication callers
 receive the same protection.
 
@@ -19,12 +19,22 @@ The local adapter delegates through `pkg/ids/local/store.go` and
 `pkg/authn/handle_json_login.go`.
 
 `pkg/identity/password.go` owns password creation/import and `Password.Match`.
+`password_argon2.go` owns bounded Argon2id PHC decoding, generation and matching.
+Read [password hashing contracts](references/password-hashing.md) for formats,
+public configuration/parser APIs, CLI options, resource limits and migration.
+The default remains bcrypt; `argon2:` explicitly imports Argon2id v19.
 `User.VerifyPassword` in `pkg/identity/user.go` still serves credential-change
 checks. Substituting that per-user method for the database's store-wide verifier
 would remove work equalization. Client protocol and refresh-evidence lifecycle
 changes belong to their separate owning skills.
 
 ## Password Management
+
+Keep encoded imports at trusted provisioning boundaries. Public registration and
+`Database.RequestWithIdentity` password changes reject
+`identity.IsPasswordHashImport` inputs before mutation; see the
+[password hashing contracts](references/password-hashing.md). Do not apply this
+restriction to login candidates or trusted configuration imports.
 
 `pkg/identity/user.go` owns AddPassword, ResetPassword, ChangePassword, and
 UpdatePassword. Their shared replacement helper installs a validated active
@@ -34,9 +44,14 @@ separate from the authentication verifier's raw-plaintext comparison schedule.
 - Validate replacement input through NewPassword before mutating credentials.
   Creation/import trims surrounding whitespace; duplicate comparison uses that
   same normalized input. Validation must still reject invalid imports and
-  overlength plaintext even if a comparison could match an existing hash.
+  overlength bcrypt plaintext even if a comparison could match an existing hash.
+  Argon2 supports longer plaintext subject to the database password policy.
+  Valid imports are checked as hashes, not measured against plaintext length
+  policy; import cannot prove the original plaintext satisfies that policy.
+  Plaintext policy checks use the same trimmed value that creation hashes;
+  surrounding whitespace cannot satisfy a minimum password length.
 - For plaintext duplicates, compare against the first active record with
-  Password.Match. For bcrypt imports, compare the parsed encoded hash directly;
+  Password.Match. For bcrypt and Argon2 imports, compare the algorithm and parsed encoded hash directly;
   never verify the serialized import string as though it were plaintext.
 - A matching first record is reusable only while enabled and unexpired.
   AddPassword retains its hash, timestamps, and existing history when reusable.
@@ -47,6 +62,9 @@ separate from the authentication verifier's raw-plaintext comparison schedule.
 - ResetPassword always installs a fresh active record, even when the plaintext
   or imported hash is unchanged. Validate before disabling the old credential;
   a failed reset must leave credentials usable and state unchanged.
+- Plaintext replacements of a first Argon2 record retain Argon2 with current
+  generation defaults. Explicit imports may switch either way. New users and
+  existing bcrypt users keep their default algorithm; login does not rehash.
 - ChangePassword still verifies the old password before replacing credentials.
   Database mutation wrappers must continue advancing CredentialVersion and
   persisting it even when the active hash is reused. Hash deduplication does
@@ -69,7 +87,7 @@ TestDatabasePasswordMutationPersistence for focused checks.
 For a nonempty password candidate, `AuthenticateUser` builds and executes the
 verifier before returning for a missing or disabled identity. Hold the database transaction through schedule construction and verification;
 file-backed verification also holds the canonical file lock through the fresh
-snapshot and bcrypt comparison. Follow
+snapshot and all password hashing. Follow
 [local database transactions](../local-identity-database/SKILL.md). Preserve
 failure evidence clearing, success evidence issuance, existing error contracts,
 and the separate non-password/WebAuthn path.
@@ -79,12 +97,17 @@ The current schedule is derived from enabled users' active passwords:
 - Ignore nil, disabled, and expired password records. Read each usable cost
   from `bcrypt.Cost` on the stored hash; `Password.Cost` metadata does not
   control bcrypt verification.
-- For each encoded cost, take the largest active-password count at that cost
+- Argon2 profiles come from fully validated PHC strings and include memory,
+  iterations, parallelism, salt length and output length. Never use `Cost` for
+  Argon2 work or derive from a malformed/unbounded PHC string. Unsupported
+  algorithms fail closed; an omitted algorithm retains legacy bcrypt meaning.
+- For each encoded bcrypt cost or Argon2 profile, take the largest active-password count
   belonging to any one account. Do not sum counts across accounts: adding more
-  users with the same password profile must not add bcrypt comparisons.
+  users with the same password profile must not add hashing work.
 - Every target executes that ordered schedule. Use its actual active hashes
   where available and server-controlled dummy comparisons for remaining slots.
-  If no usable costs exist in the store, perform one `bcrypt.DefaultCost`
+  Argon2 dummy slots derive with synthetic salts of the scheduled length.
+  If no usable profiles exist in the store, perform one `bcrypt.DefaultCost`
   comparison.
 - Never authenticate from a dummy match. Continue the complete schedule even
   after a real password matches.
@@ -106,7 +129,7 @@ executes bcrypt at every supported scheduled cost.
 
 Compare the submitted candidate as plaintext. Do not use `NewPassword`,
 `NewPasswordWithOptions`, or the import parser to simulate authentication work.
-Their creation semantics can trim whitespace, recognize `bcrypt:` imports, or
+Their creation semantics can trim whitespace, recognize `bcrypt:`/`argon2:` imports, or
 reject overlength input before hashing. In the current dependency,
 `GenerateFromPassword` rejects more than 72 bytes before hashing, whereas
 `CompareHashAndPassword` still performs the comparison. Recheck these behaviors
@@ -118,7 +141,7 @@ hash at one arbitrary cost does not fix mixed-cost databases. The invariant is
 comparable expensive work for every identity, not merely the presence of a
 dummy-hash call or identical error text.
 
-Do not special-case or ban `bcrypt:` plaintext as the mitigation: a legitimate
+Do not special-case or ban `bcrypt:` or `argon2:` plaintext as the mitigation: a legitimate
 stored hash can represent a password containing that prefix. If input limits
 change, apply the intended validation consistently before identity-dependent
 work and preserve the chosen password semantics across affected transports.
@@ -131,14 +154,15 @@ expiration/disable must be reflected immediately. Introducing a cache requires
 covering these transitions and supported changes through the exported user
 model without weakening the existing locking boundary.
 
-A homogeneous database with one active password per user performs one bcrypt
-comparison per attempt. Mixed costs or multiple active passwords add padding
+A homogeneous database with one active password per user performs one expensive
+comparison per attempt. Mixed algorithms, costs or multiple active passwords add padding
 work for cheaper accounts. Construction also scans the user/password records;
-it does not perform bcrypt once per user. Assess this real latency and CPU
+it does not hash once per user. Argon2 profiles execute sequentially, so mixed
+profiles add CPU and allocation work without retaining every memory arena. Assess this real latency and CPU
 tradeoff when changing the algorithm. Local authentication already serializes
 through the authenticator mutex, so contention can add queueing noise.
 
-Equal bcrypt work is not a claim of perfectly constant wall-clock time or a
+Equal password hashing work is not a claim of perfectly constant wall-clock time or a
 complete defense against unrelated account-discovery signals.
 
 ## Validation
@@ -154,7 +178,27 @@ complete defense against unrelated account-discovery signals.
 | `TestPasswordVerifierCurrentRecords` | Work schedule follows current costs and account/password state |
 | `TestDatabasePasswordVerification` | Database dispatch, username/email/case lookup, errors, and authentication evidence |
 
-Use the private per-verifier comparison boundary for deterministic assertions
+Argon2 coverage lives in `password_argon2_test.go`,
+`password_argon2_verifier_test.go`, and `password_hash_config_test.go`.
+`pkg/identity/password/parser` adds external parser units, an executable example
+and a file-backed consumer E2E. `TestE2EArgon2PortalPasswords` covers configured
+imports through shared-store provisioning, TLS HTML/JSON/Basic login, mixed
+bcrypt/Argon2 stores, runtime restart,
+password replacement and refresh revocation. Invalid PHC imports also fail
+provisioning without persisting a user. The CLI executable E2E generates
+and installs a hash, then authenticates with it.
+
+`TestE2EPasswordConfigurationRejectsInvalidImport` also covers malformed bcrypt
+headers. `password_input_test.go` and the identity request tests cover reserved
+prefix recognition and unchanged credentials/revision/files after rejected
+self-service imports. Registration checks live in
+`pkg/authn/validators/user_input.go` before caching and
+`pkg/registry/local_user_registry.go` before persistence; retain both boundaries.
+`local_user_registry_password_e2e_test.go` covers provider persistence and reload,
+and `profile_password_input_e2e_test.go` covers TLS rejection, old/new password
+login and refresh eligibility. Trusted configuration import tests must keep passing.
+
+Use the private per-verifier comparison/derivation boundaries for deterministic assertions
 about completed work. Keep actual bcrypt success/failure tests alongside it;
 malformed-input errors before hashing are not completed comparisons. Avoid
 exact-millisecond unit assertions and global mutable comparison hooks.
@@ -163,7 +207,7 @@ For focused diagnostics and the repository report lifecycle:
 
 ```sh
 go test -mod=readonly -race -count=1 ./pkg/identity -run 'Test(PasswordVerifier|DatabasePasswordVerification|DatabaseAuthentication|NewPassword)'
-make test TEST_DIR='./pkg/identity ./pkg/ids/local ./pkg/authn ./pkg/authclient'
+make test TEST_DIR='./pkg/identity/... ./pkg/ids/local ./pkg/authn ./pkg/authclient ./cmd/authdbctl'
 ```
 
 When validating observable timing, use a real local portal and synthetic

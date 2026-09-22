@@ -32,7 +32,8 @@ Use [authentication-portal-jwks](../authentication-portal-jwks/SKILL.md) for
 portal public signing-key discovery, reusable admin API directive configuration,
 opt-in private-key export, issuer selection, and JWK serialization.
 Use [local-password-authentication](../local-password-authentication/SKILL.md)
-for local-store password verification and bcrypt work equalization.
+for local bcrypt/Argon2 password generation, import, configuration/parser and
+authentication work equalization.
 Use [identity-public-keys](../identity-public-keys/SKILL.md) for user-owned public
 key parsing, profile registration, persisted formats, and OpenPGP dependencies.
 Use [authentication-portal-oidc](../authentication-portal-oidc/SKILL.md) for the

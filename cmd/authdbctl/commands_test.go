@@ -49,6 +49,10 @@ func commandContext(t *testing.T, values map[string]string) *cli.Context {
 	}
 	fs.Int("retries", 1, "")
 	fs.Int("cost", 8, "")
+	fs.String("algorithm", "bcrypt", "")
+	for _, name := range []string{"memory", "iterations", "parallelism"} {
+		fs.Int(name, 0, "")
+	}
 	fs.Duration("retry-interval", time.Duration(0), "")
 	for name, value := range values {
 		if err := fs.Set(name, value); err != nil {

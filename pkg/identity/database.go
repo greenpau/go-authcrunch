@@ -247,7 +247,7 @@ func (db *Database) CheckPolicyCompliance(username, password string) error {
 	if err := db.checkUserPolicyCompliance(username); err != nil {
 		return err
 	}
-	if err := db.checkPasswordPolicyCompliance(password); err != nil {
+	if err := db.CheckPasswordPolicyCompliance(password); err != nil {
 		return err
 	}
 	return nil
@@ -260,7 +260,18 @@ func (db *Database) checkUserPolicyCompliance(s string) error {
 	return nil
 }
 
-func (db *Database) checkPasswordPolicyCompliance(s string) error {
+// CheckPasswordPolicyCompliance validates a password against the database's
+// password policy without applying its username policy. Recognized prefixed
+// hashes are validated only as trusted import representations; their unknown
+// underlying plaintext is not subject to plaintext policy.
+func (db *Database) CheckPasswordPolicyCompliance(s string) error {
+	s = strings.TrimSpace(s)
+	// An import has no available plaintext to measure. Validate its complete
+	// representation instead of applying plaintext length limits to a PHC string.
+	if IsPasswordHashImport(s) {
+		_, err := ParseHashedPassword(s)
+		return err
+	}
 	if len(s) > db.Policy.Password.MaxLength || len(s) < db.Policy.Password.MinLength {
 		return errors.ErrPasswordPolicyCompliance.WithArgs(fmt.Errorf("password length is %d characters", len(s)))
 	}
@@ -667,7 +678,7 @@ func (db *Database) authenticateUserUnlocked(r *requests.Request, proof requests
 	var passwordErr error
 	if r.User.Password != "" {
 		// Missing, disabled and existing identities must perform the same
-		// bcrypt work, even when stored password costs differ.
+		// password hashing work, even when algorithms or work factors differ.
 		passwordErr = newPasswordVerifier(db.Users).verify(user, r.User.Password)
 	}
 	if err != nil {
@@ -1311,7 +1322,7 @@ func (db *Database) ChangeUserPassword(r *requests.Request) error {
 	if err != nil {
 		return errors.ErrChangeUserPassword.WithArgs(err)
 	}
-	if err := db.checkPasswordPolicyCompliance(r.User.Password); err != nil {
+	if err := db.CheckPasswordPolicyCompliance(r.User.Password); err != nil {
 		return errors.ErrChangeUserPassword.WithArgs(err)
 	}
 	if err := user.ChangePassword(r, db.Policy.Password.KeepVersions); err != nil {
@@ -1332,7 +1343,7 @@ func (db *Database) UpdateUserPassword(r *requests.Request) error {
 	if err != nil {
 		return errors.ErrUpdateUserPassword.WithArgs(err)
 	}
-	if err := db.checkPasswordPolicyCompliance(r.User.Password); err != nil {
+	if err := db.CheckPasswordPolicyCompliance(r.User.Password); err != nil {
 		return errors.ErrUpdateUserPassword.WithArgs(err)
 	}
 	if err := user.UpdatePassword(r, db.Policy.Password.KeepVersions); err != nil {

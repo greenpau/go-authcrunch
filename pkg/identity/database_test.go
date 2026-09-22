@@ -1403,3 +1403,29 @@ func TestDatabasePolicy(t *testing.T) {
 		})
 	}
 }
+
+func TestDatabasePasswordPolicyCompliance(t *testing.T) {
+	db := &Database{Policy: Policy{
+		User:     UserPolicy{MinLength: 20, MaxLength: 30},
+		Password: PasswordPolicy{MinLength: 8, MaxLength: 12},
+	}}
+	for _, tc := range []struct {
+		name      string
+		password  string
+		shouldErr bool
+	}{
+		{name: "minimum length", password: strings.Repeat("a", 8)},
+		{name: "maximum length", password: strings.Repeat("a", 12)},
+		{name: "padded minimum length", password: "  " + strings.Repeat("a", 8) + "  "},
+		{name: "below minimum", password: strings.Repeat("a", 7), shouldErr: true},
+		{name: "padded below minimum", password: "  " + strings.Repeat("a", 7) + "  ", shouldErr: true},
+		{name: "above maximum", password: strings.Repeat("a", 13), shouldErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := db.CheckPasswordPolicyCompliance(tc.password)
+			if (err != nil) != tc.shouldErr {
+				t.Fatalf("unexpected password policy result: %v", err)
+			}
+		})
+	}
+}

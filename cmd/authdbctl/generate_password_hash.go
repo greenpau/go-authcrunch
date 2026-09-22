@@ -16,17 +16,34 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"syscall"
 
-	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/term"
+
+	"github.com/greenpau/go-authcrunch/pkg/identity"
+	passwordparser "github.com/greenpau/go-authcrunch/pkg/identity/password/parser"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
 func generatePasswordHash(c *cli.Context) error {
 	password := c.String("password")
 	dbPath := c.String("db-path")
-	cost := c.Int("cost")
+	algorithm := c.String("algorithm")
+	if algorithm == "" {
+		algorithm = identity.PasswordAlgorithmBcrypt
+	}
+	statements := []string{cfgutil.EncodeArgs([]string{"algorithm", algorithm})}
+	for _, name := range []string{"cost", "memory", "iterations", "parallelism"} {
+		if c.IsSet(name) || (name == "cost" && algorithm == identity.PasswordAlgorithmBcrypt) {
+			statements = append(statements, cfgutil.EncodeArgs([]string{name, strconv.Itoa(c.Int(name))}))
+		}
+	}
+	config, err := passwordparser.NewPasswordHashConfigFromDirectives(statements)
+	if err != nil {
+		return err
+	}
 
 	if password == "" {
 		fmt.Print("Enter Password: ")
@@ -46,7 +63,7 @@ func generatePasswordHash(c *cli.Context) error {
 		dbPath = ":memory:"
 	}
 	fmt.Printf("Database: %s\n", dbPath)
-	fmt.Printf("Cost: %d\n", cost)
+	fmt.Printf("Algorithm: %s\n", config.Algorithm)
 	fmt.Printf("Status: Generating password hash (length %d)\n", len(password))
 
 	db, err := identity.NewDatabase(dbPath)
@@ -54,21 +71,16 @@ func generatePasswordHash(c *cli.Context) error {
 		return err
 	}
 
-	if err := db.CheckPolicyCompliance("foo", password); err != nil {
+	if err := db.CheckPasswordPolicyCompliance(password); err != nil {
 		return err
 	}
 
-	params := make(map[string]interface{})
-	if dbPath == ":memory:" {
-		params["cost"] = cost
-	}
-
-	p, err := identity.NewPasswordWithOptions(password, "generic", "bcrypt", params)
+	p, err := identity.NewPasswordWithConfig(password, "generic", config)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("password \"%s:%d:%s\"\n", p.Algorithm, p.Cost, p.Hash)
+	fmt.Printf("password %q\n", p.EncodedHash())
 
 	return nil
 }

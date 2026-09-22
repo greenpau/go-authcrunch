@@ -307,6 +307,9 @@ func (p *LocalUserRegistryProvider) GetName() string {
 
 // AddUser adds user to the user registry.
 func (p *LocalUserRegistryProvider) AddUser(rr *requests.Request) error {
+	if rr != nil && identity.IsPasswordHashImport(rr.User.Password) {
+		return errors.ErrAddUser.WithArgs(rr.User.Username, "password hash imports are not allowed for registration")
+	}
 	return p.db.AddUser(rr)
 }
 

@@ -25,6 +25,12 @@ snapshot, operation allowlist, locking, rollback and detached response contract.
 The generic trusted `IdentityStore.Request` API remains a separate provisioning
 boundary; do not substitute it for authenticated self-service.
 
+Identity-bound password changes accept plaintext and reject reserved hash-import
+prefixes before mutation. Keep this check at `Database.RequestWithIdentity` so
+every local self-service caller receives it; trusted provisioning still supports
+imports. Follow the [password owner](../local-password-authentication/SKILL.md)
+for the shared predicate, work-factor trust boundary and regression coverage.
+
 For reading, selecting, or resetting a user's authentication flow, follow the
 [profile authentication-flow API contract](references/authentication-flows.md).
 It owns the existing `fetch_user_auth_challenges` and
@@ -57,7 +63,9 @@ journey; signed synthetic WebAuthn assertions exercise the factor checkpoints.
 
 Validation belongs in `profile_identity_test.go`, `api_origin_test.go`,
 `profile_identity_e2e_test.go`, `identity_alias_e2e_test.go`, and the identity
-request tests. Flow selection adds `profile_auth_challenges_test.go` and
+request tests. `profile_password_input_e2e_test.go` covers reserved import
+rejection without credential or refresh revocation, followed by a successful
+plaintext change and real TLS login checks. Flow selection adds `profile_auth_challenges_test.go` and
 `profile_auth_challenges_e2e_test.go`. Preserve real TLS login, two accounts
 with different credentials,
 subject/email transformations naming the other account, revoked/deleted/recreated

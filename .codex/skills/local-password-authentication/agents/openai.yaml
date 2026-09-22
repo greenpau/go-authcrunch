@@ -1,4 +1,4 @@
 interface:
   display_name: "Local Password Authentication"
   short_description: "Local password lifecycle and enumeration defenses"
-  default_prompt: "Use $local-password-authentication to maintain local password creation, imports, resets, verification, and credential lifecycle regression tests."
+  default_prompt: "Use $local-password-authentication to maintain local bcrypt and Argon2 password creation, imports, resets, verification, and credential lifecycle regression tests."

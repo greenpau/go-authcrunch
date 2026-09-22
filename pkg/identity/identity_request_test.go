@@ -15,7 +15,9 @@
 package identity
 
 import (
+	"bytes"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -67,6 +69,59 @@ func TestDatabaseRequestWithIdentityPersistsBoundMutation(t *testing.T) {
 				t.Fatal("bound API key mutation was not retained", err)
 			}
 		})
+	}
+}
+
+func TestDatabaseRequestWithIdentityRejectsPasswordHashImports(t *testing.T) {
+	db, authenticated := newMFABindingTestDatabase(t, false)
+	proof := authenticated.Authentication
+	before := passwordMutationSnapshot(t, db.Users[0])
+	beforeRevision := db.Revision
+	beforeFile, err := os.ReadFile(db.GetPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, candidate := range []string{
+		tests.TestPwd2Hash(t),
+		"bcrypt:malformed",
+		"argon2:" + argon2ReferenceHash,
+		" \targon2:malformed\n",
+	} {
+		r := identityRequest(t, authenticated)
+		r.User.OldPassword = tests.TestPwd1
+		r.User.Password = candidate
+		if err := db.RequestWithIdentity(operator.ChangePassword, r); err == nil {
+			t.Errorf("self-service password hash import case %d was accepted", i)
+		}
+		if got := passwordMutationSnapshot(t, db.Users[0]); !bytes.Equal(got, before) {
+			t.Fatal("rejected self-service password import changed credential state")
+		}
+		if db.Revision != beforeRevision {
+			t.Fatal("rejected self-service password import advanced the database revision")
+		}
+		persisted, err := os.ReadFile(db.GetPath())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(persisted, beforeFile) {
+			t.Fatal("rejected self-service password import changed the persisted database")
+		}
+		if err := db.WithRefreshIdentity(t.Context(), proof, func(RefreshIdentity) error { return nil }); err != nil {
+			t.Fatal("rejected self-service password import revoked current evidence", err)
+		}
+	}
+
+	r := identityRequest(t, authenticated)
+	r.User.OldPassword = tests.TestPwd1
+	r.User.Password = tests.TestPwd2
+	if err := db.RequestWithIdentity(operator.ChangePassword, r); err != nil {
+		t.Fatal("ordinary self-service password change failed", err)
+	}
+	if db.Users[0].VerifyPassword(tests.TestPwd2) != nil || db.Users[0].CredentialVersion != proof.CredentialVersion+1 {
+		t.Fatal("ordinary self-service password change did not persist and revoke evidence")
+	}
+	if err := db.WithRefreshIdentity(t.Context(), proof, func(RefreshIdentity) error { return nil }); !errors.Is(err, ErrRefreshIdentityDenied) {
+		t.Fatal("ordinary self-service password change retained stale evidence", err)
 	}
 }
 

@@ -131,6 +131,9 @@ func (db *Database) cloneIdentityRequestTarget(target *Database) (*Database, err
 func requestIdentityOperation(db *Database, op operator.Type, r *requests.Request) error {
 	switch op {
 	case operator.ChangePassword:
+		if IsPasswordHashImport(r.User.Password) {
+			return errors.ErrChangeUserPassword.WithArgs("password hash imports are not allowed for self-service changes")
+		}
 		return db.ChangeUserPassword(r)
 	case operator.GetPublicKeys:
 		return db.GetPublicKeys(r)

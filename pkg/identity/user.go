@@ -163,17 +163,20 @@ func (user *User) Valid() error {
 func (user *User) AddPassword(s string, keepVersions int) error {
 	// Creation/import and duplicate detection must interpret the same input.
 	s = strings.TrimSpace(s)
-	password, err := NewPassword(s)
+	password, err := user.newPassword(s)
 	if err != nil {
 		return err
 	}
 
 	if len(user.Passwords) > 0 {
 		current := user.Passwords[0]
-		// Encoded equality handles imports; plaintext needs bcrypt comparison.
+		// Encoded equality handles imports; plaintext needs hash verification.
 		// Disabled or expired records must receive an active replacement.
-		if !current.Disabled && !current.Expired &&
-			(current.Hash == password.Hash || (!strings.HasPrefix(s, "bcrypt:") && current.Match(s))) {
+		// An omitted algorithm is the historical bcrypt representation.
+		sameAlgorithm := current != nil && (current.Algorithm == password.Algorithm ||
+			(current.Algorithm == "" && password.Algorithm == PasswordAlgorithmBcrypt))
+		if current != nil && !current.Disabled && !current.Expired &&
+			((sameAlgorithm && current.Hash == password.Hash) || (!IsPasswordHashImport(s) && current.Match(s))) {
 			var changed bool
 			for _, p := range user.Passwords[1:] {
 				if !p.Disabled {
@@ -190,6 +193,17 @@ func (user *User) AddPassword(s string, keepVersions int) error {
 
 	user.replacePassword(password, keepVersions)
 	return nil
+}
+
+// Preserve Argon2 for plaintext replacements, using current safe generation
+// defaults rather than copying potentially weak imported work factors. Explicit
+// imports can select either algorithm. New users retain the bcrypt default.
+func (user *User) newPassword(s string) (*Password, error) {
+	algorithm := PasswordAlgorithmBcrypt
+	if len(user.Passwords) > 0 && user.Passwords[0] != nil && user.Passwords[0].Algorithm == PasswordAlgorithmArgon2 {
+		algorithm = PasswordAlgorithmArgon2
+	}
+	return NewPasswordWithOptions(s, "generic", algorithm, nil)
 }
 
 // replacePassword installs a validated active record and revokes older ones.
@@ -328,7 +342,7 @@ func (user *User) VerifyPassword(s string) error {
 // ResetPassword installs a fresh active password, including for the same secret.
 func (user *User) ResetPassword(s string, keepVersions int) error {
 	// Validate before revoking anything so rejected input cannot lock out a user.
-	password, err := NewPassword(s)
+	password, err := user.newPassword(s)
 	if err != nil {
 		return errors.ErrChangeUserPassword.WithArgs(err)
 	}

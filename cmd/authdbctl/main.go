@@ -184,10 +184,14 @@ func init() {
 								},
 								&cli.IntFlag{
 									Name:        "cost",
-									Usage:       "The hashing cost factor",
+									Usage:       "The bcrypt hashing cost factor",
 									Value:       10,
 									DefaultText: "10",
 								},
+								&cli.StringFlag{Name: "algorithm", Usage: "Password hash algorithm: bcrypt or argon2 (Argon2id)", Value: "bcrypt"},
+								&cli.IntFlag{Name: "memory", Usage: "Argon2 memory in KiB", DefaultText: "65536"},
+								&cli.IntFlag{Name: "iterations", Usage: "Argon2 passes over memory", DefaultText: "3"},
+								&cli.IntFlag{Name: "parallelism", Usage: "Argon2 lanes", DefaultText: "4"},
 								&cli.StringFlag{
 									Name:     "db-path",
 									Usage:    "Sets `PATH` to the database file",

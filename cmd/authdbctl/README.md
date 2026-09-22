@@ -346,8 +346,8 @@ The output follows. Entered `12345678` when prompted "Enter Password".
 $ authdbctl generate password hash
 Enter Password: 
 Database: :memory:
-Cost: 10
-Status: Generating hash for password 12...78 (length 8)
+Algorithm: bcrypt
+Status: Generating password hash (length 8)
 password "bcrypt:10:$2a$10$K9KksvjRCdjT1sYbecGCCu.Y33xpii94itQPgGVS6vShuEUB0On1q"
 ```
 
@@ -362,6 +362,18 @@ You can also provide custom cost.
 ```bash
 authdbctl generate password hash --cost 10 --password SomeFunkyPassword
 ```
+
+Generate Argon2id instead with the following command:
+
+```bash
+authdbctl generate password hash --algorithm argon2
+```
+
+It prints `password "argon2:$argon2id$v=19$m=65536,t=3,p=4$...$..."` with a
+fresh salt and the complete hash. The defaults use 64 MiB of memory, three
+passes and four lanes. Optional `--memory` (KiB), `--iterations` and
+`--parallelism` tune Argon2; `--cost` applies only to bcrypt. Keep the generated
+value quoted when placing it in configuration.
 
 ### Generating API Key
 

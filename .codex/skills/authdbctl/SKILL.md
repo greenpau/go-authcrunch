@@ -52,6 +52,18 @@ before configuration, login, or mutation. Hash generation may print the new hash
 and intentionally generated API key, but must not print supplied password
 fragments. Report encryption-key setup failures as errors.
 
+Password generation supports `--algorithm bcrypt|argon2`; bcrypt remains the
+default. Argon2 uses `--memory` (KiB), `--iterations` and `--parallelism`; reject
+`--cost` with Argon2 and Argon2 options with bcrypt. `generate_password_hash.go`
+encodes the flags for the public password parser and passes its typed result to
+`identity.NewPasswordWithConfig`, then prints `Password.EncodedHash()`.
+`--db-path` selects password policy without dropping the requested hash options.
+Use `Database.CheckPasswordPolicyCompliance` so unrelated username constraints
+cannot reject generation. Check the normalized password's length, including
+minimum/maximum boundaries, in unit and executable tests.
+See [password hashing contracts](../local-password-authentication/references/password-hashing.md)
+for formats, defaults, resource bounds and library integration.
+
 ## Test Boundaries
 
 Keep corresponding tests for every Go change, including CLI helpers. The tests
@@ -68,6 +80,9 @@ are in the default suite, with no external accounts or services:
 - `utility_commands_test.go`: bcrypt verification of generated hashes, password
   policy/cost errors, system-key permissions, and encrypted request/response
   round trips without access-token authentication.
+- `generate_password_hash_test.go`: Argon2 generation/defaults, independent hash
+  verification, clean option rejection and the executable generation/import/login
+  journey called by `TestE2EAuthdbctl/argon2_password_hash`.
 - `terminal_test.go` and `testdata/terminal.py`: real pseudo-terminal input,
   hidden echo, MFA choice mapping, EOF/interruption, and timeout restoration.
   Python 3's standard library supplies the PTY on Unix; missing Python is a

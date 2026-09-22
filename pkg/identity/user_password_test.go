@@ -62,7 +62,7 @@ func applyPasswordMutation(user *User, operation, candidate, old string) error {
 }
 
 func TestUserAddPasswordIdempotent(t *testing.T) {
-	for _, kind := range []string{"plaintext", "padded plaintext", "import", "padded import"} {
+	for _, kind := range []string{"plaintext", "padded plaintext", "import", "padded import", "legacy import"} {
 		t.Run(kind, func(t *testing.T) {
 			user := NewUser(tests.TestUser1)
 			current := passwordMutationFixture(t, tests.TestPwd1)
@@ -75,6 +75,9 @@ func TestUserAddPasswordIdempotent(t *testing.T) {
 			}
 			if strings.HasPrefix(kind, "padded") {
 				candidate = " \t" + candidate + "\n "
+			}
+			if kind == "legacy import" {
+				current.Algorithm = ""
 			}
 			before := passwordMutationSnapshot(t, user)
 			for i := 0; i < 3; i++ {

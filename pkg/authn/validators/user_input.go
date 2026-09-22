@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	charsetutil "github.com/greenpau/go-authcrunch/pkg/util/charset"
 )
@@ -67,6 +68,9 @@ func ValidateUserInputHandle(v string, opts map[string]interface{}) error {
 func ValidateUserInputSecret(v string, opts map[string]interface{}) error {
 	if len(v) > 255 {
 		return fmt.Errorf("the handle character length should not exceed 255 characters")
+	}
+	if identity.IsPasswordHashImport(v) {
+		return fmt.Errorf("the password value is invalid")
 	}
 	return nil
 }

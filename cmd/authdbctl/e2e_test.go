@@ -64,6 +64,9 @@ func TestE2EAuthdbctl(t *testing.T) {
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build authdbctl: %v\n%s", err, output)
 	}
+	t.Run("argon2 password hash", func(t *testing.T) {
+		testCLIArgon2PasswordHash(t, binary)
+	})
 	for _, method := range []string{"password", "totp", "api key", "piped identity"} {
 		t.Run("connect "+method, func(t *testing.T) {
 			f := newCLIE2EPortal(t, method, false)

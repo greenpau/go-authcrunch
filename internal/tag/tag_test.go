@@ -80,6 +80,7 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test identity.PasswordHashConfig struct", entry: &identity.PasswordHashConfig{}, opts: &Options{}},
 		{name: "test logging.Config struct", entry: &logging.Config{}, opts: &Options{}},
 		{name: "test logging.Filter struct", entry: &logging.Filter{}, opts: &Options{}},
 		{name: "test logging.SkipRule struct", entry: &logging.SkipRule{}, opts: &Options{}},
