@@ -17,6 +17,7 @@ package identity
 import (
 	"bytes"
 	"encoding/base64"
+	"math"
 	"strings"
 	"testing"
 
@@ -26,6 +27,35 @@ import (
 // Independent vectors from the Argon2 reference implementation's src/test.c:
 // https://github.com/P-H-C/phc-winner-argon2/blob/master/src/test.c
 const argon2ReferenceHash = "$argon2id$v=19$m=256,t=2,p=1$c29tZXNhbHQ$nf65EOgLrQMR/uIPnA4rEsF5h7TKyQwu9U1bMCHGi/4"
+
+func TestDeriveArgon2Bounds(t *testing.T) {
+	valid := argon2Parameters{256, 2, 1, 8, 32}
+	salt := []byte("somesalt")
+	key := deriveArgon2([]byte("password"), salt, valid)
+	if base64.RawStdEncoding.EncodeToString(key) != "nf65EOgLrQMR/uIPnA4rEsF5h7TKyQwu9U1bMCHGi/4" {
+		t.Fatal("reference derivation failed")
+	}
+	for _, tc := range []struct {
+		name   string
+		values []int
+		set    func(*argon2Parameters, int)
+	}{
+		{"memory", []int{-1, 0, 7, maxArgon2Memory + 1, math.MaxInt}, func(p *argon2Parameters, n int) { p.memory = n }},
+		{"iterations", []int{-1, 0, maxArgon2Iterations + 1, math.MaxInt}, func(p *argon2Parameters, n int) { p.iterations = n }},
+		{"parallelism", []int{-1, 0, maxArgon2Parallelism + 1, 256, 257, math.MaxInt}, func(p *argon2Parameters, n int) { p.parallelism = n }},
+		{"key size", []int{-1, 0, 15, 65, math.MaxInt}, func(p *argon2Parameters, n int) { p.keySize = n }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, value := range tc.values {
+				p := valid
+				tc.set(&p, value)
+				if key := deriveArgon2([]byte("password"), salt, p); key != nil {
+					t.Fatalf("unsupported value %d produced a key", value)
+				}
+			}
+		})
+	}
+}
 
 func TestPasswordArgon2Reference(t *testing.T) {
 	for _, hash := range []string{argon2ReferenceHash, "$argon2id$v=19$m=256,t=2,p=2$c29tZXNhbHQ$bQk8UB/VmZZF4Oo79iDXuL5/0ttZwg2f/5U52iv1cDc"} {

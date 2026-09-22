@@ -171,6 +171,10 @@ func TestE2EPasswordConfigurationRejectsInvalidImport(t *testing.T) {
 	for _, candidate := range []string{
 		strings.Replace(validArgon2, "v=19", "v=16", 1),
 		strings.Replace(validArgon2, "m=256", "m=262145", 1),
+		strings.Replace(validArgon2, "m=256", "m=4294967296", 1),
+		strings.Replace(validArgon2, "t=2", "t=4294967296", 1),
+		strings.Replace(validArgon2, "p=1", "p=256", 1),
+		strings.Replace(validArgon2, "p=1", "p=257", 1),
 		strings.Replace(validArgon2, "c29tZXNhbHQ", "malformed!", 1),
 		strings.Replace(validBcrypt, "$2a$", "$2z$", 1),
 		strings.Replace(validBcrypt, "$2a$", "$2a!", 1),

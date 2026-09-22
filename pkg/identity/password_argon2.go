@@ -36,6 +36,14 @@ type argon2Hash struct {
 }
 
 func deriveArgon2(candidate, salt []byte, p argon2Parameters) []byte {
+	// Callers validate the work profile. Keep constant bounds at the narrowing
+	// conversions too, so unsupported parameters cannot reach the KDF.
+	if p.iterations < 1 || p.iterations > maxArgon2Iterations ||
+		p.memory < 8 || p.memory > maxArgon2Memory ||
+		p.parallelism < 1 || p.parallelism > maxArgon2Parallelism ||
+		p.keySize < 16 || p.keySize > 64 {
+		return nil
+	}
 	return argon2.IDKey(candidate, salt, uint32(p.iterations), uint32(p.memory), uint8(p.parallelism), uint32(p.keySize))
 }
 
