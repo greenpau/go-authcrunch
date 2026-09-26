@@ -216,6 +216,12 @@ display name and all existing role elements before atomically publishing the
 merged role list; a failure must leave prior roles unchanged. Keep its fixed-host
 TLS/CONNECT E2E for malformed signed-claim types, non-success and oversized
 responses, and its decoder/merge unit matrix.
+GitHub's provider-supplied `organizations_url` is valid only on the HTTPS
+`api.github.com` origin with the default TLS port, no userinfo or fragment, and a
+nonempty path. Organization and fixed email follow-ups do not follow redirects;
+both require 2xx responses and the same 1 MiB bound before JSON decoding. Keep
+the isolated TLS/CONNECT E2E for arbitrary origins, redirect attempts,
+non-success/oversized responses, and valid organization/email enrichment.
 Keep required/error JSON field validation in `validateFetchedClaims` before
 mapping. Incorrect GitHub login/organization fields, Discord IDs and Facebook
 identity/error types must not panic. Tests must distinguish parser rejection from

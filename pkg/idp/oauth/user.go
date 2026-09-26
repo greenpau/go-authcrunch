@@ -75,6 +75,19 @@ func decodeDiscordMember(data []byte) (*discordMember, error) {
 	return &member, nil
 }
 
+func validateGithubOrganizationsURL(value string) error {
+	u, err := url.Parse(value)
+	if err != nil {
+		return fmt.Errorf("invalid URL")
+	}
+	port := u.Port()
+	if u.Scheme != "https" || !strings.EqualFold(u.Hostname(), "api.github.com") ||
+		(port != "" && port != "443") || u.User != nil || u.Fragment != "" || u.Path == "" {
+		return fmt.Errorf("URL is outside the GitHub API origin")
+	}
+	return nil
+}
+
 func (b *IdentityProvider) fetchGithubUserInfo(params map[string]interface{}) (*userData, error) {
 	var req *http.Request
 	var reqMethod, reqURL, authToken string
@@ -92,6 +105,7 @@ func (b *IdentityProvider) fetchGithubUserInfo(params map[string]interface{}) (*
 	if err != nil {
 		return nil, err
 	}
+	cli.CheckRedirect = rejectOAuthRedirect
 	req, err = http.NewRequest(reqMethod, reqURL, nil)
 	if err != nil {
 		return nil, err
@@ -104,8 +118,7 @@ func (b *IdentityProvider) fetchGithubUserInfo(params map[string]interface{}) (*
 	if err != nil {
 		return nil, err
 	}
-	respBody, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	respBody, err := readOAuthSuccessResponse(resp, "GitHub organizations")
 	if err != nil {
 		return nil, err
 	}
@@ -423,6 +436,8 @@ func (b *IdentityProvider) validateFetchedClaims(data map[string]any) error {
 		if orgURL, exists := data["organizations_url"]; exists && len(b.userOrgFilters) > 0 {
 			if value, ok := orgURL.(string); !ok || strings.TrimSpace(value) == "" {
 				return fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, organizations_url field is invalid")
+			} else if err := validateGithubOrganizationsURL(value); err != nil {
+				return fmt.Errorf("failed obtaining user profile with OAuth 2.0 access token, organizations_url field is invalid: %w", err)
 			}
 		}
 	case "discord":

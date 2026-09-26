@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 
 	"go.uber.org/zap"
@@ -75,6 +74,7 @@ func (b *IdentityProvider) fetchGithubEmail(data map[string]interface{}, metadat
 	if err != nil {
 		return err
 	}
+	cli.CheckRedirect = rejectOAuthRedirect
 	req, err = http.NewRequest(reqMethod, endpointURL, nil)
 	if err != nil {
 		return err
@@ -87,10 +87,9 @@ func (b *IdentityProvider) fetchGithubEmail(data map[string]interface{}, metadat
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := readOAuthSuccessResponse(resp, "GitHub email")
 	if err != nil {
-		return fmt.Errorf("failed to read response body: %w", err)
+		return err
 	}
 
 	b.logger.Debug("User data received", zap.String("url", endpointURL), zap.Any("body", respBody))

@@ -68,6 +68,203 @@ func TestE2EDiscordRejectsUnsafeGuildResponses(t *testing.T) {
 	}
 }
 
+func TestE2EGithubRejectsUnsafeFollowupResponses(t *testing.T) {
+	if os.Getenv("AUTHCRUNCH_GITHUB_FOLLOWUPS_CHILD") == "1" {
+		testGithubUnsafeFollowupResponsesChild(t)
+		return
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, executable, "-test.run=^TestE2EGithubRejectsUnsafeFollowupResponses$", "-test.count=1")
+	cmd.Env = append(os.Environ(), "AUTHCRUNCH_GITHUB_FOLLOWUPS_CHILD=1")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("GitHub follow-up response child failed: %v\n%s", err, output)
+	}
+}
+
+func testGithubUnsafeFollowupResponsesChild(t *testing.T) {
+	var mu sync.Mutex
+	var profileBody, emailBody, orgBody string
+	var emailStatus, orgStatus int
+	var emailRedirect, orgRedirect bool
+	var profileCalls, emailCalls, orgCalls, unsafeCalls int
+	var upstream *httptest.Server
+	upstream = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/user":
+			profileCalls++
+			if got := r.Header.Get("Authorization"); got != "token opaque" {
+				t.Errorf("GitHub profile authorization header = %q", got)
+			}
+			_, _ = io.WriteString(w, profileBody)
+		case "/user/emails":
+			emailCalls++
+			if got := r.Header.Get("Authorization"); got != "Bearer opaque" {
+				t.Errorf("GitHub email authorization header = %q", got)
+			}
+			if emailRedirect {
+				http.Redirect(w, r, upstream.URL+"/attacker-email", http.StatusFound)
+				return
+			}
+			if emailStatus != 0 {
+				w.WriteHeader(emailStatus)
+			}
+			_, _ = io.WriteString(w, emailBody)
+		case "/user/orgs":
+			orgCalls++
+			if got := r.Header.Get("Authorization"); got != "token opaque" {
+				t.Errorf("GitHub organization authorization header = %q", got)
+			}
+			if orgRedirect {
+				http.Redirect(w, r, upstream.URL+"/attacker-orgs", http.StatusFound)
+				return
+			}
+			if orgStatus != 0 {
+				w.WriteHeader(orgStatus)
+			}
+			_, _ = io.WriteString(w, orgBody)
+		case "/attacker-orgs":
+			unsafeCalls++
+			_, _ = io.WriteString(w, `[{"login":"administrators"}]`)
+		case "/attacker-email":
+			unsafeCalls++
+			_, _ = io.WriteString(w, `[{"email":"attacker@example.test","primary":true,"verified":true}]`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer upstream.Close()
+	proxy := newNamedDriverConnectProxy(t, upstream.Listener.Addr().String())
+	defer proxy.Close()
+	t.Setenv("HTTPS_PROXY", proxy.URL)
+	t.Setenv("https_proxy", proxy.URL)
+	t.Setenv("NO_PROXY", "127.0.0.1,localhost")
+	t.Setenv("no_proxy", "127.0.0.1,localhost")
+
+	for _, tc := range []struct {
+		name, profileBody, emailBody, orgBody string
+		emailStatus, orgStatus                int
+		emailRedirect, orgRedirect            bool
+		wantErr                               string
+		wantEmail, wantGroup                  string
+		forbiddenEmail, forbiddenGroup        string
+		wantProfiles, wantEmails, wantOrgs    int
+		wantUnsafe                            int
+	}{
+		{
+			name:        "valid follow-ups",
+			profileBody: `{"login":"alice","organizations_url":"https://api.github.com/user/orgs"}`,
+			emailBody:   `[{"email":"alice@example.test","primary":true,"verified":true}]`,
+			orgBody:     `[{"login":"engineering"}]`,
+			wantEmail:   "alice@example.test", wantGroup: "github.com/engineering/members",
+			wantProfiles: 1, wantEmails: 1, wantOrgs: 1,
+		},
+		{
+			name:        "unsafe organization URL",
+			profileBody: `{"login":"alice","organizations_url":"{{UPSTREAM}}/attacker-orgs"}`,
+			emailBody:   `[]`, orgBody: `[]`, wantErr: "organizations_url",
+			wantProfiles: 1,
+		},
+		{
+			name:        "organization HTTP failure",
+			profileBody: `{"login":"alice","organizations_url":"https://api.github.com/user/orgs"}`,
+			emailBody:   `[]`, orgBody: `[{"login":"administrators"}]`, orgStatus: http.StatusUnauthorized,
+			forbiddenGroup: "github.com/administrators/members", wantProfiles: 1, wantEmails: 1, wantOrgs: 1,
+		},
+		{
+			name:        "oversized organizations",
+			profileBody: `{"login":"alice","organizations_url":"https://api.github.com/user/orgs"}`,
+			emailBody:   `[]`, orgBody: `[{"login":"administrators","padding":"` + strings.Repeat("x", 1<<20) + `"}]`,
+			forbiddenGroup: "github.com/administrators/members", wantProfiles: 1, wantEmails: 1, wantOrgs: 1,
+		},
+		{
+			name:        "organization redirect",
+			profileBody: `{"login":"alice","organizations_url":"https://api.github.com/user/orgs"}`,
+			emailBody:   `[]`, orgBody: `[]`, orgRedirect: true,
+			forbiddenGroup: "github.com/administrators/members", wantProfiles: 1, wantEmails: 1, wantOrgs: 1,
+		},
+		{
+			name:        "email HTTP failure",
+			profileBody: `{"login":"alice","organizations_url":"https://api.github.com/user/orgs"}`,
+			emailBody:   `[{"email":"attacker@example.test","primary":true,"verified":true}]`, emailStatus: http.StatusUnauthorized,
+			orgBody: `[]`, forbiddenEmail: "attacker@example.test", wantProfiles: 1, wantEmails: 1, wantOrgs: 1,
+		},
+		{
+			name:        "oversized emails",
+			profileBody: `{"login":"alice","organizations_url":"https://api.github.com/user/orgs"}`,
+			emailBody:   `[{"email":"attacker@example.test","primary":true,"verified":true,"padding":"` + strings.Repeat("x", 1<<20) + `"}]`,
+			orgBody:     `[]`, forbiddenEmail: "attacker@example.test", wantProfiles: 1, wantEmails: 1, wantOrgs: 1,
+		},
+		{
+			name:        "email redirect",
+			profileBody: `{"login":"alice","organizations_url":"https://api.github.com/user/orgs"}`,
+			emailBody:   `[]`, emailRedirect: true, orgBody: `[]`,
+			forbiddenEmail: "attacker@example.test", wantProfiles: 1, wantEmails: 1, wantOrgs: 1,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mu.Lock()
+			profileBody = strings.ReplaceAll(tc.profileBody, "{{UPSTREAM}}", upstream.URL)
+			emailBody, orgBody = tc.emailBody, tc.orgBody
+			emailStatus, orgStatus = tc.emailStatus, tc.orgStatus
+			emailRedirect, orgRedirect = tc.emailRedirect, tc.orgRedirect
+			profileCalls, emailCalls, orgCalls, unsafeCalls = 0, 0, 0, 0
+			mu.Unlock()
+			provider, err := oauth.NewIdentityProvider(&oauth.Config{
+				Name: "github", Realm: "github", Driver: "github",
+				ClientID: "client", ClientSecret: "secret",
+				UserOrgFilters:        []string{"^(engineering|administrators)$"},
+				TLSInsecureSkipVerify: true,
+			}, zap.NewNop())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := provider.Configure(); err != nil {
+				provider.Close()
+				t.Fatal(err)
+			}
+			claims, err := provider.FetchClaimsForTesting(map[string]any{"access_token": "opaque"})
+			provider.Close()
+			if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("GitHub claims error = %v, want substring %q", err, tc.wantErr)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			if claims != nil {
+
+				if tc.wantEmail != "" && claims["email"] != tc.wantEmail {
+					t.Fatalf("email = %#v, want %q", claims["email"], tc.wantEmail)
+				}
+				if tc.forbiddenEmail != "" && claims["email"] == tc.forbiddenEmail {
+					t.Fatalf("unsafe GitHub email response produced %q", tc.forbiddenEmail)
+				}
+				groups, _ := claims["groups"].([]string)
+				if tc.wantGroup != "" && !slices.Contains(groups, tc.wantGroup) {
+					t.Fatalf("groups = %v, want %q", groups, tc.wantGroup)
+				}
+				if tc.forbiddenGroup != "" && slices.Contains(groups, tc.forbiddenGroup) {
+					t.Fatalf("unsafe GitHub organization response produced group %q", tc.forbiddenGroup)
+				}
+			}
+			mu.Lock()
+			gotProfiles, gotEmails, gotOrgs, gotUnsafe := profileCalls, emailCalls, orgCalls, unsafeCalls
+			mu.Unlock()
+			if gotProfiles != tc.wantProfiles || gotEmails != tc.wantEmails || gotOrgs != tc.wantOrgs || gotUnsafe != tc.wantUnsafe {
+				t.Fatalf("GitHub calls profile=%d email=%d org=%d unsafe=%d, want %d/%d/%d/%d", gotProfiles, gotEmails, gotOrgs, gotUnsafe, tc.wantProfiles, tc.wantEmails, tc.wantOrgs, tc.wantUnsafe)
+			}
+		})
+	}
+}
+
 func testDiscordUnsafeGuildResponsesChild(t *testing.T) {
 	var mu sync.Mutex
 	var guildBody, memberBody string

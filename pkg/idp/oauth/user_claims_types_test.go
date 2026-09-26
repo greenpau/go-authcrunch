@@ -111,3 +111,32 @@ func TestDecodeDiscordFollowupDataRejectsUnsafeTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateGithubOrganizationsURL(t *testing.T) {
+	for _, tc := range []struct {
+		name, value string
+		valid       bool
+	}{
+		{name: "GitHub API", value: "https://api.github.com/users/alice/orgs", valid: true},
+		{name: "explicit TLS port", value: "https://api.github.com:443/user/orgs", valid: true},
+		{name: "HTTP", value: "http://api.github.com/user/orgs"},
+		{name: "untrusted host", value: "https://attacker.example/user/orgs"},
+		{name: "lookalike host", value: "https://api.github.com.attacker.example/user/orgs"},
+		{name: "userinfo", value: "https://attacker@api.github.com/user/orgs"},
+		{name: "untrusted port", value: "https://api.github.com:8443/user/orgs"},
+		{name: "fragment", value: "https://api.github.com/user/orgs#fragment"},
+		{name: "missing path", value: "https://api.github.com"},
+		{name: "relative", value: "/user/orgs"},
+		{name: "malformed", value: "://"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateGithubOrganizationsURL(tc.value)
+			if tc.valid && err != nil {
+				t.Fatalf("valid GitHub organizations URL rejected: %v", err)
+			}
+			if !tc.valid && err == nil {
+				t.Fatal("unsafe GitHub organizations URL accepted")
+			}
+		})
+	}
+}

@@ -380,6 +380,10 @@ func readOAuthSuccessResponse(resp *http.Response, kind string) ([]byte, error) 
 	return readOAuthResponseBody(resp.Body, kind)
 }
 
+func rejectOAuthRedirect(_ *http.Request, _ []*http.Request) error {
+	return http.ErrUseLastResponse
+}
+
 func oauthAccessTokenResponseError(data map[string]any) error {
 	rawCode, exists := data["error"]
 	if !exists {
