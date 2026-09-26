@@ -21,6 +21,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -46,6 +47,151 @@ func TestE2ENamedDriverRejectsUnsafeUserInfoTypes(t *testing.T) {
 	cmd.Env = append(os.Environ(), "AUTHCRUNCH_NAMED_DRIVER_TYPES_CHILD=1")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("named-driver malformed UserInfo child failed: %v\n%s", err, output)
+	}
+}
+
+func TestE2EDiscordRejectsUnsafeGuildResponses(t *testing.T) {
+	if os.Getenv("AUTHCRUNCH_DISCORD_GUILDS_CHILD") == "1" {
+		testDiscordUnsafeGuildResponsesChild(t)
+		return
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, executable, "-test.run=^TestE2EDiscordRejectsUnsafeGuildResponses$", "-test.count=1")
+	cmd.Env = append(os.Environ(), "AUTHCRUNCH_DISCORD_GUILDS_CHILD=1")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("Discord guild response child failed: %v\n%s", err, output)
+	}
+}
+
+func testDiscordUnsafeGuildResponsesChild(t *testing.T) {
+	var mu sync.Mutex
+	var guildBody, memberBody string
+	var guildStatus, memberStatus int
+	var profileCalls, guildCalls, memberCalls int
+	upstream := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		if got := r.Header.Get("Authorization"); got != "Bearer opaque" {
+			t.Errorf("Discord authorization header = %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/api/v10/users/@me":
+			profileCalls++
+			_, _ = io.WriteString(w, `{"id":"7","username":"alice"}`)
+		case r.URL.Path == "/api/v10/users/@me/guilds":
+			guildCalls++
+			if guildStatus != 0 {
+				w.WriteHeader(guildStatus)
+			}
+			_, _ = io.WriteString(w, guildBody)
+		case strings.HasPrefix(r.URL.Path, "/api/v10/users/@me/guilds/"):
+			memberCalls++
+			if memberStatus != 0 {
+				w.WriteHeader(memberStatus)
+			}
+			_, _ = io.WriteString(w, memberBody)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer upstream.Close()
+	proxy := newNamedDriverConnectProxy(t, upstream.Listener.Addr().String())
+	defer proxy.Close()
+	t.Setenv("HTTPS_PROXY", proxy.URL)
+	t.Setenv("https_proxy", proxy.URL)
+	t.Setenv("NO_PROXY", "127.0.0.1,localhost")
+	t.Setenv("no_proxy", "127.0.0.1,localhost")
+
+	for _, tc := range []struct {
+		name                        string
+		scopes                      []string
+		guildBody, memberBody       string
+		guildStatus, memberStatus   int
+		wantGuildCalls, wantMembers int
+		wantGroup, forbiddenGroup   string
+	}{
+		{
+			name: "valid guilds", scopes: []string{"guilds"},
+			guildBody:      `[ {"id":"42","name":"operators","permissions":"8"} ]`,
+			wantGuildCalls: 1, wantGroup: "discord.com/42/admins",
+		},
+		{
+			name: "numeric guild id", scopes: []string{"guilds"},
+			guildBody:      `[ {"id":42,"name":"operators","permissions":"0"} ]`,
+			wantGuildCalls: 1, forbiddenGroup: "discord.com/42/members",
+		},
+		{
+			name: "numeric permissions", scopes: []string{"guilds"},
+			guildBody:      `[ {"id":"42","name":"operators","permissions":8} ]`,
+			wantGuildCalls: 1, forbiddenGroup: "discord.com/42/admins",
+		},
+		{
+			name: "guild HTTP failure", scopes: []string{"guilds"}, guildStatus: http.StatusUnauthorized,
+			guildBody:      `[ {"id":"42","name":"operators","permissions":"8"} ]`,
+			wantGuildCalls: 1, forbiddenGroup: "discord.com/42/admins",
+		},
+		{
+			name: "oversized guilds", scopes: []string{"guilds"},
+			guildBody:      `[{"id":"42","name":"operators","permissions":"0","padding":"` + strings.Repeat("x", 1<<20) + `"}]`,
+			wantGuildCalls: 1, forbiddenGroup: "discord.com/42/members",
+		},
+		{
+			name: "oversized member", scopes: []string{"guilds", "guilds.members.read"},
+			guildBody:      `[{"id":"42","name":"operators","permissions":"0"}]`,
+			memberBody:     `{"roles":["88"],"padding":"` + strings.Repeat("x", 1<<20) + `"}`,
+			wantGuildCalls: 1, wantMembers: 1, forbiddenGroup: "discord.com/42/role/88",
+		},
+		{
+			name: "member HTTP failure", scopes: []string{"guilds", "guilds.members.read"}, memberStatus: http.StatusUnauthorized,
+			guildBody:      `[{"id":"42","name":"operators","permissions":"0"}]`,
+			memberBody:     `{"roles":["88"]}`,
+			wantGuildCalls: 1, wantMembers: 1, forbiddenGroup: "discord.com/42/role/88",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mu.Lock()
+			guildBody, memberBody = tc.guildBody, tc.memberBody
+			guildStatus, memberStatus = tc.guildStatus, tc.memberStatus
+			profileCalls, guildCalls, memberCalls = 0, 0, 0
+			mu.Unlock()
+			provider, err := oauth.NewIdentityProvider(&oauth.Config{
+				Name: "discord", Realm: "discord", Driver: "discord",
+				ClientID: "client", ClientSecret: "secret", Scopes: tc.scopes,
+				UserGroupFilters: []string{"^42$"},
+				BaseAuthURL:      "https://identity.example/", TLSInsecureSkipVerify: true,
+			}, zap.NewNop())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := provider.Configure(); err != nil {
+				provider.Close()
+				t.Fatal(err)
+			}
+			claims, err := provider.FetchClaimsForTesting(map[string]any{"access_token": "opaque"})
+			provider.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+			groups, _ := claims["groups"].([]string)
+			if tc.wantGroup != "" && !slices.Contains(groups, tc.wantGroup) {
+				t.Fatalf("groups = %v, want %q", groups, tc.wantGroup)
+			}
+			if tc.forbiddenGroup != "" && slices.Contains(groups, tc.forbiddenGroup) {
+				t.Fatalf("unsafe Discord response produced group %q in %v", tc.forbiddenGroup, groups)
+			}
+			mu.Lock()
+			gotProfiles, gotGuilds, gotMembers := profileCalls, guildCalls, memberCalls
+			mu.Unlock()
+			if gotProfiles != 1 || gotGuilds != tc.wantGuildCalls || gotMembers != tc.wantMembers {
+				t.Fatalf("Discord calls profile=%d guilds=%d members=%d, want 1/%d/%d", gotProfiles, gotGuilds, gotMembers, tc.wantGuildCalls, tc.wantMembers)
+			}
+		})
 	}
 }
 

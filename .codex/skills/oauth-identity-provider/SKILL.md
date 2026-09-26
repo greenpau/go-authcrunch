@@ -203,6 +203,13 @@ identity; login may continue with those verified claims. Keep the real TLS porta
 regression proving an oversized UserInfo document cannot add a role and the
 original verified role still authorizes. Test the exact size boundary and reject
 provider-controlled access-token types without a panic.
+Discord guild-list and guild-member enrichment requires 2xx responses and the
+same 1 MiB bound for every request. Decode guild IDs, names, permissions, and
+member role IDs into typed fields; reject malformed types, missing/empty IDs, and
+the complete enrichment result rather than panicking or issuing partial groups.
+Keep the isolated TLS/CONNECT E2E because these production endpoints are fixed
+Discord hosts. It must cover valid admin groups, malformed provider types,
+oversized documents, and non-success responses for both follow-up routes.
 Keep required/error JSON field validation in `validateFetchedClaims` before
 mapping. Incorrect GitHub login/organization fields, Discord IDs and Facebook
 identity/error types must not panic. Tests must distinguish parser rejection from

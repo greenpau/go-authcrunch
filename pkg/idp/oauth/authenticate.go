@@ -372,6 +372,14 @@ func readOAuthResponseBody(body io.Reader, kind string) ([]byte, error) {
 	return data, nil
 }
 
+func readOAuthSuccessResponse(resp *http.Response, kind string) ([]byte, error) {
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("OAuth %s endpoint returned HTTP %d", kind, resp.StatusCode)
+	}
+	return readOAuthResponseBody(resp.Body, kind)
+}
+
 func oauthAccessTokenResponseError(data map[string]any) error {
 	rawCode, exists := data["error"]
 	if !exists {

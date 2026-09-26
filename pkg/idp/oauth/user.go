@@ -39,8 +39,40 @@ type discordMember struct {
 	Roles []string `json:"roles"`
 }
 
+type discordGuild struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Permissions string `json:"permissions"`
+}
+
 type userData struct {
 	Groups []string `json:"groups,omitempty"`
+}
+
+func decodeDiscordGuilds(data []byte) ([]discordGuild, error) {
+	var guilds []discordGuild
+	if err := json.Unmarshal(data, &guilds); err != nil {
+		return nil, fmt.Errorf("failed to decode Discord guilds: %w", err)
+	}
+	for i, guild := range guilds {
+		if strings.TrimSpace(guild.ID) == "" {
+			return nil, fmt.Errorf("discord guild %d has no valid id", i)
+		}
+	}
+	return guilds, nil
+}
+
+func decodeDiscordMember(data []byte) (*discordMember, error) {
+	var member discordMember
+	if err := json.Unmarshal(data, &member); err != nil {
+		return nil, fmt.Errorf("failed to decode Discord guild member: %w", err)
+	}
+	for i, roleID := range member.Roles {
+		if strings.TrimSpace(roleID) == "" {
+			return nil, fmt.Errorf("discord guild member role %d has no valid id", i)
+		}
+	}
+	return &member, nil
 }
 
 func (b *IdentityProvider) fetchGithubUserInfo(params map[string]interface{}) (*userData, error) {
@@ -463,8 +495,7 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 	if err != nil {
 		return nil, err
 	}
-	respBody, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	respBody, err := readOAuthSuccessResponse(resp, "Discord guild list")
 	if err != nil {
 		return nil, err
 	}
@@ -475,13 +506,13 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 		zap.Any("body", respBody),
 	)
 
-	guilds := []map[string]interface{}{}
-	if err := json.Unmarshal(respBody, &guilds); err != nil {
+	guilds, err := decodeDiscordGuilds(respBody)
+	if err != nil {
 		return nil, err
 	}
 
 	for _, guild := range guilds {
-		guildID := guild["id"].(string)
+		guildID := guild.ID
 		// Exclude org from processing if it does not match org filters.
 		included := false
 		for _, rp := range b.userGroupFilters {
@@ -496,13 +527,13 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 
 		b.logger.Debug(
 			"Checking Guild Permissions",
-			zap.String("guildName", guild["name"].(string)),
+			zap.String("guildName", guild.Name),
 		)
 
 		// Check if the user has special permissions
-		if _, exists := guild["permissions"]; exists {
+		if guild.Permissions != "" {
 			// Parses to int64 for 32-bit system support
-			perm, err := strconv.ParseInt(guild["permissions"].(string), 10, 64)
+			perm, err := strconv.ParseInt(guild.Permissions, 10, 64)
 			if err != nil {
 				b.logger.Debug(
 					"Error converting Guild permissions to integer",
@@ -529,14 +560,13 @@ func (b *IdentityProvider) fetchDiscordGuilds(authToken string) (*userData, erro
 				return nil, err
 			}
 
-			respBody, err = io.ReadAll(resp.Body)
-			resp.Body.Close()
+			respBody, err = readOAuthSuccessResponse(resp, "Discord guild member")
 			if err != nil {
 				return nil, err
 			}
 
-			var memberData discordMember
-			if err := json.Unmarshal(respBody, &memberData); err != nil {
+			memberData, err := decodeDiscordMember(respBody)
+			if err != nil {
 				b.logger.Debug(
 					"Guild Roles request failed",
 					zap.Any("response", respBody),

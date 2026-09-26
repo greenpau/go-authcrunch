@@ -74,3 +74,40 @@ func TestGithubOrganizationClaimsIgnoreUnsafeLoginTypes(t *testing.T) {
 		t.Fatalf("malformed organization produced groups: %v", got.Groups)
 	}
 }
+
+func TestDecodeDiscordFollowupDataRejectsUnsafeTypes(t *testing.T) {
+	for _, tc := range []struct {
+		name, body string
+		wantErr    bool
+	}{
+		{name: "valid guild", body: `[{"id":"42","name":"operators","permissions":"8"}]`},
+		{name: "numeric guild id", body: `[{"id":42,"name":"operators","permissions":"8"}]`, wantErr: true},
+		{name: "missing guild id", body: `[{"name":"operators","permissions":"8"}]`, wantErr: true},
+		{name: "numeric guild name", body: `[{"id":"42","name":7,"permissions":"8"}]`, wantErr: true},
+		{name: "numeric permissions", body: `[{"id":"42","name":"operators","permissions":8}]`, wantErr: true},
+	} {
+		t.Run("guild/"+tc.name, func(t *testing.T) {
+			guilds, err := decodeDiscordGuilds([]byte(tc.body))
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("decodeDiscordGuilds() = %#v, %v; want error %t", guilds, err, tc.wantErr)
+			}
+		})
+	}
+
+	for _, tc := range []struct {
+		name, body string
+		wantErr    bool
+	}{
+		{name: "valid roles", body: `{"roles":["88","99"]}`},
+		{name: "omitted roles", body: `{}`},
+		{name: "numeric role", body: `{"roles":[88]}`, wantErr: true},
+		{name: "empty role", body: `{"roles":[""]}`, wantErr: true},
+	} {
+		t.Run("member/"+tc.name, func(t *testing.T) {
+			member, err := decodeDiscordMember([]byte(tc.body))
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("decodeDiscordMember() = %#v, %v; want error %t", member, err, tc.wantErr)
+			}
+		})
+	}
+}
