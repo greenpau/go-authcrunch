@@ -369,10 +369,11 @@ func (f *directAuthorizationFixture) requestStatus(t *testing.T, target string) 
 func newNamedDriverConnectProxy(t *testing.T, target string) *httptest.Server {
 	t.Helper()
 	allowed := map[string]bool{
-		"api.linkedin.com:443":   true,
-		"api.github.com:443":     true,
-		"discord.com:443":        true,
-		"graph.facebook.com:443": true,
+		"api.linkedin.com:443":             true,
+		"api.github.com:443":               true,
+		"cloudidentity.googleapis.com:443": true,
+		"discord.com:443":                  true,
+		"graph.facebook.com:443":           true,
 	}
 	var mu sync.Mutex
 	connections := make(map[net.Conn]struct{})

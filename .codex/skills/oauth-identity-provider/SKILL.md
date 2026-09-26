@@ -210,6 +210,12 @@ the complete enrichment result rather than panicking or issuing partial groups.
 Keep the isolated TLS/CONNECT E2E because these production endpoints are fixed
 Discord hosts. It must cover valid admin groups, malformed provider types,
 oversized documents, and non-success responses for both follow-up routes.
+Google Cloud Identity group enrichment requires nonempty string access-token and
+email inputs, a 2xx response, and the same 1 MiB limit. Validate every group
+display name and all existing role elements before atomically publishing the
+merged role list; a failure must leave prior roles unchanged. Keep its fixed-host
+TLS/CONNECT E2E for malformed signed-claim types, non-success and oversized
+responses, and its decoder/merge unit matrix.
 Keep required/error JSON field validation in `validateFetchedClaims` before
 mapping. Incorrect GitHub login/organization fields, Discord IDs and Facebook
 identity/error types must not panic. Tests must distinguish parser rejection from

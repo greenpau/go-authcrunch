@@ -32,3 +32,8 @@ func (b *IdentityProvider) StateCountForTesting() int {
 func (b *IdentityProvider) FetchClaimsForTesting(data map[string]any) (map[string]any, error) {
 	return b.fetchClaims(data)
 }
+
+// FetchUserGroupsForTesting exercises provider-specific group enrichment.
+func (b *IdentityProvider) FetchUserGroupsForTesting(tokenData, userData map[string]any) error {
+	return b.fetchUserGroups(tokenData, userData)
+}
