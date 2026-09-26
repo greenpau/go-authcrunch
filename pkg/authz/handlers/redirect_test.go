@@ -15,6 +15,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -24,6 +25,112 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
+
+func TestRedirectRequestTargetForms(t *testing.T) {
+	for _, protocol := range []struct {
+		name         string
+		major, minor int
+	}{
+		{"HTTP/1.1", 1, 1}, {"HTTP/2.0", 2, 0}, {"HTTP/3.0", 3, 0},
+	} {
+		t.Run(protocol.name, func(t *testing.T) {
+			for _, tc := range []struct {
+				name, target, want string
+				headers            http.Header
+			}{
+				{name: "root", target: "/", want: "https://service.example:8443/"},
+				{name: "escaped path and query", target: "/a%2fb/%252F?q=a%26b&space=one+two&x=1&x=2", want: "https://service.example:8443/a%2fb/%252F?q=a%26b&space=one+two&x=1&x=2"},
+				{name: "empty query", target: "/private?", want: "https://service.example:8443/private?"},
+				{name: "double slash path", target: "//evil.example/private", want: "https://service.example:8443//evil.example/private"},
+				{name: "backslash path", target: `/\evil.example/private`, want: `https://service.example:8443/\evil.example/private`},
+				{name: "encoded separators", target: "/%2F%5Cevil.example/private", want: "https://service.example:8443/%2F%5Cevil.example/private"},
+				{name: "dot segments", target: "/one/../two/./", want: "https://service.example:8443/one/../two/./"},
+				{name: "absolute target", target: "https://target.example:9443/a%2Fb?x=a%26b", want: "https://target.example:9443/a%2Fb?x=a%26b"},
+				{
+					name: "forwarded origin", target: "/private?x=1", want: "https://public.example:9443/mount/private?x=1",
+					headers: http.Header{"X-Forwarded-Host": {"public.example"}, "X-Forwarded-Proto": {"https"}, "X-Forwarded-Port": {"9443"}, "X-Forwarded-Prefix": {"/mount"}},
+				},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					for _, javascript := range []bool{false, true} {
+						name := "Location"
+						if javascript {
+							name = "Javascript"
+						}
+						t.Run(name, func(t *testing.T) {
+							r := httptest.NewRequest(http.MethodGet, "https://service.example:8443/", nil)
+							var err error
+							r.URL, err = url.ParseRequestURI(tc.target)
+							if err != nil {
+								t.Fatal(err)
+							}
+							r.RequestURI = tc.target
+							r.Proto, r.ProtoMajor, r.ProtoMinor = protocol.name, protocol.major, protocol.minor
+							if protocol.major == 3 {
+								// quic-go populates these from pseudo-headers even
+								// when RequestURI is an origin-form path.
+								r.URL.Scheme, r.URL.Host = "https", r.Host
+							}
+							if tc.headers != nil {
+								r.Header = tc.headers.Clone()
+							}
+							rr := requests.NewAuthorizationRequest()
+							rr.Redirect.AuthURL = "https://auth.example/login?tenant=one"
+							rr.Redirect.QueryParameter = "return_url"
+							rr.Redirect.LoginHint = "alice+test@example.test"
+							rr.Redirect.AdditionalScopes = "profile email"
+							w := httptest.NewRecorder()
+							var location string
+							if javascript {
+								HandleJavascriptRedirect(w, r, rr)
+								if w.Code != http.StatusUnauthorized {
+									t.Fatalf("status = %d, want 401", w.Code)
+								}
+								// Decode the emitted JS string literals, including
+								// template escaping, before checking their values.
+								values := make(map[string]string)
+								for _, variable := range []string{"auth_url_path", "sep", "redir_param", "redir_url"} {
+									_, rest, ok := strings.Cut(w.Body.String(), "var "+variable+" = ")
+									if !ok {
+										t.Fatalf("missing Javascript variable %s", variable)
+									}
+									literal, _, _ := strings.Cut(rest, ";\n")
+									var value string
+									if err := json.Unmarshal([]byte(literal), &value); err != nil {
+										t.Fatalf("decode Javascript %s: %v", variable, err)
+									}
+									values[variable] = value
+								}
+								if !strings.Contains(w.Body.String(), "encodeURIComponent(redir_url)") {
+									t.Fatal("Javascript return URL is not encoded")
+								}
+								location = values["auth_url_path"] + values["sep"] + values["redir_param"] + "=" + url.QueryEscape(values["redir_url"])
+							} else {
+								HandleLocationHeaderRedirect(w, r, rr)
+								if w.Code != http.StatusFound {
+									t.Fatalf("status = %d, want 302", w.Code)
+								}
+								location = w.Header().Get("Location")
+							}
+							destination, err := url.Parse(location)
+							if err != nil {
+								t.Fatal(err)
+							}
+							if destination.Scheme != "https" || destination.Host != "auth.example" || destination.Path != "/login" || destination.User != nil || destination.Fragment != "" {
+								t.Fatalf("unexpected authentication destination: %q", location)
+							}
+							for key, want := range map[string]string{"return_url": tc.want, "tenant": "one", "login_hint": "alice+test@example.test", "additional_scopes": "profile email"} {
+								if got := destination.Query()[key]; len(got) != 1 || got[0] != want {
+									t.Fatalf("%s = %q, want [%q]", key, got, want)
+								}
+							}
+						})
+					}
+				})
+			}
+		})
+	}
+}
 
 type customResponseWriter struct {
 	body       []byte

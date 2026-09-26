@@ -78,6 +78,17 @@ and intentional `{url}` behavior covered by successful consumer cases.
 
 The authorization redirect handlers send the user to configured `AuthURL`.
 Their return URL, login hint, and additional scopes are encoded query values.
+Classify absolute-form targets by parsing `RequestURI` with
+`url.ParseRequestURI`, not by testing `r.URL.IsAbs()`. HTTP/3 servers such as
+quic-go populate `URL.Scheme` and `URL.Host` from pseudo-headers while retaining
+an origin-form `RequestURI`. Copying that path as the return URL loses the
+application origin and sends a successful login back to the portal.
+For origin-form requests, including `//host/path`, use
+`addr.GetCurrentURLWithSuffix` to retain the serving origin and the existing
+forwarded-header contract. Preserve raw path escaping, duplicate/empty query
+values, ports, and dot segments. An actual absolute-form target remains raw
+return data; do not concatenate it onto another origin. This classification
+must be independent of HTTP version and applies to both redirect renderers.
 Inspect the generated JavaScript as well as `Location` when testing both modes.
 For leading slash/backslash findings, evaluate the emitted URL using browser
 semantics; Go's `url.Parse` is not a browser URL parser. Include absolute request
@@ -89,6 +100,16 @@ identity.
 
 Gatekeeper placeholder unit cases belong in `pkg/authz/authenticate_test.go`;
 configured-login redirect cases belong in `pkg/authz/handlers/redirect_test.go`.
+`TestRedirectRequestTargetForms` covers both renderers with HTTP/1, HTTP/2,
+and HTTP/3 request representations, raw target preservation, and forwarded
+origins. Root `server_redirect_e2e_test.go` exercises real HTTP/1.1, HTTP/2,
+and HTTP/3 transports through `authcrunch.NewServer`, a temporary local identity
+database, separate application/portal origins, cookie-jar login, and final
+gatekeeper authorization. Assert the negotiated protocol and original resource
+after login; assigning `ProtoMajor` in a handler is not HTTP/3 transport coverage.
+The pinned quic-go dependency is imported only by tests. Keep this journey in
+the default suite with bounded requests and cleanup of QUIC workers and sockets.
+
 `pkg/authz/redirect_e2e_test.go` exercises the public Gatekeeper over TLS and
 the browser destination behavior. Retain a failing pre-fix reproduction for
 unsafe placeholder composition, plus safe fixed-host and local forms.
@@ -105,6 +126,12 @@ OIDC callback matching and exact code binding are covered by
 loopback fuzzer checks host/path/query invariants independently of the matcher.
 Run the corresponding unit and E2E cases through the repository test lifecycle;
 scanner output alone does not establish these contracts.
+
+For authorization login return URLs, run:
+
+```sh
+make test TEST_DIR='./pkg/authz/... .' TEST='TestRedirect|TestLocationHeaderRedirect|TestJavascriptRedirect|TestE2EAuthorizationRedirect|TestE2EServerAuthorizationLoginRedirectProtocols' COVERAGE_DIR=.coverage/authorization-redirects
+```
 
 ## Scanner evidence
 

@@ -331,6 +331,13 @@ defines their adversarial matrix and unit/fuzz coverage.
 `pkg/authz/validator` and related tests use `httptest`,
 test crypto key stores, test users, ACL helpers, and exact source/match
 expectations.
+Authorization login return URLs also use the root
+`TestE2EServerAuthorizationLoginRedirectProtocols` journey with real HTTP/1.1,
+HTTP/2, and quic-go HTTP/3 transports. It requires loopback TCP and UDP sockets;
+do not replace HTTP/3 with a modified HTTP/1 request or silently fall back to
+another protocol. See the
+[redirect owner](../threat-hunting/references/redirects.md#regression-ownership)
+for the full login journey and request-target invariants.
 
 Direct OAuth policy tests use [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md).
 Root `server_oauth_authorization_e2e_test.go` exercises both public parsers,

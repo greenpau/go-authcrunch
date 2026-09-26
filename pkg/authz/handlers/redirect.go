@@ -115,16 +115,17 @@ func configureRedirect(w http.ResponseWriter, r *http.Request, rr *requests.Auth
 		return
 	}
 
-	// Origin-form and authority-looking paths remain return data on the current
-	// service. Only an absolute-form request target already carries its origin.
-	if !r.URL.IsAbs() {
+	// Classify the request target itself: HTTP/3 servers can populate URL's
+	// scheme and host from pseudo-headers while RequestURI remains origin-form.
+	// Authority-looking paths such as //host/path still belong to this service.
+	if target, err := url.ParseRequestURI(r.RequestURI); err == nil && target.IsAbs() {
+		rr.Redirect.URL = r.RequestURI
+	} else {
 		u, err := addrutil.GetCurrentURLWithSuffix(r, "")
 		if err != nil {
 			return
 		}
 		rr.Redirect.URL = u
-	} else {
-		rr.Redirect.URL = r.RequestURI
 	}
 
 	rr.Redirect.Separator = "?"
