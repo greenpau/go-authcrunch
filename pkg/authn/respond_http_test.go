@@ -17,6 +17,7 @@ package authn
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -32,6 +33,34 @@ import (
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
 )
+
+func TestHTMLResponseSecurityHeaders(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	recorder.Header().Set("Content-Security-Policy", "default-src 'self'")
+	p := &Portal{}
+
+	if err := p.handleHTTPRenderHTML(context.Background(), recorder, http.StatusAccepted, []byte("<!doctype html>")); err != nil {
+		t.Fatal(err)
+	}
+	response := recorder.Result()
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusAccepted {
+		t.Fatalf("status = %d, want %d", response.StatusCode, http.StatusAccepted)
+	}
+	if got := response.Header.Get("Content-Type"); got != "text/html; charset=utf-8" {
+		t.Fatalf("Content-Type = %q", got)
+	}
+	if got := response.Header.Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Fatalf("X-Content-Type-Options = %q", got)
+	}
+	if got := response.Header.Get("X-Frame-Options"); got != "DENY" {
+		t.Fatalf("X-Frame-Options = %q", got)
+	}
+	policies := response.Header.Values("Content-Security-Policy")
+	if len(policies) != 2 || policies[0] != "default-src 'self'" || policies[1] != "frame-ancestors 'none'" {
+		t.Fatalf("Content-Security-Policy = %q", policies)
+	}
+}
 
 type customResponseWriter struct {
 	body       []byte

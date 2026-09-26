@@ -43,6 +43,13 @@ Use `pathjoin` for path segments only; append a query string after the joined
 path. Do not use it to construct an absolute `https://` URL. Keep Go's contextual
 HTML/URL/JavaScript escaping and avoid introducing raw HTML helpers for branding.
 
+The shared portal renderer makes every HTML page non-embeddable with both CSP
+`frame-ancestors 'none'` and `X-Frame-Options: DENY`, and sends `nosniff` with an
+explicit UTF-8 HTML content type. Filesystem themes inherit this response policy;
+do not describe iframe embedding as a supported theme integration or weaken the
+headers in page-specific handlers. Page-specific CSPs compose with the shared
+frame policy as separate response values.
+
 ## Pages and Their Functional Content
 
 | Alias | Preserve while changing presentation |

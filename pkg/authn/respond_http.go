@@ -223,7 +223,12 @@ func (p *Portal) handleHTTPRenderError(ctx context.Context, w http.ResponseWrite
 }
 
 func (p *Portal) handleHTTPRenderHTML(_ context.Context, w http.ResponseWriter, code int, body []byte) error {
-	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "DENY")
+	// Keep this as a separate policy so it composes restrictively with any
+	// page-specific CSP already set by the caller.
+	w.Header().Add("Content-Security-Policy", "frame-ancestors 'none'")
 	w.WriteHeader(code)
 	w.Write(body)
 	return nil
