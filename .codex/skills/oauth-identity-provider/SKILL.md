@@ -190,6 +190,12 @@ UserInfo HTTP status, and at most 1 MiB of response JSON. Reject oversized bodie
 instead of truncating into an accepted identity, and do not panic on malformed
 token response types. Synthetic TLS tests cover these boundaries without calling
 the named provider's live service.
+Authorization-code exchange responses, including the Facebook variant, are also
+limited to 1 MiB before JSON decoding. Reject an oversized document even when its
+prefix is valid JSON. Treat `error` and `error_description` as optional strings;
+malformed values fail without a panic and without copying aggregate provider data
+into the returned error. Keep the real portal callback regression proving an
+oversized token response issues no portal credential.
 Keep required/error JSON field validation in `validateFetchedClaims` before
 mapping. Incorrect GitHub login/organization fields, Discord IDs and Facebook
 identity/error types must not panic. Tests must distinguish parser rejection from

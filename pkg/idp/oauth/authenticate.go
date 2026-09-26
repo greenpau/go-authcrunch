@@ -19,7 +19,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -34,6 +35,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+const maxOAuthResponseSize = 1 << 20
 
 // Authenticate performs authentication. The embedding application must supply
 // Upstream.SessionID from a protected, distinct per-browser cookie on both the
@@ -265,8 +268,8 @@ func (b *IdentityProvider) fetchAccessToken(redirectURI, state, code, codeVerifi
 		return nil, err
 	}
 
-	respBody, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
+	defer resp.Body.Close()
+	respBody, err := readOAuthResponseBody(resp.Body, "token")
 	if err != nil {
 		return nil, err
 	}
@@ -287,16 +290,8 @@ func (b *IdentityProvider) fetchAccessToken(redirectURI, state, code, codeVerifi
 		zap.Any("body", data),
 	)
 
-	if _, exists := data["error"]; exists {
-		if v, exists := data["error_description"]; exists {
-			return nil, errors.ErrIdentityProviderOauthGetAccessTokenFailedDetailed.WithArgs(data["error"].(string), v.(string))
-		}
-		switch data["error"].(type) {
-		case string:
-			return nil, errors.ErrIdentityProviderOauthGetAccessTokenFailed.WithArgs(data["error"].(string))
-		default:
-			return nil, errors.ErrIdentityProviderOauthGetAccessTokenFailed.WithArgs(data["error"])
-		}
+	if err := oauthAccessTokenResponseError(data); err != nil {
+		return nil, err
 	}
 
 	for k := range b.requiredTokenFields {
@@ -340,8 +335,8 @@ func (b *IdentityProvider) fetchFacebookAccessToken(redirectURI, state, code str
 		return nil, err
 	}
 
-	respBody, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
+	defer resp.Body.Close()
+	respBody, err := readOAuthResponseBody(resp.Body, "token")
 	if err != nil {
 		return nil, err
 	}
@@ -354,16 +349,8 @@ func (b *IdentityProvider) fetchFacebookAccessToken(redirectURI, state, code str
 	if err := json.Unmarshal(respBody, &data); err != nil {
 		return nil, err
 	}
-	if _, exists := data["error"]; exists {
-		if v, exists := data["error_description"]; exists {
-			return nil, errors.ErrIdentityProviderOauthGetAccessTokenFailedDetailed.WithArgs(data["error"].(string), v.(string))
-		}
-		switch data["error"].(type) {
-		case string:
-			return nil, errors.ErrIdentityProviderOauthGetAccessTokenFailed.WithArgs(data["error"].(string))
-		default:
-			return nil, errors.ErrIdentityProviderOauthGetAccessTokenFailed.WithArgs(data["error"])
-		}
+	if err := oauthAccessTokenResponseError(data); err != nil {
+		return nil, err
 	}
 
 	for k := range b.requiredTokenFields {
@@ -372,4 +359,32 @@ func (b *IdentityProvider) fetchFacebookAccessToken(redirectURI, state, code str
 		}
 	}
 	return data, nil
+}
+
+func readOAuthResponseBody(body io.Reader, kind string) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(body, maxOAuthResponseSize+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > maxOAuthResponseSize {
+		return nil, fmt.Errorf("OAuth %s response exceeds %d bytes", kind, maxOAuthResponseSize)
+	}
+	return data, nil
+}
+
+func oauthAccessTokenResponseError(data map[string]any) error {
+	rawCode, exists := data["error"]
+	if !exists {
+		return nil
+	}
+	code, ok := rawCode.(string)
+	if !ok || code == "" {
+		return errors.ErrIdentityProviderOauthGetAccessTokenFailed.WithArgs("invalid error response")
+	}
+	if rawDescription, exists := data["error_description"]; exists {
+		if description, ok := rawDescription.(string); ok {
+			return errors.ErrIdentityProviderOauthGetAccessTokenFailedDetailed.WithArgs(code, description)
+		}
+	}
+	return errors.ErrIdentityProviderOauthGetAccessTokenFailed.WithArgs(code)
 }

@@ -16,8 +16,11 @@ package oauth
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -27,6 +30,85 @@ import (
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
 )
+
+func TestFetchAccessTokenRejectsUnsafeResponses(t *testing.T) {
+	const responseLimit = 1 << 20
+	testcases := []struct {
+		name, body, wantErr, forbid string
+	}{
+		{
+			name: "bounded valid response",
+			body: `{"access_token":"opaque"}` + strings.Repeat(" ", responseLimit-len(`{"access_token":"opaque"}`)),
+		},
+		{
+			name:    "oversized valid response",
+			body:    `{"access_token":"opaque","padding":"` + strings.Repeat("x", responseLimit) + `"}`,
+			wantErr: "OAuth token response exceeds",
+		},
+		{
+			name:    "non-string error",
+			body:    `{"error":7,"error_description":{"secret":"must-not-panic"}}`,
+			wantErr: "failed obtaining OAuth 2.0 access token",
+			forbid:  "must-not-panic",
+		},
+		{
+			name:    "valid detailed error",
+			body:    `{"error":"invalid_grant","error_description":"expired code"}`,
+			wantErr: "error: invalid_grant, description: \"expired code\"",
+		},
+	}
+
+	for _, tc := range testcases {
+		for _, endpoint := range []struct {
+			name, method string
+			facebook     bool
+		}{
+			{name: "generic", method: http.MethodPost},
+			{name: "facebook", method: http.MethodGet, facebook: true},
+		} {
+			t.Run(tc.name+"/"+endpoint.name, func(t *testing.T) {
+				server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.Method != endpoint.method {
+						t.Errorf("token request method = %s, want %s", r.Method, endpoint.method)
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = io.WriteString(w, tc.body)
+				}))
+				defer server.Close()
+
+				provider := &IdentityProvider{
+					config: &Config{
+						ClientID:              "client",
+						ClientSecret:          "secret",
+						TLSInsecureSkipVerify: true,
+					},
+					tokenURL:      server.URL,
+					browserConfig: &browserConfig{TLSInsecureSkipVerify: true},
+					logger:        zap.NewNop(),
+				}
+				var data map[string]any
+				var err error
+				if endpoint.facebook {
+					data, err = provider.fetchFacebookAccessToken("https://client.example/callback", "state", "code")
+				} else {
+					data, err = provider.fetchAccessToken("https://client.example/callback", "state", "code", "verifier")
+				}
+				if tc.wantErr == "" {
+					if err != nil || data["access_token"] != "opaque" {
+						t.Fatalf("token exchange = %#v, %v", data, err)
+					}
+					return
+				}
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("token exchange error = %v, want substring %q", err, tc.wantErr)
+				}
+				if tc.forbid != "" && strings.Contains(err.Error(), tc.forbid) {
+					t.Fatalf("token exchange error exposed malformed provider data: %v", err)
+				}
+			})
+		}
+	}
+}
 
 func must[T any](val T, err error) T {
 	if err != nil {

@@ -224,7 +224,11 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 		f.accessSubjects[access] = record.subject
 		f.lastIdentity = id
 		f.lastSubject = record.subject
-		json.NewEncoder(w).Encode(map[string]any{"id_token": id, "access_token": access, "token_type": "Bearer", "expires_in": 3600})
+		response := map[string]any{"id_token": id, "access_token": access, "token_type": "Bearer", "expires_in": 3600}
+		if f.failure == "oversized token response" {
+			response["padding"] = strings.Repeat("x", 1<<20)
+		}
+		json.NewEncoder(w).Encode(response)
 	case "/userinfo":
 		subject, exists := f.accessSubjects[strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")]
 		if !exists {
@@ -635,7 +639,7 @@ func TestE2EOAuthEd25519SourcesAndClaims(t *testing.T) {
 
 func TestE2EOAuthEd25519RejectsInvalidIdentity(t *testing.T) {
 	for _, alg := range []string{"EdDSA", "Ed25519"} {
-		for _, failure := range []string{"signature", "issuer", "audience", "nonce", "nonce type", "expired", "unknown kid", "state"} {
+		for _, failure := range []string{"signature", "issuer", "audience", "nonce", "nonce type", "expired", "unknown kid", "state", "oversized token response"} {
 			t.Run(alg+"/"+failure, func(t *testing.T) {
 				issuer := newOIDCE2EIssuer(t, alg, "opaque", failure, true)
 				p := newOIDCE2EPortal(t, issuer, "/auth", "HS512", "discovery")
