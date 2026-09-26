@@ -40,18 +40,15 @@ func (p *Portal) handleAPIListRealms(ctx context.Context, w http.ResponseWriter,
 	w.Header().Set("Content-Type", "application/json")
 
 	reqQuery := &realmQuery{}
-	if r.Body != nil {
-		defer r.Body.Close()
-		if err := json.NewDecoder(r.Body).Decode(reqQuery); err != nil {
-			p.logger.Error(
-				"failed to decode request",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.String("api_endpoint", "server/realms"),
-				zap.String("error", err.Error()),
-			)
-			return p.handleJSONError(ctx, w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
-		}
+	if status, err := decodeAdminAPIRequest(w, r, reqQuery); err != nil {
+		p.logger.Error(
+			"failed to decode request",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.String("api_endpoint", "server/realms"),
+			zap.String("error", err.Error()),
+		)
+		return p.handleJSONError(ctx, w, status, http.StatusText(status))
 	}
 
 	resp := make(map[string]any)

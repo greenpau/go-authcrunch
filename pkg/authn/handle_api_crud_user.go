@@ -34,18 +34,15 @@ type userCrudRequest struct {
 
 func (p *Portal) handleAPICrudUser(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, _ *user.User) error {
 	req := &userCrudRequest{}
-	if r.Body != nil {
-		defer r.Body.Close()
-		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-			p.logger.Error(
-				"failed to decode request",
-				zap.String("session_id", rr.Upstream.SessionID),
-				zap.String("request_id", rr.ID),
-				zap.String("api_endpoint", "server/user"),
-				zap.String("error", err.Error()),
-			)
-			return p.handleJSONError(ctx, w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
-		}
+	if status, err := decodeAdminAPIRequest(w, r, req); err != nil {
+		p.logger.Error(
+			"failed to decode request",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.String("api_endpoint", "server/user"),
+			zap.String("error", err.Error()),
+		)
+		return p.handleJSONError(ctx, w, status, http.StatusText(status))
 	}
 
 	if req.Realm == "" {

@@ -351,6 +351,13 @@ to the handler or runtime object that owns the flow. Preserve existing cache,
 cookie, sandbox, token source, and redirect semantics unless the task
 explicitly changes them.
 
+Put an explicit `http.MaxBytesReader` boundary in front of every public HTTP
+body decoder or reader, including authenticated administrative endpoints;
+authentication does not constrain memory consumption. Return HTTP 413 for
+`http.MaxBytesError` and reserve HTTP 400 for malformed content within the
+accepted size. Share a boundary helper across handlers with the same request
+class so new routes inherit the limit and status contract.
+
 ## Tests
 
 Apply the mandatory [corresponding tests requirement](../testing-and-ci/SKILL.md#corresponding-tests)
