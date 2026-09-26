@@ -222,6 +222,12 @@ nonempty path. Organization and fixed email follow-ups do not follow redirects;
 both require 2xx responses and the same 1 MiB bound before JSON decoding. Keep
 the isolated TLS/CONNECT E2E for arbitrary origins, redirect attempts,
 non-success/oversized responses, and valid organization/email enrichment.
+Cognito extension handling consumes the already signature/trust-verified claims
+map; do not decode the raw JWT payload a second time. Validate custom roles,
+groups, timezone, username, and zoneinfo types before publishing any derived
+claims. Malformed signed values return an authentication error without partial
+mutation or panic; `custom:timezone` deterministically overrides `zoneinfo`.
+Keep both the atomic parser unit matrix and signed-RSA validation E2E.
 Keep required/error JSON field validation in `validateFetchedClaims` before
 mapping. Incorrect GitHub login/organization fields, Discord IDs and Facebook
 identity/error types must not panic. Tests must distinguish parser rejection from

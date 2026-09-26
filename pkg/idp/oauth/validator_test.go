@@ -31,6 +31,57 @@ const (
 	oauthValidatorTestIssuer         = "https://issuer.example.com"
 )
 
+func TestE2EValidateCognitoCustomClaimTypes(t *testing.T) {
+	for _, tc := range []struct {
+		name, key string
+		value     any
+		wantKey   string
+		wantValue any
+		wantErr   bool
+	}{
+		{name: "valid custom timezone", key: "custom:timezone", value: "America/New_York", wantKey: "timezone", wantValue: "America/New_York"},
+		{name: "valid username", key: "cognito:username", value: "alice", wantKey: "username", wantValue: "alice"},
+		{name: "valid zoneinfo", key: "zoneinfo", value: "UTC", wantKey: "timezone", wantValue: "UTC"},
+		{name: "numeric custom timezone", key: "custom:timezone", value: 7, wantErr: true},
+		{name: "object username", key: "cognito:username", value: map[string]any{}, wantErr: true},
+		{name: "array zoneinfo", key: "zoneinfo", value: []any{"UTC"}, wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
+			provider.config.Driver = "cognito"
+			state, nonce := "cognito-state-"+tc.name, "cognito-nonce-"+tc.name
+			if err := provider.state.add(state, nonce); err != nil {
+				t.Fatal(err)
+			}
+			claims := jwtlib.MapClaims{
+				"aud": oauthValidatorTestClientID, "email": "alice@example.test",
+				"exp": time.Now().Add(time.Hour).Unix(), "iss": oauthValidatorTestIssuer,
+				"name": "Alice", "nonce": nonce, "sub": "cognito-user",
+				tc.key: tc.value,
+			}
+			idToken := signOAuthValidatorTestToken(t, privateKey, jwksKey.KeyID, claims)
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					t.Fatalf("verified Cognito claim caused a panic: %v", recovered)
+				}
+			}()
+			got, err := provider.validateAccessToken(t.Context(), state, map[string]any{"id_token": idToken})
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("unsafe Cognito %s claim accepted: %#v", tc.key, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got[tc.wantKey] != tc.wantValue {
+				t.Fatalf("%s = %#v, want %#v", tc.wantKey, got[tc.wantKey], tc.wantValue)
+			}
+		})
+	}
+}
+
 func TestValidateAccessTokenMergesVerifiedAccessTokenClaims(t *testing.T) {
 	provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
 	state, nonce := "state-1", "nonce-1"

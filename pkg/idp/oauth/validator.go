@@ -106,7 +106,7 @@ func (b *IdentityProvider) validateAccessToken(ctx context.Context, state string
 			}
 		}
 
-		if err := b.parseTokenClaims(tokenName, claims, data, parsedData); err != nil {
+		if err := b.parseTokenClaims(tokenName, claims, parsedData); err != nil {
 			return nil, err
 		}
 	}

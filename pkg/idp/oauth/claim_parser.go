@@ -15,11 +15,11 @@
 package oauth
 
 import (
+	"fmt"
 	"strings"
 
 	jwtlib "github.com/golang-jwt/jwt/v5"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
-	"github.com/greenpau/go-authcrunch/pkg/kms"
 )
 
 const rolesKeyword = "roles"
@@ -91,7 +91,60 @@ func mergeClaims(a interface{}, b interface{}) interface{} {
 	return b
 }
 
-func (b *IdentityProvider) parseTokenClaims(tokenName string, claims jwtlib.MapClaims, data map[string]interface{}, parsedData map[string]interface{}) error {
+func parseCognitoClaims(claims jwtlib.MapClaims, parsedData map[string]any, roles []string) ([]string, error) {
+	mergedRoles := append([]string(nil), roles...)
+	for _, key := range []string{"custom:roles", "cognito:groups", "cognito:roles"} {
+		value, exists := claims[key]
+		if !exists {
+			continue
+		}
+		switch values := value.(type) {
+		case string:
+			if key == "custom:roles" {
+				mergedRoles = append(mergedRoles, strings.Split(values, "|")...)
+			} else {
+				mergedRoles = append(mergedRoles, values)
+			}
+		case []string:
+			mergedRoles = append(mergedRoles, values...)
+		case []any:
+			for i, rawRole := range values {
+				role, ok := rawRole.(string)
+				if !ok {
+					return nil, fmt.Errorf("cognito claim %s entry %d must be a string", key, i)
+				}
+				mergedRoles = append(mergedRoles, role)
+			}
+		default:
+			return nil, fmt.Errorf("cognito claim %s must be a string or string array", key)
+		}
+	}
+
+	updates := make(map[string]string)
+	for _, field := range []struct {
+		claim, output string
+	}{
+		{claim: "zoneinfo", output: "timezone"},
+		{claim: "custom:timezone", output: "timezone"},
+		{claim: "cognito:username", output: "username"},
+	} {
+		value, exists := claims[field.claim]
+		if !exists {
+			continue
+		}
+		text, ok := value.(string)
+		if !ok {
+			return nil, fmt.Errorf("cognito claim %s must be a string", field.claim)
+		}
+		updates[field.output] = text
+	}
+	for key, value := range updates {
+		parsedData[key] = value
+	}
+	return mergedRoles, nil
+}
+
+func (b *IdentityProvider) parseTokenClaims(tokenName string, claims jwtlib.MapClaims, parsedData map[string]interface{}) error {
 	if claims == nil {
 		return errors.ErrIdentityProviderOAuthClaimsParserClaimsNotFound
 	}
@@ -134,37 +187,10 @@ func (b *IdentityProvider) parseTokenClaims(tokenName string, claims jwtlib.MapC
 	switch b.config.Driver {
 	case "cognito":
 		if tokenName == "id_token" || tokenName == b.config.IdentityTokenFieldName {
-			if v, exists := data[tokenName]; exists {
-				if tp, err := kms.ParsePayloadFromToken(v.(string)); err == nil {
-					for k, val := range tp {
-						switch k {
-						case "custom:roles", "cognito:groups", "cognito:roles":
-							switch values := val.(type) {
-							case string:
-								if k == "custom:roles" {
-									for _, roleName := range strings.Split(values, "|") {
-										roles = append(roles, roleName)
-									}
-								} else {
-									roles = append(roles, values)
-								}
-							case []interface{}:
-								for _, value := range values {
-									switch roleName := value.(type) {
-									case string:
-										roles = append(roles, roleName)
-									}
-								}
-							}
-						case "custom:timezone":
-							parsedData["timezone"] = val.(string)
-						case "cognito:username":
-							parsedData["username"] = val.(string)
-						case "zoneinfo":
-							parsedData["timezone"] = val.(string)
-						}
-					}
-				}
+			var err error
+			roles, err = parseCognitoClaims(claims, parsedData, roles)
+			if err != nil {
+				return err
 			}
 		}
 	}
