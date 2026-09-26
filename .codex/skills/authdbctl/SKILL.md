@@ -44,7 +44,9 @@ token attachment disabled and must not trigger login. Validate management HTTP
 return an error without retrying. Malformed responses, including `null`, must
 not produce a successful command exit. Preserve the original successful JSON
 body for output, including generated credentials the command is meant to return.
-Never put response bodies or configured secrets in error diagnostics.
+The shared HTTP browser caps all responses at 16 MiB, including chunked bodies;
+an oversized response is deterministic and must fail without retrying. Never put
+response bodies or configured secrets in error diagnostics.
 
 Marshal realm/user fields as JSON rather than interpolating strings. A user
 update selects exactly one operation; reject absent or conflicting selections

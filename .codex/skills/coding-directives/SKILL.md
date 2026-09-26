@@ -358,6 +358,13 @@ authentication does not constrain memory consumption. Return HTTP 413 for
 accepted size. Share a boundary helper across handlers with the same request
 class so new routes inherit the limit and status contract.
 
+Bound every outbound HTTP response before `io.ReadAll` or decoding, including
+responses from configured/trusted peers. Check declared `Content-Length` early
+and retain a limiting reader for chunked or dishonest responses. Return a typed
+or sentinel size error so retrying consumers can fail without repeating a
+deterministic oversized response. Never include remote response bodies in error
+messages or logs.
+
 ## Tests
 
 Apply the mandatory [corresponding tests requirement](../testing-and-ci/SKILL.md#corresponding-tests)

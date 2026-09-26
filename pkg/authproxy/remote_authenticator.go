@@ -204,7 +204,7 @@ func (r *RemoteAuthenticator) doRequest(reqData string) (system.Message, error) 
 	}
 
 	if !strings.HasPrefix(respBody, "v4.local.") {
-		return nil, fmt.Errorf("unexpected system message response: %s", respBody)
+		return nil, fmt.Errorf("unexpected system message response")
 	}
 
 	respMsg, err := r.encryptor.DecryptMessage(respBody)

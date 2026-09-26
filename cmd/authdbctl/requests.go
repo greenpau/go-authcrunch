@@ -17,11 +17,13 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
@@ -79,6 +81,9 @@ func (wr *wrapper) doRequestWithRetry(c *cli.Context, method, url string, opts *
 		respBody, resp, err = wr.browser.Do(req)
 		if contextErr := c.Context.Err(); contextErr != nil {
 			return "", contextErr
+		}
+		if errors.Is(err, util.ErrHTTPResponseBodyTooLarge) {
+			return "", err
 		}
 
 		if err == nil && resp != nil && resp.StatusCode == http.StatusOK {

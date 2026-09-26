@@ -15,16 +15,27 @@
 package util
 
 import (
-	"io/ioutil"
+	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"time"
 )
 
+// MaxHTTPResponseBodySize is the largest response accepted by Browser.Do.
+// Management list responses can be substantially larger than authentication
+// responses, so retain a generous finite boundary for all current consumers.
+const MaxHTTPResponseBodySize int64 = 16 << 20
+
+// ErrHTTPResponseBodyTooLarge indicates that an HTTP response exceeded the
+// Browser.Do allocation boundary.
+var ErrHTTPResponseBodyTooLarge = errors.New("HTTP response body exceeds size limit")
+
 // Browser represents a browser instance.
 type Browser struct {
-	client *http.Client
+	client              *http.Client
+	maxResponseBodySize int64
 }
 
 // NewBrowser returns an instance of a browser.
@@ -41,6 +52,7 @@ func NewBrowser() (*Browser, error) {
 		TLSHandshakeTimeout: 5 * time.Second,
 	}
 	b := &Browser{
+		maxResponseBodySize: MaxHTTPResponseBodySize,
 		client: &http.Client{
 			Jar:       cj,
 			Timeout:   time.Second * 10,
@@ -60,11 +72,17 @@ func (b *Browser) Do(req *http.Request) (string, *http.Response, error) {
 	if err != nil {
 		return "", nil, err
 	}
+	defer resp.Body.Close()
 
-	respBody, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
+	if resp.ContentLength > b.maxResponseBodySize {
+		return "", nil, ErrHTTPResponseBodyTooLarge
+	}
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, b.maxResponseBodySize+1))
 	if err != nil {
 		return "", nil, err
+	}
+	if int64(len(respBody)) > b.maxResponseBodySize {
+		return "", nil, ErrHTTPResponseBodyTooLarge
 	}
 
 	return string(respBody), resp, nil

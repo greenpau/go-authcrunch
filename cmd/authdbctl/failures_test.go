@@ -21,12 +21,14 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
+	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
 func TestConfigurationFailures(t *testing.T) {
@@ -123,7 +125,7 @@ func TestAuthenticateSaveFailure(t *testing.T) {
 }
 
 func TestRequestFailures(t *testing.T) {
-	for _, mode := range []string{"first authentication", "re-authentication", "request URL", "authorization", "transport", "response read", "operation failure", "null response", "array response", "invalid status", "zero retries", "negative retries"} {
+	for _, mode := range []string{"first authentication", "re-authentication", "request URL", "authorization", "transport", "response read", "oversized response", "operation failure", "null response", "array response", "invalid status", "zero retries", "negative retries"} {
 		t.Run(mode, func(t *testing.T) {
 			var calls, logins atomic.Int32
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -140,6 +142,9 @@ func TestRequestFailures(t *testing.T) {
 				case "response read":
 					w.Header().Set("Content-Length", "100")
 					_, _ = w.Write([]byte(`{}`))
+				case "oversized response":
+					w.Header().Set("Content-Length", strconv.FormatInt(util.MaxHTTPResponseBodySize+1, 10))
+					w.WriteHeader(http.StatusOK)
 				case "null response":
 					_, _ = w.Write([]byte(`null`))
 				case "array response":
@@ -181,6 +186,9 @@ func TestRequestFailures(t *testing.T) {
 			if err == nil {
 				t.Fatal("failed request reported success")
 			}
+			if mode == "oversized response" && !errors.Is(err, util.ErrHTTPResponseBodyTooLarge) {
+				t.Fatalf("error = %v, want %v", err, util.ErrHTTPResponseBodyTooLarge)
+			}
 			if strings.Contains(err.Error(), "synthetic-private-response") {
 				t.Fatal("error leaked response body")
 			}
@@ -192,7 +200,7 @@ func TestRequestFailures(t *testing.T) {
 				wantCalls, wantLogins = 1, 1
 			case "response read":
 				wantCalls = 3
-			case "operation failure", "null response", "array response", "invalid status", "zero retries", "negative retries":
+			case "oversized response", "operation failure", "null response", "array response", "invalid status", "zero retries", "negative retries":
 				wantCalls = 1
 			}
 			if calls.Load() != wantCalls || logins.Load() != wantLogins {
