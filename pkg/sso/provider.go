@@ -18,6 +18,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
 	"go.uber.org/zap"
@@ -79,6 +80,9 @@ func NewSingleSignOnProvider(cfg *SingleSignOnProviderConfig, logger *zap.Logger
 	if logger == nil {
 		return nil, errors.ErrSingleSignOnProviderConfigureLoggerNotFound
 	}
+	if cfg == nil {
+		return nil, errors.ErrSingleSignOnProviderConfigInvalid.WithArgs("configuration is nil")
+	}
 
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -90,11 +94,17 @@ func NewSingleSignOnProvider(cfg *SingleSignOnProviderConfig, logger *zap.Logger
 	}
 
 	certBlock, _ := pem.Decode(certBytes)
+	if certBlock == nil {
+		return nil, errors.ErrSingleSignOnProviderConfigInvalid.WithArgs("certificate PEM block not found")
+	}
 	if certBlock.Type != "CERTIFICATE" {
 		return nil, errors.ErrSingleSignOnProviderConfigInvalid.WithArgs("unexpected block type", certBlock.Type)
 	}
 
 	cert, err := x509.ParseCertificate(certBlock.Bytes)
+	if err != nil {
+		return nil, errors.ErrSingleSignOnProviderConfigInvalid.WithArgs("certificate parse error", err)
+	}
 
 	pkBytes, err := fileutil.ReadFileBytes(cfg.PrivateKeyPath)
 	if err != nil {
@@ -102,6 +112,9 @@ func NewSingleSignOnProvider(cfg *SingleSignOnProviderConfig, logger *zap.Logger
 	}
 
 	pkBlock, _ := pem.Decode(pkBytes)
+	if pkBlock == nil {
+		return nil, errors.ErrSingleSignOnProviderConfigInvalid.WithArgs("private key PEM block not found")
+	}
 	if pkBlock.Type != "PRIVATE KEY" {
 		return nil, errors.ErrSingleSignOnProviderConfigInvalid.WithArgs("unexpected block type", pkBlock.Type)
 	}

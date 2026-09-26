@@ -16,13 +16,11 @@ package sso
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
-	"go.uber.org/zap"
 )
 
 func TestGetMetadata(t *testing.T) {
@@ -68,10 +66,7 @@ func TestGetMetadata(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			var logger *zap.Logger
-			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
-			msgs = append(msgs, fmt.Sprintf("config:\n%v", tc.config))
-			logger = logutil.NewLogger()
+			logger := logutil.NewLogger()
 			provider, err := NewSingleSignOnProvider(tc.config, logger)
 			if err != nil {
 				t.Fatalf("failed initializing sso provider: %v", err)

@@ -365,6 +365,12 @@ or sentinel size error so retrying consumers can fail without repeating a
 deterministic oversized response. Never include remote response bodies in error
 messages or logs.
 
+Treat certificate and private-key files as fallible configuration input. Check
+for a nil block after every `pem.Decode` before reading its type or bytes, and
+return DER/key parser errors from construction. Do not publish a runtime object
+with nil or partially parsed cryptographic material for a later request path to
+dereference.
+
 ## Tests
 
 Apply the mandatory [corresponding tests requirement](../testing-and-ci/SKILL.md#corresponding-tests)

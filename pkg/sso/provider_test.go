@@ -15,14 +15,50 @@
 package sso
 
 import (
-	"fmt"
+	"encoding/pem"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
-	"testing"
 )
+
+func TestNewSingleSignOnProviderRejectsMalformedKeyMaterial(t *testing.T) {
+	write := func(name string, data []byte) string {
+		t.Helper()
+		path := filepath.Join(t.TempDir(), name)
+		if err := os.WriteFile(path, data, 0600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	validCert := "../../testdata/sso/authp_saml.crt"
+	validKey := "../../testdata/sso/authp_saml.key"
+	for _, tc := range []struct {
+		name, cert, key, want string
+	}{
+		{"nil config", "", "", "configuration is nil"},
+		{"certificate without PEM", write("cert.pem", []byte("not pem")), validKey, "certificate PEM block not found"},
+		{"malformed certificate DER", write("cert.pem", pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: []byte("not der")})), validKey, "certificate parse error"},
+		{"private key without PEM", validCert, write("key.pem", []byte("not pem")), "private key PEM block not found"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var cfg *SingleSignOnProviderConfig
+			if tc.name != "nil config" {
+				cfg = &SingleSignOnProviderConfig{Name: "aws", Driver: "aws", EntityID: "urn:authcrunch:test", Locations: []string{"https://example.test/sso"}, CertPath: tc.cert, PrivateKeyPath: tc.key}
+			}
+			provider, err := NewSingleSignOnProvider(cfg, zap.NewNop())
+			if provider != nil || err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("provider = %T, error = %v, want error containing %q", provider, err, tc.want)
+			}
+		})
+	}
+}
 
 func TestNewSingleSignOnProvider(t *testing.T) {
 	testcases := []struct {
@@ -125,8 +161,6 @@ func TestNewSingleSignOnProvider(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			var logger *zap.Logger
-			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
-			msgs = append(msgs, fmt.Sprintf("config:\n%v", tc.config))
 			if !tc.disableLogger {
 				logger = logutil.NewLogger()
 			}
