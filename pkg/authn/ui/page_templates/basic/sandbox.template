@@ -599,11 +599,18 @@
     {{ end }}
     {{ if .Message }}
     <script>
-    var toastHTML = '<span>{{ .Message }}</span><button class="btn-flat toast-action" onclick="M.Toast.dismissAll();">Close</button>';
-    toastElement = M.toast({
-      html: toastHTML,
+    const toastMessage = document.createElement('span');
+    toastMessage.textContent = "{{ .Message }}";
+    const toastElement = M.toast({
+      html: toastMessage,
       classes: 'toast-error'
     });
+    const toastButton = document.createElement('button');
+    toastButton.type = 'button';
+    toastButton.className = 'btn-flat toast-action';
+    toastButton.textContent = 'Close';
+    toastButton.addEventListener('click', () => M.Toast.dismissAll());
+    toastElement.el.appendChild(toastButton);
     const appContainer = document.querySelector('.app-card-container')
     appContainer.prepend(toastElement.el)
     </script>

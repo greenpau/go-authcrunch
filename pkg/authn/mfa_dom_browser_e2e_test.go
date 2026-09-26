@@ -34,6 +34,7 @@ func TestE2EMFADOMRendering(t *testing.T) {
 	}
 	assets := http.FileServer(http.Dir("ui/core"))
 	portalUI := authnui.NewFactory()
+	portalUI.CustomJsPath = "materialize.min.js"
 	if err := portalUI.AddBuiltinTemplates(); err != nil {
 		t.Fatal(err)
 	}
@@ -41,6 +42,7 @@ func TestE2EMFADOMRendering(t *testing.T) {
 		switch {
 		case r.URL.Path == "/sandbox":
 			args := portalUI.GetArgs()
+			args.Message = `</span><img id="xss-probe" src="x" onerror="globalThis.__authcrunchXSS=true">`
 			args.Data["view"] = "mfa_app_register"
 			args.Data["id"] = "fixture"
 			args.Data["mfa_label"] = "AUTHP"
@@ -74,6 +76,8 @@ func TestE2EMFADOMRendering(t *testing.T) {
 <div id="panel[fixture]\value"></div>
 <script src="/assets/materialize-css/js/materialize.min.js"></script>
 <script src="/assets/js/%s"></script></body></html>`, script)
+		case r.URL.Path == "/assets/js/custom.js":
+			http.ServeFile(w, r, "ui/core/materialize-css/js/materialize.min.js")
 		case strings.HasPrefix(r.URL.Path, "/assets/"):
 			http.StripPrefix("/assets/", assets).ServeHTTP(w, r)
 		case strings.HasPrefix(r.URL.Path, "/barcode/"):

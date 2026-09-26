@@ -84,6 +84,30 @@ func TestBasicThemeBrandAssets(t *testing.T) {
 	}
 }
 
+func TestBasicSandboxMessageUsesTextOnlyToast(t *testing.T) {
+	f := NewFactory()
+	if err := f.AddBuiltinTemplates(); err != nil {
+		t.Fatal(err)
+	}
+	args := f.GetArgs()
+	args.Message = `</span><img id="xss-probe" src="x" onerror="globalThis.__authcrunchXSS=true">`
+	args.Data["view"] = "error"
+	args.Data["id"] = "fixture"
+	body, err := f.Render("basic/sandbox", args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered := body.String()
+	if !strings.Contains(rendered, "toastMessage.textContent") || !strings.Contains(rendered, "html: toastMessage") {
+		t.Fatal("sandbox toast does not preserve the text-only rendering contract")
+	}
+	for _, unsafe := range []string{`toastHTML`, `<img id="xss-probe"`, `onclick="M.Toast.dismissAll()`} {
+		if strings.Contains(rendered, unsafe) {
+			t.Fatalf("sandbox toast retained executable message markup %q", unsafe)
+		}
+	}
+}
+
 // Every view must retain its branding, mounted assets, and final CSS override.
 // Browser E2E verifies the computed styles and real form/session behavior.
 func TestBasicTheme(t *testing.T) {

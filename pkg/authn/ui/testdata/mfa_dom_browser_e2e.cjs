@@ -12,14 +12,14 @@ socket.addEventListener("message", ({ data }) => {
   if (!request) return;
   pending.delete(message.id);
   clearTimeout(request.timer);
-  if (message.error) request.reject(new Error("browser protocol command failed"));
+  if (message.error) request.reject(new Error(`${request.method} failed: ${message.error.message}`));
   else request.resolve(message.result);
 });
 function command(method, params = {}, sessionId) {
   return new Promise((resolve, reject) => {
     const id = ++sequence;
     const timer = setTimeout(() => reject(new Error("browser command timed out")), 20000);
-    pending.set(id, { resolve, reject, timer });
+    pending.set(id, { resolve, reject, timer, method });
     socket.send(JSON.stringify({ id, method, params, sessionId }));
   });
 }
@@ -87,7 +87,8 @@ async function waitFor(page, fn) {
     const target = await command("Target.createTarget", { url: `${origin}/sandbox`, browserContextId });
     const attached = await command("Target.attachToTarget", { targetId: target.targetId, flatten: true });
     await command("Runtime.enable", {}, attached.sessionId);
-    await waitFor(attached.sessionId, () => document.readyState === "complete" && typeof updateQRCode === "function");
+    await waitFor(attached.sessionId, () => document.readyState === "complete" &&
+      typeof updateQRCode === "function" && document.querySelector(".toast") !== null);
     const portal = await evaluate(attached.sessionId, () => {
       document.getElementById("label").value = "Ops & QA";
       document.getElementById("email").value = "member+fixture@example.test";
@@ -96,11 +97,17 @@ async function waitFor(page, fn) {
         href: document.querySelector("#mfa-no-camera-link a").getAttribute("href"),
         src: document.querySelector("#mfa-qr-code-image img").src,
         form: document.querySelector("form.mfa-add-app-form") !== null,
+        toast: document.querySelector(".toast > span")?.textContent,
+        probe: document.getElementById("xss-probe") !== null,
+        executed: globalThis.__authcrunchXSS === true,
       };
     });
     assert.equal(portal.form, true);
     assert.match(portal.href, /^otpauth:\/\/totp\/Ops%20%26%20QA:/);
     assert.match(portal.src, new RegExp(`^${origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/sandbox/fixture/mfa-app-barcode/`));
+    assert.equal(portal.toast, `</span><img id="xss-probe" src="x" onerror="globalThis.__authcrunchXSS=true">`);
+    assert.equal(portal.probe, false);
+    assert.equal(portal.executed, false);
     await command("Target.disposeBrowserContext", { browserContextId });
     process.stdout.write(JSON.stringify({ passed: true }) + "\n");
   } finally {

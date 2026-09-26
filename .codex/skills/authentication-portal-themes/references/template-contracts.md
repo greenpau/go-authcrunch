@@ -31,6 +31,14 @@ fields when moving blocks. Flags are not uniformly typed: login/UI options
 often compare string `"yes"`, while refresh/registration flags may be booleans.
 Preserve the type expected by each existing conditional.
 
+Contextual template escaping protects the generated JavaScript source, but it
+does not make a decoded JavaScript string safe for a later HTML parser. Render
+status and error messages with `textContent` or an equivalent text-node API.
+Never concatenate `.Message` or `.Data` values into Materialize's `html` option,
+`innerHTML`, or another HTML-producing DOM sink. The sandbox toast passes an
+element populated with `textContent` to Materialize and appends its close button
+with DOM APIs; preserve that boundary in built-in and filesystem templates.
+
 Use `pathjoin` for path segments only; append a query string after the joined
 path. Do not use it to construct an absolute `https://` URL. Keep Go's contextual
 HTML/URL/JavaScript escaping and avoid introducing raw HTML helpers for branding.
