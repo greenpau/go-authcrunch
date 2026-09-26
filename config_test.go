@@ -16,6 +16,7 @@ package authcrunch
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -26,11 +27,60 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
+	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"go.uber.org/zap"
 )
+
+func TestConfigDumpToJSONFileUsesPrivateAtomicReplacement(t *testing.T) {
+	for _, existing := range []bool{false, true} {
+		name := "new destination"
+		if existing {
+			name = "permissive existing destination"
+		}
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "security.json")
+			if existing {
+				if err := os.WriteFile(path, []byte("old"), 0600); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Chmod(path, 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			cfg := &Config{Credentials: &credentials.Config{Generic: []*credentials.GenericCredential{{
+				Name: "smtp", Username: "mailer", Password: "private-value",
+			}}}}
+			if err := cfg.DumpToJSONFile(path); err != nil {
+				t.Fatal(err)
+			}
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := info.Mode().Perm(); got != 0600 {
+				t.Fatalf("config mode = %04o, want 0600", got)
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(data), `"password": "private-value"`) {
+				t.Fatal("dumped configuration did not contain the credential fixture")
+			}
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 1 || entries[0].Name() != "security.json" {
+				t.Fatalf("config directory contains temporary artifacts: %v", entries)
+			}
+		})
+	}
+}
 
 func TestNewConfig(t *testing.T) {
 	db, err := testutils.CreateTestDatabase("TestNewPortal")

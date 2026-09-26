@@ -18,7 +18,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
@@ -384,7 +386,9 @@ func (cfg *Config) LoadFromJSONFile(filePath string) error {
 	return json.Unmarshal(data, cfg)
 }
 
-// DumpToJSONFile stores configuration in a JSON file with pretty-printed formatting.
+// DumpToJSONFile stores configuration in a private JSON file with pretty-printed formatting.
+// A complete owner-only temporary file atomically replaces the destination so
+// readers never observe partial JSON and an existing permissive mode is narrowed.
 func (cfg *Config) DumpToJSONFile(filePath string) error {
 	rawBytes, err := json.Marshal(cfg)
 	if err != nil {
@@ -397,9 +401,46 @@ func (cfg *Config) DumpToJSONFile(filePath string) error {
 		return fmt.Errorf("error indenting JSON: %w", err)
 	}
 
-	if err := os.WriteFile(filePath, prettyBuf.Bytes(), 0644); err != nil {
+	if err := writeConfigFileAtomically(filePath, prettyBuf.Bytes()); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
+	return nil
+}
+
+func writeConfigFileAtomically(filePath string, data []byte) error {
+	dir := filepath.Dir(filePath)
+	temp, err := os.CreateTemp(dir, "."+filepath.Base(filePath)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tempPath := temp.Name()
+	committed := false
+	defer func() {
+		_ = temp.Close()
+		if !committed {
+			_ = os.Remove(tempPath)
+		}
+	}()
+	if err := temp.Chmod(0600); err != nil {
+		return err
+	}
+	n, err := temp.Write(data)
+	if err != nil {
+		return err
+	}
+	if n != len(data) {
+		return io.ErrShortWrite
+	}
+	if err := temp.Sync(); err != nil {
+		return err
+	}
+	if err := temp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tempPath, filePath); err != nil {
+		return err
+	}
+	committed = true
 	return nil
 }

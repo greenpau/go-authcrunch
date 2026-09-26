@@ -336,8 +336,10 @@ length/charset contracts and unbiased bounded sampling. Verify failure behavior
 in isolated subprocesses, never by replacing `rand.Reader` in parallel tests.
 
 Prefer explicit permission bits already used in the repo for sensitive files
-and directories, such as `0600` for token files and `0700` for private
-directories.
+and directories, such as `0600` for token and serialized configuration files
+and `0700` for private directories. Publish complete secret-bearing files by
+atomic replacement through an owner-only temporary file; never retain an
+existing destination's broader permission mode.
 
 ## HTTP And Runtime Flow
 
