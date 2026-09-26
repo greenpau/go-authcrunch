@@ -283,7 +283,10 @@ func getRequestURI(r *http.Request) string {
 	if !strings.HasPrefix(s, "/") {
 		s = "/" + s
 	}
-	if strings.HasPrefix(s, "//") {
+	// Keep both browser authority prefixes behind a local dot segment.
+	// URL.RequestURI escapes path backslashes; enforce the local-URI boundary
+	// explicitly on the completed value as well.
+	if strings.HasPrefix(s, "//") || strings.HasPrefix(s, `/\`) {
 		s = "/." + s
 	}
 	return s

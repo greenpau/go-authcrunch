@@ -202,6 +202,30 @@ func TestForbiddenURLURIPlaceholderUsesLocalRequestURI(t *testing.T) {
 			wantLocation: "/%5C%5Cevil.example/admin?x=1",
 		},
 		{
+			name:         "literal slash backslash remains escaped path data",
+			target:       `https://app.example/\evil.example/admin?x=1`,
+			forbiddenURL: "{uri}",
+			wantLocation: "/%5Cevil.example/admin?x=1",
+		},
+		{
+			name:         "literal double backslash remains escaped path data",
+			target:       `https://app.example/\\evil.example/admin?x=1`,
+			forbiddenURL: "{http.request.uri}",
+			wantLocation: "/%5C%5Cevil.example/admin?x=1",
+		},
+		{
+			name:         "mixed authority separators remain local",
+			target:       `https://app.example//\evil.example/admin?x=1`,
+			forbiddenURL: "{uri}",
+			wantLocation: "/.//%5Cevil.example/admin?x=1",
+		},
+		{
+			name:         "encoded mixed separators preserve escaping and query",
+			target:       "https://app.example/%2f%5cevil.example/a%2fb?x=one%26two&x=&q=two+words",
+			forbiddenURL: "{uri}",
+			wantLocation: "/%2f%5cevil.example/a%2fb?x=one%26two&x=&q=two+words",
+		},
+		{
 			name:         "http request uri placeholder uses local URI",
 			target:       "https://app.example/private?next=http://evil.example",
 			forbiddenURL: "/forbidden?return={http.request.uri}",

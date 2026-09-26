@@ -15,11 +15,14 @@
 package authz_test
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -38,6 +41,53 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
+
+func TestE2EAuthorizationRedirectRawRequestSeparators(t *testing.T) {
+	for _, placeholder := range []string{"{uri}", "{http.request.uri}"} {
+		t.Run(placeholder, func(t *testing.T) {
+			server := newRedirectGateServer(t, &authz.PolicyConfig{
+				ForbiddenURL:    placeholder,
+				AccessListRules: []*acl.RuleConfiguration{{Conditions: []string{"match roles administrator"}, Action: "allow stop"}},
+			})
+			token := redirectTestToken(t, "viewer")
+			for _, tc := range []struct{ target, want string }{
+				{`/\evil.example/private`, "/%5Cevil.example/private"},
+				{`/\\evil.example/private`, "/%5C%5Cevil.example/private"},
+				{`//\evil.example/private`, "/.//%5Cevil.example/private"},
+				{"//evil.example/private", "/.//evil.example/private"},
+				{"/%2f%5cevil.example/a%2fb?x=one%26two&x=", "/%2f%5cevil.example/a%2fb?x=one%26two&x="},
+			} {
+				t.Run(tc.target, func(t *testing.T) {
+					// Write the request target verbatim: http.Client would
+					// escape literal backslashes before the server sees them.
+					dialer := tls.Dialer{
+						NetDialer: &net.Dialer{Timeout: 5 * time.Second},
+						Config:    server.Client().Transport.(*http.Transport).TLSClientConfig.Clone(),
+					}
+					conn, err := dialer.DialContext(t.Context(), "tcp", server.Listener.Addr().String())
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer conn.Close()
+					if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := fmt.Fprintf(conn, "GET %s HTTP/1.1\r\nHost: %s\r\nAuthorization: Bearer %s\r\nConnection: close\r\n\r\n", tc.target, server.Listener.Addr(), token); err != nil {
+						t.Fatal("write raw redirect request")
+					}
+					resp, err := http.ReadResponse(bufio.NewReader(conn), &http.Request{Method: http.MethodGet})
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer resp.Body.Close()
+					if resp.StatusCode != http.StatusSeeOther || resp.Header.Get("Location") != tc.want {
+						t.Fatalf("raw target %q: status=%d Location=%q, want 303 %q", tc.target, resp.StatusCode, resp.Header.Get("Location"), tc.want)
+					}
+				})
+			}
+		})
+	}
+}
 
 func newRedirectGateServer(t *testing.T, cfg *authz.PolicyConfig) *httptest.Server {
 	t.Helper()
@@ -268,21 +318,47 @@ func TestE2EAuthorizationRedirectBrowserOrigin(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer gate.Close()
+	localGate, err := authz.NewGatekeeper(&authz.PolicyConfig{
+		Name:            "browser-local-uri-boundary",
+		ForbiddenURL:    "{uri}",
+		AccessListRules: []*acl.RuleConfiguration{{Conditions: []string{"match roles administrator"}, Action: "allow stop"}},
+		RawCryptoKeyStoreConfig: []string{
+			"crypto key verify " + testutils.GetSharedKey(),
+		},
+	}, zap.NewNop())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer localGate.Close()
 	token := redirectTestToken(t, "viewer")
 
 	var mu sync.Mutex
 	var visits []string
+	redirected := make(map[string]bool)
 	var finalStatus int
 	var finalLocation string
 	started := make(chan struct{}, 1)
 	completed := make(chan struct{}, 1)
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "landed-") {
+			// Each path must first pass through the production {uri} redirect.
+			// Only its subsequent browser visit advances to the next case.
+			mu.Lock()
+			first := !redirected[r.URL.Path]
+			redirected[r.URL.Path] = true
+			mu.Unlock()
+			if first {
+				_ = localGate.Authenticate(w, r, requests.NewAuthorizationRequest())
+				return
+			}
+		}
 		switch {
 		case r.URL.Path == "/start":
 			select {
 			case started <- struct{}{}:
 			default:
 			}
+			http.SetCookie(w, &http.Cookie{Name: "access_token", Value: token, Path: "/", Secure: true, HttpOnly: true})
 			w.Header().Set("Location", "/.//evil.example/landed-double-slash")
 			w.WriteHeader(http.StatusSeeOther)
 		case strings.Contains(r.RequestURI, "landed-double-slash"):
@@ -301,7 +377,12 @@ func TestE2EAuthorizationRedirectBrowserOrigin(t *testing.T) {
 			mu.Lock()
 			visits = append(visits, r.Host+" "+r.RequestURI)
 			mu.Unlock()
-			http.SetCookie(w, &http.Cookie{Name: "access_token", Value: token, Path: "/", Secure: true, HttpOnly: true})
+			w.Header().Set("Location", "/%5Cevil.example/landed-slash-backslash")
+			w.WriteHeader(http.StatusSeeOther)
+		case strings.Contains(r.RequestURI, "landed-slash-backslash"):
+			mu.Lock()
+			visits = append(visits, r.Host+" "+r.RequestURI)
+			mu.Unlock()
 			w.Header().Set("Location", "/evil.example/callback")
 			w.WriteHeader(http.StatusSeeOther)
 		case r.URL.Path == "/evil.example/callback":
@@ -379,8 +460,8 @@ func TestE2EAuthorizationRedirectBrowserOrigin(t *testing.T) {
 	if journeyErr != nil {
 		t.Fatalf("%v\nlocal redirect visits: %v\n%s", journeyErr, gotVisits, diagnostic.String())
 	}
-	if len(gotVisits) != 3 {
-		t.Fatalf("local redirect visits = %v, want three", gotVisits)
+	if len(gotVisits) != 4 {
+		t.Fatalf("local redirect visits = %v, want four", gotVisits)
 	}
 	wantHost := strings.TrimPrefix(server.URL, "https://")
 	for _, visit := range gotVisits {
@@ -388,7 +469,7 @@ func TestE2EAuthorizationRedirectBrowserOrigin(t *testing.T) {
 			t.Fatalf("browser changed redirect authority: visit=%q, serving authority=%q", visit, wantHost)
 		}
 	}
-	for i, marker := range []string{"//evil.example/landed-double-slash", "%5C%5Cevil.example/landed-backslash", "%2F%2Fevil.example/landed-encoded-slash"} {
+	for i, marker := range []string{"//evil.example/landed-double-slash", "%5C%5Cevil.example/landed-backslash", "%2F%2Fevil.example/landed-encoded-slash", "%5Cevil.example/landed-slash-backslash"} {
 		if !strings.Contains(gotVisits[i], marker) {
 			t.Fatalf("visit %d = %q, want marker %q", i, gotVisits[i], marker)
 		}

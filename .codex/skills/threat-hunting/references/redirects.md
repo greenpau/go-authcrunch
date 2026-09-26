@@ -65,6 +65,12 @@ these placeholders. The embedding server owns trusted request-host and
 forwarded-header policy. An arbitrary unprotected Host or forwarded header is
 not evidence of a slash-check bypass in the local URI helper.
 
+`getRequestURI` guards both `//` and `/\` at its output boundary, keeping
+either browser authority prefix behind a local dot segment. `URL.RequestURI`
+normally escapes literal path backslashes as `%5C`; retain the explicit check
+on the completed URI as well. Preserve valid `RawPath` and raw query bytes,
+and do not use path cleaning or decode encoded separators to clear an alert.
+
 Validate placeholder composition as well as the substituted value. A safe
 `/evil.example/path` becomes a cross-origin `//evil.example/path` in `/{uri}`.
 `getForbiddenRedirectLocation` rejects templates where local URI substitution
@@ -113,6 +119,13 @@ the default suite with bounded requests and cleanup of QUIC workers and sockets.
 `pkg/authz/redirect_e2e_test.go` exercises the public Gatekeeper over TLS and
 the browser destination behavior. Retain a failing pre-fix reproduction for
 unsafe placeholder composition, plus safe fixed-host and local forms.
+`TestE2EAuthorizationRedirectRawRequestSeparators` writes literal slash and
+backslash targets over TLS for both local placeholders; `http.Client` would
+escape backslashes before transmission and miss that input boundary.
+`TestE2EAuthorizationRedirectBrowserOrigin` follows redirects emitted by the
+production `{uri}` gatekeeper in Chrome before checking ambiguous template
+rejection. Keep the initial test navigation separate from the gatekeeper's
+actual redirect under test.
 
 External-provider field isolation belongs in
 `pkg/authn/external_login_redirect_test.go`. Its complete TLS OAuth consumer
