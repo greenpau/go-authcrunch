@@ -196,6 +196,13 @@ prefix is valid JSON. Treat `error` and `error_description` as optional strings;
 malformed values fail without a panic and without copying aggregate provider data
 into the returned error. Keep the real portal callback regression proving an
 oversized token response issues no portal credential.
+Generic OIDC UserInfo enrichment also requires a nonempty string access token, a
+2xx response, and no more than 1 MiB of JSON before decoding. A failed or
+oversized optional enrichment must not replace roles from the already verified
+identity; login may continue with those verified claims. Keep the real TLS portal
+regression proving an oversized UserInfo document cannot add a role and the
+original verified role still authorizes. Test the exact size boundary and reject
+provider-controlled access-token types without a panic.
 Keep required/error JSON field validation in `validateFetchedClaims` before
 mapping. Incorrect GitHub login/organization fields, Discord IDs and Facebook
 identity/error types must not panic. Tests must distinguish parser rejection from

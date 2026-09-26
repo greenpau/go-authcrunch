@@ -237,7 +237,12 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 			return
 		}
 		f.userInfos++
-		json.NewEncoder(w).Encode(map[string]any{"sub": subject, "email": subject + "@example.test", "roles": []string{"userinfo-user"}})
+		response := map[string]any{"sub": subject, "email": subject + "@example.test", "roles": []string{"userinfo-user"}}
+		if f.failure == "oversized userinfo response" {
+			response["roles"] = []string{"oversized-userinfo-role"}
+			response["padding"] = strings.Repeat("x", 1<<20)
+		}
+		json.NewEncoder(w).Encode(response)
 	case "/post-login":
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("post-login-destination"))
@@ -634,6 +639,41 @@ func TestE2EOAuthEd25519SourcesAndClaims(t *testing.T) {
 				t.Fatal("OAuth credential did not authorize")
 			}
 		})
+	}
+}
+
+func TestE2EOAuthEd25519RejectsOversizedUserInfo(t *testing.T) {
+	issuer := newOIDCE2EIssuer(t, "Ed25519", "userinfo", "oversized userinfo response", false)
+	p := newOIDCE2EPortal(t, issuer, "/auth", "HS512", "discovery")
+	token, _ := p.login(t, http.StatusSeeOther)
+	parsed, err := jwtlib.Parse(token, func(*jwtlib.Token) (any, error) {
+		return []byte(oidcE2EPortalSecret), nil
+	}, jwtlib.WithValidMethods([]string{"HS512"}))
+	if err != nil {
+		t.Fatal("portal verification failed", err)
+	}
+	roles, ok := parsed.Claims.(jwtlib.MapClaims)["roles"].([]any)
+	if !ok {
+		t.Fatalf("portal roles have unexpected type: %#v", parsed.Claims)
+	}
+	var foundViewer bool
+	for _, role := range roles {
+		if role == "oversized-userinfo-role" {
+			t.Fatal("oversized UserInfo document influenced portal roles")
+		}
+		foundViewer = foundViewer || role == "viewer"
+	}
+	if !foundViewer {
+		t.Fatal("verified identity roles were not preserved after rejected enrichment")
+	}
+	issuer.mu.Lock()
+	userInfos := issuer.userInfos
+	issuer.mu.Unlock()
+	if userInfos != 1 {
+		t.Fatalf("UserInfo interactions = %d, want 1", userInfos)
+	}
+	if status, _ := p.get(t, "/protected", token); status != http.StatusOK {
+		t.Fatalf("verified identity failed authorization after rejected enrichment: HTTP %d", status)
 	}
 }
 

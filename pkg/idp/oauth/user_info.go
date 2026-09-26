@@ -17,7 +17,6 @@ package oauth
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -37,8 +36,9 @@ func (b *IdentityProvider) fetchUserInfo(tokenData, userData map[string]interfac
 	if tokenData == nil || userData == nil {
 		return nil
 	}
-	if _, exists := tokenData["access_token"]; !exists {
-		return fmt.Errorf("access_token not found")
+	accessToken, exists := tokenData["access_token"].(string)
+	if !exists || accessToken == "" {
+		return fmt.Errorf("access_token is missing or is not a non-empty string")
 	}
 
 	// Initialize HTTP client.
@@ -53,16 +53,19 @@ func (b *IdentityProvider) fetchUserInfo(tokenData, userData map[string]interfac
 	}
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Add("Authorization", "Bearer "+tokenData["access_token"].(string))
+	req.Header.Add("Authorization", "Bearer "+accessToken)
 
 	// Fetch data from the URL.
 	resp, err := cli.Do(req)
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
-	respBody, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("UserInfo endpoint returned HTTP %d", resp.StatusCode)
+	}
+	respBody, err := readOAuthResponseBody(resp.Body, "UserInfo")
 	if err != nil {
 		return err
 	}
