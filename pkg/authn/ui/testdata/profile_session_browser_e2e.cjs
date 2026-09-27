@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 // Run the embedded profile application against the Go fixture's TLS portal.
 const assert = require("node:assert/strict");
+const { waitFor } = require("./profile_session_browser_helpers.cjs");
 const config = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
 const socket = new WebSocket(process.argv[2]);
 const pending = new Map();
@@ -35,23 +36,13 @@ function command(method, params = {}, sessionId) {
   });
 }
 async function evaluate(tab, fn, args) {
+  // These callbacks are synchronous. Awaiting a promise adds a navigation race
+  // even after a DOM observation or form submission has completed.
   const result = await command("Runtime.evaluate", {
-    expression: `(${fn.toString()})(${JSON.stringify(args)})`, awaitPromise: true, returnByValue: true
+    expression: `(${fn.toString()})(${JSON.stringify(args)})`, returnByValue: true
   }, tab);
   if (result.exceptionDetails) throw new Error("browser evaluation failed");
   return result.result.value;
-}
-async function waitFor(fn) {
-  const deadline = Date.now() + 15000;
-  while (Date.now() < deadline) {
-    try {
-      if (await fn()) return;
-    } catch (error) {
-      if (!/Execution context was destroyed|Cannot find context/.test(error.message)) throw error;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  }
-  throw new Error("profile recovery did not reach the login form");
 }
 
 (async () => {
@@ -70,7 +61,8 @@ async function waitFor(fn) {
     await command("Page.navigate", { url: config.issuer + "/portal" }, tab);
     await waitFor(() => evaluate(tab, (issuer) => location.href === issuer + "/portal" && document.readyState === "complete", config.issuer));
     await command("Page.navigate", { url: config.issuer + "/profile/" }, tab);
-    await waitFor(() => evaluate(tab, (issuer) => location.href === issuer + "/login?fresh=1" && !!document.querySelector("#username"), config.issuer));
+    await waitFor(() => evaluate(tab, (issuer) => location.href === issuer + "/login?fresh=1" &&
+      document.readyState === "complete" && !!document.querySelector("#username"), config.issuer));
     assert.ok(rejectedProfile, "the shipped profile app did not observe the revoked session");
     assert.ok(recoveryNavigation, "the shipped profile app did not follow its recovery route");
     const { cookies } = await command("Storage.getCookies", { browserContextId });
@@ -81,7 +73,8 @@ async function waitFor(fn) {
       document.querySelector("#realm").value = "local";
       document.querySelector("#username").form.submit();
     });
-    await waitFor(() => evaluate(tab, () => location.pathname.includes("/sandbox/") && document.readyState === "complete"));
+    await waitFor(() => evaluate(tab, () => location.pathname.includes("/sandbox/") &&
+      document.readyState === "complete" && !!document.querySelector('input[name="secret"][type="password"]')));
     process.stdout.write(JSON.stringify({ passed: true }));
   } finally {
     await command("Browser.close").catch(() => {});

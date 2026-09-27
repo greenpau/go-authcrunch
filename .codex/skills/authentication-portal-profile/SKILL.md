@@ -68,6 +68,12 @@ fresh login, and recovered profile access with refresh disabled/enabled. Its
 Chrome driver `ui/testdata/profile_session_browser_e2e.cjs` runs the shipped
 profile application using real TLS login cookies and checks the 401-to-login
 journey; signed synthetic WebAuthn assertions exercise the factor checkpoints.
+The driver waits for the completed login page and the rendered password checkpoint.
+Keep its DOM evaluations synchronous; only read-only observations may retry
+Chrome document-replacement errors, including `Inspected target navigated or closed`,
+within the existing deadline. Never retry form submission or swallow unrelated
+protocol failures. `profile_session_client_test.cjs` covers these retry and timeout
+boundaries through `make test-ui`; the real Chrome journey remains required.
 
 ## Acceptance and validation
 
