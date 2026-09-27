@@ -17,8 +17,30 @@ package addr
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
+
+func TestGetCurrentURLWithSuffixRejectsMalformedForwardedPrefix(t *testing.T) {
+	for _, tc := range []struct {
+		name, prefix, want string
+		wantErr            bool
+	}{
+		{name: "valid mount", prefix: "/tenant", want: "https://service.example/tenant/private"},
+		{name: "authority injection", prefix: "@attacker.example", want: malformedURLStr, wantErr: true},
+		{name: "query injection", prefix: "/tenant?next=/", want: malformedURLStr, wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, "https://service.example/private", nil)
+			r.RequestURI = "/private"
+			r.Header.Set("X-Forwarded-Prefix", tc.prefix)
+			got, err := GetCurrentURLWithSuffix(r, "")
+			if (err != nil) != tc.wantErr || got != tc.want {
+				t.Fatalf("URL = %q, error = %v, want %q, error %t", got, err, tc.want, tc.wantErr)
+			}
+		})
+	}
+}
 
 func TestGetSourceAddress(t *testing.T) {
 	testFailed := 0

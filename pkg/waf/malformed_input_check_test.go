@@ -83,6 +83,21 @@ func TestMalformedInput(t *testing.T) {
 			entries: []string{`foo`, `1000000`, `99999`, `00000`},
 			want:    true,
 		},
+		// X-Forwarded-Prefix checks.
+		{
+			name:    "test valid X-Forwarded-Prefix header value",
+			kind:    "X-Forwarded-Prefix",
+			entries: []string{"", "/", "/mount", "/tenant/auth/", "/caf%C3%A9"},
+			want:    false,
+		},
+		{
+			name: "test malformed X-Forwarded-Prefix header value",
+			kind: "X-Forwarded-Prefix",
+			entries: []string{
+				"mount", "@attacker.example", ":443@attacker.example", "/mount?next=/", "/mount#fragment", `/\\attacker.example`, "/mount\r\nX-Test: injected",
+			},
+			want: true,
+		},
 		// X-Forwarded-For checks.
 		{
 			name: "test valid X-Forwarded-For header value",
@@ -142,6 +157,8 @@ func TestMalformedInput(t *testing.T) {
 					got = IsMalformedForwardedHost(entry, 2, 255)
 				case "X-Forwarded-Port":
 					got = IsMalformedForwardedPort(entry, 2, 5)
+				case "X-Forwarded-Prefix":
+					got = IsMalformedForwardedPrefix(entry, 1, 255)
 				case "X-Forwarded-For":
 					got = IsMalformedForwardedFor(entry, 7, 255)
 				case "X-Real-Ip":

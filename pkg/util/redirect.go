@@ -18,6 +18,8 @@ import (
 	"net/http"
 	urlpkg "net/url"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/waf"
 )
 
 // GetBaseURL returns base path based on some match.
@@ -65,10 +67,7 @@ func GetIssuerURL(r *http.Request) string {
 		return s
 	}
 	s = strings.TrimRightFunc(s, func(r rune) bool {
-		if r == '/' {
-			return false
-		}
-		return true
+		return r != '/'
 	})
 
 	// i := strings.LastIndexByte(s, '/')
@@ -110,6 +109,9 @@ func GetCurrentBaseURL(r *http.Request) string {
 		}
 	}
 	redirPrefix := r.Header.Get("X-Forwarded-Prefix")
+	if waf.IsMalformedForwardedPrefix(redirPrefix, 1, 255) {
+		redirPrefix = ""
+	}
 	redirectBaseURL += redirPrefix
 
 	return redirectBaseURL

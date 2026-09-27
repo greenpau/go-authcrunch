@@ -15,7 +15,9 @@
 package waf
 
 import (
+	"net/url"
 	"strconv"
+	"strings"
 	"unicode"
 )
 
@@ -124,6 +126,23 @@ func IsMalformedForwardedPort(s string, a, b int) bool {
 		return true
 	}
 	return false
+}
+
+// IsMalformedForwardedPrefix checks whether X-Forwarded-Prefix is an
+// origin-relative path. A prefix is appended directly after an authority, so a
+// value without a leading slash can otherwise become userinfo and replace the
+// effective URL host.
+func IsMalformedForwardedPrefix(s string, a, b int) bool {
+	switch {
+	case len(s) == 0:
+		return false
+	case len(s) < a || len(s) > b:
+		return true
+	case s[0] != '/' || strings.ContainsAny(s, "\\\x00\r\n?#"):
+		return true
+	}
+	u, err := url.ParseRequestURI(s)
+	return err != nil || u.IsAbs() || u.Host != "" || u.RawQuery != "" || u.Fragment != ""
 }
 
 // IsMalformedRealIP checks whether the provided X-Real-IP

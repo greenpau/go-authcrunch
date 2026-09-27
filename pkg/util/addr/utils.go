@@ -16,9 +16,10 @@ package addr
 
 import (
 	"fmt"
-	"github.com/greenpau/go-authcrunch/pkg/waf"
 	"net/http"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/waf"
 )
 
 const malformedURLStr = "malformed-url"
@@ -171,6 +172,9 @@ func GetCurrentURLWithSuffix(r *http.Request, suffix string) (string, error) {
 	}
 
 	prefix := r.Header.Get("X-Forwarded-Prefix")
+	if waf.IsMalformedForwardedPrefix(prefix, 1, 255) {
+		return malformedURLStr, fmt.Errorf("malformed X-Forwarded-Prefix header")
+	}
 	u += prefix
 
 	if suffix != "" {

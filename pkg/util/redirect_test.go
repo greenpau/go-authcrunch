@@ -15,11 +15,13 @@
 package util
 
 import (
-	"github.com/greenpau/go-authcrunch/internal/tests"
+	"crypto/tls"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
 )
 
 func TestSanitizeURLPath(t *testing.T) {
@@ -158,6 +160,27 @@ func TestGetCurrentURLSanitizesPath(t *testing.T) {
 			got := GetCurrentURL(r)
 			if tc.wantSafe && (strings.Contains(got, "<") || strings.Contains(got, ">") || strings.Contains(got, `"`)) {
 				t.Errorf("GetCurrentURL() returned unsanitized HTML chars: %s", got)
+			}
+		})
+	}
+}
+
+func TestGetCurrentBaseURLRejectsMalformedForwardedPrefix(t *testing.T) {
+	for _, tc := range []struct {
+		name, prefix, want string
+	}{
+		{name: "empty", want: "https://service.example"},
+		{name: "valid mount", prefix: "/tenant/auth", want: "https://service.example/tenant/auth"},
+		{name: "userinfo authority injection", prefix: "@attacker.example", want: "https://service.example"},
+		{name: "query injection", prefix: "/tenant?next=https://attacker.example", want: "https://service.example"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &http.Request{Host: "service.example", TLS: &tls.ConnectionState{}, Header: make(http.Header)}
+			if tc.prefix != "" {
+				r.Header.Set("X-Forwarded-Prefix", tc.prefix)
+			}
+			if got := GetCurrentBaseURL(r); got != tc.want {
+				t.Fatalf("base URL = %q, want %q", got, tc.want)
 			}
 		})
 	}

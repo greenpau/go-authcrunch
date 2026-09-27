@@ -95,6 +95,12 @@ forwarded-header contract. Preserve raw path escaping, duplicate/empty query
 values, ports, and dot segments. An actual absolute-form target remains raw
 return data; do not concatenate it onto another origin. This classification
 must be independent of HTTP version and applies to both redirect renderers.
+Treat `X-Forwarded-Prefix` as an origin-relative path only: it must begin with
+`/` and must not contain a query, fragment, backslash, control bytes, or invalid
+request-URI encoding. A value such as `@attacker.example` appended directly to
+`https://trusted.example` becomes userinfo and changes the effective authority.
+Helpers that cannot return an error discard a malformed prefix; fallible URL
+builders reject it before composition.
 Inspect the generated JavaScript as well as `Location` when testing both modes.
 For leading slash/backslash findings, evaluate the emitted URL using browser
 semantics; Go's `url.Parse` is not a browser URL parser. Include absolute request
