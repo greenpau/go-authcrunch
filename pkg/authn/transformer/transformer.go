@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
@@ -83,9 +84,40 @@ func (f *Factory) Transform(m map[string]any) error {
 // Legacy require actions remain additive in m["challenges"]. The first eligible
 // rule across matching transforms wins; later claim and deny actions still run.
 // Registered methods must come from the backend, never JWT or client claims.
+// Callers must also authenticate the source of github_id and github_orgs. This
+// factory validates their types, but cannot establish a map's provider identity.
 func (f *Factory) TransformWithAuthMethods(m map[string]any, methods []string) ([]string, error) {
 	if m == nil {
 		return nil, fmt.Errorf("nil transformer claims")
+	}
+	if rawID, exists := m["github_id"]; exists {
+		value, ok := rawID.(string)
+		id, err := strconv.ParseUint(value, 10, 64)
+		if !ok || err != nil || id == 0 || strconv.FormatUint(id, 10) != value {
+			return nil, fmt.Errorf("invalid GitHub ID claim")
+		}
+	}
+	if orgs, exists := m["github_orgs"]; exists {
+		switch values := orgs.(type) {
+		case []string:
+			for _, value := range values {
+				if strings.TrimSpace(value) == "" {
+					return nil, fmt.Errorf("invalid GitHub organization claim")
+				}
+			}
+		case []any:
+			normalized := make([]string, 0, len(values))
+			for _, raw := range values {
+				value, ok := raw.(string)
+				if !ok || strings.TrimSpace(value) == "" {
+					return nil, fmt.Errorf("invalid GitHub organization claim")
+				}
+				normalized = append(normalized, value)
+			}
+			m["github_orgs"] = normalized
+		default:
+			return nil, fmt.Errorf("invalid GitHub organization claim")
+		}
 	}
 	registered := make(map[string]bool, len(methods))
 	for _, method := range methods {

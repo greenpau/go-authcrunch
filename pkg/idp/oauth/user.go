@@ -46,7 +46,8 @@ type discordGuild struct {
 }
 
 type userData struct {
-	Groups []string `json:"groups,omitempty"`
+	Groups     []string `json:"groups,omitempty"`
+	GithubOrgs []string `json:"github_orgs,omitempty"`
 }
 
 func decodeDiscordGuilds(data []byte) ([]discordGuild, error) {
@@ -146,6 +147,7 @@ func (b *IdentityProvider) fetchGithubUserInfo(params map[string]interface{}) (*
 			continue
 		}
 		data.Groups = append(data.Groups, fmt.Sprintf("github.com/%s/members", orgName))
+		data.GithubOrgs = append(data.GithubOrgs, orgName)
 	}
 
 	b.logger.Debug(
@@ -276,8 +278,15 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 			}
 		}
 		metadata := make(map[string]interface{})
-		if v, exists := data["id"]; exists {
-			metadata["id"] = v
+		githubID, err := githubIDFromProfile(respBody)
+		if err != nil {
+			return nil, err
+		}
+		if githubID != "" {
+			// Preserve the numeric metadata claim and expose a lossless string
+			// for matching. Never derive this ID from login or another driver.
+			metadata["id"] = json.Number(githubID)
+			m["github_id"] = githubID
 		}
 		m["metadata"] = metadata
 
@@ -309,6 +318,9 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 				)
 			} else {
 				userGroups = append(userGroups, userData.Groups...)
+				if len(userData.GithubOrgs) > 0 {
+					m["github_orgs"] = userData.GithubOrgs
+				}
 				b.logger.Debug(
 					"Successfully extracted user org data",
 					zap.String("identity_provider_name", b.config.Name),

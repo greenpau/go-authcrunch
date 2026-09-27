@@ -1,6 +1,6 @@
 ---
 name: oauth-identity-provider
-description: Maintain upstream OAuth identity-provider directive parsers, shared configuration dispatch, OAuth/OIDC discovery, JWKS and static public PEM verification, EdDSA/Ed25519 token validation, key refresh, and real portal OAuth E2E tests. Excludes portal signing-key publication and gatekeeper-owned direct OAuth sessions.
+description: Maintain upstream OAuth identity-provider directive parsers, shared configuration dispatch, OAuth/OIDC discovery, GitHub identity claims, JWKS and static public PEM verification, EdDSA/Ed25519 token validation, key refresh, and real portal OAuth E2E tests. Excludes portal signing-key publication and gatekeeper-owned direct OAuth sessions.
 ---
 
 # OAuth Identity Provider
@@ -37,6 +37,53 @@ separate credential using its existing KMS configuration. Keep upstream keys,
 algorithms, issuer metadata, and key refresh independent of portal signing
 selection, token settings, and portal JWKS publication. ES512 is the existing
 autogeneration fallback, not a mandatory portal signing algorithm.
+
+## GitHub identity claims
+
+The GitHub driver derives `github_id` only from the numeric `id` in its
+successful authenticated `/user` response. Decode that value losslessly from
+the original JSON as a positive unsigned 64-bit integer and emit a canonical
+decimal string; a float64 conversion can authorize the wrong large ID. Preserve
+`metadata.id` as a JSON number and the existing `sub = github.com/<login>`.
+An absent ID remains compatible with older profile fixtures but emits no
+`github_id`. Reject a supplied null, string, zero, negative, fraction, exponent
+or overflow. Never accept an upstream field already named `github_id` as proof.
+
+When `user_org_filters` enables the existing GitHub organization lookup,
+project accepted organization `login` values into the string list `github_orgs`
+as well as the existing `github.com/<org>/members` groups. For example, provider
+body directive `user_org_filters .*` admits all returned organizations; narrower
+regex filters restrict both outputs. Derive the list from fetched organization
+records, never the profile's arbitrary extra fields or transformed roles.
+Missing/disabled lookup, an empty or filtered result, an HTTP/API failure, or
+invalid organization login types cannot grant an organization match. Existing
+lookup failures remain nonfatal for login and produce no organization claim.
+
+The lookup follows the profile's validated GitHub API `organizations_url` and
+retains its existing response/visibility behavior, including its current single
+page. GitHub's [list-user-organizations endpoint](https://docs.github.com/en/rest/orgs/orgs#list-organizations-for-a-user)
+returns public memberships; adding `read:org` alone does not change that endpoint
+to the authenticated-user API or expose private memberships. This feature adds
+matching over those results, not private-membership discovery or pagination.
+
+The transform parser and portal provider boundary are owned by
+[GitHub identity matchers](../authentication-portal-challenges/SKILL.md#github-identity-matchers).
+Other drivers must not forward either reserved top-level claim.
+The public factory assumes its embedding caller has authenticated the claim
+source; a realm called `github` is not proof of the configured driver.
+
+Validate changes with `TestGithubIDFromProfile`, `TestGithubOrganizationClaims`,
+transform parser tests/examples, and the default-suite TLS consumer
+`TestE2EOAuthGithubTransforms`. Its isolated subprocess confines proxy routing
+for fixed GitHub hosts to local listeners and preserves production endpoints.
+It covers large adjacent IDs, unchanged subjects/metadata, renamed accounts,
+malformed IDs, exact/regex membership, org filters and lookup failures,
+non-GitHub claim spoofing, and combined matchers through a protected resource.
+
+```sh
+make test TEST_DIR='./pkg/authn ./pkg/authn/transformer/... ./pkg/idp/oauth/... ./pkg/acl' COVERAGE_DIR='.coverage/github-transforms'
+make test-automation
+```
 
 ## Ed25519 Verification Contract
 

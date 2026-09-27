@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"slices"
 	"testing"
 
 	"go.uber.org/zap"
@@ -55,23 +56,44 @@ func TestFetchedClaimsRejectUnsafeJSONTypes(t *testing.T) {
 	}
 }
 
-func TestGithubOrganizationClaimsIgnoreUnsafeLoginTypes(t *testing.T) {
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`[{"login":7}]`))
-	}))
-	defer server.Close()
-	provider := &IdentityProvider{
-		config:         &Config{Driver: "github"},
-		logger:         zap.NewNop(),
-		browserConfig:  &browserConfig{TLSInsecureSkipVerify: true},
-		userOrgFilters: []*regexp.Regexp{regexp.MustCompile(".*")},
-	}
-	got, err := provider.fetchGithubUserInfo(map[string]any{"url": server.URL, "method": http.MethodGet, "token": "opaque"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got.Groups) != 0 {
-		t.Fatalf("malformed organization produced groups: %v", got.Groups)
+func TestGithubOrganizationClaims(t *testing.T) {
+	for _, tc := range []struct {
+		name, body, filter string
+		want               []string
+	}{
+		{name: "invalid login types", body: `[{"login":7},{"login":null},{"login":" "},{}]`, filter: ".*"},
+		{name: "memberships", body: `[{"login":"acme"},{"login":"acme-labs"}]`, filter: ".*", want: []string{"acme", "acme-labs"}},
+		{name: "filtered memberships", body: `[{"login":"acme"},{"login":"other"}]`, filter: "^acme$", want: []string{"acme"}},
+		{name: "empty", body: `[]`, filter: ".*"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("Authorization") != "token opaque" {
+					t.Error("missing access token")
+				}
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer server.Close()
+			provider := &IdentityProvider{
+				config: &Config{Driver: "github"}, logger: zap.NewNop(),
+				browserConfig:  &browserConfig{TLSInsecureSkipVerify: true},
+				userOrgFilters: []*regexp.Regexp{regexp.MustCompile(tc.filter)},
+			}
+			got, err := provider.fetchGithubUserInfo(map[string]any{"url": server.URL, "method": http.MethodGet, "token": "opaque"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(got.GithubOrgs, tc.want) {
+				t.Fatalf("organizations = %v, want %v", got.GithubOrgs, tc.want)
+			}
+			var wantGroups []string
+			for _, org := range tc.want {
+				wantGroups = append(wantGroups, "github.com/"+org+"/members")
+			}
+			if !slices.Equal(got.Groups, wantGroups) {
+				t.Fatal("existing groups changed")
+			}
+		})
 	}
 }
 

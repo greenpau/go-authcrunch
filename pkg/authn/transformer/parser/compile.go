@@ -54,6 +54,9 @@ func CompileUserTransformerConfig(cfg *config.Config) (*config.RuntimeConfig, er
 			}
 			args = args[1:]
 		}
+		if mutatesGithubClaims(args) {
+			return nil, fmt.Errorf("GitHub identity claims are provider-owned")
+		}
 		switch args[0] {
 		case "require":
 			if len(args) >= 3 && args[1] == "auth" && args[2] == "challenges" {
@@ -110,16 +113,22 @@ func CompileUserTransformerConfig(cfg *config.Config) (*config.RuntimeConfig, er
 			return nil, fmt.Errorf("transformer has unsupported action")
 		}
 	}
+	var conditions []string
 	for _, statement := range cfg.Matchers {
 		args, err := cfgutil.DecodeArgs(statement)
 		if err != nil || len(args) == 0 || hasEmptyArgument(args) || !utf8.ValidString(statement) || strings.ContainsAny(statement, "\r\n") {
 			return nil, fmt.Errorf("invalid transformer matcher")
 		}
+		condition, err := compileGithubMatcher(args)
+		if err != nil {
+			return nil, err
+		}
+		conditions = append(conditions, condition)
 	}
 	matcher := acl.NewAccessList()
 	matchRuleConfigs := []*acl.RuleConfiguration{
 		{
-			Conditions: slices.Clone(cfg.Matchers),
+			Conditions: conditions,
 			Action:     "allow",
 		},
 	}

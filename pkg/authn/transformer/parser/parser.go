@@ -26,7 +26,8 @@ import (
 )
 
 // NewUserTransformerConfigFromDirectives parses one transform user block body,
-// without its header or braces. Match directives use the ACL grammar; actions
+// without its header or braces. Match directives use the ACL grammar or
+// "match github <id|org> <exact|regex> <value>"; actions
 // use require, add, overwrite, delete, drop, action, ui, block, or deny.
 // Repeated matchers/actions retain declaration order. Conditional requirements
 // use "require auth challenges <rule>" and the authentication challenge grammar.

@@ -35,6 +35,8 @@ GO_HEADER = '''// Copyright 2022 Paul Greenberg greenpau@outlook.com
 FIELD_TYPES = collections.OrderedDict({
     'roles':  'ListStr',
     'amr':    'ListStr',
+    'github_id': 'Str',
+    'github_orgs': 'ListStr',
     'email':  'Str',
     'origin': 'Str',
     'name':   'Str',

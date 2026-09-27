@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-challenges
-description: Maintain conditional authentication challenge policies, reusable authchal and user-transform FromDirectives parsers, safe claim substitution, registered-factor inventory, passwordless WebAuthn selection, verified AMR access claims, and policy revalidation across portal login, refresh, OIDC, and direct authentication.
+description: Maintain conditional authentication challenge policies, reusable authchal and user-transform FromDirectives parsers, safe claim substitution, GitHub ID/organization transforms, registered-factor inventory, passwordless WebAuthn selection, verified AMR access claims, and policy revalidation across portal login, refresh, OIDC, and direct authentication.
 ---
 
 # Authentication Challenge Policies
@@ -48,6 +48,47 @@ require auth challenges u2f
 require auth challenges password totp if u2f not available
 require auth challenges password if u2f and totp not available
 ```
+
+## GitHub identity matchers
+
+The shared transform parser accepts `match github id <exact|regex> <value>` and
+`match github org <exact|regex> <value>`. Both operators take exactly one value.
+ID `exact` requires a canonical positive unsigned 64-bit decimal integer;
+reject signs, zero, leading zeros, fractions and overflow. Organization values
+are organization login names, not numeric organization IDs or display names.
+Matching is case-sensitive, and Go regular expressions are unanchored unless
+the operator supplies `^` and `$`. A list matches when any organization matches.
+Multiple different matchers in one block are ANDed; separate blocks can grant
+the same role for alternatives. Existing duplicate-field rejection still applies.
+
+```text
+match github id exact 12345678
+match github org regex ^(acme|acme-labs)$
+action add role authp/admin
+```
+
+Compilation lowers these directives to ordinary ACL conditions over the string
+`github_id` and string-list `github_orgs`. Preserve the original shorthand in
+serialized `Config.Matchers`; public parsing and typed/JSON configuration must
+use the same compiler, without mutating caller input. Adapters must forward the
+`match github` prefix without prepending an implicit `exact` operator.
+
+Both claims are provider-owned and read-only to transform actions, including
+nested writes. Missing claims never satisfy these positive matchers, including
+`regex .*`. Malformed supplied claims return an error before actions run;
+JSON-decoded organization string arrays are normalized to the ACL list type.
+Portal code preserves these claims only for the server-selected OAuth GitHub
+backend, independent of the realm's spelling. Direct factory consumers must
+supply trusted provider claims; `realm`, `origin`, groups and metadata alone do
+not establish GitHub identity. Ordinary role actions cannot manufacture it.
+See the OAuth owner's [GitHub claim contract](../oauth-identity-provider/SKILL.md#github-identity-claims)
+for organization lookup prerequisites, visibility and failure behavior.
+
+`parser/github_test.go` covers grammar, examples, serialization, matching and
+claim immutability. `TestGithubTransformProviderBoundary` checks backend trust.
+`TestE2EOAuthGithubTransforms` exercises public parsers, serialized configuration,
+a real TLS OAuth login, independent portal JWT verification and gatekeeper
+allow/deny results, including combined ID and organization conditions.
 
 ## Custom claim actions
 

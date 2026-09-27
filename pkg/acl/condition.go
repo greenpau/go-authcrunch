@@ -33,21 +33,23 @@ var (
 	matchFieldRgx        *regexp.Regexp
 
 	inputDataTypes = map[string]dataType{
-		"roles":  dataTypeListStr,
-		"amr":    dataTypeListStr,
-		"email":  dataTypeStr,
-		"origin": dataTypeStr,
-		"name":   dataTypeStr,
-		"realm":  dataTypeStr,
-		"aud":    dataTypeListStr,
-		"scopes": dataTypeListStr,
-		"org":    dataTypeListStr,
-		"jti":    dataTypeStr,
-		"iss":    dataTypeStr,
-		"sub":    dataTypeStr,
-		"addr":   dataTypeStr,
-		"method": dataTypeStr,
-		"path":   dataTypeStr,
+		"roles":       dataTypeListStr,
+		"amr":         dataTypeListStr,
+		"github_id":   dataTypeStr,
+		"github_orgs": dataTypeListStr,
+		"email":       dataTypeStr,
+		"origin":      dataTypeStr,
+		"name":        dataTypeStr,
+		"realm":       dataTypeStr,
+		"aud":         dataTypeListStr,
+		"scopes":      dataTypeListStr,
+		"org":         dataTypeListStr,
+		"jti":         dataTypeStr,
+		"iss":         dataTypeStr,
+		"sub":         dataTypeStr,
+		"addr":        dataTypeStr,
+		"method":      dataTypeStr,
+		"path":        dataTypeStr,
 	}
 
 	inputDataAliases = map[string]string{

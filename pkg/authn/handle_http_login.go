@@ -537,6 +537,14 @@ func injectPortalRoles(m map[string]interface{}, cfg *PortalConfig) {
 }
 
 func (p *Portal) transformUser(_ context.Context, rr *requests.Request, m map[string]interface{}) error {
+	// The realm is selected by the authenticated backend. A claim supplied by
+	// another driver, including one whose realm is named "github", is not proof
+	// of GitHub identity.
+	provider := p.getIdentityProviderByRealm(rr.Upstream.Realm)
+	if rr.Upstream.Method != "oauth2" || provider == nil || provider.GetDriver() != "github" {
+		delete(m, "github_id")
+		delete(m, "github_orgs")
+	}
 	if p.transformer == nil {
 		return nil
 	}
