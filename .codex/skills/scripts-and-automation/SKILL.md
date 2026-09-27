@@ -35,6 +35,7 @@ boundary for these workflows.
 | `make test-automation` | Verbose Python automation/version/release fixture tests |
 | `make test-codeql` | Real CodeQL fixture scan verifying accepted diagnostic logging exceptions and retained alerts; requires CodeQL CLI |
 | `make brand-assets` / `make brand-assets-check` | Regenerate SVG branding and shared colors from the palette, or check drift without writes |
+| `make generate-acl` | Regenerate the four ACL condition/rule source and test files from the local Python generator |
 | `make ci-check` | Sequential version, brand-asset consistency, automation, lint, Go tests, UI tests, and build gates |
 | `make version-check` / `make version-sync` | Check or explicitly synchronize version-bearing Go defaults |
 | `make artifact-id` | Validate and print the versioned artifact identity |
@@ -89,6 +90,45 @@ diff; it is not a prerequisite for builds/tests.
 requested. Keep diagnostic reports until the user has the needed evidence.
 
 ## Asset and Security Scripts
+
+### ACL Generation
+
+`assets/scripts/generate_acl.py` owns `pkg/acl/condition.go`,
+`condition_test.go`, `rule.go`, and `rule_test.go`. Edit its field/match/action
+tables and Go templates, then run `make generate-acl` and commit the generator
+and regenerated files together. The generator includes the Apache license and
+generated-file notice; it does not run license maintenance on other ACL files.
+Handwritten tests, including `pkg/acl/generation_e2e_test.go`, remain independent
+of the generated test matrices.
+
+Generation requires Python 3.9+ (override Make's `PYTHON` when needed) and
+`gofmt` on PATH. It uses only the Python standard library and this checkout;
+no sibling repository, autopep8, or global versioned binary is needed. Direct
+invocation resolves the repository from the script path, regardless of the
+working directory. Run `python3 assets/scripts/generate_acl.py --check` to
+detect missing or stale files without writing (exit 1 for drift, 2 for tool or
+filesystem failures). Generation renders and formats all four files before
+staging replacements, so rendering/formatting/staging failures preserve existing
+outputs. Replacements are atomic per file, not a transaction across all four.
+Unchanged files retain their timestamps and permissions.
+
+Preserve the current ACL behavior when changing templates, including `amr` as
+a list-valued field and condition-level `match any`. Negative regex conditions
+with list expressions or list inputs accept any nonmatching pair when that
+modifier is present; their default rejects any matching pair. The unconditional
+`match any` condition retains its existing `exp` field dependency.
+
+Run `make test-automation` and
+`make test TEST_DIR='./pkg/acl' COVERAGE_DIR='.coverage/acl'` after changes.
+`assets/scripts/tests/generate_acl_test.py` exercises the real Make target in an
+isolated checkout with spaces in its path, reconstructs all four deleted files,
+compares them byte-for-byte with committed outputs, and runs the resulting Go
+tests. It also covers idempotence, read-only drift checks, a missing formatter,
+and a real formatting failure after earlier artifacts rendered successfully.
+This reproducibility check runs in `ci-check` through `test-automation`;
+build/test commands never regenerate the working checkout's ACL files.
+
+### Other Assets and Security Scripts
 
 `assets/scripts/update_brand_assets.py` owns the palette-driven core/profile
 SVG artwork, the marked color block in `basic.css`, and profile theme metadata.

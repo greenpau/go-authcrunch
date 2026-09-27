@@ -17,7 +17,7 @@ export TEST TEST_DIR TEST_TIMEOUT QUICK_TEST_DIR COVERAGE_DIR MINIMUM_COVERAGE
 export APP_VERSION GIT_COMMIT GIT_BRANCH BUILD_USER BUILD_DATE
 export PYTHONDONTWRITEBYTECODE := 1
 
-.PHONY: all info build linter dep install-test-tools test run-tests qtest run-quick-tests run-reports test-ui test-automation test-codeql ci-check brand-assets brand-assets-check version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release fast-release fast-minor-release release-git-check release-update-version release-git-commit
+.PHONY: all info build linter dep install-test-tools test run-tests qtest run-quick-tests run-reports test-ui test-automation test-codeql ci-check brand-assets brand-assets-check generate-acl version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release fast-release fast-minor-release release-git-check release-update-version release-git-commit
 
 all: info build
 
@@ -104,6 +104,9 @@ artifact-id:
 	@$(PYTHON) assets/scripts/version.py artifact
 
 # Explicit maintenance actions are separate from test/build entry points.
+generate-acl:
+	@$(PYTHON) assets/scripts/generate_acl.py
+
 templates: license
 
 license:

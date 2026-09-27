@@ -50,6 +50,10 @@ make ci-check
 coverage/report bundle to `.coverage/index.html`. Use `make test-ui` for browser
 session tests and `make build` for `bin/authdb` and `bin/authdbctl`.
 
+Run `make generate-acl` to regenerate ACL conditions, rules, and their tests
+from `assets/scripts/generate_acl.py`. It requires Python 3.9+ and `gofmt` on
+PATH; no separate generator repository or Python packages are needed.
+
 Repository guidance lives in [repo-local skills](.codex/skills).
 [Release and versioning](.codex/skills/release-and-versioning/SKILL.md) describes
 `make release` (patch) and `make minor-release`, which publish a release.
