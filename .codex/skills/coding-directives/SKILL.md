@@ -373,6 +373,11 @@ return DER/key parser errors from construction. Do not publish a runtime object
 with nil or partially parsed cryptographic material for a later request path to
 dereference.
 
+Render every HTML context, including HTML email, with `html/template`; reserve
+`text/template` for plain-text output such as mail subjects. MIME or
+quoted-printable transport encoding is not contextual HTML escaping. Exercise
+both text-node and URL/attribute values with hostile markup in regression tests.
+
 ## Tests
 
 Apply the mandatory [corresponding tests requirement](../testing-and-ci/SKILL.md#corresponding-tests)

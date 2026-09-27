@@ -18,10 +18,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	htmltemplate "html/template"
 	"mime/quotedprintable"
 	"strings"
 	"sync"
-	"text/template"
+	texttemplate "text/template"
 
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -496,7 +497,7 @@ func (p *LocalUserRegistryProvider) Notify(data map[string]string) error {
 	if err != nil {
 		return errors.ErrNotifyRequestEmail.WithArgs(p.EmailProviderName, err)
 	}
-	tmplSubj, tmplSubjErr := template.New("email_subj").Parse(tmplSubjAsset.Content)
+	tmplSubj, tmplSubjErr := texttemplate.New("email_subj").Parse(tmplSubjAsset.Content)
 	if tmplSubjErr != nil {
 		return errors.ErrNotifyRequestEmail.WithArgs(p.EmailProviderName, tmplSubjErr)
 	}
@@ -509,17 +510,13 @@ func (p *LocalUserRegistryProvider) Notify(data map[string]string) error {
 	if err != nil {
 		return errors.ErrNotifyRequestEmail.WithArgs(p.EmailProviderName, err)
 	}
-	tmplBody, tmplBodyErr := template.New("email_body").Parse(tmplBodyAsset.Content)
-	if tmplBodyErr != nil {
-		return errors.ErrNotifyRequestEmail.WithArgs(p.EmailProviderName, tmplBodyErr)
-	}
-	emailBody := bytes.NewBuffer(nil)
-	if err := tmplBody.Execute(emailBody, data); err != nil {
+	emailBody, err := renderEmailHTML(tmplBodyAsset.Content, data)
+	if err != nil {
 		return errors.ErrNotifyRequestEmail.WithArgs(p.EmailProviderName, err)
 	}
 
 	var qpEmailBody string
-	qpEmailBody, err = quotedPrintableBody(emailBody.String())
+	qpEmailBody, err = quotedPrintableBody(emailBody)
 	if err != nil {
 		return errors.ErrNotifyRequestEmail.WithArgs(p.EmailProviderName, err)
 	}
@@ -577,6 +574,18 @@ func (p *LocalUserRegistryProvider) Notify(data map[string]string) error {
 		return errors.ErrNotifyRequestProviderTypeUnsupported.WithArgs(p.EmailProviderName, providerType)
 	}
 	return nil
+}
+
+func renderEmailHTML(content string, data map[string]string) (string, error) {
+	tmpl, err := htmltemplate.New("email_body").Parse(content)
+	if err != nil {
+		return "", err
+	}
+	var output bytes.Buffer
+	if err := tmpl.Execute(&output, data); err != nil {
+		return "", err
+	}
+	return output.String(), nil
 }
 
 func quotedPrintableBody(s string) (string, error) {
