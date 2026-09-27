@@ -1,5 +1,15 @@
 # OIDC browser pages and portal themes
 
+Contents:
+
+- [Rendering boundary](#rendering-boundary)
+- [Page and template contract](#page-and-template-contract)
+- [Filesystem override](#filesystem-override)
+- [Response policy](#response-policy)
+- [Disclosure and errors](#disclosure-and-errors)
+- [Diagnose rendering failures](#diagnose-rendering-failures)
+- [Validation](#validation)
+
 ## Rendering boundary
 
 `pkg/oidc/pages.go` owns browser page data, readable permission descriptions,

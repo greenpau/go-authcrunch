@@ -1,5 +1,17 @@
 # Authentication portal token refresh
 
+Contents:
+
+- [Enable through library configuration](#enable-through-library-configuration)
+- [Encoded directives for embedding applications](#encoded-directives-for-embedding-applications)
+- [Authentication and issuance](#authentication-and-issuance)
+- [Browser requests](#browser-requests)
+- [Native clients](#native-clients)
+- [Rotation, replay, and failures](#rotation-replay-and-failures)
+- [Logout and security changes](#logout-and-security-changes)
+- [Storage and lifecycle](#storage-and-lifecycle)
+- [Validation](#validation)
+
 Portal refresh is opt-in. It retains JWT access tokens and adds a separate,
 opaque credential for renewing a completed local authentication. It does not
 renew an upstream OAuth provider's tokens.
@@ -155,19 +167,16 @@ route. Issuer-specific authorization rules should use that value.
 
 ## Browser requests
 
-Use the portal's origin for both endpoints:
+Use the shipped browser coordinator on the portal's origin:
 
 ```javascript
-await fetch('/auth/api/refresh_token', {
-  method: 'POST',
-  credentials: 'same-origin',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-Authcrunch-Refresh': '1'
-  },
-  body: '{}'
-});
+await window.AuthCrunchSession.refresh();
 ```
+
+It serializes refresh/logout across tabs and records uncertainty before sending
+the request. A custom consumer must implement the same coordination contract in
+[refresh-token-transports](../../refresh-token-transports/SKILL.md); independent
+raw fetch calls can rotate one credential concurrently.
 
 Browsers supply `Origin` automatically. The endpoint requires an exact configured
 Origin, the custom header, JSON, and compatible Fetch Metadata. It rejects
@@ -279,8 +288,10 @@ rule changes, and `local.IdentityStore.RevokeUserSessions(ctx, immutableUserID)`
 invalidate affected refresh evidence. User deletion prevents lookup, and a
 recreated username has a different immutable identity. Version zero is the safe
 legacy baseline; the first security mutation persists `credential_version: 1`.
-Existing database files do not require a bulk rewrite. Database reload also
-invalidates evidence, including restoration of an older file.
+Existing database files do not require a bulk rewrite. Without runtime state,
+database reload invalidates evidence. Persistent mode retains the epoch only
+for the exact committed identity-file digest; an incompatible or older file
+still invalidates evidence.
 
 Revoking refresh **does not immediately revoke an already-issued stateless JWT**.
 Its short expiry bounds remaining access. Immediate access revocation would
@@ -288,10 +299,17 @@ require a separate authorization-time session/version check.
 
 ## Storage and lifecycle
 
-The portal owns a bounded in-memory store. Restart, portal replacement, or
-identity-store reload requires reauthentication. Call `Portal.Close()` after
-quiescing requests when disposing of a portal; it stops cache workers and clears
-its refresh state. Failed portal construction also cleans up workers.
+The portal owns a bounded `MemoryStore`. Without root `Config.State`, restart,
+portal replacement, or identity-store reload requires reauthentication. Opt-in
+[runtime-state](../../runtime-state/SKILL.md) attaches durable snapshots of complete
+live families, spent digests, and identity epochs before publication. Unchanged
+configuration and matching identity-file bindings permit restart continuity;
+configuration or identity changes still invalidate old authority.
+
+Call `Portal.Close()` after quiescing requests; it stops workers and clears live
+memory without deleting committed persistent snapshots. Failed construction
+also cleans up workers. A state directory has one active owner, so drain and
+close the old runtime before constructing its replacement.
 
 `max sessions` bounds live families. Logout, replay, definitive identity denial,
 and rotation exhaustion retire an entire family and free its slot. Admission
@@ -316,11 +334,12 @@ old credential is supplied; unsupported adapters return `ErrUnavailable`.
 Never recreate old session snapshots or reuse old IDs/credential material.
 The portal constructs `MemoryStore`, which implements both interfaces.
 
-This is a single-process implementation. The `tokenrefresh.Store` contract describes
-atomic creation, lookup, rotation, and revocation for future adapters, but the
-portal currently constructs its own memory store. Shared/distributed storage,
-external-provider refresh capabilities, and persistent reload continuity need
-separate integration and transaction tests.
+This remains a single-owner runtime, including with local persistence.
+`tokenrefresh.Store` defines atomic creation, lookup, rotation, and revocation
+for alternative adapters; implementing that interface alone does not make an
+adapter configurable through the portal. Shared/distributed storage and upstream
+provider-token renewal are unsupported. Local restart continuity is implemented
+by the runtime-state integration and its restart/replay tests.
 
 ## Validation
 

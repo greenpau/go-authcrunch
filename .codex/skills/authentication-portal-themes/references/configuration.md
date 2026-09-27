@@ -7,6 +7,13 @@
 theme, fills aliases without overrides, and loads custom template files.
 Currently only `basic` is registered in `ui.Themes`.
 
+The library exposes typed/serialized UI parameters but no dedicated UI directive
+`parser` package. This is an existing configuration-parser conformance gap;
+external adapter syntax below does not close it. New or changed UI settings need
+the reusable parser and consumer coverage required by the
+[shared parser contract](../../coding-directives/references/configuration-parsers.md).
+CSS or template changes using existing fields do not introduce a new setting.
+
 The current aliases are `login`, `sandbox`, `portal`, `register`, `generic`,
 `whoami`, `apps_sso`, `apps_mobile_access`, `session`, and `oidc`. Use bare aliases in
 configuration, such as `login`, rather than `basic/login` or `login.template`.
@@ -65,8 +72,10 @@ stores/providers, registration, links, cookie settings, mount, and authorization
 configuration. A page override does not enable its backend feature.
 
 The Caddy grammar belongs to `caddy-security/caddyfile_authn_ui.go`, outside this
-library. Validate with the consuming application's actual Caddy binary or Go
-entrypoint and pinned adapter version. Environment placeholders are adapter
+library. Consumer integration must be validated separately with that
+application's pinned adapter and executable; this repository's tests validate
+the typed Go configuration and portal behavior. Do not run sibling-repository
+builds or mutate consumer checkouts during library work. Environment placeholders are adapter
 features, not expansion performed by `ui.NewTemplate` or `StaticAssets.AddAsset`.
 Container/service paths must resolve in that runtime, not just the developer's
 shell. Do not commit a developer's home directory into shared configuration.

@@ -171,6 +171,7 @@ make test TEST_DIR='./pkg/state/... ./pkg/user ./pkg/kms ./pkg/authn ./pkg/authn
 make ci-check
 ```
 
-Use `testing-and-ci` for diagnostics and artifact interpretation. The default
+The [testing contract](../testing-and-ci/SKILL.md) defines diagnostics and artifact
+interpretation. The default
 full suite must retain volatile-mode replacement tests alongside persistent-mode
 journeys; opt-in storage must not change existing omission semantics.

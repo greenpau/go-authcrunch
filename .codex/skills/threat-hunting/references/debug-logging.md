@@ -123,8 +123,8 @@ Apply the exception to each individual logging field. Neighboring request or
 session identifiers, credentials, and other payloads remain analyzed unless
 they independently qualify. Do not sanitize the claims source or remove it
 from the upstream flow model. Log injection and other queries remain active.
-Alert 1651's profile warning logs the JTI claim at Warn level and qualifies
-under this policy; it does not require changing runtime logging or severity.
+A profile warning's direct JTI claim field qualifies under this policy at Warn
+level; that alone does not require changing runtime logging or severity.
 
 ## ACL rule logging
 

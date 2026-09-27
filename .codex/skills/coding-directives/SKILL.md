@@ -1,6 +1,6 @@
 ---
 name: coding-directives
-description: go-authcrunch repository coding standards and implementation directives for Go library, CLI, authentication, authorization, identity store/provider, SSO, KMS, registry, messaging, translation, embedded UI, and test code. Use when creating, modifying, or reviewing repository code; designing configuration and its required dedicated parser package; choosing package boundaries, constructors, validation, errors, logging, serialization tags, security handling, or tests; or deciding how a feature fits existing AuthCrunch packages.
+description: Apply AuthCrunch coding contracts when creating, modifying, or reviewing repository code. Covers package ownership, dedicated configuration parsers, public APIs, validation, errors, logging, serialization, and security boundaries, and routes to the owning implementation skill.
 ---
 
 # Coding Directives
@@ -13,48 +13,84 @@ top-level `authcrunch.Config` and `Server` wire package-owned configs,
 constructors, validators, providers, stores, portals, gatekeepers, registries,
 and crypto key stores.
 
-Use the repo-local `testing-and-ci` skill for every Go code change and when
-choosing, adding, or running tests. Use `scripts-and-automation` for Makefile
-targets, generated assets, dependency commands, and release/version workflows. Use
-`refresh-token-implementation` and its identity/transport owners when changing
-portal refresh behavior; use `release-and-versioning` for version invariants.
-Use `authentication-portal-themes` for custom portal templates, branding assets,
-and their UI configuration and template contracts.
-Use [authentication-portal-cookies](../authentication-portal-cookies/SKILL.md)
-for shared cookie directives, prefix/name configuration, and consumer behavior.
-Use [oauth-identity-provider](../oauth-identity-provider/SKILL.md) for upstream
-OAuth directive parsers and shared configuration adapters, OAuth/OIDC token
-trust, and key ingestion and refresh.
-Use [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md) for
-authorization-policy login without a portal, provider selection and session HTTP
-boundaries. Policy cookies are owned by that feature, separate from portal roles.
-Use [authentication-portal-jwks](../authentication-portal-jwks/SKILL.md) for
-portal public signing-key discovery, reusable admin API directive configuration,
-opt-in private-key export, issuer selection, and JWK serialization.
-Use [local-password-authentication](../local-password-authentication/SKILL.md)
-for local bcrypt/Argon2 password generation, import, configuration/parser and
-authentication work equalization.
-Use [identity-public-keys](../identity-public-keys/SKILL.md) for user-owned public
-key parsing, profile registration, persisted formats, and OpenPGP dependencies.
-Use [authentication-portal-oidc](../authentication-portal-oidc/SKILL.md) for the
-portal acting as a downstream OpenID Provider, including client registration,
-authorization grants, consent, dedicated keys, and conformance.
-Use [local-identity-database](../local-identity-database/SKILL.md) for durable
-identity transactions, [authentication-portal-profile](../authentication-portal-profile/SKILL.md)
-for self-service credential operations, [authentication-portal-mfa](../authentication-portal-mfa/SKILL.md)
-for factor checkpoints/enrollment, and [saml-identity-provider](../saml-identity-provider/SKILL.md)
-for upstream SAML trust and browser binding.
-Use [authentication-portal-challenges](../authentication-portal-challenges/SKILL.md)
-for challenge selection/parsers, registered-method inventory and verified AMR.
-Use `authentication-client` for reusable portal login clients and CLI credential
-handling. Use `authdbctl` for CLI commands, terminal behavior, and executable E2E
-tests. Use [authdb](../authdb/SKILL.md) for the standalone HTTP server, listener
-configuration/parser, portal routing, TLS, and process lifecycle.
+Go changes must meet the [testing requirements](../testing-and-ci/SKILL.md).
+[scripts-and-automation](../scripts-and-automation/SKILL.md) owns Make targets,
+generated assets, and dependency commands;
+[release-and-versioning](../release-and-versioning/SKILL.md) owns version invariants.
+The root routes select those workflows when their tasks are in scope.
 
-Use [runtime-state](../runtime-state/SKILL.md) for opt-in durable runtime keys and
-sessions, configuration epochs, local storage ownership, and restart consumers.
-Use [logging](../logging/SKILL.md) for diagnostic skip rules, their public parser,
-immutable Zap filters, and component/host logger boundaries.
+## Keep Skills Current
+
+Treat relevant repo-local skill maintenance as part of completing every code
+change. After updating implementation and tests, review the owning skills and
+their linked references and update affected guidance in the same task, before
+reporting completion. Do not wait for a separate documentation request.
+
+Use [skill-authoring](../skill-authoring/SKILL.md) to synchronize the relevant
+skills with implemented behavior, configuration, ownership, and validation
+changes, including corrected paths or examples after a refactor.
+
+## Implementation workflows
+
+- Use [refresh-token-implementation](../refresh-token-implementation/SKILL.md) to
+  change portal refresh configuration, issuance, rotation, replay, storage, or
+  lifecycle; follow its routes for login evidence and transport boundaries.
+- Use [authentication-portal-themes](../authentication-portal-themes/SKILL.md) to
+  build custom portal templates, CSS, branding, and UI configuration, including
+  OIDC consent, continuation, and browser-error pages.
+- Use [authentication-portal-cookies](../authentication-portal-cookies/SKILL.md) to
+  change shared cookie directives, prefixes, names, factory attributes, and
+  interoperability across portal features and gatekeepers.
+- Use [oauth-identity-provider](../oauth-identity-provider/SKILL.md) to change
+  upstream OAuth directive parsers, shared configuration adapters, discovery,
+  JWKS/static PEM and EdDSA verification, key refresh, and real portal OAuth tests.
+- Use [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md) to
+  implement OAuth login without a portal, provider selection, directives,
+  callbacks, opaque sessions, ACL revalidation, logout, and embedding lifecycle.
+  This feature owns policy cookies; upstream protocol verification remains with
+  the OAuth identity provider.
+- Use [authentication-portal-jwks](../authentication-portal-jwks/SKILL.md) to
+  change portal public signing-key discovery, base-path routing, reusable admin
+  API directives, opt-in private-key export, issuer selection, and serialization.
+- Use [local-password-authentication](../local-password-authentication/SKILL.md) to
+  change local bcrypt/Argon2 password creation, import, changes, resets,
+  verification, hashing configuration/parser, and authentication work equalization.
+- Use [identity-public-keys](../identity-public-keys/SKILL.md) to change user-owned
+  GPG/SSH key parsing, profile registration, persisted compatibility, and OpenPGP
+  dependencies. Portal signing-key publication and admin private-key export
+  remain with the portal JWKS owner.
+- Use [authentication-portal-oidc](../authentication-portal-oidc/SKILL.md) to
+  change the reusable `pkg/oidc` OpenID Provider and its local-user portal adapter:
+  discovery, clients, code/PKCE, consent, ID-token keys, UserInfo, revocation,
+  browser rendering/response policies, and conformance.
+- Use [local-identity-database](../local-identity-database/SKILL.md) to change
+  file locking, atomic persistence, cross-instance credential revocation, TOTP
+  state, and identity-bound operations.
+- Use [authentication-portal-profile](../authentication-portal-profile/SKILL.md) to
+  change local self-service authorization, canonical identity, browser-origin
+  checks, credential operations, and per-user authentication-flow selection.
+- Use [authentication-portal-mfa](../authentication-portal-mfa/SKILL.md) to change
+  TOTP/WebAuthn login checkpoints, verification, and enrollment.
+- Use [saml-identity-provider](../saml-identity-provider/SKILL.md) to change signed
+  upstream assertions, SP-initiated browser binding, ACS validation, and
+  authoritative signing-certificate pins.
+- Use [authentication-portal-challenges](../authentication-portal-challenges/SKILL.md) to
+  change conditional challenge selection, challenge/user-transform parsers,
+  registered-factor inventory, verified AMR, and policy revalidation at issuance.
+  Factor verification and enrollment remain with the portal MFA owner.
+- Use [authentication-client](../authentication-client/SKILL.md) to change
+  reusable JSON portal login clients, credential files, and authentication
+  protocol wiring. This client uses `/login` without the admin API.
+- Use [authdbctl](../authdbctl/SKILL.md) to change management CLI commands,
+  configuration, terminal behavior, database retries, output, and executable E2E tests.
+- Use [authdb](../authdb/SKILL.md) to change the standalone HTTP server,
+  `pkg/httpserver` listener configuration/parser, portal mounts, TLS, shutdown,
+  executable tests, and deployment guidance.
+- Use [runtime-state](../runtime-state/SKILL.md) to change host-independent durable
+  keys and sessions, directory parsing, refresh/OIDC replay history, local identity
+  epochs, storage ownership, restart tests, and embedding lifecycle contracts.
+- Use [logging](../logging/SKILL.md) to change diagnostic skip rules, their public
+  parser, immutable Zap filters, root logger wiring, and host logging integration.
 
 ## Repository Scope
 
@@ -130,63 +166,22 @@ are appropriate inside the dedicated `pkg/authn/token_refresh` package. Rename
 maintained callers and skill references together; source-file cleanup does not
 rename established HTTP routes, serialized fields, or served asset URLs.
 
-## Design
+## Design and structure
 
-Use cohesive structs with methods for stateful runtime concepts such as
-`Server`, `Portal`, `Gatekeeper`, `IdentityStore`, `IdentityProvider`,
-validators, caches, registries, stores, and CLI wrappers.
+Model stateful business rules with cohesive structs and methods, using
+composition and small consumer-owned interfaces at dispatch boundaries. Keep
+stateless parsing/formatting helpers separate; reuse `pkg/util`, `pkg/util/cfg`,
+`internal/tests`, and `internal/testutils` where they already own the operation.
+Avoid pipelines that obscure authentication state, error handling, or lifetime.
 
-Keep interfaces small and consumer-facing at dispatch or boundary packages.
-Follow existing names and method shapes before inventing new generic
-abstractions.
+Export only what consumers need. Keep runtime-only fields out of serialization;
+use matching JSON/XML/YAML tags on public persisted models. Split growing types
+by owned responsibility instead of adding cross-package shortcuts. Prefer
+package-local changes and preserve established constructors and interfaces.
 
-Use package helpers for stateless parsing, formatting, matching, and validation
-logic. Prefer existing helpers in `pkg/util`, `pkg/util/cfg`,
-`internal/tests`, and `internal/testutils` before adding new ones.
-
-Avoid global mutable state outside package constants, defaults, registries, and
-CLI initialization patterns that already exist. Avoid broad refactors while
-fixing localized behavior.
-
-Use object-oriented design where it is natural. Translate object-oriented
-intent into focused structs with methods, small interfaces at package
-boundaries, and package organization that models ownership.
-
-Use utility functions only when they are stateless, narrowly scoped, and do not
-naturally belong to a type.
-
-Prefer object-oriented design for business rules and data processing.
-Encapsulate related data and behavior within structs with methods. Favor
-composition and define small consumer-owned interfaces.
-
-Avoid functional pipelines that obscure state transitions, error handling, or
-the lifecycle of an operation.
-
-## Structure
-
-Keep structs focused on a single responsibility. Avoid large types that perform
-unrelated tasks. When a type grows beyond a clear responsibility, refactor
-functionality into supporting structs or packages.
-
-Export only the types, fields, methods, and functions needed outside the
-package. Keep implementation details unexported.
-
-For exported structs intended for external or persisted data, keep serialization
-tags consistent across `json`, `xml`, and `yaml`.
-
-Keep methods small and focused. A method should perform one logical operation.
-Extract complex logic into private methods or unexported helpers when it
-improves readability and maintainability.
-
-## Constants
-
-Avoid hard-coded values. Define reusable constants in `const` groups.
-
-Use `const` for stable values and `var` only when a value must be computed or
-mutated. Keep configuration keys, route names, tag names, and well-known status
-values named.
-
-
+Do not add mutable process-global runtime state; existing shared registries and
+key buffers have explicit ownership contracts. Name repeated configuration keys,
+cookie/header names, provider kinds, and defaults with package-local constants.
 
 ## Configuration
 
@@ -242,61 +237,17 @@ validation ownership, and migration boundaries. Existing configurations without
 this structure are implementation gaps to address within the authorized feature
 work; a skills-only update does not authorize a repository-wide code migration.
 
-Name directive constructors `New<Domain><Subject>ConfigFromDirectives`.
-Include the complete domain and subject, even when the package path supplies
-that context: use `NewTokenRefreshConfigFromDirectives` for token refresh,
-`NewAdminAPIConfigFromDirectives` for admin API settings, and
-`NewOIDCClientConfigFromDirectives` for OIDC clients. Preserve Go initialisms
-such as `API` and `OIDC`. Apply the same name to declarations, public comments,
-callers, unit tests, executable examples, and owning skill references whenever
-changing the API or extracting it into a package.
-
-Keep argument encoding in `pkg/util/cfg` and use `cfgutil.DecodeArgs` for encoded
-statements. Keep semantic validation, defaults, and provisioning in the owning
-configuration API; the parser calls that API rather than duplicating its rules.
-Return the owning feature's typed configuration and an error without a partial
-result. In shared packages, use a dedicated feature type such as
-`authn.AdminAPIConfig`, rather than returning an aggregate containing unrelated
-settings. Reuse that model across typed and directive configuration; preserve
-established aggregate serialization through a typed application method when
-needed, as `PortalConfig.ConfigureAdminAPI` does for the existing `APIConfig`.
-Document credential generation or other intentional provisioning behavior.
-
-Keep dependencies acyclic: parser packages may import their domain's public
-configuration API, while the runtime does not import a parser that depends on it.
-If both layers require shared types, give those types a lower-level owner rather
-than duplicating models. When extracting a parser, move its implementation and
-unit tests together, update consumers and examples, and identify changed import
-paths and entry points. Do not leave the parsing implementation behind a wrapper
-in the runtime package.
-
-Preserve unsupported-field checks in shared config dispatchers so malformed
-config fails early instead of being silently ignored. Use the external-package
-unit tests and consumer E2E requirements in `testing-and-ci` for every new or
-changed configuration parser.
+The [parser contract](references/configuration-parsers.md) owns constructor
+names, typed results, statement encoding, validation, application snapshots,
+acyclic dependencies, shared dispatch, and migration. Record only concrete
+feature bindings in an implementation skill.
 
 ### Cookie Configuration
 
-Use `pkg/authn/cookie.Config` and `cookie.Factory` as the owners of portal cookie
-names. Honor `CookieNamePrefix`, the `AUTHP_<SUFFIX>` defaults, and explicit name
-overrides. New cookie roles belong in that package's constants, configuration,
-defaults, parser, and collision checks. Public cookie-name constants are suffixes;
-use initialized config/factory fields for complete names. After initialization,
-change prefixes with `SetCookieNamePrefix`, not a raw prefix-field assignment.
-The [cookie owner](../authentication-portal-cookies/SKILL.md) defines ordering,
-directive application, and consumer compatibility. Feature-specific naming
-aliases must resolve to the shared setting before factory construction;
-runtime reads, writes, response
-metadata, and deletion all use the factory's effective name.
-
-Do not generate separate hashed cookie names or require `__Host-`/`__Secure-`
-namespaces for a feature. Those prefixes may be explicitly configured and must
-retain their attribute validation. Ordinary examples and fixtures use portal
-defaults or explicit conventional names; prefix-specific cases test compatibility.
-Keep Secure, HttpOnly, SameSite, lifetime, and domain/path requirements explicit
-and independent of naming. Issuance and deletion must match name, domain, and
-path, including cleanup of a legacy cookie at a different path. Verify actual
-cookie-jar login, rotation, and logout behavior in consumer E2E tests.
+The [cookie owner](../authentication-portal-cookies/SKILL.md) owns portal role
+names, prefix changes, directive parsing, factory attributes, and issuance/deletion
+compatibility. New portal features must use that shared configuration and factory;
+feature-owned transport and lifetime rules still apply.
 
 ## Errors
 
@@ -338,8 +289,11 @@ in isolated subprocesses, never by replacing `rand.Reader` in parallel tests.
 Prefer explicit permission bits already used in the repo for sensitive files
 and directories, such as `0600` for token and serialized configuration files
 and `0700` for private directories. Publish complete secret-bearing files by
-atomic replacement through an owner-only temporary file; never retain an
-existing destination's broader permission mode.
+atomic replacement through an owner-only temporary file. Token and newly
+created configuration files must not inherit a destination's broader mode.
+Existing identity-database commits preserve the file's mode as an explicit
+compatibility contract owned by [local-identity-database](../local-identity-database/SKILL.md);
+do not silently change that persistence behavior during unrelated file work.
 
 ## HTTP And Runtime Flow
 

@@ -6,10 +6,14 @@ description: Maintain go-authcrunch Make targets, pinned Go tools, build/test or
 # Scripts and Automation
 
 The root Makefile is the public automation surface. Helper scripts live under
-`assets/scripts/`. Use `testing-and-ci` for test selection and report evidence;
-use `release-and-versioning` for the fixed-major version contract, version
-synchronization, artifact identity, and patch/minor publication. Use
-`skill-authoring-patterns` when updating the instructions that own a workflow.
+`assets/scripts/`. Apply `testing-and-ci` for test selection and report evidence.
+Use [release-and-versioning](../release-and-versioning/SKILL.md) to maintain the
+fixed `1.<minor>.<patch>` version namespace, synchronize versions, validate CI
+artifact identity, and publish requested patch/minor releases.
+Use [skill-authoring](../skill-authoring/SKILL.md) to update the instructions
+that own an automation workflow after changing its commands, tool requirements,
+side effects, artifacts, or validation procedure. Include those skill updates
+in the same task before reporting the automation change complete.
 
 ## Command Selection
 
@@ -119,9 +123,5 @@ only when their explicit maintenance operation is in scope. CLA automation owns
 This repository has no general `docs/` directory. Keep durable instructions in
 the owning skill and its linked references, with README links for onboarding.
 
-For local qualification with an explicit patched toolchain, keep `GOROOT`, `PATH`,
-and `GOTOOLCHAIN=local` consistent in the child process. A shell-exported older
-`GOROOT` can make a newer compiler reject the standard library. Preserve the
-failed evidence and correct the invocation; do not alter module minimums or
-global Go configuration to mask that environment mismatch. Snapshot builds use
-a separate ignored distribution directory and never receive publishing tokens.
+Local release-toolchain qualification and snapshot isolation are defined in
+[release validation](../release-and-versioning/SKILL.md#validation).

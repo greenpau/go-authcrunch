@@ -91,9 +91,9 @@ issuance. Role changes advance CredentialVersion and require a new login; otherw
 cached profile roles could retain credential-management authority. New challenge
 requirements must already be satisfied by verified evidence. A subject rename requires fresh login.
 
-Use [local identity database](../local-identity-database/SKILL.md) for durable
-locking, cross-instance revisions, snapshot adoption, TOTP and bound profile
-operations. File-backed `WithRefreshIdentity` holds the canonical file lock as
+Use [local-identity-database](../local-identity-database/SKILL.md) to change
+transaction locking, cross-instance revisions, snapshot adoption, durable TOTP,
+or identity-bound profile operations. File-backed `WithRefreshIdentity` holds the canonical file lock as
 well as the local database lock through transformations,
 signing, and the store commit. Security mutation therefore cannot interleave
 between checking the credential version and returning credentials. Preserve

@@ -10,6 +10,23 @@ request state. `pkg/authn` supplies the browser transport. Use shared provider
 construction and public portal consumers in tests; do not conflate downstream
 OIDC sessions with upstream SAML authentication.
 
+## Configuration boundary
+
+`pkg/idp/saml.Config` owns name, realm, driver, metadata location, signing pin,
+IdP login URL, ACS URLs, TLS settings, and login-icon configuration. Its
+`Validate` checks required values and applies the `azure` or `generic` driver
+behavior; `saml.NewIdentityProvider` constructs the runtime. Shared
+`idp.IdentityProviderConfig` dispatches SAML parameters through `idp.NewIdentityProvider`.
+
+There is no dedicated SAML directive-parser package or SAML constructor in
+`pkg/idp/parser`; that package currently adapts only OAuth. This is an existing
+configuration-parser conformance gap. Do not invent a supported SAML directive
+API, or infer one from an embedding server's configuration syntax. A change to
+this configuration surface must include its parser and consumer coverage under
+the [shared parser contract](../coding-directives/references/configuration-parsers.md).
+
+## Browser transaction and trust
+
 GET initiates an SP AuthnRequest. RelayState is a random transaction identifier,
 never a redirect destination or browser credential. Bind it server-side to the
 initiating browser secret, exact configured ACS callback, AuthnRequest ID and a
@@ -37,9 +54,20 @@ partition; preserve explicit encryption descriptors. Metadata must not widen
 trust by adding another certificate. This is exact signing-certificate trust,
 not permission for arbitrary descendants of a configured CA certificate.
 
+## Acceptance and validation
+
 Unit tests cover state lifetime/capacity/concurrency and certificate precedence.
 `pkg/authn/saml_state_e2e_test.go` uses real signed responses and a TLS portal:
 valid login, missing/wrong-browser/wrong-callback/replayed state and rogue metadata
 cert rejection. Preserve a real Chrome cross-site POST journey for cookie
 semantics; a net/http cookiejar alone cannot validate SameSite. Document migration
 from earlier unsolicited IdP responses and test only synthetic local IdPs.
+
+```sh
+make test TEST_DIR='./pkg/idp/saml ./pkg/authn/cookie/... ./pkg/authn' TEST='SAML|Saml|StateManager' COVERAGE_DIR=.coverage/saml
+```
+
+A valid signed response from the initiating browser at the bound ACS succeeds
+once. Wrong-browser, wrong-callback, expired, replayed, or metadata-only rogue
+signing credentials cannot issue a portal token. Retain a successful control
+alongside each rejection so transport failure cannot masquerade as validation.

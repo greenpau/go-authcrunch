@@ -40,8 +40,9 @@ during work here.
 
 The selected provider owns authorization-code exchange, state, nonce, PKCE,
 issuer, audience, signature verification, and provider-specific identity lookup.
-Use [oauth-identity-provider](../oauth-identity-provider/SKILL.md) for those
-mechanisms; do not implement another OAuth client inside the gatekeeper.
+Those mechanisms are specified by the
+[oauth-identity-provider](../oauth-identity-provider/SKILL.md) contract; do not
+implement another OAuth client inside the gatekeeper.
 Direct policies accept code/query callbacks only. JavaScript/implicit response
 configurations fail construction. Existing provider compatibility settings and named-driver defaults are preserved;
 notably LinkedIn uses its UserInfo path and disables nonce/PKCE in that driver.
@@ -151,5 +152,6 @@ make test TEST_DIR='./pkg/authz/... . ./internal/tag' COVERAGE_DIR='.coverage/oa
 make ci-check
 ```
 
-Follow `testing-and-ci` for diagnostics and reports. A passing library fixture
+The [testing contract](../testing-and-ci/SKILL.md) defines diagnostics and reports.
+A passing library fixture
 is not evidence that Caddy's authentication wrapper preserves handled responses.

@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-oidc
-description: Maintain the reusable pkg/oidc OpenID Provider, its public API and portal adapter, including client registration, discovery, code/PKCE, consent and browser-page rendering, ID-token keys, scoped and individual claims, authentication context, Request Objects, rotating OIDC refresh tokens, revocation, and conformance tests. Use for OIDC renderer integration, form-post continuation, browser errors, and their response policies. Excludes upstream OAuth providers and portal refresh-token transport.
+description: Maintain the downstream pkg/oidc OpenID Provider and portal adapter, including client configuration, code/PKCE, claims, consent rendering, response policies, provider tokens, and conformance. Excludes upstream OAuth providers and portal refresh-token transport.
 ---
 
 # Authentication Portal OpenID Provider
@@ -110,9 +110,9 @@ OIDC and portal access tokens derive AMR from the same completed method evidence
 
 OIDC browser credentials use the portal cookie factory's configurable names:
 `AUTHP_OIDC_SESSION_ID` and `AUTHP_OIDC_REQUEST_ID` by default. They honor
-`cookie_config.cookie_name_prefix` and explicit name overrides. Use the
+`cookie_config.cookie_name_prefix` and explicit name overrides. The
 [shared cookie parser and prefix API](../authentication-portal-cookies/SKILL.md)
-for directive configuration and post-initialization prefix changes. Credentials are
+own directive configuration and post-initialization prefix changes. Credentials are
 random, host-only cookies with Secure, HttpOnly, SameSite=Lax, and the issuer
 mount as Path (root issuers use `/`). Use distinct names or prefixes for portals
 with overlapping mounts on one host. Issuance and deletion use matching paths;
@@ -265,89 +265,17 @@ rotate; reuse revokes the family. They remain bound to the original client,
 identity, session, consent and absolute expiry. The ordinary portal refresh
 protocol remains independent.
 
-## Validation
+## Runtime lifecycle
 
-For renderer, template, CSS, browser policy, or consent-presentation changes,
-use the [browser-page validation matrix](references/browser-pages.md#validation).
-It covers both standalone and portal rendering, filesystem overrides, native
-browser form submissions, and JavaScript-disabled continuation.
-
-`pkg/oidc/config_test.go` covers config, client authentication, and PKCE contracts.
-`provisioning_test.go` covers generated credentials, defaults, copied registration,
-duplicate rejection, private-key format, file permissions, and concurrent creation.
-`parser/client_test.go` and `parser/example_test.go` cover the separate public
-parser, quoting, arity, boolean compatibility, error redaction, concurrent reuse,
-and stable adaptation with persisted credentials. `parser/redirect_test.go`
-checks repeated single-URI statements through both public constructors, rejects
-plural/mixed forms and malformed later statements, and preserves exact callback
-order and serialized arrays. Reloads replace the callback list without mutating
-persisted registrations or inheriting removed callbacks.
-`application_test.go` covers named registration snapshots and JSON/XML/YAML
-roundtrips. `parser/application_test.go` and `parser/application_example_test.go`
-cover header recognition, shared field parsing, restored/explicit credentials,
-rotation, authentication-method changes, malformed inputs, and concurrent reloads.
-Root `config_oauth_applications_test.go` and its executable example cover the
-registry, serialization, ordered assembly, independent portal bindings, validation,
-and duplicate rejection. `pkg/authn/oidc_config_test.go` checks provider attachment.
-`parser/provider_test.go` and `parser/provider_example_test.go` cover provider
-settings, registration resolution and copying, disabled state, limits, malformed
-arguments, error redaction, concurrent reuse, and serialized roundtrips.
-`provider_test.go` and `options_test.go` cover keys, hints, identity, expiry,
-capacity, construction, public methods, lifecycle, lock release, and parser
-fuzzing. `request_object_test.go` covers strict request assembly and fuzzing.
-`pkg/oidc/provider_e2e_test.go` imports the public provider and parser packages
-and the standard library, running TLS login, consent, PKCE exchange, independent
-RSA verification, UserInfo, fresh login, account disablement, and logout without a portal. It
-provisions and persists generated clients/keys, exercises all three client
-authentication methods, and repeats login/exchange after restoring the provider.
-
-The standalone E2E fixture imports the provider parser directly; the shared
-portal fixture uses root named registration and provider integration.
-`pkg/authn/oidc_application_e2e_test.go` imports the application parser directly
-and exercises all three client authentication methods through root configuration,
-real TLS local-user login, PKCE exchange, independently verified ID tokens, and
-UserInfo. It persists credentials and dedicated keys in temporary files, repeats
-adaptation after reopening storage, rejects old secrets after explicit rotation,
-reloads the rotated secret, and rejects unselected applications. It exchanges
-through both separately declared callbacks after each reload and rejects an
-unregistered callback variation before redirecting, including equivalent host,
-port, and path/query encodings. It checks the response destination and query
-values, binds each code to its authorized callback, and tests unselected clients
-with their own registered callback on every reload. Runtime sessions
+Runtime sessions
 and grants remain volatile by default even when client credentials survive
 reloads. Opt-in [runtime-state](../runtime-state/SKILL.md) retains completed sessions,
 consent and complete grant/replay families. `Provider.ConfigurePersistentState`
 supports independent Go hosts; the root portal adapter wires it automatically.
 Pending interactive requests are not restored. Use `LogoutWithError` and
 `ClearSessionWithError` when composing responses, stopping on commit errors.
-`pkg/authn/oidc_config_parser_e2e_test.go` checks discovery, selected clients,
-session/token lifetimes, all capacity limits, and disabled routing through
-a real TLS portal. Root `server_oidc_config_test.go` checks parsed configuration
-through server dispatch, including realm, key-file, and reserved-mount failures.
-`pkg/authn/oidc_e2e_test.go` keeps the real portal/local-database password and
-MFA E2E flows. `pkg/authn/oidc_runtime_test.go` checks adapter configuration and
-browser/native logout. Root `config_test.go` covers server dispatch and the
-public provider getter. Keep E2E cases in the default Go suite. Route portal
-fixture requests directly to the portal so outer mount filtering cannot mask
-incorrect dispatch. Requests outside the issuer mount must not serve keys or
-consume codes.
 
-```sh
-make test TEST_DIR='./ ./pkg/oidc ./pkg/authn ./internal/tag' TEST='OIDC|Provider|TestTagCompliance|TestStructTagCompliance' COVERAGE_DIR=.coverage/oidc
-make test TEST_DIR='./pkg/oidc/parser' COVERAGE_DIR=.coverage/oidc-parser
-go test -mod=readonly -race ./pkg/oidc -run '^$' -fuzz '^FuzzOIDCAuthorizationParameters$' -fuzztime=10000x -parallel=2
-go test -mod=readonly -race ./pkg/oidc -run '^$' -fuzz '^FuzzOIDCRequestObjects$' -fuzztime=10000x -parallel=2
-make ci-check
-```
-
-Local tests establish implementation behavior, not OpenID certification. Never
-claim conformance-suite success or certification without the actual Foundation
-plan results and submission record for this deployment/version.
-
-For release qualification, record the Foundation suite revision, selected OP
-profile, configuration, and per-test results for the actual standalone host or
-portal adapter under test. Local TLS tests and parser fuzzing do not substitute
-for that plan.
+## Native Loopback Clients
 
 A public registration (`token_endpoint_auth_method none`, mandatory S256 PKCE)
 with an HTTP callback at literal `127.0.0.1` or `[::1]` declares the supported
@@ -372,3 +300,17 @@ coverage, and `FuzzOIDCLoopbackRedirect`. Standalone and portal E2E fixtures run
 real IPv4 and IPv6 callback listeners on ephemeral ports, perform PKCE exchanges,
 and independently verify ID-token signatures and UserInfo. They require both
 loopback stacks; report a listener failure as a validation blocker.
+
+## Validation
+
+Read [validation scenarios](references/validation.md) for parser, standalone
+provider, portal adapter, registration reload, and real TLS login/code/PKCE
+journeys. Verify ID-token signatures independently and test successful UserInfo,
+rejected redirects, changed identity, replay, and consent boundaries. Browser
+rendering changes also require the [browser-page matrix](references/browser-pages.md#validation).
+Local tests establish behavior; certification requires actual Foundation plan
+results for the deployment and version described in [conformance](references/conformance.md).
+
+```sh
+make test TEST_DIR='./ ./pkg/oidc/... ./pkg/authn ./internal/tag' TEST='OIDC|Provider|TagCompliance' COVERAGE_DIR=.coverage/oidc
+```

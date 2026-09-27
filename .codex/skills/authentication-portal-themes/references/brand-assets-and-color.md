@@ -1,5 +1,16 @@
 # Brand Assets and Color
 
+Contents:
+
+- [Shipped identity versus replacement artwork](#shipped-identity-versus-replacement-artwork)
+- [Suggested Sizes](#suggested-sizes)
+- [Logo and Favicon](#logo-and-favicon)
+- [Banners](#banners)
+- [Backgrounds](#backgrounds)
+- [Color Palettes and Tokens](#color-palettes-and-tokens)
+- [Contrast and Status Messages](#contrast-and-status-messages)
+- [Export and Review](#export-and-review)
+
 For the shipped AuthCrunch assets, CSS variables, and a complete deployment
 example, read [basic theme branding](basic-theme.md). This reference covers how
 to choose or prepare replacement artwork and palettes; its suggested dimensions

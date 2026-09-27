@@ -169,15 +169,14 @@ followed by fetch establishes the persisted policy.
 
 ## Separate Profile UI consumer
 
-The source checkout is `../../authcrunch/authcrunch-ui/frontend/profile/`.
-Its `src/Config.ts` exposes `config.getAppPath()`; existing services such as
-`src/components/custom/MultiFactorAuthenticatorListing/service.tsx` use
-`${config.getAppPath()}/api/profile` with Axios POST and the profile's normal
-authentication setup. Reuse that pattern and the helper in
-`src/components/builtin/auth/index.tsx` for future flow controls. Label `u2f`
-as WebAuthn/passkey and `totp` as authenticator code without changing wire names.
-Keep this backend contract in go-authcrunch; UI source changes, asset builds,
-and generated embedded bundles belong to a separately requested UI change.
+The separately maintained Profile UI must derive the API URL from its configured
+portal base path and retain its normal authenticated JSON POST transport. Label
+`u2f` as WebAuthn/passkey and `totp` as authenticator code without changing wire
+names. Display saved rules, registered factors, and the effective preview as
+distinct values, and use the fresh-login recovery above after a successful save.
+Keep this backend contract in go-authcrunch. UI source locations and a concrete
+consumer handoff belong in an ignored task artifact; UI edits, asset builds,
+and regenerated embedded bundles require that work to be in the requested scope.
 
 ## Validation
 

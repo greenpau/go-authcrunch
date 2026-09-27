@@ -1,4 +1,4 @@
 interface:
   display_name: "Local Identity Database"
-  short_description: "Local Identity Database maintenance and validation"
-  default_prompt: "Use $local-identity-database to maintain its implementation and tests."
+  short_description: "Atomic identity transactions, revocation, and replay state"
+  default_prompt: "Use $local-identity-database to maintain atomic persistence, cross-instance credential revocation, identity-bound operations, and TOTP replay state."

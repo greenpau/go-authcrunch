@@ -43,6 +43,7 @@ compatibility choices; they do not enable features or relax their security rules
 | Legacy refresh token | Portal mount plus `/api/refresh_token` | Incompatible; legacy helpers return an empty string |
 | OIDC session ID | Issuer mount, host-only | Root issuer only |
 | OIDC request ID | Issuer mount, host-only | Root issuer only |
+| SAML session ID | Root Path, host-only, fixed cross-site attributes | Supported; independent of the portal mount |
 
 `__Secure-` works with non-root paths and Domain cookies when Secure is enabled.
 Ordinary portal `insecure enabled` behavior stays supported for ordinary names.
@@ -101,6 +102,7 @@ A single parser statement `cookie prefix PORTAL`, or a typed call to
 | Refresh token | `PORTAL_REFRESH_TOKEN` |
 | OIDC session ID | `PORTAL_OIDC_SESSION_ID` |
 | OIDC request ID | `PORTAL_OIDC_REQUEST_ID` |
+| SAML session ID | `PORTAL_SAML_SESSION_ID` |
 
 Embedding Caddy adapters can translate `set cookie name prefix PORTAL` to the
 shared parser's `cookie prefix PORTAL`; adapter integration is owned separately.
@@ -116,7 +118,7 @@ aggregate `authcrunch.NewServer` retains its historical behavior of discovering
 portal access-cookie names when a policy's `AccessTokenCookieNames` is empty.
 Supply an explicit list to prevent that cross-portal discovery; use an explicit
 `AUTHP_ACCESS_TOKEN` list when only the default portal name is intended. Session
-names still need their own matching policy setting. This deletion change does
+names still need their own matching policy setting. Cookie deletion does
 not alter server-level discovery or token-source defaults.
 
 ## Validation and Limits
@@ -137,6 +139,6 @@ runtime behavior. Cookie removal does not end a session at an external upstream
 identity provider unless its logout integration performs that operation.
 
 Gatekeeper rejection-time cookie cleanup is a separate best-effort path. Incoming
-Cookie headers contain names and values, not their original Domain or Path. This
-change does not add portal scope information to authorization policies; use the
+Cookie headers contain names and values, not their original Domain or Path. Authorization
+policies do not acquire portal scope information from those incoming headers; use the
 portal logout endpoint for authoritative deletion.

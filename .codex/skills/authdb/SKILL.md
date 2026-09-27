@@ -127,9 +127,10 @@ ambient `AUTHDB_*` variables and add only their own configuration environment.
 
 ## Persistent Runtime State
 
-`security.state` passes directly to `authcrunch.Config.State`; use
-[runtime-state](../runtime-state/SKILL.md) for its directory/parser and lifecycle
-contract. `persistent_state_e2e_test.go` runs inside `TestE2EAuthdb`, kills the built
+`security.state` passes directly to `authcrunch.Config.State`.
+Use [runtime-state](../runtime-state/SKILL.md) to change persistent storage
+configuration, parsing, and lifecycle. `persistent_state_e2e_test.go` runs inside
+`TestE2EAuthdb`, kills the built
 process after real login, and verifies JWKS, old JWT and browser session continuity.
 Keep the omitted-state behavior documented separately.
 

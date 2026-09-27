@@ -5,6 +5,15 @@ description: Maintain authenticated local profile APIs, user authentication-flow
 
 # Authentication Portal Profile
 
+## Ownership and configuration
+
+`authn.APIConfig.ProfileEnabled` gates profile access. The existing admin API
+parser preserves this field but does not configure it; no dedicated profile
+enablement parser is present. Keep that legacy configuration gap separate from
+the implemented challenge-rule parser used by the flow-selection operations.
+
+## Canonical identity and mutations
+
 `pkg/authn/handle_api_profile.go` dispatches local self-service operations after
 JWT authorization and lookup of the server-cached login. `profile_identity.go`
 wraps the selected backend with `ids.IdentityRequestStore`; each delegated
@@ -51,8 +60,7 @@ Credential or role mutation invalidates the login evidence. A cached access
 JWT may still have time remaining, but it cannot authorize another profile
 operation after its underlying evidence is revoked. Require a fresh login;
 do not silently update cached credential versions after enrollment or deletion.
-For WebAuthn ceremony details use
-[portal MFA](../authentication-portal-mfa/SKILL.md).
+[Portal MFA](../authentication-portal-mfa/SKILL.md) owns WebAuthn ceremony details.
 The embedded profile client's recovery navigation is handled by the
 [refresh transport compatibility path](../refresh-token-transports/SKILL.md).
 `profile_session_e2e_test.go` covers passkey addition and deletion, same-browser
@@ -60,6 +68,8 @@ fresh login, and recovered profile access with refresh disabled/enabled. Its
 Chrome driver `ui/testdata/profile_session_browser_e2e.cjs` runs the shipped
 profile application using real TLS login cookies and checks the 401-to-login
 journey; signed synthetic WebAuthn assertions exercise the factor checkpoints.
+
+## Acceptance and validation
 
 Validation belongs in `profile_identity_test.go`, `api_origin_test.go`,
 `profile_identity_e2e_test.go`, `identity_alias_e2e_test.go`, and the identity
@@ -72,3 +82,13 @@ subject/email transformations naming the other account, revoked/deleted/recreate
 identities, role removal, refresh renewal, cross-origin cookie submissions,
 and persistence checks showing rejected operations changed no credentials.
 Run focused tests through `make test` before the full quality gate.
+
+```sh
+make test TEST_DIR='./pkg/identity ./pkg/ids/local ./pkg/authn' TEST='Profile|IdentityRequest|IdentityAlias|RoleChange' COVERAGE_DIR=.coverage/portal-profile
+```
+
+A current local identity can read and change its own profile even when token
+claims have been transformed. A transformed claim naming another account,
+cross-origin submission, or revoked identity cannot change that account's
+credentials. A successful credential mutation requires fresh authentication
+before another self-service operation.

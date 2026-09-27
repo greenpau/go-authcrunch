@@ -37,7 +37,7 @@ normalization; never broaden trust merely to make a proxy setup pass.
 
 Cookie transport returns session/expiry metadata only. Cookie names come from
 the portal factory's `RefreshTokenCookieName`, defaulting to `AUTHP_REFRESH_TOKEN`.
-Use the [shared cookie owner](../authentication-portal-cookies/SKILL.md) for
+The [shared cookie contract](../authentication-portal-cookies/SKILL.md) owns
 `cookie prefix`, `cookie refresh token name`, and the reusable cookie parser.
 Honor the common prefix and explicit name settings. An enabled token refresh
 `cookie name` directive overrides the shared refresh-cookie setting before

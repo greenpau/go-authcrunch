@@ -5,9 +5,9 @@ description: Maintain upstream OAuth identity-provider directive parsers, shared
 
 # OAuth Identity Provider
 
-Use [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md) for
-policy-selected login without a portal, its parser, callbacks and opaque sessions.
-That consumer reuses this provider's authentication protocol and trust checks.
+[authorization-policy-oauth](../authorization-policy-oauth/SKILL.md) owns
+policy-selected login without a portal, its parser, callbacks, and opaque sessions.
+That peer consumer reuses this provider's authentication protocol and trust checks.
 
 ## Ownership and Entry Points
 

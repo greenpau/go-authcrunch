@@ -79,8 +79,10 @@ application-specific redirect scripts, or hardcoded user/role lists in a theme.
 Preserve the current portal refresh script and the `session` template's DOM and
 script attributes. The session response blocks inline CSS/JavaScript: load
 theme CSS from the same origin. Do not relax its Content Security Policy to
-reuse an inline style block. Read `refresh-token-transports` if changing session
-behavior; visual changes alone do not require redesigning the refresh flow.
+reuse an inline style block.
+Use [refresh-token-transports](../refresh-token-transports/SKILL.md) to change
+session continuation or refresh behavior; visual changes alone do not require
+redesigning the refresh flow.
 
 For OIDC styling, read the
 [OIDC browser page contract](../authentication-portal-oidc/references/browser-pages.md)

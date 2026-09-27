@@ -5,14 +5,16 @@ description: Maintain portal TOTP and WebAuthn login checkpoints and enrollment,
 
 # Authentication Portal MFA
 
+## Ownership and login evidence
+
 `handle_http_sandbox.go` and `handle_json_login.go` own login checkpoints;
 `webauthn_enrollment.go` and the profile U2F API handlers own registration state.
 `pkg/identity` owns credential validation, durable TOTP consumption and mutation.
-Use [local database transactions](../local-identity-database/SKILL.md) and
-[canonical login evidence](../refresh-token-identity/SKILL.md) at those boundaries.
-
-Use [authentication challenge policies](../authentication-portal-challenges/SKILL.md)
-for conditional selection, user-transform/parser APIs, and AMR issuance. Successful
+The collaborating contracts are
+[local database transactions](../local-identity-database/SKILL.md) for durable
+mutation and [canonical login evidence](../refresh-token-identity/SKILL.md) for
+identity binding. [Authentication challenge policies](../authentication-portal-challenges/SKILL.md)
+own conditional selection, user-transform/parser APIs, and AMR issuance. Successful
 verification sets the server-only `Checkpoint.Method`; enrollment never does.
 JSON hardware authentication must retain its server challenge and pass the actual
 assertion to the backend, including when U2F is the first checkpoint.
@@ -55,6 +57,8 @@ Sandbox first-factor enrollment requires no enabled existing factor and current
 identity evidence. After successful enrollment require a new completed login;
 never advance the original sandbox's evidence version to allow token issuance.
 
+## Enrollment and lifecycle
+
 Keep `mfa_add_app.js` and `sandbox_mfa_add_app.js` aligned when changing TOTP
 enrollment rendering. Encode each OTP label/query component independently and
 the QR payload as one URL path segment. Resolve the QR endpoint against the
@@ -79,9 +83,21 @@ construction; it does not verify an attestation statement. Its compatibility
 allowance for the known legacy nested credential-ID truncation is exact, not an
 arbitrary-prefix exemption. Trusted provisioning constructors remain separate.
 
+## Acceptance and validation
+
 Unit tests cover state phases, clock boundaries, concurrency, digest/binding
 changes and malformed creation data. TLS enrollment tests cover direct-save
 rejection, wrong user/session/origin/challenge, replay, changed identity, transformed
 claims, renewed sessions, persistent key ownership and a fresh signed hardware
 login. Browser hardware/attestation certification needs separate evidence;
 synthetic signatures do not establish it.
+
+```sh
+make test TEST_DIR='./pkg/identity ./pkg/authn' TEST='MFA|Mfa|TOTP|WebAuthn|AuthenticationChallenge|IdentityAlias' COVERAGE_DIR=.coverage/portal-mfa
+make test-ui
+```
+
+A valid enrolled factor completes only its required checkpoint. A replayed TOTP,
+wrong-origin assertion, or revoked sandbox produces no credential and cannot
+mutate a replacement account. Successful enrollment persists the new factor,
+invalidates the old evidence, and requires a fresh completed login.

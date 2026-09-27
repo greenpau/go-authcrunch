@@ -89,7 +89,7 @@ narrow the grant, permanently; absent scope retains it. No ID token is emitted
 when narrowed scope excludes openid. ID tokens preserve original subject,
 audience, nonce, auth_time and verified methods; iat reflects new issuance.
 
-State is process-local and SHA-256 indexed. `refresh lifetime <seconds>` maps to
+State is SHA-256 indexed and volatile unless persistent runtime state is configured. `refresh lifetime <seconds>` maps to
 `Config.RefreshLifetimeSeconds` (default 28800, maximum 86400), bounded by the
 original server session's remaining life. It is never extended by refresh.
 `max refresh tokens <count>` maps to `Config.MaxRefreshTokens` (default 10000,
@@ -98,11 +98,14 @@ returns temporarily_unavailable without evicting replay evidence or consuming
 the current credential. Families expire with their code tombstones and hashes.
 
 Explicit token revocation, code replay, browser logout/replacement, account
-revocation, password/MFA policy changes, provider close and expiry invalidate
-use. Every issue and UserInfo request revalidates current identity in the same
+revocation, password/MFA policy changes, and expiry invalidate use. Closing the
+provider rejects work on that instance; persistent grants are not erased by Close. Every issue and UserInfo request revalidates current identity in the same
 serialized transaction. The refresh grant can run without a browser cookie;
-it remains bounded by server session state. Restart/reload requires fresh
-authorization. This is separate from portal `/refresh` transport and storage.
+it remains bounded by server session state. Without persistence, restart/reload
+requires fresh authorization. Opt-in [runtime-state](../../runtime-state/SKILL.md)
+retains complete families and replay history within unchanged configuration and
+identity bindings. Pending browser interactions remain volatile. This is separate
+from portal `/api/refresh_token` transport and storage.
 
 ## Validation
 
@@ -125,31 +128,8 @@ through the production management API using a separate authenticated administrat
 The optional official harness and exact results live in
 [conformance](conformance.md). Consumer Caddy integration is separate work.
 
-
-## Recorded validation and diagnostics
-
-September 17 validation used the repository `go tool tested` lifecycle with race
-detection and uncached tests. The full regression report at
-`.coverage/oidc-full/index.html` recorded 67 passing packages, 6135 passing tests
-and 6 skips. The skips are the explicitly opt-in Foundation test and five
-pre-existing `pkg/acl` cases in `TestCustomAccessList`: missing roles, existing
-metadata, email outside foo.bar, custom foo=bar, and exp within two hours.
-They were not introduced or cleared by this change.
-
-Final changed-code reports are `.coverage/oidc-capabilities-final/index.html`,
-`.coverage/oidc-final-regression-2/index.html`, and
-`.coverage/oidc-evidence/index.html`. The separate portal protocol regression is
-`.coverage/oidc-portal/index.html`. Earlier failed runs remain in distinct
-report directories. The first new management-revocation fixture failed because
-it sent Alice's browser cookie with an administrator bearer credential; it now
-uses the administrator's separate HTTP client, and the real API revocation cases
-pass. Authentication/authorization policy was not changed to clear that fixture.
-
-`go vet ./...` and `make linter` passed. `gopls v0.23.0 check -severity=hint`
-examined every changed/new Go file, with follow-up checks after edits. No
-in-scope diagnostics remain. Existing hints were left unchanged: legacy
-`interface{}` declarations in `internal/tag/tag_test.go` and
-`pkg/identity/user.go`, and ineffective omitempty on existing time.Time fields
-in the latter. Raw diagnostics are retained at
-`tmp/oidc-diagnostics-final.log`; these are not claims of a globally hint-free
-repository. The OIDC skill passed the skill-creator quick validator.
+Keep administrative revocation requests in a separate client from the user's
+browser cookie jar. Mixed admin bearer and user-cookie credentials can select
+the wrong identity and invalidate the fixture's intended authorization boundary.
+Record actual reports, diagnostics, and Foundation outcomes per run outside the
+skill; those artifacts are evidence for that candidate, not permanent guarantees.

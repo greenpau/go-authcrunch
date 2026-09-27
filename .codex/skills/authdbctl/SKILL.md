@@ -12,9 +12,9 @@ protocols remain unchanged.
 ## Ownership and Contracts
 
 `cmd/authdbctl` owns application paths, configuration discovery, flags/env,
-terminal input, management commands, retry decisions, and output. Use
-`authentication-client` for the importable login protocol and token-file
-contracts. Keep CLI and admin API dependencies out of `pkg/authclient`.
+terminal input, management commands, retry decisions, and output.
+Use [authentication-client](../authentication-client/SKILL.md) to change the
+importable login protocol or opaque credential-file behavior. Keep CLI and admin API dependencies out of `pkg/authclient`.
 `connect` authenticates through `/login` even when the admin API is disabled.
 
 Preserve `AUTHDBCTL_*` environment names and `~/.config/authdbctl` defaults.
@@ -26,8 +26,15 @@ for native login to a refresh realm with body transport enabled. The omitted
 cookie mode and existing flags/env precedence remain unchanged. Save the whole
 new credential bundle, including refresh/session metadata, without merging an
 old refresh token. Initial native login does not imply automatic renewal.
-Unavailable transport fails without retrying or overwriting the cache; follow
-`authentication-client` for the public parser and transport/error contract.
+Unavailable transport fails without retrying or overwriting the cache. The
+authentication-client contract owns the public parser and transport errors.
+
+`Config` in `cmd/authdbctl/config.go` embeds `authclient.Config` and adds
+CLI-owned `TokenPath` and the compatibility `CookieName` field. The reusable
+login settings have `pkg/authclient/parser`; CLI file discovery, path precedence,
+and command-specific settings still use local YAML/flag handling with no dedicated
+public parser. Document that legacy boundary when extending CLI configuration;
+do not describe the login parser as covering the whole command configuration.
 
 Keep one buffered reader per wrapper for plain identity input; creating readers
 for consecutive prompts can discard piped lines. Hidden prompts use a real
@@ -85,7 +92,7 @@ are in the default suite, with no external accounts or services:
 - `generate_password_hash_test.go`: Argon2 generation/defaults, independent hash
   verification, clean option rejection and the executable generation/import/login
   journey called by `TestE2EAuthdbctl/argon2_password_hash`.
-- `terminal_test.go` and `testdata/terminal.py`: real pseudo-terminal input,
+- `terminal_test.go` and `cmd/authdbctl/testdata/terminal.py`: real pseudo-terminal input,
   hidden echo, MFA choice mapping, EOF/interruption, and timeout restoration.
   Python 3's standard library supplies the PTY on Unix; missing Python is a
   failure there. Only PTY-dependent cases skip on Windows. Close the broker

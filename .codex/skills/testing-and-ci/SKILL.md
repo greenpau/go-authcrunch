@@ -118,9 +118,10 @@ profile and actual TLS portal. Supply `AUTHCRUNCH_TEST_BROWSER` when the executa
 is not discoverable. Missing browsers are a validation failure; the Node VM
 suite does not substitute for this E2E. The default suite also runs
 `TestE2EOIDCThemedBrowser` with the same browser discovery and startup helpers.
-Use `refresh-token-transports` for the refresh fixture and the
-[OIDC browser-page owner](../authentication-portal-oidc/references/browser-pages.md#validation)
-for consent/continuation assertions, browser isolation, and screenshot capture.
+Use [refresh-token-transports](../refresh-token-transports/SKILL.md) to maintain
+the refresh browser fixture and its rotation/recovery assertions. The
+[OIDC browser-page matrix](../authentication-portal-oidc/references/browser-pages.md#validation)
+defines consent/continuation assertions, browser isolation, and screenshot capture.
 Loopback `httptest` listeners are expected.
 
 ### Browser Engine
@@ -234,12 +235,12 @@ never print real credentials. Ignore all report artifacts in Git.
 
 Tests and builds do not run license rewrites, version synchronization, or
 module tidy. `make ci-check` serializes version checks, automation fixtures,
-existing golint, full Go coverage, browser tests, and both executable builds. Use
-`scripts-and-automation` for maintenance side effects and
-`release-and-versioning` for release/tag operations.
+existing golint, full Go coverage, browser tests, and both executable builds.
+Maintenance side effects are specified by [scripts-and-automation](../scripts-and-automation/SKILL.md);
+release/tag operations are specified by [release-and-versioning](../release-and-versioning/SKILL.md).
 
-Refresh changes use `refresh-token-implementation`, `refresh-token-identity`,
-and `refresh-token-transports` according to their affected boundaries.
+Use [refresh-token-implementation](../refresh-token-implementation/SKILL.md) to
+select refresh-engine, login-evidence, and transport acceptance scenarios.
 
 ## Test Helpers
 
@@ -295,102 +296,11 @@ for tests and shared fixture drivers too: portal token-refresh tests use
 
 ## Test Surfaces
 
-Root configuration and server tests exercise composed AuthCrunch configuration
-and server construction across credentials, messaging, identity stores,
-identity providers, authentication portals, authorization policies, OAuth keys,
-and validation phases. Use these when a change affects cross-package wiring.
-
-Logging tests use [logging](../logging/SKILL.md) for the directive parser,
-immutable Zap filter, and root TLS journeys that verify actual JSON log output
-while preserving denial and successful authentication behavior.
-
-Authentication tests live under `pkg/authn`, including HTTP login/logout,
-external logout, response handling, cache sandbox behavior, cookie settings,
-transformers, icons, and embedded UI pages/static assets. Use `httptest` and
-`internal/testutils` helpers for request/response and token-driven behavior.
-
-Standalone server tests live under `pkg/httpserver` and `cmd/authdb`, including
-parser-based TLS refresh/OIDC journeys and the actual race-enabled executable.
-Use [authdb](../authdb/SKILL.md) for listener lifecycle, routing, configuration,
-subprocess cleanup, and targeted validation.
-
-Reusable login-client tests live under `pkg/authclient`, including E2E tests
-against a real local TLS portal and identity store in the default test suite;
-CLI tests live under `cmd/authdbctl`, including executable E2E against a real
-portal and local database plus Python-backed pseudo-terminal tests. Use
-`authentication-client` for reusable protocol/credential coverage and its 100%
-gate; use `authdbctl` for command coverage, terminal fixtures, and CLI E2E
-validation. The CLI subprocess is separate from the parent coverage profile.
-
-Authorization tests live under `pkg/authz`, including gatekeeper behavior,
-authentication requests, redirect handlers, cache behavior, options, and token
-validator sources. Path normalization and JWT path-claim changes use the TLS
-consumer fixtures in `pkg/authz/path_e2e_test.go`; the
-[authorization path owner](../threat-hunting/references/authorization-paths.md)
-defines their adversarial matrix and unit/fuzz coverage.
-`pkg/authz/validator` and related tests use `httptest`,
-test crypto key stores, test users, ACL helpers, and exact source/match
-expectations.
-Authorization login return URLs also use the root
-`TestE2EServerAuthorizationLoginRedirectProtocols` journey with real HTTP/1.1,
-HTTP/2, and quic-go HTTP/3 transports. It requires loopback TCP and UDP sockets;
-do not replace HTTP/3 with a modified HTTP/1 request or silently fall back to
-another protocol. See the
-[redirect owner](../threat-hunting/references/redirects.md#regression-ownership)
-for the full login journey and request-target invariants.
-
-Direct OAuth policy tests use [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md).
-Root `server_oauth_authorization_e2e_test.go` exercises both public parsers,
-configuration restoration, shared provider dispatch and TLS gatekeeper journeys
-without a portal or identity database. Keep callback consumption, ACL checks,
-opaque sessions, logout cancellation and lifecycle distinct from portal JWT tests.
-
-Persistent-state tests use [runtime-state](../runtime-state/SKILL.md), including
-root TLS portal-free OAuth and portal/OIDC/refresh restart journeys and an actual
-built `authdb` process killed without cleanup. Verify old credentials and replay
-revocations after reopening; graceful Close alone is insufficient crash evidence.
-
-Identity and store tests live under `pkg/identity`, `pkg/ids`,
-`pkg/ids/local`, `pkg/ids/ldap`, and `pkg/registry`. They rely on temporary
-identity databases, registration/user JSON fixtures, domain restriction cases,
-LDAP DN/config parsing, and table-driven success/error cases.
-Use [local-password-authentication](../local-password-authentication/SKILL.md)
-for the password-verifier regression matrix and controlled timing validation.
-
-Local transaction changes use [local-identity-database](../local-identity-database/SKILL.md)
-and the two-realm TLS journeys in `pkg/authn/identity_alias_e2e_test.go`.
-Profile credential changes use [authentication-portal-profile](../authentication-portal-profile/SKILL.md),
-including transformed-account, revoked-evidence and cross-origin persistence
-checks. Factor enrollment and replay use
-[authentication-portal-mfa](../authentication-portal-mfa/SKILL.md).
-
-Identity provider and SSO tests live under `pkg/idp`, `pkg/idp/oauth`,
-`pkg/idp/saml`, and `pkg/sso`. OAuth tests cover request parsing, state,
-provider setup, JWKS, GitHub email lookup, and provider HTTP interactions.
-Use [oauth-identity-provider](../oauth-identity-provider/SKILL.md) for upstream
-JWT/JWKS, static key provisioning, rotation, and real portal OAuth E2E coverage.
-SAML/SSO tests use metadata, certificate, and key fixtures from
-`testdata/saml` and `testdata/sso`.
-
-KMS and credential tests live under `pkg/kms` and `pkg/credentials`. They use
-RSA, ECDSA, GPG, OAuth, malformed PEM, missing-key, and mixed-key fixtures
-under `testdata`. Preserve package-relative paths such as
-`../../testdata/rskeys/test_2_pri.pem` when adding cases.
-Use [authentication-portal-jwks](../authentication-portal-jwks/SKILL.md) for
-public signing-key export, admin private-key export authorization, and portal
-endpoint tests that independently verify issued JWT signatures.
-
-Embedded UI tests live under `pkg/authn/ui`. `static_test.go` asserts the
-static asset count, sorted paths, and content types; `pages_test.go` and
-`ui_test.go` exercise built-in templates, page rendering, and filesystem
-template parity. Update these tests deliberately when embedded assets or
-templates change.
-
-Utilities and policy primitives have focused table-driven tests under
-`pkg/acl`, `pkg/apiauth`, `pkg/authchal`, `pkg/messaging`, `pkg/redirects`,
-`pkg/tagging`, `pkg/translate`, `pkg/user`, `pkg/util`, and `pkg/waf`. Add new
-cases in the nearest package-level test before creating a broader integration
-test.
+Read [test ownership](references/test-surfaces.md) when locating the owning
+package, fixture, or consumer journey. Keep root composition tests at the root,
+parser grammar tests in external parser packages, and HTTP/browser behavior
+with the feature that serves it. A test helper's location does not decide the
+production contract's owner.
 
 ## Adding Coverage
 
@@ -486,6 +396,16 @@ or its invocation, also exercise an intentional Go test failure and build
 failure and an intentional short test timeout in an isolated fixture; verify
 nonzero status, fresh evidence, and failed offline reports.
 
-Skill changes use `skill-authoring-patterns` and the default skill-creator quick
-validator. Inspect routing, exact code names, and links as well as frontmatter.
+## Skill Guidance at Completion
+
+Before reporting code changes complete, check that the owning skills and linked
+references reflect the final implementation and validation evidence under the
+[skill synchronization contract](../skill-authoring/SKILL.md#synchronize-skills-after-code-changes).
+Verify affected examples, test commands, acceptance scenarios, and support limits;
+distinguish checks actually run from documented procedures. Resolve stale guidance
+in the same task and report any remaining verification gaps.
+
+Use [skill-authoring](../skill-authoring/SKILL.md) to validate skill changes with
+the default skill-creator quick validator and audit their routing hierarchy.
+Inspect exact code names and links as well as frontmatter.
 Do not treat prose-matching tests as behavioral validation.

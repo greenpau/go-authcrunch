@@ -71,8 +71,8 @@ qualifying a release; the current workflows explicitly select Go 1.26.8 with
 database for a supported patched toolchain before shipping binaries. A local
 upgrade does not update CI, and changing only `go.mod` does not update explicit
 workflow pins. Record `go version` for validation and `go version -m` for the
-packaged executable. Follow [threat-hunting](../threat-hunting/SKILL.md) for
-stdlib versus library findings and scanner precision for stripped binaries.
+packaged executable. Use [threat-hunting](../threat-hunting/SKILL.md) to classify
+stdlib versus library findings and assess scanner precision for stripped binaries.
 Do not raise the module's minimum Go version solely to clear a local stdlib scan.
 
 ## Release Execution

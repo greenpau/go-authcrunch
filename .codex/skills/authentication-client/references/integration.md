@@ -9,10 +9,10 @@ renewal, and logout are outside this API.
 
 ## Application integration
 
-The following helper shows the intended boundary for a future
-`caddy-authenticator` command. The application loads its configuration and
-supplies terminal input through `PromptFunc`; it decides where to persist the
-returned credentials. This repository does not install that command.
+The following helper shows the reusable application boundary. The application
+loads its configuration, supplies terminal input through `PromptFunc`, and
+chooses where to persist returned credentials. `example-cli` is a placeholder
+application name; this example does not install an executable.
 
 ```go
 package main
@@ -31,14 +31,14 @@ func authenticate(ctx context.Context, cfg *authclient.Config, prompt authclient
         return nil, err
     }
     store, err := authclient.NewFileTokenStore(filepath.Join(
-        home, ".config", "caddy-authenticator", "token.jwt",
+        home, ".config", "example-cli", "token.jwt",
     ))
     if err != nil {
         return nil, err
     }
     client, err := authclient.NewClient(cfg, authclient.Options{
         Prompt: prompt,
-        UserAgent: "caddy-authenticator",
+        UserAgent: "example-cli",
     })
     if err != nil {
         return nil, err
@@ -119,7 +119,7 @@ metadata, not proof of current authorization.
 | Application | Config file chosen by application | Token store path |
 | --- | --- | --- |
 | authdbctl | `~/.config/authdbctl/config.yaml` | `~/.config/authdbctl/token.jwt` |
-| future caddy-authenticator | `~/.config/caddy-authenticator/config.yaml` | `~/.config/caddy-authenticator/token.jwt` |
+| example-cli | `~/.config/example-cli/config.yaml` | `~/.config/example-cli/token.jwt` |
 
 Expand `~` or join `os.UserHomeDir()` in the application before constructing the
 store. The store does not infer the application name or consult environment

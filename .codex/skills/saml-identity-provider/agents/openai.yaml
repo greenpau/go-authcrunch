@@ -1,4 +1,4 @@
 interface:
   display_name: "SAML Identity Provider"
-  short_description: "SAML Identity Provider maintenance and validation"
-  default_prompt: "Use $saml-identity-provider to maintain its implementation and tests."
+  short_description: "Signed SAML callbacks, browser binding, and certificate pins"
+  default_prompt: "Use $saml-identity-provider to maintain SP-initiated SAML login, assertion and certificate trust, and signed TLS and browser regression tests."

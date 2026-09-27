@@ -1,6 +1,6 @@
 ---
 name: authentication-client
-description: Maintain pkg/authclient portal login, its reusable configuration parser, native login transport, password/TOTP challenges, API key authentication, real-portal E2E tests, opaque credential files, and cmd/authdbctl authentication wiring. Use when embedding authentication in another CLI such as caddy-authenticator; this client does not use the admin API.
+description: Maintain or embed pkg/authclient for portal login, password/TOTP and API-key authentication, native credential transport, configuration parsing, and credential files. Covers authdbctl login wiring; management commands and the admin API have separate owners.
 ---
 
 # Authentication Client
@@ -39,6 +39,8 @@ presentation, config loading, user-agent identity, and credential persistence.
   never in the URL. Do not fall back to challenges or prompt after key rejection.
   The portal derives the identity using its existing proxy API key verifier.
   Keys are independent credentials, including for accounts enrolled in MFA.
+  They do not satisfy password/TOTP/WebAuthn checkpoints; configured challenge
+  requirements or an explicit saved flow preference can therefore deny key login.
   Key login issues an access token only, sets no cookies, and cannot create a
   refresh family. `refresh_transport: body` is rejected for this mode.
 - TOTP uses raw secret bytes and SHA-1, matching `identity.MfaToken` and existing

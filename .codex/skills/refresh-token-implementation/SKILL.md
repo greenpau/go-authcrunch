@@ -10,8 +10,11 @@ reusable token/session engine lives at `pkg/authn/token_refresh`, with Go packag
 identifier `tokenrefresh`. Use that import path and qualifier in consumers. Read
 [configuration and client contract](references/configuration-and-clients.md)
 when exposing settings, integrating clients, or changing public behavior.
-Use `refresh-token-identity` for login proof and identity revalidation, and
-`refresh-token-transports` for HTTP, cookies, browser coordination, and logout.
+Use [refresh-token-identity](../refresh-token-identity/SKILL.md) to change login
+proof, MFA completion, sandbox redemption, and credential-version revalidation.
+Use [refresh-token-transports](../refresh-token-transports/SKILL.md) to change
+refresh/logout HTTP routes, cookies, native transport, browser coordination,
+continuation, and fresh login.
 These are distinct boundaries; a change may require more than one owner.
 
 Directive support here is the public parser package and its portal

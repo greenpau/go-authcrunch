@@ -1,4 +1,4 @@
 interface:
   display_name: "Authentication Portal Profile"
-  short_description: "Authentication Portal Profile maintenance and validation"
-  default_prompt: "Use $authentication-portal-profile to maintain its implementation and tests."
+  short_description: "Identity-bound profile APIs and authentication preferences"
+  default_prompt: "Use $authentication-portal-profile to maintain canonical self-service identity, authentication-flow preferences, origin checks, and credential-management journeys."

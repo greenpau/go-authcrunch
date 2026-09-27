@@ -5,6 +5,8 @@ description: Maintain local identity database transactions, file locking and ato
 
 # Local Identity Database
 
+## Ownership and transaction boundary
+
 `pkg/identity/database.go`, `database_atomic_write.go`, `database_file_lock*.go`,
 `identity_request.go`, and `refresh.go` own persistence and security transactions.
 `pkg/ids/local` holds the authenticator lock across database replacement and
@@ -61,6 +63,8 @@ the verified key proof with a newer identification version, or repeat bcrypt
 outside the transaction as a substitute for protecting issuance. The `api_key`
 marker is internal proof, not a password/MFA AMR claim or renewable session.
 
+## Replay and persistence
+
 TOTP acceptance persists a monotonic `LastTOTPCounter` before success. Replay
 and earlier counters fail, including across processes, restart and symlink
 aliases. Failure increments, resets and expired-lockout clearing are fresh
@@ -74,6 +78,8 @@ files use 0600. `Copy` writes an isolated source snapshot without advancing the
 live source revision or merging destination TOTP state. Hardlink aliases and
 network filesystems without reliable advisory locks are outside this contract.
 
+## Acceptance and validation
+
 Run identity/local tests plus real TLS `identity_alias_e2e_test.go`: two realms
 sharing a file, revoked passwords/API keys, pending TOTP/WebAuthn, refresh
 revocation, shared lockout, role removal, conflicting writes and backup continuity.
@@ -86,3 +92,12 @@ The portal's `authentication_challenges_transaction_e2e_test.go` checks those
 issuance boundaries through real TLS direct-login consumers; see
 [authentication challenge policies](../authentication-portal-challenges/SKILL.md)
 for current policy, inventory, and direct issuance rules.
+
+```sh
+make test TEST_DIR='./pkg/identity ./pkg/ids/local ./pkg/authn' TEST='Database|Identity|TOTP|MFA|RoleChange|AuthenticationChallenge' COVERAGE_DIR=.coverage/local-identity
+```
+
+A committed change survives reopening and is visible through another alias.
+A stale writer adopts current state and returns a conflict without overwriting
+newer credentials. Two attempts consuming one TOTP step permit at most one
+success, and a failed commit cannot publish a successful mutation.

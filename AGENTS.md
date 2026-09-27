@@ -25,17 +25,23 @@ and test fixtures under `testdata`.
 
 ## Scripts and Automation
 
-Use the repo-local `scripts-and-automation` skill when choosing, running, or
-documenting Makefile targets, repository scripts, build/test/report workflows,
-generated artifacts, dependency automation, or release/version procedures.
+Use [scripts-and-automation](.codex/skills/scripts-and-automation/SKILL.md) to
+choose, run, or document Makefile targets, repository scripts, build/test/report
+workflows, generated artifacts, dependency automation, or release/version
+procedures.
+
+`make test` uses pinned `tested`; `make ci-check` is the complete quality gate.
+`make release`, `make minor-release`, `make fast-release`, and
+`make fast-minor-release` publish commits and tags and are only run when an
+actual release is requested.
 
 ## Coding Directives
 
-Use the repo-local `coding-directives` skill when creating, modifying, or
-reviewing repository code; choosing package boundaries, config and validation
-patterns, constructors, errors, logging, serialization tags, security handling,
-or test structure; or deciding how a new feature should fit existing
-AuthCrunch packages.
+Use [coding-directives](.codex/skills/coding-directives/SKILL.md) to create,
+modify, or review repository code; choose package boundaries, config and
+validation patterns, constructors, errors, logging, serialization tags, security
+handling, or test structure; or decide how a new feature fits existing AuthCrunch
+packages. Follow its routes to the implementation skill that owns the feature.
 
 Every configuration surface must have a dedicated, reusable `parser` package.
 Follow the `coding-directives` configuration parser contract for package shape,
@@ -44,10 +50,10 @@ and consumer E2E coverage from `testing-and-ci`.
 
 ## Testing and CI
 
-Use the repo-local `testing-and-ci` skill for every Go code change to enforce
-its corresponding tests and required E2E coverage, and when choosing or running
-tests, adding or updating test coverage, interpreting CI failures, reproducing
-GitHub Actions locally, or documenting validation for this repository.
+Use [testing-and-ci](.codex/skills/testing-and-ci/SKILL.md) to enforce
+corresponding tests and required E2E coverage for every Go code change, choose
+or run tests, add or update coverage, interpret CI failures, reproduce GitHub
+Actions locally, or document validation for this repository.
 
 ### Localhost Test Listeners
 
@@ -59,22 +65,16 @@ and explain that the test binds a localhost socket.
 
 ## Threat Hunting
 
-Use the repo-local `threat-hunting` skill when auditing the repository for
-security issues, triaging vulnerability reports, threat-modeling authentication
-or authorization flows, reviewing bypass/ACL/path matching, redirects, token
-sources, cookies, sessions, provider trust boundaries, input parsing,
-concurrency, secret logging, dependency vulnerabilities, or documenting security
-findings and remediation plans.
+Use [threat-hunting](.codex/skills/threat-hunting/SKILL.md) to audit security
+issues, triage vulnerability reports, model authentication or authorization
+threats, review bypass/ACL/path matching, redirects, token sources, cookies,
+sessions, provider trust boundaries, input parsing, concurrency, secret logging,
+or dependency vulnerabilities, and document findings and remediation plans.
 
 ## Source Code Management
 
-Use the repo-local `source-code-management` skill for commit message rules and
-for the workflow used when asked to create a commit message for a change.
-
-## Logging
-
-Use `logging` for diagnostic skip rules, their reusable directive parser, Zap
-filtering, root server logger wiring, and host logging integration contracts.
+Use [source-code-management](.codex/skills/source-code-management/SKILL.md) to
+create or review commit messages and prepare their required message files.
 
 ## Repository Knowledge
 
@@ -82,115 +82,5 @@ This repository has no `docs/` directory. Keep durable implementation,
 configuration, integration, and operational guidance in the narrow owning
 `.codex/skills` skill or its linked references. Keep this file to routing and
 cross-cutting invariants, and README to onboarding and common commands.
-Use `skill-authoring-patterns` with the default `skill-creator` for skill work.
-
-## Portal Cookies
-
-Use `authentication-portal-cookies` for reusable cookie directives, common
-prefixes, explicit names, factory attributes, and cookie interoperability across
-portal features and gatekeepers.
-
-## Refresh Tokens
-
-Use `refresh-token-implementation` for portal refresh configuration, issuance,
-rotation, replay, storage, and lifecycle. Use `refresh-token-identity` for login
-proof, MFA, sandbox redemption, and credential-version invalidation. Use
-`refresh-token-transports` for HTTP/cookies, native transport, browser
-coordination, continuation, and logout.
-
-## Authentication Portal Themes
-
-Use `authentication-portal-themes` for custom portal templates, CSS, branding
-assets, theme configuration, built-in page styling, and compatibility with
-current portal pages, including OIDC consent, continuation, and browser errors.
-
-## Authentication Challenge Policies
-
-Use `authentication-portal-challenges` for conditional `require auth challenges`
-selection, reusable challenge/user-transform directive parsers, registered-factor
-inventory, verified `amr` claims, and policy revalidation during login and issuance.
-Factor verification and enrollment remain with `authentication-portal-mfa`.
-
-## Local Password Authentication
-
-Use `local-password-authentication` for local password creation, imports,
-changes, resets, verification, bcrypt work equalization, and regression tests.
-
-## OAuth Identity Providers
-
-Use `oauth-identity-provider` for reusable upstream OAuth directive parsers,
-shared provider configuration dispatch, OAuth/OIDC discovery, JWKS and static
-public PEM verification, EdDSA/Ed25519 validation, key refresh, and real portal
-OAuth E2E tests.
-
-## Persistent Runtime State
-
-Use `runtime-state` for host-independent durable keys and authenticated sessions,
-its reusable directory parser, refresh/OIDC replay history, local identity epochs,
-restart E2E tests, and embedding lifecycle contracts.
-
-## OAuth Authorization Without a Portal
-
-Use `authorization-policy-oauth` for direct OAuth provider selection in an
-authorization policy, reusable directives, gatekeeper callbacks and opaque
-sessions, ACL revalidation, logout, lifecycle, and embedding contracts.
-Upstream protocol verification remains with `oauth-identity-provider`.
-
-## Portal OpenID Provider
-
-Use `authentication-portal-oidc` for downstream OIDC discovery, registered clients,
-authorization code/PKCE flows, local-user consent, dedicated ID-token signing keys,
-UserInfo, revocation, browser rendering contracts and response policies, and OP
-conformance testing. This covers the reusable `pkg/oidc` public API and the
-local-user portal adapter in `pkg/authn`.
-
-## Portal Signing-Key Discovery
-
-Use `authentication-portal-jwks` for the portal `/.well-known/jwks.json`
-endpoint, public signing-key serialization, issuer selection, and base-path
-routing, plus reusable admin API directive configuration and opt-in private-key
-export.
-
-## Standalone HTTP Server
-
-Use `authdb` for `cmd/authdb`, the reusable `pkg/httpserver` listener and
-configuration parser, TLS, portal mounts, process lifecycle, executable tests,
-and standalone deployment. `authdbctl` remains the separate management client.
-
-## Authentication Clients
-
-Use `authentication-client` for `pkg/authclient`, JSON portal login consumers,
-credential files, and authentication protocol wiring. Use `authdbctl` for
-`cmd/authdbctl` commands, configuration, terminal input, and executable E2E tests.
-The reusable client uses `/login` without the admin API; database management
-commands and their retry policy stay in `cmd/authdbctl`.
-
-## Versioning and Releases
-
-Use `release-and-versioning` for the fixed `1.<minor>.<patch>` namespace,
-version synchronization, versioned CI artifacts, and patch/minor releases.
-`make test` uses pinned `tested`; `make ci-check` is the complete quality gate.
-`make release`, `make minor-release`, `make fast-release`, and
-`make fast-minor-release` publish commits and tags and are only run when an
-actual release is requested.
-
-## Identity Public Keys
-
-Use `identity-public-keys` for user-owned GPG/SSH public-key parsing, profile API
-registration, persisted identity compatibility, and OpenPGP dependency changes.
-Portal signing-key publication and admin private-key export belong to
-`authentication-portal-jwks`.
-
-## Local Identity Transactions and Profile
-
-Use `local-identity-database` for file locking, atomic persistence, cross-instance
-revocation, TOTP state and identity-bound operations. Use
-`authentication-portal-profile` for local self-service authorization, canonical
-identity, API browser-origin checks, and per-user authentication-flow selection
-through the Profile API. Use `authentication-portal-mfa` for
-TOTP/WebAuthn checkpoints and enrollment.
-
-## SAML Identity Providers
-
-Use `saml-identity-provider` for upstream signed assertions, SP-initiated browser
-binding, ACS validation and authoritative signing-certificate pins.
+Use [skill-authoring](.codex/skills/skill-authoring/SKILL.md) to create, revise,
+route, or validate repository skills with the default `skill-creator` workflow.

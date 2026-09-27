@@ -187,6 +187,6 @@ responsive content wrapper, logo, banner, metadata, favicon, and this custom
 CSS hook. The card and banner are visible at tablet/desktop widths; the
 [phone rules](basic-theme.md#phone-layout) remove their decoration. Older
 filesystem copies may lack them; carry over the current structure and stylesheet
-order when updating such a copy. There is no custom JavaScript hook. For changes
-to renewal, logout, or redirects, use
-[refresh-token-transports](../../refresh-token-transports/SKILL.md).
+order when updating such a copy. There is no custom JavaScript hook.
+[refresh-token-transports](../../refresh-token-transports/SKILL.md) owns renewal,
+logout, and redirect behavior independently of template presentation.

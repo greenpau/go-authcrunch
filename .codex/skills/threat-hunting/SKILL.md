@@ -1,6 +1,6 @@
 ---
 name: threat-hunting
-description: go-authcrunch threat-hunting workflow for security audits, vulnerability triage, and deep review of authentication and authorization boundaries. Use when auditing the package for security issues, validating external vulnerability reports, reviewing authn/authz bypasses, ACL/path matching, redirects, token/cookie/session handling, OAuth/SAML/LDAP/KMS flows, input parsing, concurrency, secret logging, dependency vulnerabilities, or producing security findings and remediation plans.
+description: Audit AuthCrunch security boundaries, triage vulnerability reports and scanner findings, reproduce authentication or authorization failures, and prepare evidence-backed remediation. Covers trust, credentials, redirects, concurrency, diagnostic logging, and dependency exposure.
 ---
 
 # Threat Hunting
@@ -22,18 +22,21 @@ claims into falsifiable checks, then test or inspect the exact runtime behavior.
 4. Which checks execute before token validation, ACL evaluation, or signature
    verification?
 
-Use the repo-local `coding-directives` skill for fixes, `testing-and-ci` for
-test selection, and `scripts-and-automation` for repository tooling.
-Use [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md) for
-direct-policy callback ownership, opaque sessions, origin/browser binding,
-logout cancellation and shared-provider lifecycle without a portal.
-Use [local-password-authentication](../local-password-authentication/SKILL.md)
-when reviewing local password enumeration, bcrypt costs, or dummy comparisons.
-Use [local identity database](../local-identity-database/SKILL.md) for persisted
-credential/replay/lockout transactions, [portal profile](../authentication-portal-profile/SKILL.md)
-for identity-bound self-service, [portal MFA](../authentication-portal-mfa/SKILL.md)
-for factor checkpoints and enrollment, and [SAML providers](../saml-identity-provider/SKILL.md)
-for signed callback/browser/certificate trust.
+Remediation follows [coding-directives](../coding-directives/SKILL.md),
+validation follows [testing-and-ci](../testing-and-ci/SKILL.md), and tool side
+effects follow [scripts-and-automation](../scripts-and-automation/SKILL.md).
+Use [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md) to audit
+direct-policy callbacks, opaque sessions, browser/origin binding, and logout.
+Use [local-password-authentication](../local-password-authentication/SKILL.md) to
+review enumeration defenses, work schedules, and trusted password imports.
+Use [local-identity-database](../local-identity-database/SKILL.md) to audit durable
+credential, replay, lockout, and cross-instance transaction boundaries.
+Use [authentication-portal-profile](../authentication-portal-profile/SKILL.md) to
+review canonical account selection and identity-bound self-service.
+Use [authentication-portal-mfa](../authentication-portal-mfa/SKILL.md) to review
+factor checkpoints, proof binding, and enrollment.
+Use [saml-identity-provider](../saml-identity-provider/SKILL.md) to review signed
+assertions, request/browser binding, and authoritative certificate pins.
 
 ---
 
@@ -183,194 +186,20 @@ this fallback in its
 A retained module can still match an advisory for a package no longer imported.
 State that boundary instead of claiming the module itself is advisory-free.
 
-Use [identity-public-keys](../identity-public-keys/SKILL.md) for user-owned GPG/SSH
-key import, authenticated profile input, and OpenPGP compatibility. Trace actual
+Use [identity-public-keys](../identity-public-keys/SKILL.md) to review user-owned
+GPG/SSH import, authenticated profile input, and OpenPGP compatibility. Trace actual
 operations before equating dependency maintenance debt with an exploit.
 
 ---
 
-### 4. Hunt URL and Path Canonicalization
-
-Read [authorization path interpretations](references/authorization-paths.md)
-when reviewing or changing gatekeeper bypasses, method/path authorization, or
-JWT path claims. It owns the shared normalization contract, literal wildcard
-semantics, cache safety, and consumer regression fixtures.
-
-For any path-based auth, bypass, ACL, route, redirect, or upstream decision,
-verify the exact representation used at the moment of the security check.
-
-**Check for:**
-- Matching on `r.URL.Path`, `r.RequestURI`, `r.URL.String()`, or raw config
-  before normalization
-- Prefix/partial/suffix/regex comparisons on unnormalized values
-- Different normalization between the auth layer and the upstream/backend
-- `filepath.Clean` used for URL paths instead of `path.Clean`
-- Loss of meaningful trailing slash semantics after cleaning
-- Prefix rules that unintentionally match sibling paths (e.g., `/public` →
-  `/publicity`)
-- Scheme-relative redirect targets beginning with `//`
-- Query-string tokens or redirect parameters leaking into logs or `Location`
-- Encoded slash, encoded dot segment, duplicate slash, and absolute-form inputs
-
-**Adversarial path payloads:**
-```text
-/public/..%2fadmin
-/public/%2e%2e/admin
-/public/../admin
-/public//../admin
-/public/%2e/admin
-/public/%252e%252e/admin
-//evil.example/admin
-http://evil.example/admin?x=1
-/private?redirect=http://evil.example/
-/private?redirect=//evil.example/
-/%2F%2Fevil.example/admin
-/public/./../../admin
-```
-
-For each payload, verify the parsed value **and** the security decision. In Go
-tests, assert or log `req.URL.Path`, `req.URL.RawPath`, `req.RequestURI`, and
-the result of any normalization helper used by the production code.
+For the selected boundary, read [boundary checklists](references/boundary-checklists.md):
+path interpretation, redirects and host metadata, credential propagation,
+parsers and resource limits, provider/key trust, or concurrency. These checklists
+link the narrower contract references; unrelated surfaces may remain out of scope.
 
 ---
 
-### 5. Hunt Redirect and Header Trust Issues
-
-Read [redirect trust boundaries](references/redirects.md) when reviewing portal
-login redirects, OIDC callbacks, gatekeeper redirect placeholders, or CodeQL
-open-redirect/bad-redirect-check alerts. It distinguishes the final destination
-from cookies and encoded return parameters and identifies consumer regressions.
-
-Review every `Location` header, HTML/JS redirect, return URL, logout URL,
-callback URL, and "current URL" helper.
-
-**Check for:**
-- Raw insertion of `r.URL.String()`, `RequestURI`, `Host`, or `X-Forwarded-*`
-  into `Location`
-- Absolute or scheme-relative attacker-controlled redirect targets
-- Missing allowlist check on redirect destination
-- Full current-URL construction that trusts forwarded headers outside the
-  embedding solution's documented header-normalization boundary
-- Query parameter interpolation without `url.QueryEscape`
-- Response splitting or invalid header characters
-- Post-logout redirect to attacker-controlled URL
-- `Referer`-based redirect without validation
-
-When a placeholder intentionally expands to an absolute URL, document the trust
-model and the headers or config that define the allowed host set.
-
-Do not report **"Source-Address Authorization Trusts Forwarded IP Headers"** as
-a go-authcrunch library finding. AuthCrunch consumes the request metadata
-provided by the embedding application or server. Protection, stripping, and
-normalization of `X-Forwarded-*`, `X-Real-IP`, and similar client-IP headers is
-the responsibility of the solution using this library. Document that deployment
-assumption when relevant, but do not recommend implementing trusted-proxy
-enforcement in this library unless go-authcrunch itself becomes the final
-network edge for the affected flow.
-
----
-
-### 6. Hunt Token, Cookie, and Session Issues
-
-Read [gatekeeper credential handling](references/gatekeeper-credentials.md)
-when changing injected identity headers, token stripping or credential caches.
-
-**Token sources and propagation:**
-- Default acceptance of query-string tokens (leaks to logs, referrers, proxies)
-- Tokens left in upstream headers, cookies, query strings, redirects, or logs
-- Multiple token sources with ambiguous or undefined precedence
-- Bearer/header validation that fails open when API-key or basic auth paths err
-- Cached users bypassing newer ACL, path, source-address, or token checks
-- JWT algorithm confusion: `RS256` public key accepted as `HS256` HMAC secret
-- `alg: none` acceptance or missing algorithm allowlist
-- Missing `kid` validation allowing key-set confusion
-- Apply the [diagnostic logging exceptions](references/debug-logging.md)
-  to intentional claims, identity/session, ACL and OAuth/OIDC diagnostics.
-  Check the actual logger level, structured field, deployment boundary and
-  explicitly accepted rule/sink scope before reporting or dismissing a
-  clear-text logging alert.
-
-**Cookies:**
-- Manual cookie string construction instead of `http.Cookie`
-- Missing `Secure`, `HttpOnly`, and SameSite defaults
-- User-controlled values written without encoding
-- Cookie domain/path selection derived from untrusted `Host` header
-- Session ID parsing that accepts malformed or attacker-chosen values
-- Refresh token not rotated on use
-
----
-
-### 7. Hunt Parser, DoS, and Panic Issues
-
-**Check for:**
-- Unbounded `io.ReadAll` without `http.MaxBytesReader`
-- JSON decoded into `map[string]interface{}` followed by unchecked type
-  assertions
-- Type confusion in JWT claims, user records, API-key records, or config maps
-- Regexps compiled from config and evaluated against large attacker-controlled
-  strings (ReDoS)
-- Loops with missing break conditions or unbounded retry logic
-- Panic in library/runtime code on error paths (nil pointer, index out of range)
-- XML entity expansion (XXE) or billion-laughs in SAML parsing
-- Large or deeply nested JSON/YAML config files without size/depth limits
-
-Prefer typed request structs, decoder size limits, and explicit bad-request
-errors for malformed user input.
-
----
-
-### 8. Hunt Provider and Crypto Boundaries
-
-**OAuth/OIDC:**
-- Validate: state, nonce, PKCE (method and verifier), redirect URI, issuer,
-  audience, token signature, key use, and algorithm allowlist
-- Treat provider-specific disabled controls as explicit compatibility risks —
-  document them
-- Preserve the [administrator debug diagnostic boundary](references/debug-logging.md)
-  when reviewing raw token responses, ID/access tokens, codes and userinfo.
-- Verify that the JWKS endpoint is fetched from a trusted, config-pinned URI
-- Check that key rollover does not create a window of accepting revoked keys
-
-**SAML:**
-- Verify: signature scope (assertion vs. envelope), issuer, audience,
-  destination, recipient, ACS URL, metadata trust anchor, and InResponseTo
-- Treat any XML parsing before signature validation as a dangerous prefilter
-- Reject IdP-initiated flows unless explicitly configured and allowlisted
-
-**LDAP and network clients:**
-- Verify: TLS settings, server name validation, certificate chain, timeouts,
-  bind credential handling, DN construction from user input (injection), and
-  group search filter escaping
-
-**KMS / JWT:**
-- Use [authentication-portal-jwks](../authentication-portal-jwks/SKILL.md) for
-  the portal's public signing-key export boundary, issuer selection, and
-  public-only serialization tests, plus the separate opt-in admin private-key
-  export boundary.
-- Verify: key usage separation (sign vs. encrypt), accepted algorithm set,
-  required claims (`iss`, `aud`, `exp`, `nbf`), claim type assertions,
-  expiration and not-before enforcement, and malformed-token error handling
-- Ensure signing keys are not reused as HMAC verification secrets
-
----
-
-### 9. Hunt Concurrency and Cache Behavior
-
-**Check for:**
-- Map mutation while holding only `RLock`
-- Map deletion during iteration without the correct lock
-- Cached authorization state that omits path, method, source address, or ACL
-  version as cache keys
-- Goroutines that inherit secrets or request-scoped context after request end
-- Race-test coverage gaps in session, token, registration, and provider caches
-- TOCTOU between ACL read and request dispatch
-- Timer or ticker goroutines leaking on handler teardown
-
-Run `go test -race ./...` and treat data-race reports as High severity.
-
----
-
-### 10. Validate Findings
+### 4. Validate Findings
 
 For each suspected issue, reach one of these outcomes before reporting:
 
@@ -390,8 +219,9 @@ toolchain. Avoid treating the local scan's Go version as this module's minimum
 supported Go version.
 
 When source-address authorization uses forwarded client-IP headers, classify
-header protection as an embedding-solution responsibility, not a
-go-authcrunch-code vulnerability. Treat the expected upstream protection as a
+header protection as an embedding-solution responsibility for library consumers.
+For the in-repository `authdb` listener, verify its own stripping of forwarded
+headers before making that classification. Treat the expected upstream protection as a
 deployment assumption unless the reviewed code bypasses its own authorization
 checks independently of `X-Forwarded-*` or `X-Real-IP` trust.
 
@@ -406,7 +236,7 @@ A normalization fix with no accompanying test is incomplete.
 
 ---
 
-### 11. Report Clearly
+### 5. Report Clearly
 
 Lead with findings, not an audit narrative. For each issue:
 
@@ -432,9 +262,9 @@ Save the full report to a repo-relative `tmp/threat-hunt/` directory. Create
 the directory when it does not exist. Prefix the report filename with the local
 timestamp in `YYYYMMDD_HHMM_` format, for example
 `tmp/threat-hunt/20260629_1530_authz-bypass-review.md`. After saving the
-report, run `versioned -toc -filepath <report-path>` to add or refresh the
+report, run `go tool versioned -toc -filepath <report-path>` to add or refresh the
 table of contents, for example
-`versioned -toc -filepath tmp/threat-hunt/20260629_1530_authz-bypass-review.md`.
+`go tool versioned -toc -filepath tmp/threat-hunt/20260629_1530_authz-bypass-review.md`.
 Mention the saved report path in the final response.
 
 End each report with a **"Not deeply tested"** section naming surfaces that were
@@ -446,7 +276,7 @@ not fully exercised, especially:
 
 ---
 
-### 12. Fix Conservatively
+### 6. Fix Conservatively
 
 When remediating:
 
@@ -481,5 +311,5 @@ The hunt is complete only when all of the following are true:
       performed, and residual risk
 - [ ] The full report is saved under `tmp/threat-hunt/` with a
       `YYYYMMDD_HHMM_` filename prefix
-- [ ] `versioned -toc -filepath <report-path>` was run against the saved report
+- [ ] `go tool versioned -toc -filepath <report-path>` was run against the saved report
 - [ ] A "Not deeply tested" section names unexercised surfaces

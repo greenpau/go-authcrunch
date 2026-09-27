@@ -1,5 +1,12 @@
 # Configuration and client integration
 
+Contents:
+
+- [Example](#example)
+- [Endpoints and clients](#endpoints-and-clients)
+- [Claims and consent](#claims-and-consent)
+- [Lifetimes, reloads, and deployment](#lifetimes-reloads-and-deployment)
+
 The authentication portal can act as a downstream OpenID Provider for users of
 its local identity stores. For standalone Go applications, see
 [reusing the provider package](reusable-provider.md). Configure `oidc_provider` on a portal; upstream
@@ -72,8 +79,9 @@ secret before loading it. The embedding HTTP server mounts this portal at
 `PortalConfig` supplies default cookies and a disabled admin/profile API when
 OIDC is enabled and those fields are omitted. Enabling OIDC does not enable an
 admin API. This repository implements Go and JSON/XML/YAML configuration;
-`caddy-security` owns its separate Caddyfile grammar, which is not extended by
-this change. Embedders pass requests through `Portal.ServeHTTP` as usual.
+`caddy-security` owns its separate Caddyfile grammar. Library parser support
+does not establish consumer directive support. Embedders pass requests through
+`Portal.ServeHTTP` as usual.
 
 Generate a dedicated persistent key, for example:
 

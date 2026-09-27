@@ -175,7 +175,8 @@ for concrete APIs and consumer registration.
 
 When adding or changing a configurable feature, implement or extend its parser
 and corresponding unit, executable-example, and consumer E2E coverage in the
-same change. Follow `testing-and-ci` for the required validation workflow. When
+same change. The [testing contract](../../testing-and-ci/SKILL.md) defines the
+required validation workflow. When
 extracting legacy parsing, move the implementation and tests together, preserve
 typed validation, update repository-local callers, and verify that configured
 runtime behavior survives serialization where supported.

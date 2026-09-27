@@ -1,4 +1,4 @@
 interface:
   display_name: "Authentication Portal MFA"
-  short_description: "Authentication Portal MFA maintenance and validation"
-  default_prompt: "Use $authentication-portal-mfa to maintain its implementation and tests."
+  short_description: "TOTP and WebAuthn checkpoints, replay, and enrollment"
+  default_prompt: "Use $authentication-portal-mfa to maintain factor verification and enrollment, preserving identity binding, replay protection, and real TLS login coverage."

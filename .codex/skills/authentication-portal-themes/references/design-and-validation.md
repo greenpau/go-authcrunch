@@ -178,8 +178,8 @@ state, while the Close QR Code action remains an ordinary button.
 Repository tests exercise embedded templates; they do not automatically load
 files from the consuming application's theme directory. The OIDC tests also
 exercise synthetic filesystem overrides; they still do not validate arbitrary
-deployment theme files. If library UI source changes, use the `testing-and-ci`
-skill, including
+deployment theme files. Library UI source changes follow the
+[testing requirements](../../testing-and-ci/SKILL.md), including
 `make test TEST_DIR='./pkg/authn/ui'` and the affected handler tests; run
 `make test-ui` for login or refresh client changes. For an external theme,
 validate its actual files and runtime wiring. `make templates` is license

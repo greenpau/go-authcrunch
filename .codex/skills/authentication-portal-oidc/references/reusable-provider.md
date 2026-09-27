@@ -1,5 +1,15 @@
 # Reusing the Go OpenID Provider
 
+Contents:
+
+- [Construction](#construction)
+- [Provider settings directives](#provider-settings-directives)
+- [Named application registration and reloads](#named-application-registration-and-reloads)
+- [Provisioning clients and signing keys](#provisioning-clients-and-signing-keys)
+- [Identity boundary](#identity-boundary)
+- [HTTP and browser lifecycle](#http-and-browser-lifecycle)
+- [Claims and refresh integration](#claims-and-refresh-integration)
+
 Import `github.com/greenpau/go-authcrunch/pkg/oidc`. Applications can construct
 `*oidc.Provider` directly, use it through `oidc.OpenIDProvider`, and serve it as
 an `http.Handler`. No authentication portal or local-store implementation is
@@ -301,7 +311,7 @@ crypto adapter does. `oidcparser.NewOIDCClientConfigFromDirectives` decodes each
 statement with `cfgutil.DecodeArgs`; pass the body without the header or braces.
 Preserve token boundaries with the encoder rather than joining arguments with spaces. Resolve
 host-specific placeholders before encoding. The library has no Caddy dependency
-and this change does not install the outer `oauth application` Caddyfile grammar.
+and does not install the outer `oauth application` Caddyfile grammar.
 
 | Directive | Values |
 | --- | --- |
@@ -321,11 +331,14 @@ A public native registration may use `http://127.0.0.1/callback` and/or
 remains mandatory. Bind a local ephemeral listener and include its actual port
 in authorization. Only that port may differ from registration; preserve all
 other URI bytes. Token exchange must repeat the actual authorized URI exactly.
-Use `configuration-and-clients.md` for the callback and CORS boundaries.
+The [client configuration contract](configuration-and-clients.md) defines the
+callback and CORS boundaries.
 
 Booleans follow `cfgutil.ParseBoolArg`: true/yes/on/1 and false/no/off/0,
-case-insensitively. Only `redirect_uri` may repeat; each occurrence takes exactly
-one URI. `scopes` takes multiple values on one line and may occur once.
+case-insensitively. Only `redirect_uri` and `request_object_key` may repeat;
+each callback statement takes exactly one URI, and each key statement takes
+one key ID, modulus, and exponent. `scopes` takes multiple values on one line
+and may occur once.
 `redirect_uris` is not an alias: reject it even when mixed with singular
 statements. The JSON/XML/YAML `redirect_uris` array and typed `RedirectURIs`
 field remain unchanged, preserving stored registrations. One callback per
@@ -385,7 +398,7 @@ securely before serving it, and provision the relying party with its client ID
 and secret through a protected channel. Do not call this operation on every
 Caddyfile adaptation or reload: load the saved registration and key instead.
 The returned config can be assigned directly to `authn.PortalConfig.OIDCProvider`.
-This library change does not add Caddyfile directives or a management endpoint.
+These helpers do not add Caddyfile directives or a management endpoint.
 
 `NewClientConfig` accepts a `ClientConfig` value and returns an independent,
 validated copy. Missing client IDs and confidential-client secrets each receive
