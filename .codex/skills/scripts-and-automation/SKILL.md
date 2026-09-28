@@ -27,6 +27,7 @@ boundary for these workflows.
 | --- | --- |
 | `make` / `make build` | Check version projections, compile `bin/authdb` and `bin/authdbctl`, print version/help |
 | `make dep` | Download/verify modules and resolve pinned `go tool` commands |
+| `make linter` | Run pinned golint on the root package and `cmd`, `internal`, and `pkg` trees |
 | `make test` | Race-enabled, uncached Go tests and complete tested reports |
 | `make test TEST_DIR='./pkg/authn/...' TEST='TestPortalRefresh'` | Same lifecycle with selected packages/test pattern |
 | `make qtest QUICK_TEST_DIR='./pkg/authn/token_refresh/...'` | Token engine and public parser lifecycle under `.coverage/quick`; default scope is `./pkg/system` |
@@ -61,6 +62,13 @@ other output directories. Unrelated files in a report directory also survive.
 The lifecycle fixture in `assets/scripts/tests/tested_test.py` checks this
 isolation alongside fresh evidence and nonzero exits after test/build failures.
 Whole-directory cleanup belongs to the explicitly requested `make clean`.
+
+`make linter` scopes golint to the root package and the `cmd`, `internal`, and
+`pkg` source trees. Golint's recursive filesystem scan does not honor nested
+Go modules or Git ignores; using `./...` also scans temporary consumer checkouts
+under `tmp/` and generated output. Keep new source trees in the explicit lint
+scope. `assets/scripts/tests/linter_test.py` exercises the real Make target with
+temporary checkouts and verifies that source and test-file warnings still fail.
 
 The Go module minimum is `1.26.0`; CI and release builds select Go `1.26.8`, Node 24, and Python
 3. Use Python 3.9+ locally. `go.mod` and `go.sum` pin `tested`, `versioned`, and

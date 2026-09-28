@@ -41,7 +41,7 @@ build: version-check
 	done
 
 linter:
-	@go tool golint -set_exit_status ./...
+	@go tool golint -set_exit_status . ./cmd/... ./internal/... ./pkg/...
 
 # Tools are pinned by go.mod/go.sum; no global installation is required.
 dep:
