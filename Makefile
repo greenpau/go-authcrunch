@@ -9,7 +9,8 @@ BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 PYTHON ?= python3
 TEST ?= .
 TEST_DIR ?= ./...
-TEST_TIMEOUT ?= 20m
+# Aggregate package budget for race-enabled real-login tests.
+TEST_TIMEOUT ?= 30m
 QUICK_TEST_DIR ?= ./pkg/system
 COVERAGE_DIR ?= .coverage
 MINIMUM_COVERAGE ?= 1

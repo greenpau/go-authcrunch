@@ -47,12 +47,19 @@ module tidy, or version synchronization. `run-tests` aliases the same tested
 lifecycle. `run-quick-tests` underlies `qtest`. There is no `ctest` target.
 `COVERAGE_DIR` selects output; concurrent independent invocations must use
 separate directories. `TEST` is a regex, not a fragment of Go flags. `TEST_TIMEOUT` is a quoted
-Go per-package duration (default `20m`) forwarded through tested; use it instead
-of embedding flags in `TEST`. The expanded race-enabled TLS suite can exceed
-Go's implicit ten-minute limit. Preserve individual request/process deadlines;
-inspect timeout stacks before adjusting the aggregate limit. The real automation
-fixture verifies both default forwarding and a short timeout that remains a
-failed run in live and offline reports.
+Go per-package duration (default `30m`) forwarded through tested; use it instead
+of embedding flags in `TEST`. Environment overrides apply to both full and quick
+runs; a Make command-line assignment takes precedence and survives recursive
+quick-test invocations. The workflow job allows 45 minutes, including setup,
+other gates, and evidence upload. Follow the
+[timeout diagnosis](../testing-and-ci/SKILL.md#test-lifecycle) before changing
+these budgets. Preserve individual request/process deadlines.
+
+`assets/scripts/tests/test_timeout_test.py` checks default and override argument
+forwarding for all four test entry points at the tool boundary.
+`assets/scripts/tests/tested_test.py` exercises pinned tested and real Go tests:
+default forwarding, a recursive quick-run override, and a short environment
+deadline that remains a failed run in live and offline reports.
 
 Let pinned `tested` clean up its managed artifacts inside the selected
 `COVERAGE_DIR`. Do not recursively delete `.coverage` or the selected directory

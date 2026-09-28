@@ -61,14 +61,17 @@ class TestedLifecycleTests(unittest.TestCase):
                 self.assertEqual((root / name).read_bytes(), content, name)
             first_run = json.loads((report / 'run.json').read_text())
             command = first_run['command']
-            self.assertEqual(command[command.index('-timeout') + 1], '20m')
+            self.assertEqual(command[command.index('-timeout') + 1], '30m')
             first_profile = (report / 'coverage.out').read_bytes()
             self.assertIn('TestSelected', (report / 'test_output.jsonl').read_text())
             self.assertNotIn('TestExcluded', (report / 'test_output.jsonl').read_text())
             first_bundle = bundle(report)
-            quick = make('qtest', 'QUICK_TEST_DIR=.', 'TEST=^TestSelected$')
+            # Exercise the recursive target with a real overridden deadline.
+            quick = make('qtest', 'QUICK_TEST_DIR=.', 'TEST=^TestSelected$', 'TEST_TIMEOUT=1m')
             self.assertEqual(quick.returncode, 0, quick.stdout)
             self.assertTrue((report / 'quick/manifest.json').is_file())
+            quick_command = json.loads((report / 'quick/run.json').read_text())['command']
+            self.assertEqual(quick_command[quick_command.index('-timeout') + 1], '1m')
             for name, content in first_bundle.items():
                 self.assertEqual((report / name).read_bytes(), content, str(name))
             quick_bundle = bundle(report / 'quick')
@@ -91,7 +94,10 @@ class TestedLifecycleTests(unittest.TestCase):
             # fixture finishes in two seconds even if timeout forwarding breaks.
             test.write_text('package fixture\nimport ("testing"; "time")\n'
                             'func TestTimeout(t *testing.T) { Value(); time.Sleep(2*time.Second) }\n')
-            timed_out = make('test', 'TEST=^TestTimeout$', 'TEST_TIMEOUT=100ms')
+            # A shell-provided override must reach Go as well as a Make argument.
+            env['TEST_TIMEOUT'] = '100ms'
+            timed_out = make('test', 'TEST=^TestTimeout$')
+            env.pop('TEST_TIMEOUT')
             self.assertNotEqual(timed_out.returncode, 0, timed_out.stdout)
             timeout_run = json.loads((report / 'run.json').read_text())
             timeout_command = timeout_run['command']

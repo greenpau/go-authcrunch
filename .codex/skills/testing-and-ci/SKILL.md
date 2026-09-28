@@ -94,13 +94,18 @@ make test-automation
 make ci-check
 ```
 
-Go lifecycle runs use `-mod=readonly -race -count=1 -timeout 20m -v`.
+Go lifecycle runs use `-mod=readonly -race -count=1 -timeout 30m -v`.
 `TEST_TIMEOUT` overrides the per-package limit through the quoted Go flag.
-The expanded real-login suite exceeds Go's implicit ten-minute limit under race
-instrumentation; the explicit limit remains below the CI job's thirty-minute
-bound. Keep individual network/browser timeouts and diagnose timed-out stacks
-before changing the package limit. Never disable deadlines or skip E2E to clear
-a timeout. `TEST` is a test regex
+The real-login suite can exceed twenty minutes under race instrumentation.
+The CI job allows 45 minutes for setup, compilation, the package budget, other
+quality gates, and artifact upload. Keep individual network/browser timeouts.
+For a package timeout, inspect `run.json` and `test_output.jsonl`: compare elapsed
+times of completed top-level tests with the package limit and inspect the active
+stack. Subtest times overlap their parents; do not add both. A recently started
+test doing bcrypt work can be the victim of the aggregate deadline. Reproduce
+that test separately before attributing a hang to it. Adjust package and job
+budgets together when healthy cumulative work exhausts the limit; never disable
+deadlines or skip E2E to clear a timeout. `TEST` is a test regex
 (default `.`); `TEST_DIR` accepts package patterns (default `./...`). Reports
 land in `.coverage`, or `.coverage/quick` for `qtest`. Use `COVERAGE_DIR` to
 separate independent concurrent runs. `MINIMUM_COVERAGE` defaults to 1 percent
