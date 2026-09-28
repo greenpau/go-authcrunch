@@ -1160,6 +1160,10 @@ func extractInputDataType(fieldName string) dataType {
 }
 
 func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition, error) {
+	return newACLRuleConditionWithFields(ctx, tokens, nil)
+}
+
+func newACLRuleConditionWithFields(ctx context.Context, tokens []string, fieldTypes map[string]dataType) (aclRuleCondition, error) {
 	var inputDataType, condDataType dataType
 	var matchStrategy fieldMatchStrategy
 	var negativeMatch bool
@@ -1229,6 +1233,9 @@ func newACLRuleCondition(ctx context.Context, tokens []string) (aclRuleCondition
 			return nil, err
 		}
 		inputDataType = extractInputDataType(fieldName)
+		if customType, ok := fieldTypes[fieldName]; ok {
+			inputDataType = customType
+		}
 		var err error
 		condDataType, err = extractCondDataType(line, inputDataType, values)
 		if err != nil {

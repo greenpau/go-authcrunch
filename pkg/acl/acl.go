@@ -16,6 +16,8 @@ package acl
 
 import (
 	"context"
+
+	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -25,6 +27,9 @@ type AccessList struct {
 	rules        []aclRule
 	logger       *zap.Logger
 	defaultAllow bool
+	fieldTypes   map[string]dataType
+	customFields map[string]FieldConfig
+	usedFields   map[string]FieldConfig
 }
 
 // NewAccessList returns an instance of AccessList.
@@ -62,12 +67,20 @@ func (acl *AccessList) AddRules(ctx context.Context, cfgs []*RuleConfiguration) 
 
 // AddRule adds a rule to AccessList.
 func (acl *AccessList) AddRule(ctx context.Context, cfg *RuleConfiguration) error {
-	rule, err := newACLRule(ctx, len(acl.rules), cfg, acl.logger)
+	if cfg == nil {
+		return errors.ErrAccessListRuleConfig.WithArgs(len(acl.rules), "rule must not be null")
+	}
+	rule, err := newACLRuleWithFields(ctx, len(acl.rules), cfg, acl.logger, acl.fieldTypes)
 	if err != nil {
 		return err
 	}
 	acl.config = append(acl.config, cfg)
 	acl.rules = append(acl.rules, rule)
+	for _, name := range rule.getConfig(ctx).fields {
+		if field, ok := acl.customFields[name]; ok {
+			acl.usedFields[name] = field
+		}
+	}
 	return nil
 }
 
@@ -86,9 +99,15 @@ func (acl *AccessList) AsMap() map[string]interface{} {
 	return m
 }
 
-// Allow takes in client identity and metadata and returns an error when
-// denied access.
-func (acl *AccessList) Allow(ctx context.Context, data map[string]interface{}) bool {
+// Allow evaluates normalized identity and request data. Declared custom fields
+// are read by their ACL names and strictly type-checked before evaluating rules.
+// Configure the list completely before sharing it between requests.
+func (acl *AccessList) Allow(ctx context.Context, data map[string]any) bool {
+	data, valid := acl.prepareData(data, data, false)
+	return valid && acl.allow(ctx, data)
+}
+
+func (acl *AccessList) allow(ctx context.Context, data map[string]any) bool {
 	var grantAccess bool
 	for _, rule := range acl.rules {
 		v := rule.eval(ctx, data)

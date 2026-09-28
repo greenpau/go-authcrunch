@@ -30,8 +30,13 @@ the reusable Go host boundary.
 
 The host checks serialized object collections before provisioning: optional
 objects can be absent, but typed collections cannot contain null objects.
-Keep this check limited to the declared JSON model; provider `params` values
-remain owned by their validators. Guard incomplete raw crypto statements before
+Use explicit typed traversal and generic pointer-collection checks, without
+runtime reflection. `TestSecurityConfigurationObjectCoverage` discovers the
+declared JSON model in test code and checks concrete/null objects at every
+collection path. Extend the typed traversal whenever that model adds a new
+object collection, including policy `access_list_fields`. Keep provider `params`
+values owned by their validators. Errors identify field paths and indices,
+never map keys or configured values. Guard incomplete raw crypto statements before
 calling the legacy KMS decoder. Initialization errors expose a redacted message;
 their wrapped causes are available to embedding code for private diagnostics
 and may contain credentials. Do not print those causes from the executable.

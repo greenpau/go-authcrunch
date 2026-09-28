@@ -176,14 +176,14 @@ func (g *guardianBase) authorize(ctx context.Context, r *http.Request, usr *user
 	// if usr.Cached {
 	//	return nil
 	// }
-	if userAllowed := g.accessList.Allow(ctx, usr.GetData()); !userAllowed {
+	if userAllowed := g.accessList.AllowWithClaims(ctx, usr.GetData(), usr.AsMap()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
 	return nil
 }
 
 func (g *guardianWithSrcAddr) authorize(ctx context.Context, r *http.Request, usr *user.User, _ string) error {
-	if userAllowed := g.accessList.Allow(ctx, usr.GetData()); !userAllowed {
+	if userAllowed := g.accessList.AllowWithClaims(ctx, usr.GetData(), usr.AsMap()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
 	if usr.Claims.Address == "" {
@@ -197,7 +197,7 @@ func (g *guardianWithSrcAddr) authorize(ctx context.Context, r *http.Request, us
 }
 
 func (g *guardianWithPathClaim) authorize(ctx context.Context, r *http.Request, usr *user.User, reqPath string) error {
-	if userAllowed := g.accessList.Allow(ctx, usr.GetData()); !userAllowed {
+	if userAllowed := g.accessList.AllowWithClaims(ctx, usr.GetData(), usr.AsMap()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
 	if usr.Claims.AccessList == nil {
@@ -212,7 +212,7 @@ func (g *guardianWithPathClaim) authorize(ctx context.Context, r *http.Request, 
 }
 
 func (g *guardianWithSrcAddrPathClaim) authorize(ctx context.Context, r *http.Request, usr *user.User, reqPath string) error {
-	if userAllowed := g.accessList.Allow(ctx, usr.GetData()); !userAllowed {
+	if userAllowed := g.accessList.AllowWithClaims(ctx, usr.GetData(), usr.AsMap()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
 	if usr.Claims.Address == "" {
@@ -240,7 +240,7 @@ func (g *guardianWithMethodPath) authorize(ctx context.Context, r *http.Request,
 	}
 	kv["method"] = r.Method
 	kv["path"] = reqPath
-	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
+	if userAllowed := g.accessList.AllowWithClaims(ctx, kv, usr.AsMap()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
 	return nil
@@ -253,7 +253,7 @@ func (g *guardianWithMethodPathSrcAddr) authorize(ctx context.Context, r *http.R
 	}
 	kv["method"] = r.Method
 	kv["path"] = reqPath
-	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
+	if userAllowed := g.accessList.AllowWithClaims(ctx, kv, usr.AsMap()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
 	if usr.Claims.Address == "" {
@@ -273,7 +273,7 @@ func (g *guardianWithMethodPathPathClaim) authorize(ctx context.Context, r *http
 	}
 	kv["method"] = r.Method
 	kv["path"] = reqPath
-	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
+	if userAllowed := g.accessList.AllowWithClaims(ctx, kv, usr.AsMap()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
 	if usr.Claims.AccessList == nil {
@@ -294,7 +294,7 @@ func (g *guardianWithMethodPathSrcAddrPathClaim) authorize(ctx context.Context, 
 	}
 	kv["method"] = r.Method
 	kv["path"] = reqPath
-	if userAllowed := g.accessList.Allow(ctx, kv); !userAllowed {
+	if userAllowed := g.accessList.AllowWithClaims(ctx, kv, usr.AsMap()); !userAllowed {
 		return errors.ErrAccessNotAllowed
 	}
 	if usr.Claims.Address == "" {

@@ -4218,6 +4218,10 @@ func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounter) emptyFields(ctx context
 }
 
 func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger *zap.Logger) (aclRule, error) {
+	return newACLRuleWithFields(ctx, ruleID, cfg, logger, nil)
+}
+
+func newACLRuleWithFields(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger *zap.Logger, fieldTypes map[string]dataType) (aclRule, error) {
 	var action, logLevel, tag string
 	var fieldCondFound bool
 	var stopEnabled, logEnabled, counterEnabled, matchAny bool
@@ -4233,12 +4237,15 @@ func newACLRule(ctx context.Context, ruleID int, cfg *RuleConfiguration, logger 
 		if err != nil {
 			return nil, errors.ErrACLRuleSyntaxExtractCondToken.WithArgs(err)
 		}
-		parsedACLRuleCondition, err := newACLRuleCondition(ctx, tokens)
+		parsedACLRuleCondition, err := newACLRuleConditionWithFields(ctx, tokens, fieldTypes)
 		if err != nil {
 			return nil, errors.ErrACLRuleSyntax.WithArgs(err)
 		}
-		conditions = append(conditions, parsedACLRuleCondition)
 		condConfig := parsedACLRuleCondition.getConfig(ctx)
+		if fieldTypes[condConfig.field] == dataTypeListStr && condConfig.matchStrategy != fieldFound && condConfig.matchStrategy != fieldNotFound {
+			parsedACLRuleCondition = &nonemptyListCondition{parsedACLRuleCondition}
+		}
+		conditions = append(conditions, parsedACLRuleCondition)
 		condConfigs = append(condConfigs, condConfig)
 		if _, exists := fieldIndex[condConfig.field]; exists {
 			return nil, errors.ErrACLRuleSyntaxDuplicateField.WithArgs(condConfig.field)

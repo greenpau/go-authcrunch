@@ -16,10 +16,10 @@ package httpserver
 
 import (
 	"fmt"
-	"reflect"
-	"strings"
 
 	"github.com/greenpau/go-authcrunch"
+	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/authz"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
 
@@ -45,53 +45,125 @@ func validateCryptoStatements(statements []string) error {
 
 // Serialized collections represent concrete objects, but JSON also permits
 // null entries. Several existing component validators dereference those entries.
-// Inspect only the declared JSON model, leaving optional fields nil and opaque
-// provider parameters to their owning validators. Do not include map keys or
-// configuration values in errors. Tracking pointers also bounds shared graphs.
+// Check the typed JSON model without reflection, leaving optional fields nil
+// and opaque provider parameters to their owning validators. The test suite
+// discovers every serialized collection to keep this traversal complete as the
+// model evolves. Do not include map keys or configuration values in errors.
 func validateConfigurationObjects(config *authcrunch.Config) error {
-	seen := make(map[any]bool)
-	var walk func(reflect.Value, string) error
-	walk = func(value reflect.Value, location string) error {
-		switch value.Kind() {
-		case reflect.Pointer:
-			if value.IsNil() || seen[value.Interface()] {
-				return nil
-			}
-			seen[value.Interface()] = true
-			return walk(value.Elem(), location)
-		case reflect.Struct:
-			for i := 0; i < value.NumField(); i++ {
-				field := value.Type().Field(i)
-				name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
-				if !field.IsExported() || name == "" || name == "-" {
-					continue
-				}
-				if err := walk(value.Field(i), location+"."+name); err != nil {
-					return err
-				}
-			}
-		case reflect.Slice, reflect.Array:
-			for i := 0; i < value.Len(); i++ {
-				entry := value.Index(i)
-				if entry.Kind() == reflect.Pointer && entry.IsNil() {
-					return fmt.Errorf("%s[%d] must not be null", location, i)
-				}
-				if err := walk(entry, location); err != nil {
-					return err
-				}
-			}
-		case reflect.Map:
-			for iter := value.MapRange(); iter.Next(); {
-				entry := iter.Value()
-				if entry.Kind() == reflect.Pointer && entry.IsNil() {
-					return fmt.Errorf("%s contains a null object", location)
-				}
-				if err := walk(entry, location); err != nil {
-					return err
-				}
-			}
-		}
+	if config == nil {
 		return nil
 	}
-	return walk(reflect.ValueOf(config), "security")
+	for _, err := range []error{
+		validateObjectList(config.AuthenticationPortals, "security.authentication_portals"),
+		validateObjectList(config.AuthorizationPolicies, "security.authorization_policies"),
+		validateObjectList(config.IdentityStores, "security.identity_stores"),
+		validateObjectList(config.IdentityProviders, "security.identity_providers"),
+		validateObjectList(config.SingleSignOnProviders, "security.sso_providers"),
+		validateObjectList(config.OAuthApplications, "security.oauth_applications"),
+	} {
+		if err != nil {
+			return err
+		}
+	}
+	if config.Credentials != nil {
+		if err := validateObjectList(config.Credentials.Generic, "security.credentials.generic"); err != nil {
+			return err
+		}
+	}
+	if config.Messaging != nil {
+		if err := validateObjectList(config.Messaging.EmailProviders, "security.messaging.email_providers"); err != nil {
+			return err
+		}
+		if err := validateObjectList(config.Messaging.FileProviders, "security.messaging.file_providers"); err != nil {
+			return err
+		}
+	}
+	if config.UserRegistration != nil {
+		if err := validateObjectList(config.UserRegistration.LocalProviders, "security.user_registration.local_providers"); err != nil {
+			return err
+		}
+	}
+	for _, portal := range config.AuthenticationPortals {
+		if err := validatePortalObjects(portal); err != nil {
+			return err
+		}
+	}
+	for _, policy := range config.AuthorizationPolicies {
+		if err := validatePolicyObjects(policy); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateObjectList[T any](entries []*T, location string) error {
+	for i, entry := range entries {
+		if entry == nil {
+			return fmt.Errorf("%s[%d] must not be null", location, i)
+		}
+	}
+	return nil
+}
+
+func validateObjectMap[T any](entries map[string]*T, location string) error {
+	for _, entry := range entries {
+		if entry == nil {
+			return fmt.Errorf("%s contains a null object", location)
+		}
+	}
+	return nil
+}
+
+func validatePortalObjects(portal *authn.PortalConfig) error {
+	const location = "security.authentication_portals."
+	for _, err := range []error{
+		validateObjectList(portal.UserTransformerConfigs, location+"user_transformer_configs"),
+		validateObjectList(portal.AccessListConfigs, location+"access_list_configs"),
+		validateObjectList(portal.TrustedLoginRedirectURIConfigs, location+"trusted_login_redirect_uri_configs"),
+		validateObjectList(portal.TrustedLogoutRedirectURIConfigs, location+"trusted_logout_redirect_uri_configs"),
+	} {
+		if err != nil {
+			return err
+		}
+	}
+	if portal.UI != nil {
+		for _, err := range []error{
+			validateObjectList(portal.UI.PrivateLinks, location+"ui.private_links"),
+			validateObjectList(portal.UI.Realms, location+"ui.realms"),
+			validateObjectList(portal.UI.StaticAssets, location+"ui.static_assets"),
+		} {
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if portal.CookieConfig != nil {
+		if err := validateObjectMap(portal.CookieConfig.Domains, location+"cookie_config.domains"); err != nil {
+			return err
+		}
+	}
+	if portal.OIDCProvider != nil {
+		if err := validateObjectList(portal.OIDCProvider.Clients, location+"oidc_provider.clients"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validatePolicyObjects(policy *authz.PolicyConfig) error {
+	const location = "security.authorization_policies."
+	for _, err := range []error{
+		validateObjectList(policy.BypassConfigs, location+"bypass_configs"),
+		validateObjectList(policy.HeaderInjectionConfigs, location+"header_injection_configs"),
+		validateObjectList(policy.AccessListRules, location+"access_list_rules"),
+		validateObjectList(policy.AccessListFields, location+"access_list_fields"),
+	} {
+		if err != nil {
+			return err
+		}
+	}
+	if policy.AuthProxyConfig != nil {
+		return validateObjectMap(policy.AuthProxyConfig.Realms, location+"auth_proxy_config.realms")
+	}
+	return nil
 }

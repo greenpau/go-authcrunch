@@ -126,6 +126,12 @@ with list expressions or list inputs accept any nonmatching pair when that
 modifier is present; their default rejects any matching pair. The unconditional
 `match any` condition retains its existing `exp` field dependency.
 
+Typed custom ACL fields pass per-list types into generated constructors; they
+must not modify the standard global field table. The handwritten empty-list
+guard applies only to custom list comparisons. The
+[ACL owner](../authorization-policy-acl/SKILL.md) defines claim projection,
+type validation, public parser APIs, and independent runtime coverage.
+
 Run `make test-automation` and
 `make test TEST_DIR='./pkg/acl' COVERAGE_DIR='.coverage/acl'` after changes.
 `assets/scripts/tests/generate_acl_test.py` exercises the real Make target in an

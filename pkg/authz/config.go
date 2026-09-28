@@ -51,6 +51,8 @@ type PolicyConfig struct {
 	// The list of mappings between header names and field names.
 	HeaderInjectionConfigs []*injector.Config       `json:"header_injection_configs,omitempty" xml:"header_injection_configs,omitempty" yaml:"header_injection_configs,omitempty"`
 	AccessListRules        []*acl.RuleConfiguration `json:"access_list_rules,omitempty" xml:"access_list_rules,omitempty" yaml:"access_list_rules,omitempty"`
+	// AccessListFields binds policy-local ACL names to typed authenticated claims.
+	AccessListFields []*acl.FieldConfig `json:"access_list_fields,omitempty" xml:"access_list_fields,omitempty" yaml:"access_list_fields,omitempty"`
 	// Holds raw crypto configuration.
 	RawCryptoKeyStoreConfig []string `json:"raw_crypto_key_store_config,omitempty" xml:"raw_crypto_key_store_config,omitempty" yaml:"raw_crypto_key_store_config,omitempty"`
 	// CryptoKeyStoreConfig hold the default configuration for the keys, e.g. token name and lifetime.
@@ -154,7 +156,7 @@ func (cfg *PolicyConfig) Validate() error {
 		}
 	}
 	if cfg.validated {
-		return nil
+		return cfg.validateAccessList()
 	}
 	if cfg.Name == "" {
 		return errors.ErrPolicyConfigNameNotFound
@@ -208,17 +210,27 @@ func (cfg *PolicyConfig) Validate() error {
 		// cfg.PassClaimsWithHeaders = true
 	}
 
+	if err := cfg.validateAccessList(); err != nil {
+		return err
+	}
+	cfg.validated = true
+	return nil
+}
+
+func (cfg *PolicyConfig) validateAccessList() error {
 	if len(cfg.AccessListRules) == 0 {
 		return errors.ErrInvalidConfiguration.WithArgs(cfg.Name, "access list rule config not found")
 	}
 
-	accessList := acl.NewAccessList()
+	accessList, err := acl.NewAccessListWithFields(cfg.AccessListFields)
+	if err != nil {
+		return errors.ErrInvalidConfiguration.WithArgs(cfg.Name, err)
+	}
 	accessList.SetLogger(logutil.NewLogger())
 	if err := accessList.AddRules(context.Background(), cfg.AccessListRules); err != nil {
 		return errors.ErrInvalidConfiguration.WithArgs(cfg.Name, err)
 	}
 
-	cfg.validated = true
 	return nil
 }
 

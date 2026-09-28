@@ -13,6 +13,10 @@ top-level `authcrunch.Config` and `Server` wire package-owned configs,
 constructors, validators, providers, stores, portals, gatekeepers, registries,
 and crypto key stores.
 
+Do not import or use `reflect` in non-test code. Use typed APIs, explicit type
+switches, and generic helpers where needed. Reflection-based test helpers belong
+in `_test.go` files and must not become production dependencies.
+
 Go changes must meet the [testing requirements](../testing-and-ci/SKILL.md).
 [scripts-and-automation](../scripts-and-automation/SKILL.md) owns Make targets,
 generated assets, and dependency commands;
@@ -32,6 +36,9 @@ changes, including corrected paths or examples after a refactor.
 
 ## Implementation workflows
 
+- Use [authorization-policy-acl](../authorization-policy-acl/SKILL.md) to
+  change typed custom ACL claims, their parser, condition compilation, policy
+  configuration, and gatekeeper evaluation across cached and fresh identities.
 - Use [refresh-token-implementation](../refresh-token-implementation/SKILL.md) to
   change portal refresh configuration, issuance, rotation, replay, storage, or
   lifecycle; follow its routes for login evidence and transport boundaries.

@@ -16,6 +16,7 @@ package errors
 
 // ACL Errors
 const (
+	ErrACLFieldConfig                           StandardError = "acl field configuration error: %s"
 	ErrAccessListRuleConfig                     StandardError = "acl rule configuration error: %v: %v"
 	ErrAccessListRuleConditionConfig            StandardError = "acl rule condition configuration error: %v: %v"
 	ErrAccessListNoRules                        StandardError = "acl has no rules"

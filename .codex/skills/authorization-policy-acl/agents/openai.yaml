@@ -1,0 +1,4 @@
+interface:
+  display_name: "Authorization Policy ACLs"
+  short_description: "Maintain typed custom ACL claims and gatekeeper integration"
+  default_prompt: "Use $authorization-policy-acl to maintain custom ACL fields, their parser, and authorization integration."

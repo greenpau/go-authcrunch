@@ -152,6 +152,10 @@ func TestE2EAuthdb(t *testing.T) {
 			`{"http":{"insecure_http":true,"portals":[{"name":"portal","path":"/auth"}]},"security":{"credentials":{"raw_credential_configs":[["SECRET do-not-print extra"]]},"authentication_portals":[{"name":"portal"}]}}`,
 			`{"http":{"insecure_http":true,"portals":[{"name":"portal","path":"/auth"}]},"security":{"authentication_portals":[{"name":"portal","trusted_login_redirect_uri_configs":[null]}]}}`,
 			`{"http":{"insecure_http":true,"portals":[{"name":"portal","path":"/auth"}]},"security":{"authentication_portals":[{"name":"portal","ui":{"static_assets":[null]}}]}}`,
+			`{"http":{"insecure_http":true,"portals":[{"name":"portal","path":"/auth"}]},"security":{"authentication_portals":[{"name":"portal","cookie_config":{"domains":{"SECRET":null}}}]}}`,
+			`{"http":{"insecure_http":true,"portals":[{"name":"portal","path":"/auth"}]},"security":{"authentication_portals":[{"name":"portal","oidc_provider":{"clients":[null]}}]}}`,
+			`{"http":{"insecure_http":true,"portals":[{"name":"portal","path":"/auth"}]},"security":{"authentication_portals":[{"name":"portal"}],"authorization_policies":[{"access_list_fields":[null]}]}}`,
+			`{"http":{"insecure_http":true,"portals":[{"name":"portal","path":"/auth"}]},"security":{"authentication_portals":[{"name":"portal"}],"authorization_policies":[{"auth_proxy_config":{"realms":{"SECRET":null}}}]}}`,
 			`{"http":{"insecure_http":true,"portals":[{"name":"portal","path":"/auth"}]},"security":{"authentication_portals":[{"name":"portal","raw_crypto_key_store_config":["crypto"]}]}}`,
 		} {
 			name := filepath.Join(t.TempDir(), "config.json")

@@ -173,7 +173,10 @@ func (g *Gatekeeper) configure() error {
 	if len(g.config.AccessListRules) == 0 {
 		return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, "access list rule config not found")
 	}
-	accessList := acl.NewAccessList()
+	accessList, err := acl.NewAccessListWithFields(g.config.AccessListFields)
+	if err != nil {
+		return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)
+	}
 	accessList.SetLogger(g.logger)
 	if err := accessList.AddRules(ctx, g.config.AccessListRules); err != nil {
 		return errors.ErrInvalidConfiguration.WithArgs(g.config.Name, err)

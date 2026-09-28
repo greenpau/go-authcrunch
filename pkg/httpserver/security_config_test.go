@@ -18,12 +18,68 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch"
 	"go.uber.org/zap"
 )
+
+// Discover the declared model in test code so adding a serialized collection
+// requires extending the production typed traversal. Opaque interfaces (such
+// as provider params) remain the owning component's responsibility.
+func TestSecurityConfigurationObjectCoverage(t *testing.T) {
+	var walk func(reflect.Type, string, func(any) any)
+	walk = func(typ reflect.Type, location string, wrap func(any) any) {
+		switch typ.Kind() {
+		case reflect.Pointer:
+			walk(typ.Elem(), location, wrap)
+		case reflect.Struct:
+			for field := range typ.Fields() {
+				name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+				if !field.IsExported() || name == "" || name == "-" {
+					continue
+				}
+				walk(field.Type, location+"."+name, func(value any) any {
+					return wrap(map[string]any{name: value})
+				})
+			}
+		case reflect.Slice, reflect.Map:
+			collection := func(value any) any { return []any{value} }
+			if typ.Kind() == reflect.Map {
+				collection = func(value any) any { return map[string]any{"SECRET": value} }
+			}
+			if typ.Elem().Kind() == reflect.Pointer {
+				t.Run(location, func(t *testing.T) {
+					for _, null := range []bool{false, true} {
+						var value any = map[string]any{}
+						if null {
+							value = nil
+						}
+						body, err := json.Marshal(wrap(collection(value)))
+						if err != nil {
+							t.Fatal(err)
+						}
+						var config authcrunch.Config
+						if err := json.Unmarshal(body, &config); err != nil {
+							t.Fatal(err)
+						}
+						err = validateConfigurationObjects(&config)
+						if (err != nil) != null {
+							t.Fatalf("null=%t: validation error = %v", null, err)
+						}
+						if err != nil && (!strings.Contains(err.Error(), location) || strings.Contains(err.Error(), "SECRET")) {
+							t.Fatalf("error omitted the field path or disclosed the map key: %v", err)
+						}
+					}
+				})
+			}
+			walk(typ.Elem(), location, func(value any) any { return wrap(collection(value)) })
+		}
+	}
+	walk(reflect.TypeFor[authcrunch.Config](), "security", func(value any) any { return value })
+}
 
 func TestSecurityConfigurationObjects(t *testing.T) {
 	for _, body := range []string{
