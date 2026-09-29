@@ -165,6 +165,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 					zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
 					zap.String("checkpoint_name", checkpoint.Name),
 					zap.String("checkpoint_type", checkpoint.Type),
+					zap.String("username", rr.User.Username),
 				)
 				return fmt.Errorf("password authentication failed")
 			}
@@ -226,6 +227,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 					zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
 					zap.String("checkpoint_name", checkpoint.Name),
 					zap.String("checkpoint_type", checkpoint.Type),
+					zap.String("username", rr.User.Username),
 				)
 				return fmt.Errorf("totp passcode authentication failed")
 			}
@@ -353,6 +355,7 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 					zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
 					zap.String("checkpoint_name", checkpoint.Name),
 					zap.String("checkpoint_type", checkpoint.Type),
+					zap.String("username", rr.User.Username),
 				)
 				return fmt.Errorf("u2f authentication failed")
 			}
@@ -513,7 +516,7 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 				)
 				return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 			}
-			p.logger.Debug(
+			p.logger.Info(
 				"user was successfully authenticated",
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
