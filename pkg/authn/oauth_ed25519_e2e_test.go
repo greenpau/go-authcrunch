@@ -262,6 +262,7 @@ type oidcE2EPortal struct {
 type oidcE2ETrustConfig struct {
 	issuer, audience, identityCookie, realm, sandboxCookie string
 	nonceDisabled                                          bool
+	configurePortal                                        func(*authn.PortalConfig)
 	loginRedirects                                         []*redirects.RedirectURIMatchConfig
 }
 
@@ -384,6 +385,9 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 		cookies.SandboxIDCookieName = settings.sandboxCookie
 	}
 	portalConfig := &authn.PortalConfig{Name: "oauth-e2e", IdentityStores: []string{"local"}, IdentityProviders: []string{"upstream"}, RawCryptoKeyStoreConfig: keys, CookieConfig: cookies, TrustedLoginRedirectURIConfigs: settings.loginRedirects}
+	if settings.configurePortal != nil {
+		settings.configurePortal(portalConfig)
+	}
 	if settings.identityCookie != "" {
 		// Identity-cookie consumers need permission to call the portal's Whoami.
 		portalConfig.AccessListConfigs = []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer"}, Action: "allow stop"}}

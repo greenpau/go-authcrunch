@@ -63,6 +63,7 @@ frame policy as separate response values.
 | `apps_sso` | Numeric `.Data.role_count`, `.Data.roles` entries with `ProviderName`, `AccountID`, and `Name`, generated role links and empty state; this is the AWS SSO role-selection page |
 | `apps_mobile_access` | Instructional content and navigation; the current baseline does not itself render a mobile QR image |
 | `oidc` | All `.Data.oidc.Kind` branches: consent CSRF/decisions, form-post action/values/nonce/manual Continue, and local error message; see the [owning contract](../../authentication-portal-oidc/references/browser-pages.md#page-and-template-contract) |
+| `cross_device` | `.Data.view` request/activate/confirm/approve/deny branches, matching-code warnings, CSRF/decision form fields, and external cross-device client hooks; see the [feature contract](../../authentication-portal-cross-device/SKILL.md) |
 | `session` | `.Message`, continuation/logout action, confirmation button, fresh-login link, external refresh client and data attributes |
 
 Handlers live in `pkg/authn/handle_http_login.go`,
@@ -190,3 +191,13 @@ filesystem copies may lack them; carry over the current structure and stylesheet
 order when updating such a copy. There is no custom JavaScript hook.
 [refresh-token-transports](../../refresh-token-transports/SKILL.md) owns renewal,
 logout, and redirect behavior independently of template presentation.
+
+## Optional cross-device login
+
+Preserve `.Data.cross_device_enabled` when copying `login.template`. The action
+must remain available even when registration/recovery/support links are hidden,
+and in local-only, provider-only and mixed configurations. The `cross_device`
+alias uses same-origin external assets and a restrictive CSP, so do not add
+inline event handlers or scripts. Its data attributes and element IDs are
+consumed by `core/js/cross_device.js`. Preserve explicit confirmation, matching
+codes and cancellation controls. The ordinary login QR bookmark remains separate.

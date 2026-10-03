@@ -37,6 +37,7 @@ func (c *Config) names() []cookieName {
 		{DefaultOIDCSessionIDCookieName, &c.OIDCSessionIDCookieName},
 		{DefaultOIDCRequestIDCookieName, &c.OIDCRequestIDCookieName},
 		{DefaultSAMLSessionIDCookieName, &c.SAMLSessionIDCookieName},
+		{DefaultCrossDeviceSessionIDCookieName, &c.CrossDeviceSessionIDCookieName},
 	}
 }
 

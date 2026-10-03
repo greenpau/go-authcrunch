@@ -47,7 +47,7 @@ func portalCookiePath(basePath string) string {
 // HTTP mount. Config.Validate already checks their security attributes.
 // Embedders must call it before serving a dynamically mounted portal.
 func (f *Factory) ValidatePortalPath(basePath string) error {
-	for _, name := range []string{f.RefererCookieName, f.SandboxIDCookieName} {
+	for _, name := range []string{f.RefererCookieName, f.SandboxIDCookieName, f.CrossDeviceSessionIDCookieName} {
 		if err := ValidatePrefix(name, "", portalCookiePath(basePath), true); err != nil {
 			return fmt.Errorf("portal cookie path: %w", err)
 		}

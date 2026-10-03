@@ -54,6 +54,7 @@ func extractBaseURLPath(_ context.Context, r *http.Request, rr *requests.Request
 }
 
 func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request) {
+	crossDeviceIndex := crossDeviceRouteIndex(r.URL.Path)
 	switch {
 	case r.URL.Path == "/":
 		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
@@ -61,6 +62,14 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 	case r.URL.Path == "/auth":
 		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
 		rr.Upstream.BasePath = "/auth/"
+	case crossDeviceIndex >= 0:
+		// Include the segment delimiter even for the terminal page route, so
+		// GetBaseURL cannot match a mount prefix such as /cross-device-team.
+		request := *r
+		requestURL := *r.URL
+		requestURL.Path += "/"
+		request.URL = &requestURL
+		extractBaseURLPath(ctx, &request, rr, r.URL.Path[crossDeviceIndex:]+"/")
 	case strings.Contains(r.URL.Path, "/api/"):
 		// Match ServeHTTP's dispatch order before endpoint suffixes such as
 		// /logout or /profile can be mistaken for the portal mount.

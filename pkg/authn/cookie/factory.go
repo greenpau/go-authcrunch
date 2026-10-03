@@ -23,18 +23,19 @@ import (
 // Factory holds configuration and associated finctions
 // for the cookies issued by authn.Authenticator.
 type Factory struct {
-	config                  *Config
-	domains                 []string
-	CookieNamePrefix        string `json:"cookie_name_prefix,omitempty" xml:"cookie_name_prefix,omitempty" yaml:"cookie_name_prefix,omitempty"`
-	RefererCookieName       string `json:"referer_cookie_name,omitempty" xml:"referer_cookie_name,omitempty" yaml:"referer_cookie_name,omitempty"`
-	SessionIDCookieName     string `json:"session_id_cookie_name,omitempty" xml:"session_id_cookie_name,omitempty" yaml:"session_id_cookie_name,omitempty"`
-	SandboxIDCookieName     string `json:"sandbox_id_cookie_name,omitempty" xml:"sandbox_id_cookie_name,omitempty" yaml:"sandbox_id_cookie_name,omitempty"`
-	IdentityTokenCookieName string `json:"identity_token_cookie_name,omitempty" xml:"identity_token_cookie_name,omitempty" yaml:"identity_token_cookie_name,omitempty"`
-	AccessTokenCookieName   string `json:"access_token_cookie_name,omitempty" xml:"access_token_cookie_name,omitempty" yaml:"access_token_cookie_name,omitempty"`
-	RefreshTokenCookieName  string `json:"refresh_token_cookie_name,omitempty" xml:"refresh_token_cookie_name,omitempty" yaml:"refresh_token_cookie_name,omitempty"`
-	OIDCSessionIDCookieName string `json:"oidc_session_id_cookie_name,omitempty" xml:"oidc_session_id_cookie_name,omitempty" yaml:"oidc_session_id_cookie_name,omitempty"`
-	OIDCRequestIDCookieName string `json:"oidc_request_id_cookie_name,omitempty" xml:"oidc_request_id_cookie_name,omitempty" yaml:"oidc_request_id_cookie_name,omitempty"`
-	SAMLSessionIDCookieName string `json:"saml_session_id_cookie_name,omitempty" xml:"saml_session_id_cookie_name,omitempty" yaml:"saml_session_id_cookie_name,omitempty"`
+	config                         *Config
+	domains                        []string
+	CookieNamePrefix               string `json:"cookie_name_prefix,omitempty" xml:"cookie_name_prefix,omitempty" yaml:"cookie_name_prefix,omitempty"`
+	RefererCookieName              string `json:"referer_cookie_name,omitempty" xml:"referer_cookie_name,omitempty" yaml:"referer_cookie_name,omitempty"`
+	SessionIDCookieName            string `json:"session_id_cookie_name,omitempty" xml:"session_id_cookie_name,omitempty" yaml:"session_id_cookie_name,omitempty"`
+	SandboxIDCookieName            string `json:"sandbox_id_cookie_name,omitempty" xml:"sandbox_id_cookie_name,omitempty" yaml:"sandbox_id_cookie_name,omitempty"`
+	IdentityTokenCookieName        string `json:"identity_token_cookie_name,omitempty" xml:"identity_token_cookie_name,omitempty" yaml:"identity_token_cookie_name,omitempty"`
+	AccessTokenCookieName          string `json:"access_token_cookie_name,omitempty" xml:"access_token_cookie_name,omitempty" yaml:"access_token_cookie_name,omitempty"`
+	RefreshTokenCookieName         string `json:"refresh_token_cookie_name,omitempty" xml:"refresh_token_cookie_name,omitempty" yaml:"refresh_token_cookie_name,omitempty"`
+	OIDCSessionIDCookieName        string `json:"oidc_session_id_cookie_name,omitempty" xml:"oidc_session_id_cookie_name,omitempty" yaml:"oidc_session_id_cookie_name,omitempty"`
+	OIDCRequestIDCookieName        string `json:"oidc_request_id_cookie_name,omitempty" xml:"oidc_request_id_cookie_name,omitempty" yaml:"oidc_request_id_cookie_name,omitempty"`
+	SAMLSessionIDCookieName        string `json:"saml_session_id_cookie_name,omitempty" xml:"saml_session_id_cookie_name,omitempty" yaml:"saml_session_id_cookie_name,omitempty"`
+	CrossDeviceSessionIDCookieName string `json:"cross_device_session_id_cookie_name,omitempty" xml:"cross_device_session_id_cookie_name,omitempty" yaml:"cross_device_session_id_cookie_name,omitempty"`
 }
 
 // NewFactory returns an instance of cookie factory.
@@ -82,6 +83,7 @@ func NewFactory(c *Config) (*Factory, error) {
 	f.OIDCSessionIDCookieName = f.config.OIDCSessionIDCookieName
 	f.OIDCRequestIDCookieName = f.config.OIDCRequestIDCookieName
 	f.SAMLSessionIDCookieName = f.config.SAMLSessionIDCookieName
+	f.CrossDeviceSessionIDCookieName = f.config.CrossDeviceSessionIDCookieName
 
 	hasOverlaps, duplicate := f.HasCookieNameOverlaps()
 	if hasOverlaps {
@@ -94,15 +96,16 @@ func NewFactory(c *Config) (*Factory, error) {
 // HasCookieNameOverlaps checks if any cookie names are identical.
 func (f *Factory) HasCookieNameOverlaps() (bool, string) {
 	checkMap := map[string]string{
-		"RefererCookieName":       f.RefererCookieName,
-		"SessionIDCookieName":     f.SessionIDCookieName,
-		"SandboxIDCookieName":     f.SandboxIDCookieName,
-		"IdentityTokenCookieName": f.IdentityTokenCookieName,
-		"AccessTokenCookieName":   f.AccessTokenCookieName,
-		"RefreshTokenCookieName":  f.RefreshTokenCookieName,
-		"OIDCSessionIDCookieName": f.OIDCSessionIDCookieName,
-		"OIDCRequestIDCookieName": f.OIDCRequestIDCookieName,
-		"SAMLSessionIDCookieName": f.SAMLSessionIDCookieName,
+		"RefererCookieName":              f.RefererCookieName,
+		"SessionIDCookieName":            f.SessionIDCookieName,
+		"SandboxIDCookieName":            f.SandboxIDCookieName,
+		"IdentityTokenCookieName":        f.IdentityTokenCookieName,
+		"AccessTokenCookieName":          f.AccessTokenCookieName,
+		"RefreshTokenCookieName":         f.RefreshTokenCookieName,
+		"OIDCSessionIDCookieName":        f.OIDCSessionIDCookieName,
+		"OIDCRequestIDCookieName":        f.OIDCRequestIDCookieName,
+		"SAMLSessionIDCookieName":        f.SAMLSessionIDCookieName,
+		"CrossDeviceSessionIDCookieName": f.CrossDeviceSessionIDCookieName,
 	}
 
 	// seen stores: [cookie_value] -> field_name

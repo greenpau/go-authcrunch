@@ -71,6 +71,13 @@ func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.R
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return nil
 	}
+	if r.URL.Path == rr.Upstream.BasePath+"cross-device" || strings.HasPrefix(r.URL.Path, rr.Upstream.BasePath+"cross-device/") {
+		return p.handleCrossDevice(ctx, w, r, rr)
+	}
+	if p.crossDevice != nil && len(r.CookiesNamed(p.cookie.CrossDeviceSessionIDCookieName)) > 0 && r.Method == http.MethodPost && (strings.HasSuffix(r.URL.Path, "/login") || strings.Contains(r.URL.Path, "/sandbox/")) && !validCrossDeviceOrigin(r) {
+		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		return nil
+	}
 	switch {
 	case strings.Contains(r.URL.Path, "/api/"):
 		return p.handleAPI(ctx, w, r, rr)

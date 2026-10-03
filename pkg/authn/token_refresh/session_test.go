@@ -73,3 +73,89 @@ func TestGetSessionIDValidation(t *testing.T) {
 		t.Fatal("lookup ignored store closure")
 	}
 }
+
+func TestValidateSessionLifecycle(t *testing.T) {
+	h := newTestManager(t)
+	first := h.issue(t)
+	for range 2 {
+		if err := h.manager.ValidateSession(t.Context(), first.SessionID, CookieTransport); err != nil {
+			t.Fatal("live session rejected", err)
+		}
+	}
+	// Liveness is not identity authorization and does not create credentials.
+	h.identity.err = ErrDenied
+	if err := h.manager.ValidateSession(t.Context(), first.SessionID, CookieTransport); err != nil {
+		t.Fatal("liveness unexpectedly authenticated identity", err)
+	}
+	h.identity.err = nil
+	next, err := h.manager.Refresh(t.Context(), first.RefreshToken, CookieTransport)
+	if err != nil {
+		t.Fatal("liveness check consumed a credential", err)
+	}
+	if err := h.manager.ValidateSession(t.Context(), first.SessionID, CookieTransport); err != nil {
+		t.Fatal("healthy rotation invalidated the family reference", err)
+	}
+	if _, err := h.manager.Refresh(t.Context(), first.RefreshToken, CookieTransport); !errors.Is(err, ErrInvalid) {
+		t.Fatal("liveness changed ordinary replay rejection")
+	}
+	if err := h.manager.ValidateSession(t.Context(), first.SessionID, CookieTransport); !errors.Is(err, ErrInvalid) {
+		t.Fatal("replay-revoked family remained live")
+	}
+	if _, err := h.manager.Refresh(t.Context(), next.RefreshToken, CookieTransport); !errors.Is(err, ErrInvalid) {
+		t.Fatal("liveness lost spent-token revocation history")
+	}
+}
+
+func TestValidateSessionBoundaries(t *testing.T) {
+	for _, scenario := range []string{"empty", "unknown", "wrong transport", "invalid transport", "wrong origin", "wrong mount", "wrong portal", "logout", "replacement", "idle expiry", "absolute expiry", "closed", "cancelled", "unsupported"} {
+		t.Run(scenario, func(t *testing.T) {
+			h := newTestManager(t)
+			first := h.issue(t)
+			id, transport := first.SessionID, CookieTransport
+			ctx := t.Context()
+			want := ErrInvalid
+			switch scenario {
+			case "empty":
+				id = ""
+			case "unknown":
+				id = "unknown"
+			case "wrong transport":
+				transport = BodyTransport
+			case "invalid transport":
+				transport = "invalid"
+			case "wrong origin":
+				h.manager.binding.Origin = "https://other.example.test"
+			case "wrong mount":
+				h.manager.binding.BasePath = "/other"
+			case "wrong portal":
+				h.manager.binding.Portal = "other"
+			case "logout":
+				if err := h.manager.Logout(ctx, first.RefreshToken, CookieTransport); err != nil {
+					t.Fatal(err)
+				}
+			case "replacement":
+				if _, err := h.manager.IssueReplacing(ctx, h.principal, CookieTransport, []string{first.RefreshToken}); err != nil {
+					t.Fatal(err)
+				}
+			case "idle expiry":
+				h.clock.Store(first.RefreshExpiresAt)
+			case "absolute expiry":
+				h.clock.Store(first.AbsoluteExpiresAt)
+			case "closed":
+				h.store.Close()
+				want = ErrUnavailable
+			case "cancelled":
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithCancel(ctx)
+				cancel()
+				want = context.Canceled
+			case "unsupported":
+				h.manager.store = struct{ Store }{h.store}
+				want = ErrUnavailable
+			}
+			if err := h.manager.ValidateSession(ctx, id, transport); !errors.Is(err, want) {
+				t.Fatalf("got %v, want %v", err, want)
+			}
+		})
+	}
+}

@@ -103,6 +103,15 @@ read followed by an unguarded commit is insufficient. Temporary lookup errors
 must remain distinguishable from definitive denial so an outage does not spend
 a valid refresh credential.
 
+## Cross-device evidence reuse
+
+[Cross-device browser login](../authentication-portal-cross-device/SKILL.md)
+snapshots the completed HTML sandbox proof only after successful normal login.
+Requester redemption reuses `issueSandboxTokens` and `finishOIDCLogin` with the
+requester's HTTP context, preserving canonical identity, verified AMR, current
+challenge selection and credential-version checks. Each device gets its own
+family/session; neither an API key nor a client claim can supply this proof.
+
 ## Validation
 
 Run `make test TEST_DIR='./pkg/identity ./pkg/ids/local ./pkg/authn'`.

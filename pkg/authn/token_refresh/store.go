@@ -79,6 +79,16 @@ type ReplacementStore interface {
 	CreateReplacing(context.Context, Session, int64, [][32]byte) error
 }
 
+// SessionValidator optionally checks the continued lifetime of a server-held
+// session reference. It must check binding, revocation, both deadlines and store
+// health atomically, without rotating credentials or altering replay history.
+// A session ID is public metadata, not authentication evidence. Callers must
+// independently authenticate any operation guarded by this liveness check.
+type SessionValidator interface {
+	Store
+	ValidateSession(context.Context, string, Binding) error
+}
+
 func cloneSession(s Session) Session {
 	s.Principal.Methods = append([]string(nil), s.Principal.Methods...)
 	s.Principal.Challenges = append([]string(nil), s.Principal.Challenges...)

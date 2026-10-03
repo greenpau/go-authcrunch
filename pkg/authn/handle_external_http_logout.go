@@ -39,6 +39,7 @@ func (p *Portal) handleHTTPExternalLogout(ctx context.Context, w http.ResponseWr
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 	}
 
+	p.revokeCrossDeviceLogin(ctx, r)
 	providerIdentityTokenCookieName := provider.GetIdentityTokenCookieName()
 	if providerIdentityTokenCookieName != "" {
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteIdentityTokenCookie(providerIdentityTokenCookieName, rr.Upstream.BasePath))

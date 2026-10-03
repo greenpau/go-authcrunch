@@ -67,6 +67,15 @@ Use the status contract: 400 malformed/ambiguous request, 401 login required,
 415 wrong content type, and 503 transient signing/storage/backend failure.
 No response delivers credentials before the store commits.
 
+Completed browser logout also invalidates outstanding
+[cross-device approvals](../authentication-portal-cross-device/SKILL.md) tied to
+that access session or refresh family. Keep this after successful logout checks;
+merely rendering a logout confirmation page does not revoke approval.
+The transfer also checks authoritative family liveness, so logout after a fresh
+login page clears the access cookie still prevents redemption. This remains true
+after healthy rotation and when replay or account replacement revokes the family.
+Do not make invalidation depend solely on an access JWT accompanying logout.
+
 ## Browser Lifecycle
 
 `pkg/authn/ui/core/js/refresh.js` exposes `AuthCrunchSession.refresh()` and

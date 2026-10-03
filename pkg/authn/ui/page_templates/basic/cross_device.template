@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
+    <meta name="description" content="{{ .MetaDescription }}">
+    <meta name="author" content="{{ .MetaAuthor }}">
+    <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.svg" }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/google-webfonts/roboto.css" }}">
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/generic.css" }}">
+    <link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/basic.css" }}">
+    {{ if .CustomCSSEnabled }}<link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}">{{ end }}
+  </head>
+  <body class="basic-theme">
+    <div class="app-page">
+      <div class="app-content">
+        <main class="app-container" aria-labelledby="cross-device-title">
+          <div class="brand-banner" aria-hidden="true"></div>
+          <header class="brand-heading">
+            {{ if .LogoURL }}<img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}">{{ end }}
+            <h1 id="cross-device-title">{{ .PageTitle }}</h1>
+          </header>
+          {{ if eq .Data.view "request" }}
+          <p class="brand-message" id="cross-device-status" role="status">Preparing your sign-in link…</p>
+          <div id="cross-device-details" hidden>
+            <img id="cross-device-qr" alt="Scan to sign in on another device" width="256" height="256">
+            <p class="brand-message">Scan this code, or copy the link to a device you trust. Keep this page open.</p>
+            <label for="cross-device-link">Sign-in link</label>
+            <input id="cross-device-link" readonly aria-label="Sign-in link">
+            <button class="app-btn-sec" id="cross-device-copy" type="button">Copy link</button>
+            <p class="brand-message">Check that both devices show <strong id="cross-device-code"></strong>.</p>
+          </div>
+          <button class="app-btn-sec" id="cross-device-cancel" type="button">Cancel</button>
+          <noscript><p>JavaScript is required on the device requesting sign-in.</p></noscript>
+          {{ else if eq .Data.view "activate" }}
+          <p class="brand-message">A device is asking to sign in. Continue only if you started this request on a device you control.</p>
+          <p class="brand-message">Check the code on that device: <strong id="cross-device-code">{{ .Data.display }}</strong></p>
+          <form method="post" action="{{ pathjoin .ActionEndpoint "/cross-device/begin" }}">
+            <input type="hidden" name="code" value="{{ .Data.code }}">
+            <input type="hidden" name="csrf" value="{{ .Data.csrf }}">
+            <button class="app-btn-pri" type="submit">Sign in to continue</button>
+          </form>
+          {{ else if eq .Data.view "confirm" }}
+          <p class="brand-message">Allow the other device to sign in as <strong>{{ .Data.account }}</strong>?</p>
+          <p class="brand-message">Approve only if its code is <strong id="cross-device-code">{{ .Data.display }}</strong> and you control that device. Never approve a code sent to you by someone else.</p>
+          <form method="post" action="{{ pathjoin .ActionEndpoint "/cross-device/confirm" }}">
+            <input type="hidden" name="csrf" value="{{ .Data.csrf }}">
+            <button class="app-btn-pri" name="decision" value="approve" type="submit">Approve sign-in</button>
+            <button class="app-btn-sec" name="decision" value="deny" type="submit">Deny</button>
+          </form>
+          {{ else if eq .Data.view "approve" }}
+          <p class="brand-message" role="status">Sign-in approved. You can return to the other device.</p>
+          {{ else }}
+          <p class="brand-message" role="status">Sign-in denied. The other device has not been signed in.</p>
+          {{ end }}
+          <div class="brand-actions"><a href="{{ pathjoin .ActionEndpoint "/login" }}">Back to sign in</a></div>
+        </main>
+      </div>
+    </div>
+    {{ if eq .Data.view "request" }}<script src="{{ pathjoin .ActionEndpoint "/assets/js/cross_device.js" }}" data-base="{{ .ActionEndpoint }}"></script>{{ end }}
+  </body>
+</html>

@@ -98,6 +98,9 @@ func TestPersistentRefreshReplayAndRevocation(t *testing.T) {
 		t.Fatal(err)
 	}
 	h = open()
+	if err = h.manager.ValidateSession(t.Context(), first.SessionID, CookieTransport); err != nil {
+		t.Fatalf("live family lost on restart: %v", err)
+	}
 	if id, err := h.manager.GetSessionID(t.Context(), next.RefreshToken, CookieTransport); err != nil || id != first.SessionID {
 		t.Fatal("family lost on restart")
 	}
@@ -106,6 +109,9 @@ func TestPersistentRefreshReplayAndRevocation(t *testing.T) {
 	}
 	_ = storage.Close()
 	h = open()
+	if err = h.manager.ValidateSession(t.Context(), first.SessionID, CookieTransport); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("replayed family remained live after restart: %v", err)
+	}
 	if _, err = h.manager.Refresh(t.Context(), next.RefreshToken, CookieTransport); !errors.Is(err, ErrInvalid) {
 		t.Fatal("replay revocation not durable")
 	}
@@ -115,11 +121,17 @@ func TestPersistentRefreshReplayAndRevocation(t *testing.T) {
 	}
 	_ = storage.Close()
 	h = open()
+	if err = h.manager.ValidateSession(t.Context(), fresh.SessionID, CookieTransport); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("logged-out family remained live after restart: %v", err)
+	}
 	if _, err = h.manager.Refresh(t.Context(), fresh.RefreshToken, CookieTransport); !errors.Is(err, ErrInvalid) {
 		t.Fatal("logout not durable")
 	}
 	live := h.issue(t)
 	_ = storage.Close()
+	if err = h.manager.ValidateSession(t.Context(), live.SessionID, CookieTransport); !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("unavailable persistent state accepted liveness: %v", err)
+	}
 	if _, err = h.manager.Refresh(t.Context(), live.RefreshToken, CookieTransport); !errors.Is(err, ErrUnavailable) {
 		t.Fatal("unavailable state permitted issuance")
 	}

@@ -115,7 +115,7 @@ func newSAMLE2ESigningKey(t *testing.T, serial int64) (*rsa.PrivateKey, *x509.Ce
 	return key, cert
 }
 
-func newSAMLE2EFixture(t *testing.T) *samlE2EFixture {
+func newSAMLE2EFixture(t *testing.T, configure ...func(*authn.PortalConfig)) *samlE2EFixture {
 	t.Helper()
 	key, cert := newSAMLE2ESigningKey(t, 1)
 	rogueKey, rogueCert := newSAMLE2ESigningKey(t, 2)
@@ -215,12 +215,16 @@ func newSAMLE2EFixture(t *testing.T) *samlE2EFixture {
 	if reloadedCookies.SAMLSessionIDCookieName != "SAML_E2E_BROWSER" {
 		t.Fatal("serialized cookie configuration lost custom SAML name")
 	}
+	config := &authn.PortalConfig{
+		Name: "saml-e2e", IdentityProviders: []string{"upstream"},
+		RawCryptoKeyStoreConfig: []string{"crypto default autogenerate tag saml-e2e", "crypto default token name saml_e2e_token"},
+		CookieConfig:            &reloadedCookies,
+	}
+	for _, apply := range configure {
+		apply(config)
+	}
 	portal, err := authn.NewPortal(authn.PortalParameters{
-		Config: &authn.PortalConfig{
-			Name: "saml-e2e", IdentityProviders: []string{"upstream"},
-			RawCryptoKeyStoreConfig: []string{"crypto default autogenerate tag saml-e2e", "crypto default token name saml_e2e_token"},
-			CookieConfig:            &reloadedCookies,
-		},
+		Config:            config,
 		Logger:            zap.NewNop(),
 		IdentityProviders: []idp.IdentityProvider{provider},
 	})

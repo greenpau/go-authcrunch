@@ -38,6 +38,7 @@ func (p *Portal) handleHTTPLogout(ctx context.Context, w http.ResponseWriter, r 
 	if p.hasRefreshCookie(r) {
 		return p.handleSessionPage(ctx, w, r, rr, "logout")
 	}
+	p.revokeCrossDeviceLogin(ctx, r)
 	if err := p.revokeOIDCBrowser(w, r); err != nil {
 		return err
 	}

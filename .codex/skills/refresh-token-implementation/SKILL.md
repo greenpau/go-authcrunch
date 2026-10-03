@@ -97,6 +97,18 @@ do not relax the Store contract or turn a SID into authentication evidence.
 Use the transport owner for browser bootstrap, the session metadata endpoint,
 and rules against looking up an uncertain credential.
 
+`Manager.ValidateSession` checks a previously authenticated, server-held family
+reference through the optional `SessionValidator` store interface. Check the
+complete binding, both deadlines, revocation and storage health atomically;
+unsupported adapters return `ErrUnavailable`. This read-only operation does not
+authenticate a caller, revalidate identity, issue credentials, rotate tokens,
+extend deadlines or alter replay history. Keep healthy rotation valid and deny
+logout, replay, replacement and expiry, including across persistent restart.
+Consumers must establish authentication independently and obtain the reference
+from actual local issuance, not an arbitrary access/provider `sid` claim. Do not
+substitute a lookup of a captured refresh token: it becomes spent after rotation
+and such a lookup would revoke an otherwise healthy family.
+
 ## Lifetime and Extension
 
 The portal constructs its bounded `MemoryStore`. Capacity fails closed; exhausted

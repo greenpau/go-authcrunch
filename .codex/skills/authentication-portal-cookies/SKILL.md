@@ -86,6 +86,15 @@ impossible legacy `__Host-` cookie or suppress active root-cookie deletion.
 
 ## Consumer Boundaries
 
+Cross-device login uses `CrossDeviceSessionIDCookieName`, defaulting to
+`AUTHP_CROSS_DEVICE_SESSION_ID`. The complete directive is
+`cookie cross-device session id name <name>`; prefixes cover it too. Its factory
+methods issue/delete a Secure, HttpOnly, host-only, mount-scoped, SameSite=None
+cookie with a five-minute lifetime, independently of common attributes. None
+supports SAML POST callbacks; the [cross-device contract](../authentication-portal-cross-device/SKILL.md)
+owns origin checks, CSRF values, explicit approval, and pending state. Duplicate
+binding cookies are rejected. Optional `__Host-` names require a root mount.
+
 OIDC uses the factory's `OIDCSessionIDCookieName` and `OIDCRequestIDCookieName`.
 Refresh uses `RefreshTokenCookieName`, with a nonempty feature `CookieName`
 override applied before factory creation. These credentials remain Secure,

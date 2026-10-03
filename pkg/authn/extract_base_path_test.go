@@ -28,7 +28,7 @@ func TestExtractBasePathCookieMount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, mount := range []string{"", "/auth", "/tenant/auth", "/tenant%20name/auth"} {
+	for _, mount := range []string{"", "/auth", "/tenant/auth", "/tenant%20name/auth", "/cross-device-team/auth"} {
 		for _, endpoint := range []string{
 			"/login", "/portal", "/logout", "/whoami", "/beacon?format=json",
 			"/api/refresh_token", "/api/refresh_session", "/api/logout",
@@ -40,6 +40,12 @@ func TestExtractBasePathCookieMount(t *testing.T) {
 			"/oauth2/provider/logout", "/saml/provider", "/recover", "/forgot",
 			"/oauth2/beacon", "/saml/beacon", "/basic/login/beacon",
 			"/apps/sso/beacon", "/barcode/mfa/beacon", "/assets/beacon",
+			"/cross-device", "/cross-device/start", "/cross-device/confirm",
+			"/cross-device/api/logout", "/cross-device/oauth2/cross-device", "/cross-device/assets/test.js",
+			"/oauth2/cross-device", "/oauth2/cross-device/callback", "/oauth2/cross-device/logout",
+			"/saml/cross-device", "/basic/login/cross-device", "/assets/js/cross-device",
+			"/profile/cross-device", "/apps/sso/cross-device", "/sandbox/cross-device",
+			"/favicon.ico/cross-device", "/barcode/mfa/cross-device",
 		} {
 			t.Run(mount+endpoint, func(t *testing.T) {
 				r := httptest.NewRequest(http.MethodGet, "https://example.test"+mount+endpoint, nil)
@@ -50,6 +56,25 @@ func TestExtractBasePathCookieMount(t *testing.T) {
 				}
 				if err := factory.ValidatePortalPath(rr.Upstream.BasePath); (err == nil) != (mount == "") {
 					t.Fatalf("Path=%q: host cookie mount validation: %v", r.URL.Path, err)
+				}
+			})
+		}
+	}
+}
+
+func TestCrossDeviceMountNamespaces(t *testing.T) {
+	for _, mount := range []string{"/apps/auth", "/basic/auth", "/barcode/auth"} {
+		for _, endpoint := range []string{"/cross-device", "/cross-device/start", "/cross-device/confirm"} {
+			t.Run(mount+endpoint, func(t *testing.T) {
+				r := httptest.NewRequest(http.MethodGet, "https://example.test"+mount+endpoint, nil)
+				original := *r.URL
+				rr := requests.NewRequest()
+				extractBasePath(t.Context(), r, rr)
+				if rr.Upstream.BasePath != mount+"/" || rr.Upstream.BaseURL != "https://example.test" {
+					t.Fatal("incomplete namespace in mount masked the transfer route")
+				}
+				if *r.URL != original {
+					t.Fatal("route extraction mutated the request URL")
 				}
 			})
 		}

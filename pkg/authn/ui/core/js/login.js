@@ -67,7 +67,8 @@ function showLoginForm(storeName, registrationEnabled, usernameRecoveryEnabled, 
     contactSupportEnabled == 'yes' ? contactSupportLink.classList.remove('hidden') : contactSupportLink.classList.add('hidden');
     userActions.classList.remove('hidden');
   } else {
-    userActions.classList.add('hidden');
+    if (document.getElementById('cross-device-link')) userActions.classList.remove('hidden');
+    else userActions.classList.add('hidden');
   }
 
   document.getElementById('authenticators').classList.add('hidden');

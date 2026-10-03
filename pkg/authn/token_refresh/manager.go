@@ -202,6 +202,25 @@ func (m *Manager) GetSessionID(ctx context.Context, token, transport string) (st
 	return s.ID, nil
 }
 
+// ValidateSession checks a previously authenticated, server-held family reference
+// without presenting an old refresh token, so healthy rotation is not mistaken
+// for replay. It authenticates no caller and returns no identity or credentials.
+// Unsupported store adapters fail closed with ErrUnavailable.
+func (m *Manager) ValidateSession(ctx context.Context, sessionID, transport string) error {
+	if sessionID == "" {
+		return ErrInvalid
+	}
+	b, err := m.transportBinding(transport)
+	if err != nil {
+		return err
+	}
+	store, ok := m.store.(SessionValidator)
+	if !ok {
+		return ErrUnavailable
+	}
+	return store.ValidateSession(ctx, sessionID, b)
+}
+
 func (m *Manager) refresh(ctx context.Context, token, transport, sessionID string) (*Result, error) {
 	d, err := digest(token)
 	if err != nil {

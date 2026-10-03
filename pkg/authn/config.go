@@ -86,6 +86,8 @@ type PortalConfig struct {
 	API *APIConfig `json:"api,omitempty" xml:"api,omitempty" yaml:"api,omitempty"`
 	// RefreshTokens configures optional rotating portal sessions.
 	RefreshTokens *TokenRefreshConfig `json:"refresh_tokens,omitempty" xml:"refresh_tokens,omitempty" yaml:"refresh_tokens,omitempty"`
+	// CrossDeviceLogin configures optional sign-in from another browser/device.
+	CrossDeviceLogin *CrossDeviceLoginConfig `json:"cross_device_login,omitempty" xml:"cross_device_login,omitempty" yaml:"cross_device_login,omitempty"`
 	// OIDCProvider configures the optional downstream OpenID Provider.
 	// Assign the result of pkg/oidc/parser.NewOIDCProviderConfigFromDirectives
 	// after collecting the application registrations referenced by its directives.

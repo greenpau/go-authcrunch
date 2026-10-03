@@ -211,6 +211,7 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 			if err := p.revokeOIDCBrowser(w, r); err != nil {
 				return p.refreshError(ctx, w, err)
 			}
+			p.revokeCrossDeviceLogin(ctx, r)
 			p.deleteRefreshCookies(w, r)
 		}
 		rr.Response.Code = http.StatusOK

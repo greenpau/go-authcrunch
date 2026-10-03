@@ -144,7 +144,8 @@ func nameFields(c *cookie.Config) map[string]*string {
 		"sandbox id": &c.SandboxIDCookieName, "identity token": &c.IdentityTokenCookieName,
 		"access token": &c.AccessTokenCookieName, "refresh token": &c.RefreshTokenCookieName,
 		"oidc session id": &c.OIDCSessionIDCookieName, "oidc request id": &c.OIDCRequestIDCookieName,
-		"saml session id": &c.SAMLSessionIDCookieName,
+		"saml session id":         &c.SAMLSessionIDCookieName,
+		"cross-device session id": &c.CrossDeviceSessionIDCookieName,
 	}
 }
 

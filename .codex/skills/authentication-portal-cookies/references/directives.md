@@ -130,3 +130,9 @@ does not implicitly rewrite those separate configurations.
 
 This API is library integration support. External configuration handlers must
 call it from their own repositories; do not edit sibling projects here.
+
+Cross-device approving-browser bindings use
+`cookie cross-device session id name <name>` and participate in common prefix
+changes and collision checks. Their
+security, five-minute lifetime and mount scope are fixed by the feature; common
+Domain, lifetime, SameSite and insecure attributes do not weaken them.

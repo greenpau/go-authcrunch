@@ -16,6 +16,7 @@ package authn
 
 import (
 	"context"
+	"encoding/json"
 	stderrors "errors"
 	"fmt"
 	"net/http"
@@ -74,6 +75,7 @@ func (p *Portal) handleHTTPLoginScreen(ctx context.Context, w http.ResponseWrite
 	}
 	resp.Data["authenticated"] = rr.Response.Authenticated
 	resp.Data["login_options"] = p.loginOptions
+	resp.Data["cross_device_enabled"] = p.crossDevice != nil
 
 	resp.Data["i18n_provide_username_or_email"] = translate.Translate("provide_username_or_email", p.ui.Language, nil)
 	resp.Data["i18n_back_action"] = translate.Translate("back_action", p.ui.Language, nil)
@@ -257,6 +259,14 @@ func (p *Portal) identifyUserRequest(rr *requests.Request, identity map[string]s
 
 func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
 	var usr *user.User
+	var providerClaims []byte
+	if p.crossDevice != nil && p.crossDeviceBinding(r) != "" && (rr.Upstream.Method == "oauth2" || rr.Upstream.Method == "saml") {
+		var err error
+		providerClaims, err = json.Marshal(rr.Response.Payload)
+		if err != nil {
+			return fmt.Errorf("capture cross-device provider identity: %w", err)
+		}
+	}
 	issue := func() error {
 		var err error
 		usr, err = p.authorizeLoginUser(ctx, r, rr)
@@ -271,7 +281,13 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 	if err != nil {
 		return err
 	}
-	return p.grantAccess(ctx, w, r, rr, usr)
+	if err := p.grantAccess(ctx, w, r, rr, usr); err != nil {
+		return err
+	}
+	if len(providerClaims) > 0 {
+		p.completeCrossDeviceLogin(w, r, rr, usr, usr, providerClaims, nil)
+	}
+	return nil
 }
 
 func (p *Portal) authorizeLoginUser(ctx context.Context, r *http.Request, rr *requests.Request) (*user.User, error) {

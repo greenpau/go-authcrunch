@@ -84,7 +84,10 @@
                 </form>
               </div>
 
-              <div id="user_actions" class="flex flex-wrap pt-6 justify-center gap-4 {{ if or (ne $authenticatorCount 1) (eq .Data.login_options.hide_links "yes") }}hidden{{ end -}}">
+              <div id="user_actions" class="flex flex-wrap pt-6 justify-center gap-4 {{ if or (ne $authenticatorCount 1) (and (eq .Data.login_options.hide_links "yes") (not .Data.cross_device_enabled)) }}hidden{{ end -}}">
+                {{ if .Data.cross_device_enabled }}
+                <div id="cross-device-link"><a class="text-primary-600 text-lg" href="{{ pathjoin .ActionEndpoint "/cross-device" }}">Sign in on another device</a></div>
+                {{ end }}
                 <div id="user_register_link" {{ if eq .Data.login_options.hide_register_link "yes" }}class="hidden"{{ end -}}>
                   <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/register" .Data.login_options.default_realm }}">
                     <i class="las la-book"></i>
@@ -137,6 +140,9 @@
                     </a>
                   {{ end }}
                 </div>
+              {{ end }}
+              {{ if .Data.cross_device_enabled }}
+              <div {{ if ne .Data.login_options.form_required "yes" }}id="user_actions"{{ else }}id="cross-device-provider-link"{{ end }}><a class="text-primary-600 text-lg" href="{{ pathjoin .ActionEndpoint "/cross-device" }}">Sign in on another device</a></div>
               {{ end }}
             </div>
           {{ end }}

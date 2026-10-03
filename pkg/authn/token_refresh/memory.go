@@ -174,6 +174,28 @@ func (s *MemoryStore) Lookup(ctx context.Context, d [32]byte, b Binding) (result
 	return cloneSession(f.session), nil
 }
 
+// ValidateSession checks a trusted family reference without consuming a token.
+// It leaves healthy current/spent credentials and expired records unchanged.
+func (s *MemoryStore) ValidateSession(ctx context.Context, id string, b Binding) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed || (s.state != nil && s.state.Err() != nil) {
+		return ErrUnavailable
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	f := s.families[id]
+	if f == nil || f.session.Binding != b {
+		return ErrInvalid
+	}
+	now := s.now().Unix()
+	if now >= f.session.IdleExpiresAt || now >= f.session.AbsoluteExpiresAt {
+		return ErrInvalid
+	}
+	return nil
+}
+
 // Rotate commits exactly one descendant; a competing old token revokes it.
 func (s *MemoryStore) Rotate(ctx context.Context, previous Session, next [32]byte, idleExpiry, accessExpiry int64) (err error) {
 	s.mu.Lock()

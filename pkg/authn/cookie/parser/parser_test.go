@@ -86,6 +86,37 @@ func TestSAMLCookieDirective(t *testing.T) {
 	}
 }
 
+func TestCrossDeviceCookieDirective(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		directives []string
+		want       string
+		invalid    bool
+	}{
+		{name: "default", want: "AUTHP_CROSS_DEVICE_SESSION_ID"},
+		{name: "prefix", directives: []string{"cookie prefix PORTAL"}, want: "PORTAL_CROSS_DEVICE_SESSION_ID"},
+		{name: "explicit", directives: []string{"cookie cross-device session id name CrossDevice_BROWSER"}, want: "CrossDevice_BROWSER"},
+		{name: "collision", directives: []string{"cookie cross-device session id name AUTHP_ACCESS_TOKEN"}, invalid: true},
+		{name: "duplicate", directives: []string{"cookie cross-device session id name ONE", "cookie cross-device session id name TWO"}, invalid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := cookieparser.NewCookieConfigFromDirectives(tc.directives)
+			if tc.invalid {
+				if err == nil || got != nil {
+					t.Fatal("invalid CrossDevice cookie directive returned a configuration")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.CrossDeviceSessionIDCookieName != tc.want {
+				t.Fatalf("got %q, want %q", got.CrossDeviceSessionIDCookieName, tc.want)
+			}
+		})
+	}
+}
+
 func TestCookieDirectiveNamesAndAttributes(t *testing.T) {
 	input := []string{
 		"cookie prefix PORTAL", "cookie session id name CUSTOM_SESSION", "cookie redirect url name CUSTOM_REDIRECT",

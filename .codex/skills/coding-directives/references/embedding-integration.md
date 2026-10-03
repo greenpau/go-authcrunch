@@ -19,6 +19,7 @@ that a downstream configuration language already recognizes a directive.
 | `oauth application <nickname>` | `pkg/oidc/parser.NewOAuthApplicationConfigFromDirectives(header, statements, persisted)` | `Config.AddOAuthApplication` |
 | OIDC provider body | `pkg/oidc/parser.NewOIDCProviderConfigFromDirectives(statements, applications)` | `PortalConfig.ConfigureOIDCProvider`; root `Config.ConfigureOIDCProvider` resolves registered applications through this parser |
 | `token refresh` body | `pkg/authn/token_refresh/parser.NewTokenRefreshConfigFromDirectives(statements)` | `PortalConfig.RefreshTokens` |
+| Cross-device login statements | `pkg/authn/cross_device/parser.NewCrossDeviceLoginConfigFromDirectives(statements)` | `PortalConfig.CrossDeviceLogin` |
 | Admin API statements | `pkg/authn/admin_api/parser.NewAdminAPIConfigFromDirectives(statements)` | `PortalConfig.ConfigureAdminAPI` preserves profile API configuration |
 | Complete `cookie ...` statements | `pkg/authn/cookie/parser.NewCookieConfigFromDirectives(statements)` | `PortalConfig.ConfigureCookies` |
 | Direct OAuth authorization statements | `pkg/authz/oauth/parser.NewOAuthAuthorizationConfigFromDirectives(policyName, statements)` | `PolicyConfig.ConfigureOAuth`; root `NewServer` resolves shared providers |

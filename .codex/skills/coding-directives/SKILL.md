@@ -36,6 +36,10 @@ changes, including corrected paths or examples after a refactor.
 
 ## Implementation workflows
 
+- Use [authentication-portal-cross-device](../authentication-portal-cross-device/SKILL.md) to
+  maintain optional cross-device login, approval/polling, its parser, browser
+  binding, transferred login evidence, and TLS/browser acceptance tests.
+
 - Use [authorization-policy-acl](../authorization-policy-acl/SKILL.md) to
   change typed custom ACL claims, their parser, condition compilation, policy
   configuration, and gatekeeper evaluation across cached and fresh identities.

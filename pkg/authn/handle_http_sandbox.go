@@ -230,6 +230,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 			}
 			return p.handleHTTPError(ctx, w, r, rr, status)
 		}
+		p.completeCrossDeviceLogin(w, r, rr, issued, proof, nil, tokens)
 		w.WriteHeader(rr.Response.Code)
 		return nil
 	}

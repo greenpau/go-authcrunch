@@ -82,6 +82,7 @@ type Portal struct {
 	logger            *zap.Logger
 
 	webAuthnEnrollments *webAuthnEnrollmentStore
+	crossDevice         *crossDeviceStore
 }
 
 // PortalParameters are input parameters for NewPortal.
@@ -210,6 +211,9 @@ func (p *Portal) Close() {
 		if p.webAuthnEnrollments != nil {
 			p.webAuthnEnrollments.close()
 		}
+		if p.crossDevice != nil {
+			p.crossDevice.close()
+		}
 		if p.refreshStore != nil {
 			p.refreshStore.Close()
 		}
@@ -279,6 +283,9 @@ func (p *Portal) configureEssentials() error {
 	p.sandboxes.Run()
 	p.passwordAttempts = newPasswordAttemptLimiter(time.Now, passwordAttemptLimiterCapacity)
 	p.webAuthnEnrollments = newWebAuthnEnrollmentStore(time.Now, webAuthnEnrollmentCapacity)
+	if p.config.CrossDeviceLogin != nil && p.config.CrossDeviceLogin.Enabled {
+		p.crossDevice = newCrossDeviceStore(time.Now)
+	}
 
 	// A token refresh directive is an explicit override of the shared cookie
 	// setting. Resolve it before factory defaults and collision checks so every

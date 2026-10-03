@@ -44,26 +44,30 @@ const DefaultOIDCRequestIDCookieName string = "OIDC_REQUEST_ID"
 // DefaultSAMLSessionIDCookieName is the SAML browser-binding suffix, combined with the prefix.
 const DefaultSAMLSessionIDCookieName string = "SAML_SESSION_ID"
 
+// DefaultCrossDeviceSessionIDCookieName is the cross-device browser-binding suffix.
+const DefaultCrossDeviceSessionIDCookieName string = "CROSS_DEVICE_SESSION_ID"
+
 // Config represents a common set of configuration settings
 // applicable to the cookies issued by authn.Authenticator.
 type Config struct {
-	Domains                 map[string]*DomainConfig `json:"domains,omitempty" xml:"domains,omitempty" yaml:"domains,omitempty"`
-	Path                    string                   `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
-	Lifetime                int                      `json:"lifetime,omitempty" xml:"lifetime,omitempty" yaml:"lifetime,omitempty"`
-	Insecure                bool                     `json:"insecure,omitempty" xml:"insecure,omitempty" yaml:"insecure,omitempty"`
-	SameSite                string                   `json:"same_site,omitempty" xml:"same_site,omitempty" yaml:"same_site,omitempty"`
-	StripDomainEnabled      bool                     `json:"strip_domain_enabled,omitempty" xml:"strip_domain_enabled,omitempty" yaml:"strip_domain_enabled,omitempty"`
-	GuessDomainEnabled      bool                     `json:"guess_domain_enabled,omitempty" xml:"guess_domain_enabled,omitempty" yaml:"guess_domain_enabled,omitempty"`
-	SessionIDCookieName     string                   `json:"session_id_cookie_name,omitempty" xml:"session_id_cookie_name,omitempty" yaml:"session_id_cookie_name,omitempty"`
-	RefererCookieName       string                   `json:"referer_cookie_name,omitempty" xml:"referer_cookie_name,omitempty" yaml:"referer_cookie_name,omitempty"`
-	SandboxIDCookieName     string                   `json:"sandbox_id_cookie_name,omitempty" xml:"sandbox_id_cookie_name,omitempty" yaml:"sandbox_id_cookie_name,omitempty"`
-	IdentityTokenCookieName string                   `json:"identity_token_cookie_name,omitempty" xml:"identity_token_cookie_name,omitempty" yaml:"identity_token_cookie_name,omitempty"`
-	AccessTokenCookieName   string                   `json:"access_token_cookie_name,omitempty" xml:"access_token_cookie_name,omitempty" yaml:"access_token_cookie_name,omitempty"`
-	RefreshTokenCookieName  string                   `json:"refresh_token_cookie_name,omitempty" xml:"refresh_token_cookie_name,omitempty" yaml:"refresh_token_cookie_name,omitempty"`
-	OIDCSessionIDCookieName string                   `json:"oidc_session_id_cookie_name,omitempty" xml:"oidc_session_id_cookie_name,omitempty" yaml:"oidc_session_id_cookie_name,omitempty"`
-	OIDCRequestIDCookieName string                   `json:"oidc_request_id_cookie_name,omitempty" xml:"oidc_request_id_cookie_name,omitempty" yaml:"oidc_request_id_cookie_name,omitempty"`
-	SAMLSessionIDCookieName string                   `json:"saml_session_id_cookie_name,omitempty" xml:"saml_session_id_cookie_name,omitempty" yaml:"saml_session_id_cookie_name,omitempty"`
-	CookieNamePrefix        string                   `json:"cookie_name_prefix,omitempty" xml:"cookie_name_prefix,omitempty" yaml:"cookie_name_prefix,omitempty"`
+	Domains                        map[string]*DomainConfig `json:"domains,omitempty" xml:"domains,omitempty" yaml:"domains,omitempty"`
+	Path                           string                   `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
+	Lifetime                       int                      `json:"lifetime,omitempty" xml:"lifetime,omitempty" yaml:"lifetime,omitempty"`
+	Insecure                       bool                     `json:"insecure,omitempty" xml:"insecure,omitempty" yaml:"insecure,omitempty"`
+	SameSite                       string                   `json:"same_site,omitempty" xml:"same_site,omitempty" yaml:"same_site,omitempty"`
+	StripDomainEnabled             bool                     `json:"strip_domain_enabled,omitempty" xml:"strip_domain_enabled,omitempty" yaml:"strip_domain_enabled,omitempty"`
+	GuessDomainEnabled             bool                     `json:"guess_domain_enabled,omitempty" xml:"guess_domain_enabled,omitempty" yaml:"guess_domain_enabled,omitempty"`
+	SessionIDCookieName            string                   `json:"session_id_cookie_name,omitempty" xml:"session_id_cookie_name,omitempty" yaml:"session_id_cookie_name,omitempty"`
+	RefererCookieName              string                   `json:"referer_cookie_name,omitempty" xml:"referer_cookie_name,omitempty" yaml:"referer_cookie_name,omitempty"`
+	SandboxIDCookieName            string                   `json:"sandbox_id_cookie_name,omitempty" xml:"sandbox_id_cookie_name,omitempty" yaml:"sandbox_id_cookie_name,omitempty"`
+	IdentityTokenCookieName        string                   `json:"identity_token_cookie_name,omitempty" xml:"identity_token_cookie_name,omitempty" yaml:"identity_token_cookie_name,omitempty"`
+	AccessTokenCookieName          string                   `json:"access_token_cookie_name,omitempty" xml:"access_token_cookie_name,omitempty" yaml:"access_token_cookie_name,omitempty"`
+	RefreshTokenCookieName         string                   `json:"refresh_token_cookie_name,omitempty" xml:"refresh_token_cookie_name,omitempty" yaml:"refresh_token_cookie_name,omitempty"`
+	OIDCSessionIDCookieName        string                   `json:"oidc_session_id_cookie_name,omitempty" xml:"oidc_session_id_cookie_name,omitempty" yaml:"oidc_session_id_cookie_name,omitempty"`
+	OIDCRequestIDCookieName        string                   `json:"oidc_request_id_cookie_name,omitempty" xml:"oidc_request_id_cookie_name,omitempty" yaml:"oidc_request_id_cookie_name,omitempty"`
+	SAMLSessionIDCookieName        string                   `json:"saml_session_id_cookie_name,omitempty" xml:"saml_session_id_cookie_name,omitempty" yaml:"saml_session_id_cookie_name,omitempty"`
+	CrossDeviceSessionIDCookieName string                   `json:"cross_device_session_id_cookie_name,omitempty" xml:"cross_device_session_id_cookie_name,omitempty" yaml:"cross_device_session_id_cookie_name,omitempty"`
+	CookieNamePrefix               string                   `json:"cookie_name_prefix,omitempty" xml:"cookie_name_prefix,omitempty" yaml:"cookie_name_prefix,omitempty"`
 }
 
 // NewConfig returns cookie configuration with the common AUTHP names.
