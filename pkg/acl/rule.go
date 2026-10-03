@@ -9153,7 +9153,7 @@ func newACLRuleWithFields(ctx context.Context, ruleID int, cfg *RuleConfiguratio
 func (rule *aclRuleAllowMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9168,7 +9168,7 @@ func (rule *aclRuleAllowMatchAllStop) eval(ctx context.Context, data map[string]
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9184,7 +9184,7 @@ func (rule *aclRuleAllowMatchAllStop) eval(ctx context.Context, data map[string]
 
 func (rule *aclRuleAllowStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9196,7 +9196,7 @@ func (rule *aclRuleAllowStop) eval(ctx context.Context, data map[string]interfac
 func (rule *aclRuleAllowMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9211,7 +9211,7 @@ func (rule *aclRuleAllowMatchAll) eval(ctx context.Context, data map[string]inte
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9227,7 +9227,7 @@ func (rule *aclRuleAllowMatchAll) eval(ctx context.Context, data map[string]inte
 
 func (rule *aclRuleAllow) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9239,7 +9239,7 @@ func (rule *aclRuleAllow) eval(ctx context.Context, data map[string]interface{})
 func (rule *aclRuleAllowWithDebugLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9255,7 +9255,7 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAnyStop) eval(ctx context.Context, d
 func (rule *aclRuleAllowWithInfoLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9271,7 +9271,7 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAnyStop) eval(ctx context.Context, da
 func (rule *aclRuleAllowWithWarnLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9287,7 +9287,7 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAnyStop) eval(ctx context.Context, da
 func (rule *aclRuleAllowWithErrorLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9304,7 +9304,7 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAllStop) eval(ctx context.Context, d
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9325,7 +9325,7 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAllStop) eval(ctx context.Context, da
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9346,7 +9346,7 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAllStop) eval(ctx context.Context, da
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9367,7 +9367,7 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAllStop) eval(ctx context.Context, d
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9386,7 +9386,7 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAllStop) eval(ctx context.Context, d
 
 func (rule *aclRuleAllowWithDebugLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9399,7 +9399,7 @@ func (rule *aclRuleAllowWithDebugLoggerStop) eval(ctx context.Context, data map[
 
 func (rule *aclRuleAllowWithInfoLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9412,7 +9412,7 @@ func (rule *aclRuleAllowWithInfoLoggerStop) eval(ctx context.Context, data map[s
 
 func (rule *aclRuleAllowWithWarnLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9425,7 +9425,7 @@ func (rule *aclRuleAllowWithWarnLoggerStop) eval(ctx context.Context, data map[s
 
 func (rule *aclRuleAllowWithErrorLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9439,7 +9439,7 @@ func (rule *aclRuleAllowWithErrorLoggerStop) eval(ctx context.Context, data map[
 func (rule *aclRuleAllowWithDebugLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9455,7 +9455,7 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAny) eval(ctx context.Context, data 
 func (rule *aclRuleAllowWithInfoLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9471,7 +9471,7 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAny) eval(ctx context.Context, data m
 func (rule *aclRuleAllowWithWarnLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9487,7 +9487,7 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAny) eval(ctx context.Context, data m
 func (rule *aclRuleAllowWithErrorLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9504,7 +9504,7 @@ func (rule *aclRuleAllowWithDebugLoggerMatchAll) eval(ctx context.Context, data 
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9525,7 +9525,7 @@ func (rule *aclRuleAllowWithInfoLoggerMatchAll) eval(ctx context.Context, data m
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9546,7 +9546,7 @@ func (rule *aclRuleAllowWithWarnLoggerMatchAll) eval(ctx context.Context, data m
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9567,7 +9567,7 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAll) eval(ctx context.Context, data 
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9586,7 +9586,7 @@ func (rule *aclRuleAllowWithErrorLoggerMatchAll) eval(ctx context.Context, data 
 
 func (rule *aclRuleAllowWithDebugLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9599,7 +9599,7 @@ func (rule *aclRuleAllowWithDebugLogger) eval(ctx context.Context, data map[stri
 
 func (rule *aclRuleAllowWithInfoLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9612,7 +9612,7 @@ func (rule *aclRuleAllowWithInfoLogger) eval(ctx context.Context, data map[strin
 
 func (rule *aclRuleAllowWithWarnLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9625,7 +9625,7 @@ func (rule *aclRuleAllowWithWarnLogger) eval(ctx context.Context, data map[strin
 
 func (rule *aclRuleAllowWithErrorLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9639,7 +9639,7 @@ func (rule *aclRuleAllowWithErrorLogger) eval(ctx context.Context, data map[stri
 func (rule *aclRuleAllowWithCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9656,7 +9656,7 @@ func (rule *aclRuleAllowWithCounterMatchAllStop) eval(ctx context.Context, data 
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9675,7 +9675,7 @@ func (rule *aclRuleAllowWithCounterMatchAllStop) eval(ctx context.Context, data 
 
 func (rule *aclRuleAllowWithCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9689,7 +9689,7 @@ func (rule *aclRuleAllowWithCounterStop) eval(ctx context.Context, data map[stri
 func (rule *aclRuleAllowWithCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9706,7 +9706,7 @@ func (rule *aclRuleAllowWithCounterMatchAll) eval(ctx context.Context, data map[
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9725,7 +9725,7 @@ func (rule *aclRuleAllowWithCounterMatchAll) eval(ctx context.Context, data map[
 
 func (rule *aclRuleAllowWithCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9739,7 +9739,7 @@ func (rule *aclRuleAllowWithCounter) eval(ctx context.Context, data map[string]i
 func (rule *aclRuleAllowWithDebugLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9757,7 +9757,7 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAnyStop) eval(ctx context.Con
 func (rule *aclRuleAllowWithInfoLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9775,7 +9775,7 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAnyStop) eval(ctx context.Cont
 func (rule *aclRuleAllowWithWarnLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9793,7 +9793,7 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAnyStop) eval(ctx context.Cont
 func (rule *aclRuleAllowWithErrorLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9812,7 +9812,7 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAllStop) eval(ctx context.Con
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9836,7 +9836,7 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAllStop) eval(ctx context.Cont
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9860,7 +9860,7 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAllStop) eval(ctx context.Cont
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9884,7 +9884,7 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAllStop) eval(ctx context.Con
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9906,7 +9906,7 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAllStop) eval(ctx context.Con
 
 func (rule *aclRuleAllowWithDebugLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9921,7 +9921,7 @@ func (rule *aclRuleAllowWithDebugLoggerCounterStop) eval(ctx context.Context, da
 
 func (rule *aclRuleAllowWithInfoLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9936,7 +9936,7 @@ func (rule *aclRuleAllowWithInfoLoggerCounterStop) eval(ctx context.Context, dat
 
 func (rule *aclRuleAllowWithWarnLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9951,7 +9951,7 @@ func (rule *aclRuleAllowWithWarnLoggerCounterStop) eval(ctx context.Context, dat
 
 func (rule *aclRuleAllowWithErrorLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -9967,7 +9967,7 @@ func (rule *aclRuleAllowWithErrorLoggerCounterStop) eval(ctx context.Context, da
 func (rule *aclRuleAllowWithDebugLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -9985,7 +9985,7 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAny) eval(ctx context.Context
 func (rule *aclRuleAllowWithInfoLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10003,7 +10003,7 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAny) eval(ctx context.Context,
 func (rule *aclRuleAllowWithWarnLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10021,7 +10021,7 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAny) eval(ctx context.Context,
 func (rule *aclRuleAllowWithErrorLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10040,7 +10040,7 @@ func (rule *aclRuleAllowWithDebugLoggerCounterMatchAll) eval(ctx context.Context
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10064,7 +10064,7 @@ func (rule *aclRuleAllowWithInfoLoggerCounterMatchAll) eval(ctx context.Context,
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10088,7 +10088,7 @@ func (rule *aclRuleAllowWithWarnLoggerCounterMatchAll) eval(ctx context.Context,
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10112,7 +10112,7 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAll) eval(ctx context.Context
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10134,7 +10134,7 @@ func (rule *aclRuleAllowWithErrorLoggerCounterMatchAll) eval(ctx context.Context
 
 func (rule *aclRuleAllowWithDebugLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10149,7 +10149,7 @@ func (rule *aclRuleAllowWithDebugLoggerCounter) eval(ctx context.Context, data m
 
 func (rule *aclRuleAllowWithInfoLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10164,7 +10164,7 @@ func (rule *aclRuleAllowWithInfoLoggerCounter) eval(ctx context.Context, data ma
 
 func (rule *aclRuleAllowWithWarnLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10179,7 +10179,7 @@ func (rule *aclRuleAllowWithWarnLoggerCounter) eval(ctx context.Context, data ma
 
 func (rule *aclRuleAllowWithErrorLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10195,7 +10195,7 @@ func (rule *aclRuleAllowWithErrorLoggerCounter) eval(ctx context.Context, data m
 func (rule *aclRuleDenyMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10210,7 +10210,7 @@ func (rule *aclRuleDenyMatchAllStop) eval(ctx context.Context, data map[string]i
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10226,7 +10226,7 @@ func (rule *aclRuleDenyMatchAllStop) eval(ctx context.Context, data map[string]i
 
 func (rule *aclRuleDenyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10238,7 +10238,7 @@ func (rule *aclRuleDenyStop) eval(ctx context.Context, data map[string]interface
 func (rule *aclRuleDenyMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10253,7 +10253,7 @@ func (rule *aclRuleDenyMatchAll) eval(ctx context.Context, data map[string]inter
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10269,7 +10269,7 @@ func (rule *aclRuleDenyMatchAll) eval(ctx context.Context, data map[string]inter
 
 func (rule *aclRuleDeny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10281,7 +10281,7 @@ func (rule *aclRuleDeny) eval(ctx context.Context, data map[string]interface{}) 
 func (rule *aclRuleDenyWithDebugLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10297,7 +10297,7 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAnyStop) eval(ctx context.Context, da
 func (rule *aclRuleDenyWithInfoLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10313,7 +10313,7 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAnyStop) eval(ctx context.Context, dat
 func (rule *aclRuleDenyWithWarnLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10329,7 +10329,7 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAnyStop) eval(ctx context.Context, dat
 func (rule *aclRuleDenyWithErrorLoggerMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10346,7 +10346,7 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAllStop) eval(ctx context.Context, da
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10367,7 +10367,7 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAllStop) eval(ctx context.Context, dat
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10388,7 +10388,7 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAllStop) eval(ctx context.Context, dat
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10409,7 +10409,7 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAllStop) eval(ctx context.Context, da
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10428,7 +10428,7 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAllStop) eval(ctx context.Context, da
 
 func (rule *aclRuleDenyWithDebugLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10441,7 +10441,7 @@ func (rule *aclRuleDenyWithDebugLoggerStop) eval(ctx context.Context, data map[s
 
 func (rule *aclRuleDenyWithInfoLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10454,7 +10454,7 @@ func (rule *aclRuleDenyWithInfoLoggerStop) eval(ctx context.Context, data map[st
 
 func (rule *aclRuleDenyWithWarnLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10467,7 +10467,7 @@ func (rule *aclRuleDenyWithWarnLoggerStop) eval(ctx context.Context, data map[st
 
 func (rule *aclRuleDenyWithErrorLoggerStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10481,7 +10481,7 @@ func (rule *aclRuleDenyWithErrorLoggerStop) eval(ctx context.Context, data map[s
 func (rule *aclRuleDenyWithDebugLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10497,7 +10497,7 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAny) eval(ctx context.Context, data m
 func (rule *aclRuleDenyWithInfoLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10513,7 +10513,7 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAny) eval(ctx context.Context, data ma
 func (rule *aclRuleDenyWithWarnLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10529,7 +10529,7 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAny) eval(ctx context.Context, data ma
 func (rule *aclRuleDenyWithErrorLoggerMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10546,7 +10546,7 @@ func (rule *aclRuleDenyWithDebugLoggerMatchAll) eval(ctx context.Context, data m
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10567,7 +10567,7 @@ func (rule *aclRuleDenyWithInfoLoggerMatchAll) eval(ctx context.Context, data ma
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10588,7 +10588,7 @@ func (rule *aclRuleDenyWithWarnLoggerMatchAll) eval(ctx context.Context, data ma
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10609,7 +10609,7 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAll) eval(ctx context.Context, data m
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10628,7 +10628,7 @@ func (rule *aclRuleDenyWithErrorLoggerMatchAll) eval(ctx context.Context, data m
 
 func (rule *aclRuleDenyWithDebugLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10641,7 +10641,7 @@ func (rule *aclRuleDenyWithDebugLogger) eval(ctx context.Context, data map[strin
 
 func (rule *aclRuleDenyWithInfoLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10654,7 +10654,7 @@ func (rule *aclRuleDenyWithInfoLogger) eval(ctx context.Context, data map[string
 
 func (rule *aclRuleDenyWithWarnLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10667,7 +10667,7 @@ func (rule *aclRuleDenyWithWarnLogger) eval(ctx context.Context, data map[string
 
 func (rule *aclRuleDenyWithErrorLogger) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10681,7 +10681,7 @@ func (rule *aclRuleDenyWithErrorLogger) eval(ctx context.Context, data map[strin
 func (rule *aclRuleDenyWithCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10698,7 +10698,7 @@ func (rule *aclRuleDenyWithCounterMatchAllStop) eval(ctx context.Context, data m
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10717,7 +10717,7 @@ func (rule *aclRuleDenyWithCounterMatchAllStop) eval(ctx context.Context, data m
 
 func (rule *aclRuleDenyWithCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10731,7 +10731,7 @@ func (rule *aclRuleDenyWithCounterStop) eval(ctx context.Context, data map[strin
 func (rule *aclRuleDenyWithCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10748,7 +10748,7 @@ func (rule *aclRuleDenyWithCounterMatchAll) eval(ctx context.Context, data map[s
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10767,7 +10767,7 @@ func (rule *aclRuleDenyWithCounterMatchAll) eval(ctx context.Context, data map[s
 
 func (rule *aclRuleDenyWithCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10781,7 +10781,7 @@ func (rule *aclRuleDenyWithCounter) eval(ctx context.Context, data map[string]in
 func (rule *aclRuleDenyWithDebugLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10799,7 +10799,7 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAnyStop) eval(ctx context.Cont
 func (rule *aclRuleDenyWithInfoLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10817,7 +10817,7 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAnyStop) eval(ctx context.Conte
 func (rule *aclRuleDenyWithWarnLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10835,7 +10835,7 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAnyStop) eval(ctx context.Conte
 func (rule *aclRuleDenyWithErrorLoggerCounterMatchAnyStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10854,7 +10854,7 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAllStop) eval(ctx context.Cont
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10878,7 +10878,7 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAllStop) eval(ctx context.Conte
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10902,7 +10902,7 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAllStop) eval(ctx context.Conte
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10926,7 +10926,7 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAllStop) eval(ctx context.Cont
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -10948,7 +10948,7 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAllStop) eval(ctx context.Cont
 
 func (rule *aclRuleDenyWithDebugLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10963,7 +10963,7 @@ func (rule *aclRuleDenyWithDebugLoggerCounterStop) eval(ctx context.Context, dat
 
 func (rule *aclRuleDenyWithInfoLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10978,7 +10978,7 @@ func (rule *aclRuleDenyWithInfoLoggerCounterStop) eval(ctx context.Context, data
 
 func (rule *aclRuleDenyWithWarnLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -10993,7 +10993,7 @@ func (rule *aclRuleDenyWithWarnLoggerCounterStop) eval(ctx context.Context, data
 
 func (rule *aclRuleDenyWithErrorLoggerCounterStop) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -11009,7 +11009,7 @@ func (rule *aclRuleDenyWithErrorLoggerCounterStop) eval(ctx context.Context, dat
 func (rule *aclRuleDenyWithDebugLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11027,7 +11027,7 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAny) eval(ctx context.Context,
 func (rule *aclRuleDenyWithInfoLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11045,7 +11045,7 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAny) eval(ctx context.Context, 
 func (rule *aclRuleDenyWithWarnLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11063,7 +11063,7 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAny) eval(ctx context.Context, 
 func (rule *aclRuleDenyWithErrorLoggerCounterMatchAny) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11082,7 +11082,7 @@ func (rule *aclRuleDenyWithDebugLoggerCounterMatchAll) eval(ctx context.Context,
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11106,7 +11106,7 @@ func (rule *aclRuleDenyWithInfoLoggerCounterMatchAll) eval(ctx context.Context, 
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11130,7 +11130,7 @@ func (rule *aclRuleDenyWithWarnLoggerCounterMatchAll) eval(ctx context.Context, 
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11154,7 +11154,7 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAll) eval(ctx context.Context,
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11176,7 +11176,7 @@ func (rule *aclRuleDenyWithErrorLoggerCounterMatchAll) eval(ctx context.Context,
 
 func (rule *aclRuleDenyWithDebugLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -11191,7 +11191,7 @@ func (rule *aclRuleDenyWithDebugLoggerCounter) eval(ctx context.Context, data ma
 
 func (rule *aclRuleDenyWithInfoLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -11206,7 +11206,7 @@ func (rule *aclRuleDenyWithInfoLoggerCounter) eval(ctx context.Context, data map
 
 func (rule *aclRuleDenyWithWarnLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -11221,7 +11221,7 @@ func (rule *aclRuleDenyWithWarnLoggerCounter) eval(ctx context.Context, data map
 
 func (rule *aclRuleDenyWithErrorLoggerCounter) eval(ctx context.Context, data map[string]interface{}) ruleVerdict {
 	v, found := data[rule.field]
-	if !found {
+	if !found && !rule.condition.getConfig(ctx).alwaysTrue {
 		return ruleVerdictContinue
 	}
 	if !rule.condition.match(ctx, v) {
@@ -11244,7 +11244,7 @@ func (rule *aclRuleFieldCheckAllowMatchAnyStop) eval(ctx context.Context, data m
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11266,7 +11266,7 @@ func (rule *aclRuleFieldCheckAllowMatchAllStop) eval(ctx context.Context, data m
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11301,7 +11301,7 @@ func (rule *aclRuleFieldCheckAllowMatchAny) eval(ctx context.Context, data map[s
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11323,7 +11323,7 @@ func (rule *aclRuleFieldCheckAllowMatchAll) eval(ctx context.Context, data map[s
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11359,7 +11359,7 @@ func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAnyStop) eval(ctx context.
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11383,7 +11383,7 @@ func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAnyStop) eval(ctx context.C
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11407,7 +11407,7 @@ func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAnyStop) eval(ctx context.C
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11431,7 +11431,7 @@ func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAnyStop) eval(ctx context.
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11456,7 +11456,7 @@ func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAllStop) eval(ctx context.
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11485,7 +11485,7 @@ func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAllStop) eval(ctx context.C
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11514,7 +11514,7 @@ func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAllStop) eval(ctx context.C
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11543,7 +11543,7 @@ func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAllStop) eval(ctx context.
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11623,7 +11623,7 @@ func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAny) eval(ctx context.Cont
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11647,7 +11647,7 @@ func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAny) eval(ctx context.Conte
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11671,7 +11671,7 @@ func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAny) eval(ctx context.Conte
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11695,7 +11695,7 @@ func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAny) eval(ctx context.Cont
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11720,7 +11720,7 @@ func (rule *aclRuleFieldCheckAllowWithDebugLoggerMatchAll) eval(ctx context.Cont
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11749,7 +11749,7 @@ func (rule *aclRuleFieldCheckAllowWithInfoLoggerMatchAll) eval(ctx context.Conte
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11778,7 +11778,7 @@ func (rule *aclRuleFieldCheckAllowWithWarnLoggerMatchAll) eval(ctx context.Conte
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11807,7 +11807,7 @@ func (rule *aclRuleFieldCheckAllowWithErrorLoggerMatchAll) eval(ctx context.Cont
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11887,7 +11887,7 @@ func (rule *aclRuleFieldCheckAllowWithCounterMatchAnyStop) eval(ctx context.Cont
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11912,7 +11912,7 @@ func (rule *aclRuleFieldCheckAllowWithCounterMatchAllStop) eval(ctx context.Cont
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11953,7 +11953,7 @@ func (rule *aclRuleFieldCheckAllowWithCounterMatchAny) eval(ctx context.Context,
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -11978,7 +11978,7 @@ func (rule *aclRuleFieldCheckAllowWithCounterMatchAll) eval(ctx context.Context,
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12020,7 +12020,7 @@ func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAnyStop) eval(ctx c
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12047,7 +12047,7 @@ func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAnyStop) eval(ctx co
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12074,7 +12074,7 @@ func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAnyStop) eval(ctx co
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12101,7 +12101,7 @@ func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAnyStop) eval(ctx c
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12129,7 +12129,7 @@ func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAllStop) eval(ctx c
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12162,7 +12162,7 @@ func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAllStop) eval(ctx co
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12195,7 +12195,7 @@ func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAllStop) eval(ctx co
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12228,7 +12228,7 @@ func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAllStop) eval(ctx c
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12320,7 +12320,7 @@ func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAny) eval(ctx conte
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12347,7 +12347,7 @@ func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAny) eval(ctx contex
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12374,7 +12374,7 @@ func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAny) eval(ctx contex
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12401,7 +12401,7 @@ func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAny) eval(ctx conte
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12429,7 +12429,7 @@ func (rule *aclRuleFieldCheckAllowWithDebugLoggerCounterMatchAll) eval(ctx conte
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12462,7 +12462,7 @@ func (rule *aclRuleFieldCheckAllowWithInfoLoggerCounterMatchAll) eval(ctx contex
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12495,7 +12495,7 @@ func (rule *aclRuleFieldCheckAllowWithWarnLoggerCounterMatchAll) eval(ctx contex
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12528,7 +12528,7 @@ func (rule *aclRuleFieldCheckAllowWithErrorLoggerCounterMatchAll) eval(ctx conte
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12618,7 +12618,7 @@ func (rule *aclRuleFieldCheckDenyMatchAnyStop) eval(ctx context.Context, data ma
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12640,7 +12640,7 @@ func (rule *aclRuleFieldCheckDenyMatchAllStop) eval(ctx context.Context, data ma
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12675,7 +12675,7 @@ func (rule *aclRuleFieldCheckDenyMatchAny) eval(ctx context.Context, data map[st
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12697,7 +12697,7 @@ func (rule *aclRuleFieldCheckDenyMatchAll) eval(ctx context.Context, data map[st
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12733,7 +12733,7 @@ func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAnyStop) eval(ctx context.C
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12757,7 +12757,7 @@ func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAnyStop) eval(ctx context.Co
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12781,7 +12781,7 @@ func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAnyStop) eval(ctx context.Co
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12805,7 +12805,7 @@ func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAnyStop) eval(ctx context.C
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12830,7 +12830,7 @@ func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAllStop) eval(ctx context.C
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12859,7 +12859,7 @@ func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAllStop) eval(ctx context.Co
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12888,7 +12888,7 @@ func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAllStop) eval(ctx context.Co
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12917,7 +12917,7 @@ func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAllStop) eval(ctx context.C
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -12997,7 +12997,7 @@ func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAny) eval(ctx context.Conte
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13021,7 +13021,7 @@ func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAny) eval(ctx context.Contex
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13045,7 +13045,7 @@ func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAny) eval(ctx context.Contex
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13069,7 +13069,7 @@ func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAny) eval(ctx context.Conte
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13094,7 +13094,7 @@ func (rule *aclRuleFieldCheckDenyWithDebugLoggerMatchAll) eval(ctx context.Conte
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13123,7 +13123,7 @@ func (rule *aclRuleFieldCheckDenyWithInfoLoggerMatchAll) eval(ctx context.Contex
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13152,7 +13152,7 @@ func (rule *aclRuleFieldCheckDenyWithWarnLoggerMatchAll) eval(ctx context.Contex
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13181,7 +13181,7 @@ func (rule *aclRuleFieldCheckDenyWithErrorLoggerMatchAll) eval(ctx context.Conte
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13261,7 +13261,7 @@ func (rule *aclRuleFieldCheckDenyWithCounterMatchAnyStop) eval(ctx context.Conte
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13286,7 +13286,7 @@ func (rule *aclRuleFieldCheckDenyWithCounterMatchAllStop) eval(ctx context.Conte
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13327,7 +13327,7 @@ func (rule *aclRuleFieldCheckDenyWithCounterMatchAny) eval(ctx context.Context, 
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13352,7 +13352,7 @@ func (rule *aclRuleFieldCheckDenyWithCounterMatchAll) eval(ctx context.Context, 
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13394,7 +13394,7 @@ func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAnyStop) eval(ctx co
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13421,7 +13421,7 @@ func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAnyStop) eval(ctx con
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13448,7 +13448,7 @@ func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAnyStop) eval(ctx con
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13475,7 +13475,7 @@ func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAnyStop) eval(ctx co
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13503,7 +13503,7 @@ func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAllStop) eval(ctx co
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13536,7 +13536,7 @@ func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAllStop) eval(ctx con
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13569,7 +13569,7 @@ func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAllStop) eval(ctx con
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13602,7 +13602,7 @@ func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAllStop) eval(ctx co
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13694,7 +13694,7 @@ func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAny) eval(ctx contex
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13721,7 +13721,7 @@ func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAny) eval(ctx context
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13748,7 +13748,7 @@ func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAny) eval(ctx context
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13775,7 +13775,7 @@ func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAny) eval(ctx contex
 	}
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			continue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13803,7 +13803,7 @@ func (rule *aclRuleFieldCheckDenyWithDebugLoggerCounterMatchAll) eval(ctx contex
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13836,7 +13836,7 @@ func (rule *aclRuleFieldCheckDenyWithInfoLoggerCounterMatchAll) eval(ctx context
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13869,7 +13869,7 @@ func (rule *aclRuleFieldCheckDenyWithWarnLoggerCounterMatchAll) eval(ctx context
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {
@@ -13902,7 +13902,7 @@ func (rule *aclRuleFieldCheckDenyWithErrorLoggerCounterMatchAll) eval(ctx contex
 	var matched bool
 	for i, field := range rule.fields {
 		v, found := data[field]
-		if !found {
+		if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
 			return ruleVerdictContinue
 		}
 		if !rule.conditions[i].match(ctx, v) {

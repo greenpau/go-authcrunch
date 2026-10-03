@@ -77,6 +77,15 @@ Both APIs validate all referenced custom values before the first rule, including
 before allow-stop and default-allow. A malformed deny input cannot become a
 skipped condition followed by a successful allow.
 
+`match any` is unconditional, including on an empty normalized map: it does not
+require `exp` or any other claim to be present. Its legacy compiled field label
+is not a field-presence requirement. Ordinary comparisons still require their
+field, and explicit existence checks remain enforced. This applies to single,
+match-all and match-any rules, including logging, counters and stop variants.
+A matching deny overrides an earlier non-stopping allow; an allow-stop ends
+evaluation before later rules. A default allow never bypasses token verification,
+expiry, request restrictions or validation of referenced custom claims.
+
 - A scalar must be a string. An empty scalar is a valid string and can be matched
   explicitly, including with a regex.
 - Lists accept `[]string` and JSON-shaped `[]any` only when every item is a string.
@@ -114,6 +123,10 @@ standard matching behavior and all existing constructors.
 
 Coverage belongs in:
 
+- `pkg/acl/unconditional_test.go`: unconditional rules without timestamps across
+  generated action, combination, existence-check, stop, logger and counter forms.
+- `pkg/acl/generation_e2e_test.go`: public ACL evaluation and default-action
+  ordering without timestamp claims, independent of generated test matrices.
 - `pkg/acl/fields_test.go`: definitions, all matcher strategies and input shapes,
   missing/null/empty semantics, fail-closed rule ordering, logged-data projection,
   concurrent policy isolation, rejected null rules, and unchanged ACL inputs.
@@ -126,7 +139,8 @@ Coverage belongs in:
 - `server_access_list_fields_e2e_test.go`: public parser to serialized root config,
   real server/gatekeepers, independently signed JWTs, TLS protected resources,
   cache hits, malformed arrays, trust rejection, policy isolation and replacement,
-  plus direct construction rejecting invalid declarations and null rules.
+  default-action ordering through every guardian, plus direct construction
+  rejecting invalid declarations and null rules.
 
 Run focused packages through `make test`, generator automation through
 `make test-automation`, and `make ci-check` for the complete gate. New public

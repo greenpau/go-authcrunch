@@ -19,6 +19,8 @@ import (
 	"strings"
 	"testing"
 
+	"go.uber.org/zap"
+
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 )
 
@@ -37,6 +39,7 @@ func TestE2EACLGeneratedConditions(t *testing.T) {
 		{"amr mismatch", "match amr otp", map[string]any{"amr": []string{"pwd"}}, false},
 		{"amr missing", "match amr otp", map[string]any{}, false},
 		{"any unconditional", "match any", map[string]any{"exp": int64(1)}, true},
+		{"any without timestamps", "match any", nil, true},
 		{"any exact", "exact match any roles admin", map[string]any{"roles": []string{"admin"}}, true},
 		{"any exact mismatch", "exact match any roles admin", map[string]any{"roles": []string{"guest"}}, false},
 		{"regex one expression list input", "no regex match any roles ^admin$", map[string]any{"roles": []string{"admin", "guest"}}, true},
@@ -70,6 +73,43 @@ func TestE2EACLGeneratedConditions(t *testing.T) {
 			wantAny := strings.Contains(tc.condition, "match any ")
 			if got := conditions[0]["match_any"]; got != wantAny {
 				t.Fatalf("match_any = %v; want %t", got, wantAny)
+			}
+		})
+	}
+}
+
+func TestE2EACLDefaultOrdering(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		rules []*acl.RuleConfiguration
+		want  bool
+	}{
+		{"default allow", []*acl.RuleConfiguration{{Conditions: []string{"match any"}, Action: "allow"}}, true},
+		{"default deny overrides allow", []*acl.RuleConfiguration{
+			{Conditions: []string{"match roles admin"}, Action: "allow log debug"},
+			{Conditions: []string{"match any"}, Action: "deny"},
+		}, false},
+		{"allow stop precedes default deny", []*acl.RuleConfiguration{
+			{Conditions: []string{"match roles admin"}, Action: "allow stop"},
+			{Conditions: []string{"match any"}, Action: "deny"},
+		}, true},
+		{"deny overrides default allow", []*acl.RuleConfiguration{
+			{Conditions: []string{"match any"}, Action: "allow"},
+			{Conditions: []string{"match roles admin"}, Action: "deny stop"},
+		}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			access := acl.NewAccessList()
+			access.SetLogger(zap.NewNop())
+			if err := access.AddRules(t.Context(), tc.rules); err != nil {
+				t.Fatal(err)
+			}
+			data := map[string]any{"roles": []string{"admin"}}
+			if got := access.Allow(t.Context(), data); got != tc.want {
+				t.Fatalf("Allow() = %t, want %t", got, tc.want)
+			}
+			if len(data) != 1 {
+				t.Fatal("evaluation added claims to caller data")
 			}
 		})
 	}

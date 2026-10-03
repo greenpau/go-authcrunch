@@ -130,8 +130,11 @@ Unchanged files retain their timestamps and permissions.
 Preserve the current ACL behavior when changing templates, including `amr` as
 a list-valued field and condition-level `match any`. Negative regex conditions
 with list expressions or list inputs accept any nonmatching pair when that
-modifier is present; their default rejects any matching pair. The unconditional
-`match any` condition retains its existing `exp` field dependency.
+modifier is present; their default rejects any matching pair. Unconditional
+`match any` must evaluate even when its legacy compiled `exp` field is absent.
+Keep ordinary field-presence guards and explicit existence checks intact across
+all generated rule variants; the [ACL owner](../authorization-policy-acl/SKILL.md)
+owns the evaluation contract and regression coverage.
 
 Typed custom ACL fields pass per-list types into generated constructors; they
 must not modify the standard global field table. The handwritten empty-list

@@ -80,6 +80,14 @@ func TestE2EServerAccessListFields(t *testing.T) {
 			conditions = append(conditions, "match method GET", "prefix match path /private/")
 		}
 		addPolicy(fmt.Sprint("guard", flags), flags, []*acl.FieldConfig{parse("external_roles", rolesKey, true), parse("department", departmentKey, false)}, []*acl.RuleConfiguration{{Conditions: conditions, Action: "allow stop"}})
+		addPolicy(fmt.Sprint("default-deny", flags), flags, nil, []*acl.RuleConfiguration{
+			{Conditions: []string{"match roles viewer"}, Action: "allow log debug"},
+			{Conditions: []string{"match any"}, Action: "deny"},
+		})
+		addPolicy(fmt.Sprint("default-allow", flags), flags, []*acl.FieldConfig{parse("external_roles", rolesKey, true)}, []*acl.RuleConfiguration{
+			{Conditions: []string{"match any"}, Action: "allow"},
+			{Conditions: []string{"match external_roles blocked"}, Action: "deny stop"},
+		})
 	}
 	addPolicy("deny-fallback", 0, []*acl.FieldConfig{parse("external_roles", rolesKey, true)}, []*acl.RuleConfiguration{
 		{Conditions: []string{"match external_roles blocked"}, Action: "deny stop"},
@@ -251,6 +259,35 @@ func TestE2EServerAccessListFields(t *testing.T) {
 				bad := maps.Clone(claims)
 				bad["acl"] = map[string]any{"paths": []string{"/other/**"}}
 				request(srv, policy, "GET", "/private/document", sign(bad, secret), false)
+			}
+		})
+	}
+	for flags := range 8 {
+		t.Run(fmt.Sprint("default ordering", flags), func(t *testing.T) {
+			denyPolicy, allowPolicy := fmt.Sprint("default-deny", flags), fmt.Sprint("default-allow", flags)
+			request(srv, denyPolicy, "GET", "/private/document", token, false)
+			request(srv, allowPolicy, "GET", "/private/document", token, true)
+			misses := logs.FilterMessage("cache miss for JWT credentials").Len()
+			request(srv, allowPolicy, "GET", "/private/document", token, true)
+			if logs.FilterMessage("cache miss for JWT credentials").Len() != misses {
+				t.Fatal("default-allowed token was not cached")
+			}
+			for _, value := range []any{nil, "allowed", []any{"allowed", 7}, []string{"blocked"}} {
+				bad := maps.Clone(claims)
+				bad[rolesKey] = value
+				request(srv, allowPolicy, "GET", "/private/document", sign(bad, secret), false)
+			}
+			request(srv, allowPolicy, "GET", "/private/document", sign(claims, secret+"wrong"), false)
+			expired := maps.Clone(claims)
+			expired["exp"] = time.Now().Add(-time.Hour).Unix()
+			request(srv, allowPolicy, "GET", "/private/document", sign(expired, secret), false)
+			if flags&4 != 0 {
+				request(srv, allowPolicy, "GET", "/public/document", token, false)
+			}
+			if flags&2 != 0 {
+				bad := maps.Clone(claims)
+				bad["addr"] = "192.0.2.9"
+				request(srv, allowPolicy, "GET", "/private/document", sign(bad, secret), false)
 			}
 		})
 	}

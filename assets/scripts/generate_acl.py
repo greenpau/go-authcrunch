@@ -1002,8 +1002,9 @@ def makeRuleEvalMatchSingle(t):
     if 'Logger' in name:
         logger = True
 
+    # Unconditional conditions must not require their legacy placeholder field.
     output.append('''v, found := data[rule.field]
-    if !found {''')
+    if !found && !rule.condition.getConfig(ctx).alwaysTrue {''')
     output.append('''return ruleVerdictContinue
     }
     if !rule.condition.match(ctx, v) {''')
@@ -1087,7 +1088,7 @@ def makeRuleEvalMatchAny(t):
 
     output.append('''for i, field := range rule.fields {
                         v, found := data[field]
-                        if !found {
+                        if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
                             continue
                         }
                         if !rule.conditions[i].match(ctx, v) {
@@ -1148,7 +1149,7 @@ def makeRuleEvalMatchAnyWithFieldCheck(t):
 
     output.append('''for i, field := range rule.fields {
                         v, found := data[field]
-                        if !found {
+                        if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
                             continue
                         }
                         if !rule.conditions[i].match(ctx, v) {
@@ -1197,7 +1198,7 @@ def makeRuleEvalMatchAll(t):
     output.append('''var matched bool
     for i, field := range rule.fields {
         v, found := data[field]
-        if !found {
+        if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
             return ruleVerdictContinue
         }
         if !rule.conditions[i].match(ctx, v) {''')
@@ -1269,7 +1270,7 @@ def makeRuleEvalMatchAllWithFieldCheck(t):
     output.append('''var matched bool
     for i, field := range rule.fields {
         v, found := data[field]
-        if !found {
+        if !found && !rule.conditions[i].getConfig(ctx).alwaysTrue {
             return ruleVerdictContinue
         }
         if !rule.conditions[i].match(ctx, v) {''')
