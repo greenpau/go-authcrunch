@@ -11,10 +11,24 @@ TEST ?= .
 TEST_DIR ?= ./...
 # Aggregate package budget for race-enabled real-login tests.
 TEST_TIMEOUT ?= 30m
+# Leave CPU and memory available for the editor and operating system.
+TEST_PACKAGE_PARALLELISM ?= 1
+TEST_PARALLELISM ?= 2
+TEST_GOMAXPROCS ?= 2
+TEST_GO_MEMORY_MB ?= 512
+TEST_WALL_TIMEOUT ?= 2400
+TEST_MAX_PROCESSES ?= 128
+TEST_ARTIFACT_MB ?= 256
 QUICK_TEST_DIR ?= ./pkg/system
 COVERAGE_DIR ?= .coverage
 MINIMUM_COVERAGE ?= 1
 export TEST TEST_DIR TEST_TIMEOUT QUICK_TEST_DIR COVERAGE_DIR MINIMUM_COVERAGE
+export TEST_PACKAGE_PARALLELISM TEST_PARALLELISM TEST_GOMAXPROCS TEST_GO_MEMORY_MB
+export TEST_WALL_TIMEOUT TEST_MAX_PROCESSES TEST_ARTIFACT_MB
+# Unset means auto-detect a budget; do not export an undefined Make variable.
+ifneq ($(origin TEST_MEMORY_MB),undefined)
+export TEST_MEMORY_MB
+endif
 export APP_VERSION GIT_COMMIT GIT_BRANCH BUILD_USER BUILD_DATE
 export PYTHONDONTWRITEBYTECODE := 1
 
@@ -58,9 +72,10 @@ install-test-tools:
 test: run-tests
 
 run-tests:
-	@go tool tested run --output-dir "$$COVERAGE_DIR" \
+	@$(PYTHON) assets/scripts/test_guard.py run go tool tested run --output-dir "$$COVERAGE_DIR" \
 		--title "AuthCrunch Go tests" --minimum-coverage "$$MINIMUM_COVERAGE" \
-		-- -mod=readonly -race -count=1 -timeout "$$TEST_TIMEOUT" -v -run "$$TEST" $$TEST_DIR
+		-- -mod=readonly -race -count=1 -p "$$TEST_PACKAGE_PARALLELISM" \
+		-parallel "$$TEST_PARALLELISM" -timeout "$$TEST_TIMEOUT" -v -run "$$TEST" $$TEST_DIR
 
 qtest: run-quick-tests
 
@@ -68,7 +83,7 @@ run-quick-tests:
 	@$(MAKE) run-tests TEST_DIR="$$QUICK_TEST_DIR" COVERAGE_DIR="$$COVERAGE_DIR/quick"
 
 run-reports:
-	@go tool tested report --output-dir "$$COVERAGE_DIR" --title "AuthCrunch Go tests"
+	@$(PYTHON) assets/scripts/test_guard.py report go tool tested report --output-dir "$$COVERAGE_DIR" --title "AuthCrunch Go tests"
 
 test-ui:
 	@node --test --test-reporter=spec pkg/authn/ui/testdata/*_client_test.cjs

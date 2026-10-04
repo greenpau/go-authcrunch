@@ -18,6 +18,8 @@ class TestTimeoutTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='authcrunch-timeout-') as directory:
             root = Path(directory)
             shutil.copyfile(ROOT / 'Makefile', root / 'Makefile')
+            (root / 'assets/scripts').mkdir(parents=True)
+            shutil.copyfile(ROOT / 'assets/scripts/test_guard.py', root / 'assets/scripts/test_guard.py')
             (root / 'VERSION').write_text('1.0.0\n')
             capture = root / 'arguments.json'
             # Observe the real Make recipe at its tool boundary. The lifecycle
@@ -59,7 +61,8 @@ class TestTimeoutTests(unittest.TestCase):
                         go_arguments = arguments[arguments.index('--') + 1:]
                         quick = target in ('qtest', 'run-quick-tests')
                         self.assertEqual(go_arguments, [
-                            '-mod=readonly', '-race', '-count=1', '-timeout', expected,
+                            '-mod=readonly', '-race', '-count=1', '-p', '1',
+                            '-parallel', '2', '-timeout', expected,
                             '-v', '-run', '^TestSelected$',
                             './pkg/quick' if quick else './pkg/example',
                         ])

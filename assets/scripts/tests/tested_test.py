@@ -23,6 +23,8 @@ class TestedLifecycleTests(unittest.TestCase):
             env.update(PYTHONDONTWRITEBYTECODE='1', TEST='.', TEST_DIR='./...',
                        COVERAGE_DIR='.coverage', MINIMUM_COVERAGE='1')
             shutil.copyfile(ROOT / 'Makefile', root / 'Makefile')
+            (root / 'assets/scripts').mkdir(parents=True)
+            shutil.copyfile(ROOT / 'assets/scripts/test_guard.py', root / 'assets/scripts/test_guard.py')
             (root / 'VERSION').write_text('1.0.0\n')
             pinned = re.search(r'github.com/greenpau/tested (v\S+)', (ROOT / 'go.mod').read_text()).group(1)
             (root / 'go.mod').write_text('module example.invalid/testedfixture\n\ngo 1.25.0\n\n'

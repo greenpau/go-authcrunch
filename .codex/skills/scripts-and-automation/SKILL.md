@@ -45,8 +45,14 @@ boundary for these workflows.
 `make test` owns test execution and reporting; it never runs license rewrites,
 module tidy, or version synchronization. `run-tests` aliases the same tested
 lifecycle. `run-quick-tests` underlies `qtest`. There is no `ctest` target.
-`COVERAGE_DIR` selects output; concurrent independent invocations must use
-separate directories. `TEST` is a regex, not a fragment of Go flags. `TEST_TIMEOUT` is a quoted
+`COVERAGE_DIR` selects output; use separate directories to retain independent
+bundles. Test and report runs in one checkout are serialized by a nonblocking
+lock, including invocations from other terminals or agents. Read
+[test resource controls](references/test-resources.md) when running or changing
+the memory watchdog, concurrency, cancellation, output limits, or diagnosing a
+resource abort. Do not start additional expensive validation alongside a test
+run or bypass the guard to force an over-budget suite to finish.
+`TEST` is a regex, not a fragment of Go flags. `TEST_TIMEOUT` is a quoted
 Go per-package duration (default `30m`) forwarded through tested; use it instead
 of embedding flags in `TEST`. Environment overrides apply to both full and quick
 runs; a Make command-line assignment takes precedence and survives recursive
@@ -57,6 +63,11 @@ these budgets. Preserve individual request/process deadlines.
 
 `assets/scripts/tests/test_timeout_test.py` checks default and override argument
 forwarding for all four test entry points at the tool boundary.
+`assets/scripts/tests/test_guard_test.py` exercises real Make invocations with
+bounded subprocess fixtures: memory, process, time and artifact limits, output
+flooding, monitoring failures, cancellation, descendant cleanup, overlapping
+runs, override forwarding, host memory pressure refusal, and live progress
+during quiet work before the child finishes.
 `assets/scripts/tests/tested_test.py` exercises pinned tested and real Go tests:
 default forwarding, a recursive quick-run override, and a short environment
 deadline that remains a failed run in live and offline reports.

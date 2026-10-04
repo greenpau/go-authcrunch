@@ -94,7 +94,15 @@ make test-automation
 make ci-check
 ```
 
-Go lifecycle runs use `-mod=readonly -race -count=1 -timeout 30m -v`.
+Go lifecycle runs use `-mod=readonly -race -count=1 -p 1 -parallel 2 -timeout 30m -v`.
+The macOS/Linux resource supervisor covers compilation, test descendants and
+report generation. It defaults to two Go execution threads, a 512 MiB Go memory
+target per process, and a sampled aggregate budget of the smaller of 3 GiB or
+three-eighths of physical RAM. A Go memory target alone does not cap race-detector
+or browser memory. Follow the
+[resource controls](../scripts-and-automation/references/test-resources.md)
+for overrides, evidence, platform limits and abort recovery. Never raise or
+disable safeguards simply to make a failing run appear successful.
 `TEST_TIMEOUT` overrides the per-package limit through the quoted Go flag.
 The real-login suite can exceed twenty minutes under race instrumentation.
 The CI job allows 45 minutes for setup, compilation, the package budget, other
@@ -108,13 +116,17 @@ budgets together when healthy cumulative work exhausts the limit; never disable
 deadlines or skip E2E to clear a timeout. `TEST` is a test regex
 (default `.`); `TEST_DIR` accepts package patterns (default `./...`). Reports
 land in `.coverage`, or `.coverage/quick` for `qtest`. Use `COVERAGE_DIR` to
-separate independent concurrent runs. `MINIMUM_COVERAGE` defaults to 1 percent
+retain separate runs; overlapping guarded runs in the same checkout are refused.
+`MINIMUM_COVERAGE` defaults to 1 percent
 as a nonzero-profile check, matching the reference tested workflow; it is not a
 claim of a substantial coverage target. Raise it only with an intentional
 coverage policy and measured baseline.
 
 Direct `go test` is appropriate for a narrow debugging iteration, compile-only
-check, or fuzzing; it is not the report lifecycle. `make test-ui` discovers
+check, or fuzzing; run it under `python3 assets/scripts/test_guard.py run go test ...`
+to retain the resource guard. It is not the report lifecycle. Agents must
+serialize expensive validation, including builds and diagnostics, and avoid
+background duplicate suites. `make test-ui` discovers
 `pkg/authn/ui/testdata/*_client_test.cjs` and runs Node's spec reporter for login/QR
 and refresh-client simulations. Automation uses verbose Python unittest
 discovery. Both use standard-library facilities. The default Go suite also runs
@@ -217,6 +229,12 @@ diagnostics.
 failures. An offline `make run-reports` preserves recorded failure status.
 Inspect `run.json`, `stderr.log`, and `test_output.jsonl` before rerunning a
 failed command; do not replace failed evidence with a passing summary.
+For a guard abort, inspect `resource-usage.json` first. It records the measured
+peak, configured budget and stop reason, and is periodically updated while the
+run is active. Forced cleanup may leave raw evidence without tested's final
+reports. `make run-reports` refuses interrupted/aborted evidence; a new test run
+is required. Report regeneration has its own `resource-report-usage.json` and
+does not overwrite the original execution measurements.
 
 A coherent full coverage run produces:
 

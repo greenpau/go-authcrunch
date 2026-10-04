@@ -49,6 +49,11 @@ make ci-check
 `make test` runs race-enabled Go tests through pinned `tested` and writes the
 coverage/report bundle to `.coverage/index.html`. Use `make test-ui` for browser
 session tests and `make build` for `bin/authdb` and `bin/authdbctl`.
+Tests run one package at a time with a memory/process watchdog on macOS and
+Linux. An exceeded budget stops the run and records the reason in
+`.coverage/resource-usage.json`. See the
+[test resource controls](.codex/skills/scripts-and-automation/references/test-resources.md)
+for limits and troubleshooting.
 
 Run `make generate-acl` to regenerate ACL conditions, rules, and their tests
 from `assets/scripts/generate_acl.py`. It requires Python 3.9+ and `gofmt` on

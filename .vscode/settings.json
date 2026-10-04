@@ -1,5 +1,22 @@
 {
     "files.associations": {
         "*.template": "gohtml"
+    },
+    "terminal.integrated.scrollback": 2000,
+    "files.watcherExclude": {
+        "**/.coverage/**": true,
+        "**/tmp/**": true,
+        "**/.tmp/**": true,
+        "**/bin/**": true,
+        "**/dist/**": true,
+        "**/.doc/**": true
+    },
+    "search.exclude": {
+        "**/.coverage/**": true,
+        "**/tmp/**": true,
+        "**/.tmp/**": true,
+        "**/bin/**": true,
+        "**/dist/**": true,
+        "**/.doc/**": true
     }
 }
