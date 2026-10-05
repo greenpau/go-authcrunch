@@ -35,6 +35,10 @@ RSS. Shared pages may be counted multiple times. Once per second it checks host
 pressure: macOS critical pressure stops the tests, as does Linux available RAM
 below the larger of 256 MiB and ten percent of total RAM. Pressure is checked
 before launch too. Failures to monitor stop work rather than silently continuing.
+Process exit during a sample is expected: Linux `/proc/<pid>/status` can raise
+`ENOENT` or `ESRCH` after the `ps` snapshot, including if the process exits between
+opening and reading the file. Both contribute zero memory for that process;
+permission, I/O and malformed accounting errors still stop the workflow.
 
 The supervisor follows parent/child relationships and remembers process start
 times, including observed children that create another process group/session
@@ -122,3 +126,6 @@ Validate changes with `make test-automation`, including the real tested success,
 failure, build-failure, timeout and offline-report fixture. Also run the real
 OIDC and portal capacity E2E tests under the guard; synthetic memory fixtures
 alone do not establish that ordinary high-memory tests remain usable.
+The guard's Make fixtures inject Linux proc-read errors on either host to check
+that vanished processes preserve successful and failing child exits, while
+permission and I/O errors still abort and clean up owned work.

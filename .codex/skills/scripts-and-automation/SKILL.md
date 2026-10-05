@@ -69,6 +69,8 @@ flooding, monitoring failures, cancellation, descendant cleanup, overlapping
 runs, override forwarding, host memory pressure refusal, and live progress
 during quiet work before the child finishes. Output fixtures verify recovery
 after rate-limited bursts, visible throttling notices, and continued heartbeats.
+Linux proc-read fixtures distinguish normal process exits from accounting
+failures and verify child results and cleanup through Make on either host.
 `assets/scripts/tests/tested_test.py` exercises pinned tested and real Go tests:
 live log forwarding before a test can finish, default forwarding, a recursive
 quick-run override, and a short environment deadline that remains a failed run

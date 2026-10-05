@@ -1,5 +1,6 @@
 """Exercise resource refusal and process cleanup through the real Make workflow."""
 
+import errno
 import importlib.util
 import json
 import os
@@ -346,6 +347,78 @@ class TestGuardTests(unittest.TestCase):
         result = self.make('test')
         self.assert_stopped(result, 'non-zero exit status')
         self.assert_dead(int((self.root / 'tool.pid').read_text()))
+
+    def test_linux_memory_accounts_for_swap_and_exited_processes(self):
+        with mock.patch.object(guard.sys, 'platform', 'linux'):
+            usage = guard.MemoryUsage()
+        for status, expected in (('VmRSS: 128 kB\nVmSwap: 32 kB\n', 160 * 1024),
+                                 ('Name: zombie\n', 128 * 1024)):
+            with self.subTest(status=status), mock.patch.object(Path, 'read_text', return_value=status):
+                self.assertEqual(usage.bytes(123, 128 * 1024), expected)
+        for code in (errno.ENOENT, errno.ESRCH):
+            with self.subTest(errno=code), mock.patch.object(
+                    Path, 'read_text', side_effect=OSError(code, os.strerror(code))):
+                self.assertEqual(usage.bytes(123, 128 * 1024), 0)
+
+    def test_linux_memory_preserves_other_monitoring_errors(self):
+        with mock.patch.object(guard.sys, 'platform', 'linux'):
+            usage = guard.MemoryUsage()
+        for code in (errno.EACCES, errno.EPERM, errno.EIO):
+            error = OSError(code, os.strerror(code))
+            with self.subTest(errno=code), mock.patch.object(Path, 'read_text', side_effect=error):
+                with self.assertRaises(OSError) as caught:
+                    usage.bytes(123, 1024)
+                self.assertIs(caught.exception, error)
+        with mock.patch.object(Path, 'read_text', return_value='VmSwap: invalid kB\n'):
+            with self.assertRaises(ValueError):
+                usage.bytes(123, 1024)
+
+    def test_e2e_linux_proc_errors_preserve_results_and_cleanup(self):
+        # Inject Linux proc-read failures at the syscall boundary on either host;
+        # retain the real Make entry point, supervisor, process tree and cleanup.
+        launcher = self.root / 'proc_fixture.py'
+        launcher.write_text('import importlib.util, os, sys\nfrom pathlib import Path\n'
+                            'spec=importlib.util.spec_from_file_location("guard",sys.argv.pop(1))\n'
+                            'guard=importlib.util.module_from_spec(spec)\nspec.loader.exec_module(guard)\n'
+                            'usage=guard.MemoryUsage()\nusage.libproc=None\n'
+                            'guard.MemoryUsage=lambda: usage\n'
+                            'read_text=Path.read_text\n'
+                            'def proc_read(path,*args,**kwargs):\n'
+                            '    if str(path).startswith("/proc/") and path.name=="status":\n'
+                            '        pid=Path("tool.pid")\n'
+                            '        if pid.exists() and path.parent.name==read_text(pid):\n'
+                            '            Path("probe-error").touch()\n'
+                            '            code=int(os.environ["PROC_ERROR"])\n'
+                            '            raise OSError(code,os.strerror(code))\n'
+                            '        return "VmSwap: 0 kB\\n"\n'
+                            '    return read_text(path,*args,**kwargs)\n'
+                            'Path.read_text=proc_read\nsys.exit(guard.main())\n')
+        cases = ((errno.ENOENT, 0), (errno.ESRCH, 0), (errno.ESRCH, 7),
+                 (errno.EACCES, None), (errno.EIO, None))
+        for code, exit_code in cases:
+            with self.subTest(errno=code, exit_code=exit_code):
+                for name in ('tool.pid', 'probe-error'):
+                    (self.root / name).unlink(missing_ok=True)
+                self.env['PROC_ERROR'] = str(code)
+                self.tool('import os,sys,time\nfrom pathlib import Path\n'
+                          'Path("tool.pid").write_text(str(os.getpid()))\n'
+                          'deadline=time.monotonic()+5\n'
+                          'while not Path("probe-error").exists():\n'
+                          '    if time.monotonic()>deadline: sys.exit(99)\n'
+                          '    time.sleep(.02)\n'
+                          + ('time.sleep(30)' if exit_code is None else
+                             f'time.sleep(.5)\nprint("fixture complete",flush=True)\nsys.exit({exit_code})'))
+                result = self.make('test', 'PYTHON=' + sys.executable + ' proc_fixture.py')
+                self.assertTrue((self.root / 'probe-error').exists(), result.stdout + result.stderr)
+                if exit_code is None:
+                    self.assert_stopped(result, os.strerror(code))
+                    self.assert_dead(int((self.root / 'tool.pid').read_text()))
+                else:
+                    self.assertEqual(result.returncode == 0, exit_code == 0,
+                                     result.stdout + result.stderr)
+                    self.assertIn('fixture complete', result.stdout)
+                    self.assertEqual(self.status()['exit_code'], exit_code)
+                    self.assertEqual(self.status()['status'], 'passed' if exit_code == 0 else 'failed')
 
     @unittest.skipUnless(sys.platform == 'darwin', 'macOS pressure interface')
     def test_e2e_system_pressure_refuses_work_before_start(self):

@@ -122,7 +122,9 @@ class MemoryUsage:
                 for line in Path(f'/proc/{pid}/status').read_text().splitlines():
                     if line.startswith('VmSwap:'):
                         return rss + int(line.split()[1]) * 1024
-            except FileNotFoundError:
+            except (FileNotFoundError, ProcessLookupError):
+                # A process can exit after ps, including between opening and
+                # reading its proc status file. Both ENOENT and ESRCH mean gone.
                 return 0
         return rss
 
