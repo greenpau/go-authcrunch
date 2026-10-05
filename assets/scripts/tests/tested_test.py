@@ -4,9 +4,11 @@ import json
 import os
 import re
 from pathlib import Path
+import selectors
 import shutil
 import subprocess
 import tempfile
+import time
 import unittest
 
 
@@ -34,8 +36,15 @@ class TestedLifecycleTests(unittest.TestCase):
                                               if line.startswith('github.com/greenpau/tested ')))
             (root / 'fixture.go').write_text('package fixture\nfunc Value() int { return 42 }\n')
             test = root / 'fixture_test.go'
-            test.write_text('package fixture\nimport "testing"\n'
-                            'func TestSelected(t *testing.T) { if Value()!=42 { t.Fatal("value") } }\n'
+            test.write_text('package fixture\nimport ("os"; "testing"; "time")\n'
+                            'func TestSelected(t *testing.T) {\n'
+                            'if gate := os.Getenv("TESTED_STREAM_GATE"); gate != "" {\n'
+                            't.Log("streaming fixture ready")\n'
+                            'deadline := time.Now().Add(20*time.Second)\n'
+                            'for { if _, err := os.Stat(gate); err == nil { break }; '
+                            'if time.Now().After(deadline) { t.Fatal("live output was not forwarded") }; '
+                            'time.Sleep(10*time.Millisecond) }\n}\n'
+                            'if Value()!=42 { t.Fatal("value") } }\n'
                             'func TestExcluded(t *testing.T) { t.Fatal("must be filtered out") }\n')
             subprocess.run(['git', 'init', '-q', '-b', 'main'], cwd=root, env=env, check=True)
             source = {p.name: p.read_bytes() for p in root.iterdir() if p.is_file()}
@@ -52,7 +61,37 @@ class TestedLifecycleTests(unittest.TestCase):
             report.mkdir()
             notes = report / 'notes.txt'
             notes.write_text('Keep investigation notes across test runs.\n')
-            result = make('test', 'TEST=^TestSelected$')
+            # The Go test cannot finish until its log crosses tested, the guard,
+            # and Make. A final buffered summary cannot satisfy this handshake.
+            gate = root / 'stream-release'
+            env['TESTED_STREAM_GATE'] = str(gate)
+            process = subprocess.Popen(['make', 'test', 'TEST=^TestSelected$'], cwd=root,
+                                       env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            output = bytearray()
+            try:
+                deadline = time.monotonic() + 120
+                with selectors.DefaultSelector() as selector:
+                    selector.register(process.stdout, selectors.EVENT_READ)
+                    while b'streaming fixture ready' not in output:
+                        remaining = deadline - time.monotonic()
+                        self.assertGreater(remaining, 0, output.decode())
+                        self.assertTrue(selector.select(remaining), output.decode())
+                        chunk = os.read(process.stdout.fileno(), 4096)
+                        self.assertTrue(chunk, output.decode())
+                        output.extend(chunk)
+                self.assertIsNone(process.poll(), output.decode())
+                self.assertFalse(gate.exists())
+                gate.touch()
+                tail, _ = process.communicate(timeout=60)
+                result = subprocess.CompletedProcess(process.args, process.returncode,
+                                                     (output + tail).decode())
+            finally:
+                env.pop('TESTED_STREAM_GATE')
+                gate.touch()
+                if process.poll() is None:
+                    process.terminate()
+                    process.communicate(timeout=10)
+                process.stdout.close()
             self.assertEqual(result.returncode, 0, result.stdout)
             self.assertEqual(notes.read_text(), 'Keep investigation notes across test runs.\n')
             for name in ('index.html', 'test_output.html', 'coverage.html', 'coverage.out',

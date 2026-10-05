@@ -132,10 +132,98 @@ class TestGuardTests(unittest.TestCase):
                   'sys.exit(7)')
         result = self.make('test')
         self.assertNotEqual(result.returncode, 0)
-        self.assertLess(len(result.stdout), 270000)
-        self.assertTrue('Console limit reached' in result.stdout, result.stdout[-1000:])
+        windows = int(self.status()['elapsed_seconds'] / guard.CONSOLE_WINDOW_SECONDS) + 1
+        self.assertLess(len(result.stdout), windows * (guard.CONSOLE_BYTES + 256) + 1000)
+        self.assertIn('Output rate limit reached', result.stdout)
+        self.assertGreater(self.status()['console_dropped_bytes'], 0)
         self.assertEqual(self.status()['exit_code'], 7)
         self.assertEqual(self.status()['status'], 'failed')
+
+    def test_console_rate_recovers_and_preserves_heartbeat(self):
+        output = bytearray()
+
+        def write(fd, block):
+            output.extend(block)
+            return len(block)
+
+        with mock.patch.object(guard.time, 'monotonic', return_value=0) as clock, \
+                mock.patch.object(guard.os, 'write', side_effect=write):
+            console = guard.ConsoleOutput(1)
+            console.forward(b'x' * (guard.CONSOLE_BYTES + 100))
+            console.forward(b'dropped')
+            console.progress(b'\nheartbeat\n')
+            self.assertIn(b'Output rate limit reached', output)
+            self.assertEqual(output.count(b'Output rate limit reached'), 1)
+            self.assertIn(b'heartbeat', output)
+            self.assertTrue(output.startswith(b'x' * guard.CONSOLE_BYTES + b'\n[test guard]'))
+            self.assertEqual(console.dropped_bytes, 107)
+            clock.return_value = guard.CONSOLE_WINDOW_SECONDS
+            console.forward(b'later test passed\n')
+            self.assertTrue(output.endswith(b'later test passed\n'))
+
+    def test_console_counts_short_and_blocked_writes(self):
+        with mock.patch.object(guard.os, 'write', side_effect=[2, BlockingIOError(), BrokenPipeError()]):
+            console = guard.ConsoleOutput(1)
+            console.forward(b'partial')
+            console.forward(b'blocked')
+            console.forward(b'closed')
+            self.assertEqual(console.dropped_bytes, 18)
+
+    def test_console_retries_notice_before_later_progress(self):
+        with mock.patch.object(guard.os, 'write', side_effect=[guard.CONSOLE_BYTES,
+                                                             BlockingIOError(), 5]) as write:
+            console = guard.ConsoleOutput(1)
+            console.forward(b'x' * (guard.CONSOLE_BYTES + 1))
+            notice = console.pending_notice
+            self.assertIn(b'Output rate limit reached', notice)
+            console.flush_notice()
+            self.assertEqual(console.pending_notice, notice[5:])
+            write.side_effect = lambda fd, block: len(block)
+            console.progress(b'heartbeat')
+            self.assertEqual(console.pending_notice, b'')
+            self.assertEqual(write.call_args_list[-2].args[1], notice[5:])
+            self.assertEqual(write.call_args_list[-1].args[1], b'heartbeat')
+
+    def test_e2e_output_resumes_and_heartbeat_survives_flood(self):
+        self.tool('import os,time\nfrom pathlib import Path\n'
+                  'for _ in range(128): os.write(1,b"x"*8192)\n'
+                  'time.sleep(1.2)\nprint("progress after burst",flush=True)\n'
+                  'deadline=time.monotonic()+15\n'
+                  'while not Path("release").exists() and time.monotonic()<deadline: time.sleep(.02)\n'
+                  'print("fixture complete",flush=True)')
+        first = subprocess.Popen(self.command('test', 'TEST_WALL_TIMEOUT=20'),
+                                 cwd=self.root, env=self.env,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            output = bytearray()
+            deadline = time.monotonic() + 14
+            with selectors.DefaultSelector() as selector:
+                selector.register(first.stdout, selectors.EVENT_READ)
+                while b'[test guard] Elapsed ' not in output:
+                    remaining = deadline - time.monotonic()
+                    self.assertGreater(remaining, 0, output[-1000:].decode())
+                    self.assertTrue(selector.select(remaining), output[-1000:].decode())
+                    chunk = os.read(first.stdout.fileno(), 16384)
+                    self.assertTrue(chunk, output[-1000:].decode())
+                    output.extend(chunk)
+            self.assertIsNone(first.poll())
+            notice = output.index(b'Output rate limit reached')
+            progress = output.index(b'progress after burst')
+            heartbeat = output.index(b'[test guard] Elapsed ')
+            self.assertLess(notice, progress)
+            self.assertLess(progress, heartbeat)
+            self.assertNotIn(b'fixture complete', output)
+            (self.root / 'release').touch()
+            tail, stderr = first.communicate(timeout=10)
+            self.assertEqual(first.returncode, 0, stderr.decode())
+            self.assertIn(b'fixture complete', tail)
+            self.assertGreater(self.status()['console_dropped_bytes'], 0)
+        finally:
+            if first.poll() is None:
+                first.kill()
+                first.communicate(timeout=5)
+            first.stdout.close()
+            first.stderr.close()
 
     def test_e2e_quiet_work_reports_progress_before_completion(self):
         self.tool('import time\ntime.sleep(12)\nprint("fixture complete")')

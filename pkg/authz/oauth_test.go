@@ -28,12 +28,14 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/state"
-	"go.uber.org/zap"
 )
 
 type oauthProviderStub struct {
@@ -119,6 +121,9 @@ func TestE2EOAuthPersistentRestoreIsAtomic(t *testing.T) {
 }
 
 func TestE2EOAuthPersistentCapacityRefusalPreservesAuthority(t *testing.T) {
+	if tests.IsolateCapacityTest(t) {
+		return
+	}
 	p := &oauthProviderStub{}
 	g := newOAuthUnitGatekeeper(t, p)
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

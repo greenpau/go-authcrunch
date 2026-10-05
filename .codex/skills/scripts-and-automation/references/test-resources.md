@@ -62,16 +62,22 @@ do not share this lock. Agents must serialize other expensive work too.
 
 The guard prints elapsed time, current aggregate memory and process count every
 10 seconds, including during compilation and report generation. Pinned tested
-prints package summaries on completion; sequential packages can otherwise leave
-the terminal quiet for minutes. Progress lines share the 256 KiB console budget
-with forwarded child output. A slow or disconnected terminal may drop
-presentation bytes rather than block resource checks. Full
+v1.1.0 also streams test activity and bounded log previews, identifies reporting
+stages, and prints a heartbeat during quiet work. Keep its default live output
+enabled; `--quiet` and `--format json` suppress it. Forwarded child output has a
+256 KiB per-second burst limit, with a fresh allowance each second; there is no
+lifetime console cutoff. A burst that exceeds the allowance emits a notice and
+later test output resumes automatically. Guard heartbeats bypass this allowance
+and continue every ten seconds. Writes remain nonblocking: a slow or disconnected
+terminal may drop presentation bytes rather than block resource checks. Full
 Go output remains in tested's raw evidence until an artifact or other resource
 budget is reached. Workspace VS Code settings exclude generated reports/build
 directories from watching/search and retain 2,000 terminal scrollback lines.
 
 `resource-usage.json` records execution status, budget, peak memory/process
-counts, recent largest process IDs, elapsed time and stop reason. Reporting uses
+counts, recent largest process IDs, elapsed time and stop reason.
+`console_dropped_bytes` counts child-output bytes omitted by throttling or a
+blocked terminal; the guard reports that count at completion. Reporting uses
 `resource-report-usage.json`. These files supplement tested's evidence; a killed
 run can lack `run.json` or a completed manifest. Offline reporting refuses a
 previous `running` or `aborted` guard record, including a supervisor interrupted
@@ -91,6 +97,26 @@ capacity fixture may serialize many large snapshots; a package's elapsed time
 and output size alone do not reveal its memory demand. The macOS Force Quit
 application grouping does not establish which test, editor extension or agent
 caused a historical spike. Preserve the original incident evidence.
+
+The portal's HTML/JSON session-cache and gatekeeper OAuth capacity journeys use
+`tests.IsolateCapacityTest` from `internal/tests/capacity.go` to run each in a
+child of the same test binary with a five-minute deadline. Their real 64 MiB
+persistence boundary creates large Go and race-detector allocations that can
+remain resident after a test finishes. Process exit releases
+that memory before Chrome starts later in the package. Keep race instrumentation,
+the inherited resource controls, all capacity assertions, and child failures.
+Forward `-test.gocoverdir` so the parent merges child counters into its profile;
+never give a child the parent's `-test.coverprofile` output path.
+Validate the sequence together, since testing the browser alone misses retained
+memory from earlier capacity work:
+
+```sh
+make test TEST_DIR=./pkg/authn TEST='TestE2EHTMLSessionCacheCapacityRollback|TestTokenRefreshJSONSessionCacheCapacityRecovery|TestE2ECookieBrowserLogout' COVERAGE_DIR=.coverage/capacity-browser
+make test TEST_DIR=./pkg/authz TEST='TestE2EOAuthPersistentCapacityRefusalPreservesAuthority|TestE2EAuthorizationRedirectBrowserOrigin' COVERAGE_DIR=.coverage/authorization-capacity-browser
+```
+
+`TestE2EIsolateCapacityTest` checks separate-process execution, child failure
+propagation, and preservation of both wrapper and child coverage counters.
 
 Validate changes with `make test-automation`, including the real tested success,
 failure, build-failure, timeout and offline-report fixture. Also run the real

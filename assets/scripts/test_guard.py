@@ -21,6 +21,55 @@ MIB = 1024 * 1024
 POLL_SECONDS = 0.2
 HEARTBEAT_SECONDS = 10
 CONSOLE_BYTES = 256 * 1024
+CONSOLE_WINDOW_SECONDS = 1
+
+
+class ConsoleOutput:
+    """Bound output bursts without silencing later tests or guard heartbeats."""
+
+    def __init__(self, fd):
+        self.fd = fd
+        self.next_window = time.monotonic() + CONSOLE_WINDOW_SECONDS
+        self.window_bytes = 0
+        self.notified = False
+        self.dropped_bytes = 0
+        self.pending_notice = b''
+
+    def write(self, block):
+        # A stalled terminal must never block resource checks. tested owns the
+        # complete evidence; this presentation stream can drop bytes.
+        try:
+            return os.write(self.fd, block)
+        except (BlockingIOError, BrokenPipeError):
+            return 0
+
+    def flush_notice(self):
+        if self.pending_notice:
+            written = self.write(self.pending_notice)
+            self.pending_notice = self.pending_notice[written:]
+
+    def progress(self, block):
+        self.flush_notice()
+        self.write(block)
+
+    def forward(self, block):
+        self.flush_notice()
+        now = time.monotonic()
+        if now >= self.next_window:
+            self.next_window = now + CONSOLE_WINDOW_SECONDS
+            self.window_bytes = 0
+            self.notified = False
+        remaining = CONSOLE_BYTES - self.window_bytes
+        chunk = block[:remaining]
+        self.window_bytes += len(chunk)
+        written = self.write(chunk) if chunk else 0
+        self.dropped_bytes += len(block) - written
+        if len(block) > remaining and not self.notified:
+            self.notified = True
+            if not self.pending_notice:
+                self.pending_notice = (b'\n[test guard] Output rate limit reached; live output resumes '
+                                       b'in the next second. Full logs remain in the tested evidence.\n')
+            self.flush_notice()
 
 
 class RUsage(ctypes.Structure):
@@ -182,7 +231,6 @@ def supervise(command, output, memory_mb, seconds, max_processes, artifact_mb, r
     known = {}
     started = time.monotonic()
     launcher = os.getppid()
-    printed = 0
     next_sample = 0
     next_host_check = 0
     next_heartbeat = started + HEARTBEAT_SECONDS
@@ -191,20 +239,7 @@ def supervise(command, output, memory_mb, seconds, max_processes, artifact_mb, r
     was_blocking = os.get_blocking(stdout_fd)
     sys.stdout.flush()
     os.set_blocking(stdout_fd, False)
-
-    def forward(block):
-        nonlocal printed
-        remaining = CONSOLE_BYTES - printed
-        if remaining <= 0:
-            return
-        chunk = block[:remaining]
-        printed += len(chunk)
-        try:
-            # A stalled IDE/pipe must never block resource checks. Detailed
-            # output is already recorded by tested; presentation can be dropped.
-            os.write(stdout_fd, chunk)
-        except (BlockingIOError, BrokenPipeError):
-            pass
+    console = ConsoleOutput(stdout_fd)
 
     try:
         child = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -241,10 +276,11 @@ def supervise(command, output, memory_mb, seconds, max_processes, artifact_mb, r
                     if now >= next_host_check:
                         check_host_pressure()
                         status['elapsed_seconds'] = round(now - started, 2)
+                        status['console_dropped_bytes'] = console.dropped_bytes
                         write_status(status_path, status)
                         next_host_check = now + 1
                     if now >= next_heartbeat:
-                        forward((f'[test guard] Elapsed {now - started:.0f}s; '
+                        console.progress((f'\n[test guard] Elapsed {now - started:.0f}s; '
                                  f'memory {memory / MIB:.0f}/{memory_mb} MiB; '
                                  f'{len(known)} processes\n').encode())
                         next_heartbeat = now + HEARTBEAT_SECONDS
@@ -254,7 +290,7 @@ def supervise(command, output, memory_mb, seconds, max_processes, artifact_mb, r
                     if not block:
                         selector.unregister(key.fileobj)
                         continue
-                    forward(block)
+                    console.forward(block)
                 # Account and collect descendants before poll reaps the leader.
                 code = child.poll()
                 if code is not None:
@@ -262,16 +298,16 @@ def supervise(command, output, memory_mb, seconds, max_processes, artifact_mb, r
                     status['status'] = 'passed' if result == 0 else 'failed'
                     # Drain only the pipe's bounded existing tail. A descendant
                     # keeping stdout open cannot postpone cleanup indefinitely.
-                    while selector.get_map():
+                    drained = 0
+                    while selector.get_map() and drained < CONSOLE_BYTES:
                         try:
                             block = os.read(child.stdout.fileno(), 16384)
                         except BlockingIOError:
                             break
                         if not block:
                             break
-                        forward(block)
-                        if printed >= CONSOLE_BYTES:
-                            break
+                        drained += len(block)
+                        console.forward(block)
                     break
             # The leader exited; kill only remembered children after verifying
             # their identities. Do not reuse the reaped leader's PID.
@@ -298,12 +334,14 @@ def supervise(command, output, memory_mb, seconds, max_processes, artifact_mb, r
             signal.signal(sig, handler)
         status['elapsed_seconds'] = round(time.monotonic() - started, 2)
         status['exit_code'] = result
+        status['console_dropped_bytes'] = console.dropped_bytes
         write_status(status_path, status)
         os.set_blocking(stdout_fd, was_blocking)
     if status['status'] == 'aborted':
         print(f"\n[test guard] STOPPED: {status['reason']}. Evidence: {output}", file=sys.stderr, flush=True)
-    if printed >= CONSOLE_BYTES:
-        print('\n[test guard] Console limit reached; inspect the tested evidence files.', flush=True)
+    if console.dropped_bytes:
+        print(f'\n[test guard] Omitted {console.dropped_bytes} console bytes; '
+              'inspect the tested evidence files for full output.', flush=True)
     print(f"[test guard] {status['status']}; peak {status['peak_memory_mib']} MiB, "
           f"{status['peak_processes']} processes. Resource evidence: {status_path}", flush=True)
     return result

@@ -170,6 +170,9 @@ func mustParseURL(t *testing.T, raw string) *url.URL {
 }
 
 func TestE2EHTMLSessionCacheCapacityRollback(t *testing.T) {
+	if tests.IsolateCapacityTest(t) {
+		return
+	}
 	f := newRefreshPortal(t, true, false)
 	p := f.portal
 	p.refreshStore.Close()

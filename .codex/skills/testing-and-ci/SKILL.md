@@ -81,6 +81,8 @@ incomplete rather than silently substituting unit coverage.
 The root Go module declares Go `1.26.0`. Repository coverage uses the pinned
 `github.com/greenpau/tested` tool in `go.mod`, invoked through `go tool tested`.
 It owns `-json`, `-coverprofile`, child-process status, and coherent reports.
+Version 1.1.0 streams test activity and bounded log previews by default through
+the resource supervisor; complete output remains in `test_output.jsonl`.
 Do not reintroduce `go test | tee`, log-grep success detection, richgo, tparse,
 or go-test-report into the lifecycle.
 
@@ -297,6 +299,13 @@ in tests that exercise those operations, and retain real bcrypt comparisons,
 the production cost, and all request/package deadlines. Helper regressions
 live in `internal/tests/password_test.go`; the real TLS isolation journey is
 `pkg/authn/password_fixture_e2e_test.go`.
+
+The portal session-cache and OAuth gatekeeper capacity fixtures retain the real
+64 MiB persistence limit and use `tests.IsolateCapacityTest` to execute in
+separate instances of the race/coverage test binary. Their exit
+releases large snapshot and race-detector allocations before browser tests.
+See [resource controls](../scripts-and-automation/references/test-resources.md)
+for the combined capacity/browser regression and coverage-counter forwarding.
 
 ## Test Placement and Filenames
 

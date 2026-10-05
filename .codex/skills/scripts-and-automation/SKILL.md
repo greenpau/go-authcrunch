@@ -67,10 +67,12 @@ forwarding for all four test entry points at the tool boundary.
 bounded subprocess fixtures: memory, process, time and artifact limits, output
 flooding, monitoring failures, cancellation, descendant cleanup, overlapping
 runs, override forwarding, host memory pressure refusal, and live progress
-during quiet work before the child finishes.
+during quiet work before the child finishes. Output fixtures verify recovery
+after rate-limited bursts, visible throttling notices, and continued heartbeats.
 `assets/scripts/tests/tested_test.py` exercises pinned tested and real Go tests:
-default forwarding, a recursive quick-run override, and a short environment
-deadline that remains a failed run in live and offline reports.
+live log forwarding before a test can finish, default forwarding, a recursive
+quick-run override, and a short environment deadline that remains a failed run
+in live and offline reports.
 
 Let pinned `tested` clean up its managed artifacts inside the selected
 `COVERAGE_DIR`. Do not recursively delete `.coverage` or the selected directory
@@ -89,7 +91,7 @@ scope. `assets/scripts/tests/linter_test.py` exercises the real Make target with
 temporary checkouts and verifies that source and test-file warnings still fail.
 
 The Go module minimum is `1.26.0`; CI and release builds select Go `1.26.8`, Node 24, and Python
-3. Use Python 3.9+ locally. `go.mod` and `go.sum` pin `tested`, `versioned`, and
+3. Use Python 3.9+ locally. `go.mod` and `go.sum` pin `tested` v1.1.0, `versioned`, and
 `golint`; never replace the pinned lifecycle with global tools installed at
 `@latest`. `make install-test-tools` resolves `go tool tested` without modifying
 module manifests or global executable directories. Go dependency/tool downloads

@@ -152,6 +152,9 @@ func TestTokenRefreshJSONOIDCCapacityRecovery(t *testing.T) {
 }
 
 func TestTokenRefreshJSONSessionCacheCapacityRecovery(t *testing.T) {
+	if tests.IsolateCapacityTest(t) {
+		return
+	}
 	f := newRefreshPortal(t, true, false)
 	p := f.portal
 	p.refreshStore.Close()
