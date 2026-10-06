@@ -28,6 +28,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz/enrichment"
+	"github.com/greenpau/go-authcrunch/pkg/authz/external"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -59,6 +60,16 @@ type Gatekeeper struct {
 // ACL-only, cache, bypass and replacement contracts.
 func (g *Gatekeeper) SetClaimsEnricher(enricher *enrichment.Enricher) error {
 	return g.tokenValidator.SetClaimsEnricher(enricher)
+}
+
+// SetExternalAuthorizer requires an additional decision after local checks.
+// Attach before serving; the host owns the backend's lifetime. See
+// validator.SetExternalAuthorizer for replacement and bypass semantics.
+func (g *Gatekeeper) SetExternalAuthorizer(authorizer *external.Authorizer) error {
+	if g == nil {
+		return external.ErrUnavailable
+	}
+	return g.tokenValidator.SetExternalAuthorizer(authorizer)
 }
 
 // NewGatekeeper returns an instance of Gatekeeper.

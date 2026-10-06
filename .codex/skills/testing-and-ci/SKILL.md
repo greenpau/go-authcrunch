@@ -276,7 +276,8 @@ Prefer existing test helpers before adding new ones:
 - `internal/tests` provides `Unpack`, `UnpackDict`, `UnpackJSON`,
   `EvalErr`, `EvalErrWithLog`, `EvalErrPhaseWithLog`, `EvalObjects`,
   `EvalObjectsWithLog`, `CustomEvalObjectsWithLog`, `TempDir`, random strings,
-  and reusable identity constants.
+  reusable identity constants, and `RunExternalModule` for portable consumer
+  tests in a separate module.
 - `internal/testutils` provides test identity databases, authz users, ACLs,
   crypto key stores, injected tokens, and token validator options.
 - Many config tests normalize structs and JSON strings through `tests.Unpack`
@@ -289,6 +290,21 @@ Prefer existing test helpers before adding new ones:
 Use `t.TempDir()` for new isolated temporary filesystem tests unless the code
 under test already follows `tests.TempDir`, which writes below
 `/tmp/testdata/go-authcrunch/<test-name>/`.
+
+For external-module E2E drivers, use
+[`tests.RunExternalModule`](../../../internal/tests/module.go) to copy the
+checkout's `go.mod`, `go.sum`, and public-only consumer test files into temporary
+storage. It changes the module identity and replaces AuthCrunch with this
+checkout, then runs race-enabled, uncached tests with `-mod=readonly`, module
+downloads disabled, and workspace/toolchain overrides isolated. Only the driver
+may import internal test helpers; the copied consumer must use public APIs.
+Retain the root's pinned requirements: `go.sum` contains checksums, not a module
+graph. A minimal consumer manifest can load historical transitive test-module
+metadata absent from a fresh cache even when ordinary repository tests build.
+Do not fix that failure by enabling downloads inside offline E2E tests or relying
+on a warm developer cache. `internal/tests/module_test.go` reproduces the failure
+with a local file proxy and an isolated cache, exercises the corrected workflow,
+and verifies child-test failure propagation and the external `internal` boundary.
 
 For repeated portal fixture provisioning, use `tests.TestPwd1Hash(t)` and
 `tests.TestPwd2Hash(t)` as password imports, and send `tests.TestPwd1` and

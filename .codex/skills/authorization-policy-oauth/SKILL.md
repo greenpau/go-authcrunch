@@ -68,7 +68,10 @@ evaluates trusted identity; it is not an authentication API for caller claims.
 Call `TokenValidator.Configure` before using it; incomplete setup and nil requests
 return errors.
 It preserves all method/path interpretations, source-address and path-claim
-checks without caching an authorization decision.
+checks without caching an authorization decision. An attached
+[external authorizer](../external-authorization/SKILL.md) must also allow the original
+resource at callback admission and every existing-session request. Service
+failure or denial cannot issue a session or forward a protected request.
 
 Verified users receive the baseline `authp/user` role, plus provider roles/groups.
 A policy allowing that baseline authorizes every successfully authenticated user

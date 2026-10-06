@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package static_test
+package httpjson_test
 
 import (
 	"testing"
@@ -20,6 +20,6 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/tests"
 )
 
-func TestE2EClaimsEnrichmentExternalModule(t *testing.T) {
-	tests.RunExternalModule(t, "../../..", "example.test/enrichment-consumer", "consumer_e2e_test.go")
+func TestE2EHTTPJSONExternalModule(t *testing.T) {
+	tests.RunExternalModule(t, "../../..", "example.test/httpjson-consumer", "consumer_e2e_test.go")
 }

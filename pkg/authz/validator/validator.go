@@ -26,6 +26,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authz/enrichment"
+	"github.com/greenpau/go-authcrunch/pkg/authz/external"
 	"github.com/greenpau/go-authcrunch/pkg/authz/internal/uri"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -89,12 +90,14 @@ type TokenValidator struct {
 	authRealmHeaderName string
 	logger              *zap.Logger
 	claimsEnricher      *enrichment.Enricher
+	externalAuthorizer  *external.Authorizer
 }
 
 // authorizeRequest checks every path interpretation before accepting an
 // identity. The backend may stop decoding at any stage, including one that
 // traverses a protected path before a later stage returns to a public path.
 func (v *TokenValidator) authorizeRequest(ctx context.Context, r *http.Request, usr *user.User) error {
+	authenticated := usr
 	if v.claimsEnricher != nil {
 		var err error
 		usr, err = v.claimsEnricher.Enrich(ctx, usr)
@@ -105,7 +108,10 @@ func (v *TokenValidator) authorizeRequest(ctx context.Context, r *http.Request, 
 		}
 	}
 	if !v.opts.ValidateMethodPath && !v.opts.ValidateAccessListPathClaim {
-		return v.guardian.authorize(ctx, r, usr, "")
+		if err := v.guardian.authorize(ctx, r, usr, ""); err != nil {
+			return err
+		}
+		return v.authorizeExternal(ctx, r, authenticated)
 	}
 	paths, valid := uri.RequestPaths(r)
 	if !valid {
@@ -118,6 +124,26 @@ func (v *TokenValidator) authorizeRequest(ctx context.Context, r *http.Request, 
 		if err := v.guardian.authorize(ctx, r, usr, reqPath); err != nil {
 			return err
 		}
+	}
+	return v.authorizeExternal(ctx, r, authenticated)
+}
+
+// SetExternalAuthorizer attaches a required decision before serving requests.
+// The host owns the backend and must drain requests before replacing/closing it.
+// Nil cannot disable enforcement. Explicit bypass routes remain bypasses.
+func (v *TokenValidator) SetExternalAuthorizer(authorizer *external.Authorizer) error {
+	if v == nil || authorizer == nil || v.closed.Load() {
+		return fmt.Errorf("external authorizer is required on an open validator")
+	}
+	v.externalAuthorizer = authorizer
+	return nil
+}
+
+func (v *TokenValidator) authorizeExternal(ctx context.Context, r *http.Request, usr *user.User) error {
+	if v.externalAuthorizer != nil && v.externalAuthorizer.Authorize(ctx, r, usr) != nil {
+		// Denials and unavailable decisions both fail closed without disclosing
+		// backend details, redirecting to login, or discarding valid credentials.
+		return errors.ErrAccessNotAllowed
 	}
 	return nil
 }

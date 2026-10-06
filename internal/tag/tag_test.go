@@ -43,6 +43,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
 	"github.com/greenpau/go-authcrunch/pkg/authz/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authz/enrichment"
+	"github.com/greenpau/go-authcrunch/pkg/authz/external"
 	"github.com/greenpau/go-authcrunch/pkg/authz/injector"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
@@ -73,6 +74,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"github.com/greenpau/go-authcrunch/plugins/claims-enrichment/static"
 	"github.com/greenpau/go-authcrunch/plugins/cryptographic-signing/rsapss"
+	"github.com/greenpau/go-authcrunch/plugins/external-authorization/httpjson"
 )
 
 func TestTagCompliance(t *testing.T) {
@@ -92,6 +94,13 @@ func TestTagCompliance(t *testing.T) {
 		{name: "test enrichment.Result struct", entry: &enrichment.Result{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"identity": true, "observed_at": true, "expires_at": true}}},
 		{name: "test enrichment.Enricher struct", entry: &enrichment.Enricher{}, opts: &Options{}},
 		{name: "test rsapss.Config struct", entry: &rsapss.Config{}, opts: &Options{}},
+		{name: "test external.Config struct", entry: &external.Config{}, opts: &Options{}},
+		{name: "test external.Identity struct", entry: &external.Identity{}, opts: &Options{}},
+		{name: "test external.Request struct", entry: &external.Request{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"identity": true}}},
+		{name: "test external.Result struct", entry: &external.Result{}, opts: &Options{}},
+		{name: "test external.Authorizer struct", entry: &external.Authorizer{}, opts: &Options{}},
+		{name: "test httpjson.Config struct", entry: &httpjson.Config{}, opts: &Options{}},
+		{name: "test httpjson.Backend struct", entry: &httpjson.Backend{}, opts: &Options{}},
 		{name: "test rsapss.Signer struct", entry: &rsapss.Signer{}, opts: &Options{}},
 		{name: "test static.Config struct", entry: &static.Config{}, opts: &Options{}},
 		{name: "test static.Backend struct", entry: &static.Backend{}, opts: &Options{}},

@@ -113,7 +113,7 @@ installed or automatically loadable backends.
 | [Registration workflows](.codex/skills/plugin-development/references/plugin-categories.md#registration-workflows) | Invitations, approvals, and account creation | Direct registry attachment; root configuration is local-only |
 | [Session and refresh storage](.codex/skills/plugin-development/references/plugin-categories.md#session-and-refresh-storage) | Shared token-family storage and revocation | Refresh-engine interface exists; portal backend selection needs wiring |
 | [Cryptographic signing](.codex/skills/plugin-development/references/plugin-categories.md#cryptographic-signing) | Sign approved token claims with a selected key | [Local PS256 plugin](plugins/cryptographic-signing/rsapss), refresh-engine injection, and core verification; general portal/OIDC signer selection remains separate |
-| [External authorization](.codex/skills/plugin-development/references/plugin-categories.md#external-authorization) | Decisions from an external policy service | Proposed decision interface and gatekeeper integration |
+| [External authorization](.codex/skills/plugin-development/references/plugin-categories.md#external-authorization) | Decisions from an external policy service | Required gatekeeper/validator decisions and [HTTP JSON plugin](plugins/external-authorization/httpjson) |
 | [Claims enrichment](.codex/skills/plugin-development/references/plugin-categories.md#claims-enrichment) | Trusted organization, group, or entitlement attributes | Request-time gatekeeper/validator hook and [static claims plugin](plugins/claims-enrichment/static) |
 
 The [category contracts](.codex/skills/plugin-development/references/plugin-categories.md)

@@ -13,7 +13,10 @@ description: Maintain authorization ACL rules, typed custom claim fields, their 
 metadata to every guardian. Provider authentication and portal transformations
 remain separate boundaries. The [request-time enrichment contract](../claims-enrichment/SKILL.md)
 owns the optional validator/gatekeeper hook that supplies detached custom
-claims before every guardian, including cached and authenticated-user decisions. Custom ACL aliases do not assign roles, change
+claims before every guardian, including cached and authenticated-user decisions. The
+[external authorization contract](../external-authorization/SKILL.md) adds a required
+decision after all local checks, using the original authenticated identity.
+Custom ACL aliases do not assign roles, change
 headers, rewrite JWTs, or alter the user's normalized `GetData()` representation.
 
 `acl.FieldConfig` has `Name`, `Claim`, and `Type`, with matching snake_case

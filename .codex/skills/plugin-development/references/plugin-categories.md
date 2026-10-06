@@ -361,66 +361,31 @@ a resource, using an external policy service. OPA-style policy evaluation or a
 relationship-based service are potential backends. Credential verification and
 claim retrieval remain separate operations.
 
-**Current boundary:** the [validator](../../../../pkg/authz/validator/validator.go)
-uses private guardian implementations backed by `acl.AccessList`; it exposes no
-public external-decision plugin interface or registration method. `AuthorizeUser`
-evaluates an already authenticated user using existing guards. It is not an
-external-policy callback and does not authenticate its input. This category
-requires a new public API, typed configuration/parser, and consuming call sites.
+**Current APIs:** `pkg/authz/external.Backend` supplies context-aware `Decide`
+calls with typed `Request`/`Result`. `external.New` validates and snapshots the
+policy and identity binding. `Gatekeeper.SetExternalAuthorizer` and
+`TokenValidator.SetExternalAuthorizer` attach required decisions before serving.
+The working backend lives at `plugins/external-authorization/httpjson` and has
+its own transport config/parser; core has a separate binding config/parser.
+The [owning contract](../../external-authorization/SKILL.md) defines exact public
+APIs, grammar, JSON protocol, deadlines, lifecycle and consumer acceptance.
 
-Trace context propagation through the consumer as part of this work. The current
-[Gatekeeper.Authenticate](../../../../pkg/authz/authenticate.go) passes
-the HTTP request context to token authorization. A new decision API accepting a
-context does not by itself propagate request cancellation; its call sites must
-carry the request context and enforce bounded backend deadlines.
+Local authentication, constraints and ACLs must allow before external evaluation.
+A remote allow cannot override local denial. The shared enforcement path covers
+fresh and cached credentials, Basic/API-key authentication, and authenticated
+OAuth sessions. Explicit bypass routes remain bypasses. Every request path
+interpretation requires an explicit allow within one total deadline; service
+failures deny access. There is no decision cache or implicit claims/header mutation.
+Only selected authenticated attributes are sent; query/body/credential forwarding
+is not implicit. Unsupported response fields and obligations fail closed.
 
-**Proposed contract:** use a focused context-aware decision operation with typed
-input/output rather than an unbounded claims map plus an arbitrary callback.
-Define the eventual exported names during implementation. The minimum data model
-should identify:
-
-- Input: authenticated subject plus issuer/backend/realm or tenant binding;
-  resource and action; policy identity/version; allowlisted trusted attributes;
-  and authoritative current request metadata required by that policy.
-- Result: explicit allow/deny, a safe reason/decision identifier, and any supported
-  validity or policy-version information. Transport failure, timeout, missing
-  decision, and malformed responses cannot become implicit allow.
-
-Make enforcement an explicit opt-in per policy with unchanged behavior when
-omitted. Prefer a required additional decision: local authentication and request
-constraints must pass, local ACLs must allow, and the external decision must
-allow. Define precedence before implementation; a remote allow must not override
-an invalid credential, local denial, or unsatisfied request binding. Document
-bypass-route behavior explicitly instead of silently changing existing bypass
-semantics. Reject unsupported mandatory obligations in a service response rather
-than treating them as fulfilled.
-
-Call the decision at an enforcement point covering fresh and cached credentials,
-Basic/API-key authentication, and already authenticated/OAuth session paths.
-Build canonical resource/action metadata using the same request interpretations
-as the local guards. Never accept a subject, tenant, resource, or source-address
-override from an untrusted claim/header. Required-decision outages prevent access;
-choose an appropriate denial/unavailable HTTP response without exposing backend
-payloads. Optional modes must be explicit and must not masquerade as enforcement.
-
-A decision cache is separate from the authentication cache. Its key includes all
-policy-relevant identity, tenant, resource, action, attribute, and policy-version
-inputs; its lifetime cannot outlive the authority/attribute validity it relies
-on. Define revocation and policy-update invalidation. Start without decision
-caching when those guarantees cannot be made. Keep the plugin read-only with
-respect to user claims and the request; host header injection remains controlled
-by its own owner.
-
-**Acceptance:** real TLS protected requests with local-allow/remote-deny,
-local-deny/remote-allow, invalid credentials, changing resource/action, and
-cross-tenant identities. Repeat on authentication-cache hits and session-backed
-paths; exercise policy changes, malformed/empty results, timeouts, and endpoint
-failure. Assert no upstream request is forwarded after a required rejection and
-no cached user is mutated. The
-[ACL owner](../../authorization-policy-acl/SKILL.md),
-[public authorization tests](../../../../pkg/authz/validator/authorize_user_public_e2e_test.go),
-and [OAuth policy owner](../../authorization-policy-oauth/SKILL.md) identify the
-existing paths and semantics that this proposed integration must preserve.
+The host owns backend construction, attachment and disposal. This public runtime
+hook does not create a root JSON backend factory or host-module registration.
+**Acceptance:** real TLS login and protected requests, an actual HTTP decision
+service, no forwarding on required rejection, local/remote denial precedence,
+authentication-cache and OAuth-session reevaluation, domain isolation, malformed
+responses, timeouts and endpoint failure. The portable consumer also runs in an
+isolated external module. See the owner for test paths and validation commands.
 
 ## Claims enrichment
 

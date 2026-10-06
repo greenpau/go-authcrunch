@@ -37,6 +37,13 @@ OIDC issuance runs this hook. Renewed tokens are enriched when subsequently used
 on an attached protected route. Do not describe this as token revocation or an
 issuance-time enrichment feature.
 
+When composed with [external authorization](../external-authorization/SKILL.md),
+the required remote decision also receives the original authenticated claims.
+Enrichment can satisfy local ACL conditions but cannot alter remote identity or
+attribute input. A local rejection prevents the external call. The validator's
+`external_authorization_e2e_test.go` verifies both hooks together across every
+guardian, fresh/cached JWTs and already authenticated identities.
+
 ## Trust and data contracts
 
 The host selects one source and source-contract version per attachment. The

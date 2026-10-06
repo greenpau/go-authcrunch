@@ -17,7 +17,10 @@ The claims-enrichment reference is implemented at `plugins/claims-enrichment/sta
 its [owner](../../claims-enrichment/SKILL.md) defines APIs and acceptance. The
 local PS256 signer is implemented at `plugins/cryptographic-signing/rsapss`; its
 [owner](../../cryptographic-signing/SKILL.md) defines the refresh-engine consumer
-and core verification boundaries. Other category paths remain layout contracts
+and core verification boundaries. The HTTP JSON authorizer is implemented at
+`plugins/external-authorization/httpjson`; its
+[owner](../../external-authorization/SKILL.md) defines decision and enforcement
+contracts. Other category paths remain layout contracts
 until implemented. A path in this guide is
 not proof that a plugin, constructor, parser, or category integration is present.
 Inspect the working tree before naming an available reference. Establish a
@@ -71,6 +74,11 @@ To prove standalone usability, also compile and exercise the public workflow
 from an isolated external-module fixture launched by the root test suite. Keep
 that fixture in test-owned temporary storage; a test-local replacement of the
 core module validates this checkout, not published-module compatibility.
+Use `tests.RunExternalModule` from the in-module driver, following the
+[external-module test contract](../../testing-and-ci/SKILL.md#test-helpers).
+It preserves the pinned dependency graph so offline consumer tests do not rely
+on historical dependency metadata in a developer's cache. Keep the copied
+consumer files free of internal imports.
 
 Bind the reference to the actual public consumer. If that consumer needs a new
 API, implement and test the integration or state the narrower scope; a synthetic

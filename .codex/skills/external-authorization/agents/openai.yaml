@@ -1,0 +1,4 @@
+interface:
+  display_name: "External Authorization"
+  short_description: "HTTP JSON decisions and gatekeeper enforcement"
+  default_prompt: "Use $external-authorization to maintain required HTTP JSON decisions, parsers, and authorization consumer tests."

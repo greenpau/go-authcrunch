@@ -46,6 +46,10 @@ Use [cryptographic-signing](../cryptographic-signing/SKILL.md) to maintain the
 local PS256 plugin, its parser, refresh-engine composition, public JWKS, and
 strict core verification.
 
+Use [external-authorization](../external-authorization/SKILL.md) to maintain
+required request-time decisions, the HTTP JSON plugin, its public parsers, and
+gatekeeper/validator enforcement across cached credentials and OAuth sessions.
+
 Read the [development blueprint](references/development-blueprint.md) when
 starting a plugin, introducing a category, or reviewing whether an extension
 has a complete consumer integration and validation plan.
@@ -91,7 +95,7 @@ A category or repository name alone does not establish an implementation.
 | [Registration workflows](references/plugin-categories.md#registration-workflows) | Manage enrollment, confirmation, approval, and account creation | `registry.Provider` through `Portal.AddUserRegistry`; root dispatch is local-only |
 | [Session and refresh storage](references/plugin-categories.md#session-and-refresh-storage) | Store token families and enforce atomic rotation/revocation | `tokenrefresh.Store` injection into the engine; portal storage selection needs wiring |
 | [Cryptographic signing](references/plugin-categories.md#cryptographic-signing) | Sign approved claims with a selected key | `tokenrefresh.Signer` and local PS256 plugin at engine level; general portal/OIDC signing needs integration |
-| [External authorization](references/plugin-categories.md#external-authorization) | Evaluate an authenticated subject's access to a resource | Proposed public decision interface and gatekeeper call sites |
+| [External authorization](references/plugin-categories.md#external-authorization) | Evaluate an authenticated subject's access to a resource | Public decision interface and gatekeeper/validator attachment; HTTP JSON plugin available |
 | [Claims enrichment](references/plugin-categories.md#claims-enrichment) | Retrieve and validate additional identity attributes | `enrichment.Backend` and validator/gatekeeper attachment; static claims plugin available |
 
 ## Current core boundaries
@@ -181,6 +185,6 @@ task-specific Caddy implementation handoffs still belong only in ignored `tmp/`.
   containers and consumers before claiming a configurable backend exists.
 - Engine-level storage/signing injection is distinguished from full portal
   integration; request-time claims enrichment has explicit validator/gatekeeper
-  attachment, while external authorization remains proposed.
+  attachment, and external authorization has a required-decision hook and HTTP JSON backend.
 - Documentation distinguishes inspected source, tests actually executed, desired
   new behavior, and integration that remains unavailable.

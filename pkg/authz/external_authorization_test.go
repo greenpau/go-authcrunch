@@ -12,14 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package static_test
+package authz_test
 
 import (
 	"testing"
 
-	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/authz"
+	"github.com/greenpau/go-authcrunch/pkg/authz/external"
 )
 
-func TestE2EClaimsEnrichmentExternalModule(t *testing.T) {
-	tests.RunExternalModule(t, "../../..", "example.test/enrichment-consumer", "consumer_e2e_test.go")
+func TestExternalAuthorizationAttachmentGuards(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		gate *authz.Gatekeeper
+	}{{"nil", nil}, {"unconstructed", &authz.Gatekeeper{}}} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := tc.gate.SetExternalAuthorizer(&external.Authorizer{}); err == nil {
+				t.Fatal("invalid gatekeeper accepted an authorizer")
+			}
+		})
+	}
 }
