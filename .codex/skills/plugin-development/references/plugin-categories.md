@@ -326,6 +326,13 @@ uses concrete [kms.CryptoKeyStore](../../../../pkg/kms/crypto_keystore.go) and
 establishes a general remote-signer registration or arbitrary `crypto.Signer`
 injection into portal configuration.
 
+The working [local RSA-PSS reference](../../cryptographic-signing/SKILL.md)
+lives at `plugins/cryptographic-signing/rsapss`. It provides PS256 signing, a
+public directive parser, detached public JWKS, and refresh-engine consumer tests.
+Core RSA verification accepts its PS256 tokens with the required salt length;
+core RSA signing defaults remain unchanged. This is local-key, engine-level
+composition, not a remote backend or automatic portal/OIDC selection.
+
 **Implementation contract:** select allowed algorithm, key identity, token
 purpose, and key version through trusted configuration. Preserve supplied claims
 and deadlines; the signer must not grant roles, extend a session, or choose an

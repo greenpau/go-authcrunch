@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cryptographic Signing"
+  short_description: "PS256 signing plugins and verifier integration"
+  default_prompt: "Use $cryptographic-signing to maintain the RSA-PSS plugin, its parser, and consumer tests."

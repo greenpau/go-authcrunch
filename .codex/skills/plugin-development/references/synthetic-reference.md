@@ -14,8 +14,11 @@ name such as `mock`. For example, the intended secrets reference lives at
 `plugins/secrets/mock`.
 
 The claims-enrichment reference is implemented at `plugins/claims-enrichment/static`;
-its [owner](../../claims-enrichment/SKILL.md) defines APIs and acceptance. Other
-category paths remain layout contracts until implemented. A path in this guide is
+its [owner](../../claims-enrichment/SKILL.md) defines APIs and acceptance. The
+local PS256 signer is implemented at `plugins/cryptographic-signing/rsapss`; its
+[owner](../../cryptographic-signing/SKILL.md) defines the refresh-engine consumer
+and core verification boundaries. Other category paths remain layout contracts
+until implemented. A path in this guide is
 not proof that a plugin, constructor, parser, or category integration is present.
 Inspect the working tree before naming an available reference. Establish a
 runnable synthetic reference when implementing a category's plugin integration;

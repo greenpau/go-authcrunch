@@ -276,7 +276,13 @@ func (k *CryptoKey) ProvideKey(token *jwtlib.Token) (interface{}, error) {
 			return nil, errors.ErrUnexpectedSigningMethod.WithArgs("HS", token.Header["alg"])
 		}
 	case "rsa":
-		if _, validMethod := token.Method.(*jwtlib.SigningMethodRSA); !validMethod {
+		switch token.Method.(type) {
+		case *jwtlib.SigningMethodRSA:
+		case *jwtlib.SigningMethodRSAPSS:
+			if err := preparePS256Verification(token, k.Verify.Secret); err != nil {
+				return nil, err
+			}
+		default:
 			return nil, errors.ErrUnexpectedSigningMethod.WithArgs("RS", token.Header["alg"])
 		}
 	case "ecdsa":

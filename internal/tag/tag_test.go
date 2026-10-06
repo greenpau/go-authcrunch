@@ -72,6 +72,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"github.com/greenpau/go-authcrunch/plugins/claims-enrichment/static"
+	"github.com/greenpau/go-authcrunch/plugins/cryptographic-signing/rsapss"
 )
 
 func TestTagCompliance(t *testing.T) {
@@ -90,6 +91,8 @@ func TestTagCompliance(t *testing.T) {
 		{name: "test enrichment.Request struct", entry: &enrichment.Request{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"identity": true}}},
 		{name: "test enrichment.Result struct", entry: &enrichment.Result{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"identity": true, "observed_at": true, "expires_at": true}}},
 		{name: "test enrichment.Enricher struct", entry: &enrichment.Enricher{}, opts: &Options{}},
+		{name: "test rsapss.Config struct", entry: &rsapss.Config{}, opts: &Options{}},
+		{name: "test rsapss.Signer struct", entry: &rsapss.Signer{}, opts: &Options{}},
 		{name: "test static.Config struct", entry: &static.Config{}, opts: &Options{}},
 		{name: "test static.Backend struct", entry: &static.Backend{}, opts: &Options{}},
 		{name: "test identity.PasswordHashConfig struct", entry: &identity.PasswordHashConfig{}, opts: &Options{}},

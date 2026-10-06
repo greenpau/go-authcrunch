@@ -112,7 +112,7 @@ installed or automatically loadable backends.
 | [Messaging](.codex/skills/plugin-development/references/plugin-categories.md#messaging) | Email APIs and notification delivery | Provider interface exists; new backends need config and consumer wiring |
 | [Registration workflows](.codex/skills/plugin-development/references/plugin-categories.md#registration-workflows) | Invitations, approvals, and account creation | Direct registry attachment; root configuration is local-only |
 | [Session and refresh storage](.codex/skills/plugin-development/references/plugin-categories.md#session-and-refresh-storage) | Shared token-family storage and revocation | Refresh-engine interface exists; portal backend selection needs wiring |
-| [Cryptographic signing](.codex/skills/plugin-development/references/plugin-categories.md#cryptographic-signing) | Remote KMS or HSM signing | Refresh-engine signer exists; general portal/OIDC integration needs work |
+| [Cryptographic signing](.codex/skills/plugin-development/references/plugin-categories.md#cryptographic-signing) | Sign approved token claims with a selected key | [Local PS256 plugin](plugins/cryptographic-signing/rsapss), refresh-engine injection, and core verification; general portal/OIDC signer selection remains separate |
 | [External authorization](.codex/skills/plugin-development/references/plugin-categories.md#external-authorization) | Decisions from an external policy service | Proposed decision interface and gatekeeper integration |
 | [Claims enrichment](.codex/skills/plugin-development/references/plugin-categories.md#claims-enrichment) | Trusted organization, group, or entitlement attributes | Request-time gatekeeper/validator hook and [static claims plugin](plugins/claims-enrichment/static) |
 

@@ -42,6 +42,10 @@ verify retrieval, data types, metadata, and refresh behavior.
 Use [claims-enrichment](../claims-enrichment/SKILL.md) to maintain request-time
 attribute backends, their gatekeeper/validator hooks, and the static claims plugin.
 
+Use [cryptographic-signing](../cryptographic-signing/SKILL.md) to maintain the
+local PS256 plugin, its parser, refresh-engine composition, public JWKS, and
+strict core verification.
+
 Read the [development blueprint](references/development-blueprint.md) when
 starting a plugin, introducing a category, or reviewing whether an extension
 has a complete consumer integration and validation plan.
@@ -86,7 +90,7 @@ A category or repository name alone does not establish an implementation.
 | [Messaging](references/plugin-categories.md#messaging) | Deliver registration or notification messages | `messaging.Provider` exists; configuration and consumers use concrete built-ins |
 | [Registration workflows](references/plugin-categories.md#registration-workflows) | Manage enrollment, confirmation, approval, and account creation | `registry.Provider` through `Portal.AddUserRegistry`; root dispatch is local-only |
 | [Session and refresh storage](references/plugin-categories.md#session-and-refresh-storage) | Store token families and enforce atomic rotation/revocation | `tokenrefresh.Store` injection into the engine; portal storage selection needs wiring |
-| [Cryptographic signing](references/plugin-categories.md#cryptographic-signing) | Sign approved claims with a selected key | `tokenrefresh.Signer` at engine level; general portal/OIDC signing needs integration |
+| [Cryptographic signing](references/plugin-categories.md#cryptographic-signing) | Sign approved claims with a selected key | `tokenrefresh.Signer` and local PS256 plugin at engine level; general portal/OIDC signing needs integration |
 | [External authorization](references/plugin-categories.md#external-authorization) | Evaluate an authenticated subject's access to a resource | Proposed public decision interface and gatekeeper call sites |
 | [Claims enrichment](references/plugin-categories.md#claims-enrichment) | Retrieve and validate additional identity attributes | `enrichment.Backend` and validator/gatekeeper attachment; static claims plugin available |
 
