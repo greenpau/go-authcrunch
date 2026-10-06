@@ -42,6 +42,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/authz/bypass"
 	"github.com/greenpau/go-authcrunch/pkg/authz/cache"
+	"github.com/greenpau/go-authcrunch/pkg/authz/enrichment"
 	"github.com/greenpau/go-authcrunch/pkg/authz/injector"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
@@ -70,6 +71,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"github.com/greenpau/go-authcrunch/pkg/util"
 	"github.com/greenpau/go-authcrunch/pkg/util/cfg"
+	"github.com/greenpau/go-authcrunch/plugins/claims-enrichment/static"
 )
 
 func TestTagCompliance(t *testing.T) {
@@ -81,6 +83,15 @@ func TestTagCompliance(t *testing.T) {
 		err       error
 	}{
 		{name: "test acl.FieldConfig struct", entry: &acl.FieldConfig{}, opts: &Options{}},
+		{name: "test enrichment.Config struct", entry: &enrichment.Config{}, opts: &Options{}},
+		{name: "test enrichment.AttributeConfig struct", entry: &enrichment.AttributeConfig{}, opts: &Options{}},
+		{name: "test enrichment.Identity struct", entry: &enrichment.Identity{}, opts: &Options{}},
+		// Required value structs and timestamps serialize even when zero; omitempty has no effect.
+		{name: "test enrichment.Request struct", entry: &enrichment.Request{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"identity": true}}},
+		{name: "test enrichment.Result struct", entry: &enrichment.Result{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"identity": true, "observed_at": true, "expires_at": true}}},
+		{name: "test enrichment.Enricher struct", entry: &enrichment.Enricher{}, opts: &Options{}},
+		{name: "test static.Config struct", entry: &static.Config{}, opts: &Options{}},
+		{name: "test static.Backend struct", entry: &static.Backend{}, opts: &Options{}},
 		{name: "test identity.PasswordHashConfig struct", entry: &identity.PasswordHashConfig{}, opts: &Options{}},
 		{name: "test logging.Config struct", entry: &logging.Config{}, opts: &Options{}},
 		{name: "test logging.Filter struct", entry: &logging.Filter{}, opts: &Options{}},
@@ -1065,6 +1076,9 @@ func TestStructTagCompliance(t *testing.T) {
 			// Match Go package discovery so generated artifacts and fixtures
 			// outside the source packages cannot require compliance entries.
 			name := fileInfo.Name()
+			if filepath.Dir(path) == root && name != "cmd" && name != "internal" && name != "pkg" && name != "plugins" {
+				return filepath.SkipDir
+			}
 			if path != root && (strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") || name == "testdata" || name == "vendor") {
 				return filepath.SkipDir
 			}

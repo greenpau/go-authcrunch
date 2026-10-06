@@ -15,7 +15,6 @@
 package authz
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"strings"
@@ -74,7 +73,7 @@ func (g *Gatekeeper) Authenticate(w http.ResponseWriter, r *http.Request, ar *re
 	}
 	g.parseSessionID(r, ar)
 
-	usr, err := g.tokenValidator.Authorize(context.Background(), r, ar)
+	usr, err := g.tokenValidator.Authorize(r.Context(), r, ar)
 	if err != nil {
 		ar.Response.Error = err
 		return g.handleUnauthorizedUser(w, r, ar)

@@ -340,7 +340,10 @@ production contract's owner.
 
 Register new exported structs in `internal/tag/tag_test.go`'s
 `TestTagCompliance` table. `TestStructTagCompliance` scans source files for
-missing entries. Keep JSON/XML/YAML tags consistent; mark runtime-only fields
+missing entries in the root package and the `cmd`, `internal`, `pkg`, and
+`plugins` trees; ignored temporary checkouts and generated output are excluded.
+The executable scanner fixture covers unregistered plugin structs.
+Keep JSON/XML/YAML tags consistent; mark runtime-only fields
 with `-` and scope exceptions for intentionally preserved serialized fields.
 The reflective tag-checking helper lives in `internal/tag/compliance_test.go`;
 keep it test-only. Production code must not import `reflect`.

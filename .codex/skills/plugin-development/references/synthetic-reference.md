@@ -13,7 +13,9 @@ Categories use lowercase hyphenated slugs matching the
 name such as `mock`. For example, the intended secrets reference lives at
 `plugins/secrets/mock`.
 
-This is the required layout for future implementation. A path in this guide is
+The claims-enrichment reference is implemented at `plugins/claims-enrichment/static`;
+its [owner](../../claims-enrichment/SKILL.md) defines APIs and acceptance. Other
+category paths remain layout contracts until implemented. A path in this guide is
 not proof that a plugin, constructor, parser, or category integration is present.
 Inspect the working tree before naming an available reference. Establish a
 runnable synthetic reference when implementing a category's plugin integration;
@@ -52,8 +54,10 @@ external plugin repository.
 Implement a small deterministic backend that exercises the real category
 contract without an external account. Supply synthetic data explicitly and
 avoid ambient credentials, metadata services, public network calls, machine
-paths, or production signing material. The package name and public description
-must identify its reference/testing purpose.
+paths, or production signing material. Use a name that describes the implemented behavior: a useful static backend may
+supply configured values without being called a mock. Explicitly simulated
+services should identify their testing purpose. Keep fault controls in tests
+unless simulating a service is the plugin's actual purpose.
 
 The synthetic backend must be usable through its public construction and
 configuration APIs, including its dedicated `parser`. Consumer tests should
@@ -102,12 +106,12 @@ their public consuming APIs; placing code under `plugins/` does not create them.
 
 ## Include the reference in repository validation
 
-When the first package under `plugins/` is implemented, check the root automation
-and scanners as part of that implementation. The current Makefile's `linter`
-target explicitly enumerates `.`, `cmd`, `internal`, and `pkg`; it does not yet
-include `plugins`. Extend that maintained scope and its automation fixture when
-adding the tree. Verify test discovery, config/tag checks, diagnostics, and any
-other source-tree allowlists against the actual new package.
+When adding a reference under `plugins/`, check the root automation and scanners
+as part of that implementation. The Makefile's `linter`
+target explicitly enumerates `.`, `cmd`, `internal`, `pkg`, and `plugins`. Its
+automation fixture checks source and test warnings under the plugin tree. Verify
+test discovery, config/tag checks, diagnostics, and other source-tree allowlists
+against the actual new package.
 
 The [repository testing requirements](../../testing-and-ci/SKILL.md) and
 [automation contract](../../scripts-and-automation/SKILL.md) govern those changes.

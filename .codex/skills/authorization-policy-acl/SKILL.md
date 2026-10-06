@@ -11,7 +11,9 @@ description: Maintain authorization ACL rules, typed custom claim fields, their 
 `pkg/authz` owns policy configuration and gatekeeper construction;
 `pkg/authz/validator` supplies authenticated user claims and authoritative request
 metadata to every guardian. Provider authentication and portal transformations
-remain separate boundaries. Custom ACL aliases do not assign roles, change
+remain separate boundaries. The [request-time enrichment contract](../claims-enrichment/SKILL.md)
+owns the optional validator/gatekeeper hook that supplies detached custom
+claims before every guardian, including cached and authenticated-user decisions. Custom ACL aliases do not assign roles, change
 headers, rewrite JWTs, or alter the user's normalized `GetData()` representation.
 
 `acl.FieldConfig` has `Name`, `Claim`, and `Type`, with matching snake_case

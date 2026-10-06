@@ -79,7 +79,8 @@ Please open issues in [caddy-security](https://github.com/greenpau/caddy-securit
 
 ## Plugins
 
-Plugins are separate Go modules. Secrets plugins retrieve values for an
+Production plugins are separate Go modules. Synthetic references under `plugins/`
+are packages in this root module. Secrets plugins retrieve values for an
 embedding application to apply to AuthCrunch configuration. Host registration
 and configuration syntax belong to that application's adapter; this library
 does not automatically discover or load plugins.
@@ -113,7 +114,7 @@ installed or automatically loadable backends.
 | [Session and refresh storage](.codex/skills/plugin-development/references/plugin-categories.md#session-and-refresh-storage) | Shared token-family storage and revocation | Refresh-engine interface exists; portal backend selection needs wiring |
 | [Cryptographic signing](.codex/skills/plugin-development/references/plugin-categories.md#cryptographic-signing) | Remote KMS or HSM signing | Refresh-engine signer exists; general portal/OIDC integration needs work |
 | [External authorization](.codex/skills/plugin-development/references/plugin-categories.md#external-authorization) | Decisions from an external policy service | Proposed decision interface and gatekeeper integration |
-| [Claims enrichment](.codex/skills/plugin-development/references/plugin-categories.md#claims-enrichment) | Trusted organization, group, or entitlement attributes | Proposed enrichment interface, separate from existing claim transforms |
+| [Claims enrichment](.codex/skills/plugin-development/references/plugin-categories.md#claims-enrichment) | Trusted organization, group, or entitlement attributes | Request-time gatekeeper/validator hook and [static claims plugin](plugins/claims-enrichment/static) |
 
 The [category contracts](.codex/skills/plugin-development/references/plugin-categories.md)
 describe current APIs, implementation gaps, lifecycle requirements, and acceptance

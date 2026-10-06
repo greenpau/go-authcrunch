@@ -27,6 +27,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
+	"github.com/greenpau/go-authcrunch/pkg/authz/enrichment"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -51,6 +52,13 @@ type Gatekeeper struct {
 	injectedHeaders     map[string]bool
 	logger              *zap.Logger
 	sessionIDCookieName string
+}
+
+// SetClaimsEnricher attaches required enrichment before serving requests.
+// The host owns the backend lifetime. See validator.SetClaimsEnricher for the
+// ACL-only, cache, bypass and replacement contracts.
+func (g *Gatekeeper) SetClaimsEnricher(enricher *enrichment.Enricher) error {
+	return g.tokenValidator.SetClaimsEnricher(enricher)
 }
 
 // NewGatekeeper returns an instance of Gatekeeper.

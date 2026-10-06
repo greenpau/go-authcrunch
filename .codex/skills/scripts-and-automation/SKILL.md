@@ -27,7 +27,7 @@ boundary for these workflows.
 | --- | --- |
 | `make` / `make build` | Check version projections, compile `bin/authdb` and `bin/authdbctl`, print version/help |
 | `make dep` | Download/verify modules and resolve pinned `go tool` commands |
-| `make linter` | Run pinned golint on the root package and `cmd`, `internal`, and `pkg` trees |
+| `make linter` | Run pinned golint on the root package and `cmd`, `internal`, `pkg`, and `plugins` trees |
 | `make test` | Race-enabled, uncached Go tests and complete tested reports |
 | `make change-test` | Tests selected from staged, unstaged, and untracked changes; `CHANGE_DRY_RUN=1` previews selection |
 | `make test TEST_DIR='./pkg/authn/...' TEST='TestPortalRefresh'` | Same lifecycle with selected packages/test pattern |
@@ -93,8 +93,8 @@ The lifecycle fixture in `assets/scripts/tests/tested_test.py` checks this
 isolation alongside fresh evidence and nonzero exits after test/build failures.
 Whole-directory cleanup belongs to the explicitly requested `make clean`.
 
-`make linter` scopes golint to the root package and the `cmd`, `internal`, and
-`pkg` source trees. Golint's recursive filesystem scan does not honor nested
+`make linter` scopes golint to the root package and the `cmd`, `internal`, `pkg`, and
+`plugins` source trees. Golint's recursive filesystem scan does not honor nested
 Go modules or Git ignores; using `./...` also scans temporary consumer checkouts
 under `tmp/` and generated output. Keep new source trees in the explicit lint
 scope. `assets/scripts/tests/linter_test.py` exercises the real Make target with

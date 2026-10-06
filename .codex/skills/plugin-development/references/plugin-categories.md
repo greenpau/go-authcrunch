@@ -363,7 +363,7 @@ requires a new public API, typed configuration/parser, and consuming call sites.
 
 Trace context propagation through the consumer as part of this work. The current
 [Gatekeeper.Authenticate](../../../../pkg/authz/authenticate.go) passes
-`context.Background()` to token authorization. A new decision API accepting a
+the HTTP request context to token authorization. A new decision API accepting a
 context does not by itself propagate request cancellation; its call sites must
 carry the request context and enforce bounded backend deadlines.
 
@@ -421,16 +421,28 @@ existing paths and semantics that this proposed integration must preserve.
 attributes for a known subject. The result supplies data; the relevant transform,
 challenge, issuance, or authorization policy decides what that data permits.
 
-**Current boundary:** portal [transformer.Factory](../../../../pkg/authn/transformer/transformer.go)
-compiles configured match/action rules and transforms claims. The public
-`NewUserTransformerConfigFromDirectives` in
-[pkg/authn/transformer/parser](../../../../pkg/authn/transformer/parser/parser.go)
-returns transform configuration; it does not register arbitrary enrichment
-clients or perform remote lookups. The portal's
-[transform integration](../../../../pkg/authn/handle_http_login.go) also enforces
-provider-specific claim provenance. No general enrichment plugin API is exposed.
+**Current APIs:** `pkg/authz/enrichment.Backend` supplies context-aware lookups.
+`enrichment.New` validates and snapshots its typed binding configuration;
+`Gatekeeper.SetClaimsEnricher` and `TokenValidator.SetClaimsEnricher` attach it
+before serving. The validator uses detached attributes for each ACL decision,
+including cached users and `AuthorizeUser`. The runnable reference lives at
+`plugins/claims-enrichment/static`, with its dedicated public parser and a real TLS
+login-to-protected-resource test also executed from an isolated external module.
+See the [implemented contract](../../claims-enrichment/SKILL.md) for exact APIs,
+configuration, trust boundaries, lifecycle, and coverage.
 
-**Proposed contract:** define a context-aware lookup receiving the server-selected
+This is request-time enrichment. Portal transforms and issuance remain separate;
+there is no automatic root-config or authdb plugin loader. Only declared
+custom fields can enter the detached claim map, with explicit identity/source
+binding. Values support all JSON types; ACL matching retains its string and
+string-list types.
+Backend data does not rewrite JWTs, normalized roles, authentication evidence,
+headers or cached users. Plain custom keys are additive; authenticated-claim
+collisions fail. Missing data replaces earlier `enrichment.*` values; errors fail
+authorization. Already completed decisions are snapshots, not transactions
+with directory changes.
+
+**Broader extension contract:** define a context-aware lookup receiving the server-selected
 immutable identity plus issuer/backend/realm or tenant binding, requested
 attribute names, and relevant audience/purpose. Return a fresh typed attribute
 set with defined source/version/freshness information. Never key a cross-provider
@@ -473,8 +485,8 @@ races before promising atomic revocation.
 **Acceptance:** a verified login obtains a synthetic entitlement and the actual
 protected-resource policy observes it; a different tenant with the same display
 identity does not. Reject reserved-field overwrite, forged provider claims,
-wrong types, and recursive template payloads. Verify unchanged caller/cached
-maps and entitlement removal on refresh and request-time checks as applicable.
+wrong types, and malformed JSON; treat recursive template text as literal data.
+Verify unchanged caller/cached maps and entitlement removal on refresh and request-time checks as applicable.
 Cover outage/expiry and races with account or role changes. Existing
 [transform/challenge guidance](../../authentication-portal-challenges/SKILL.md),
 [refresh identity guidance](../../refresh-token-identity/SKILL.md), and

@@ -39,6 +39,9 @@ Use [secrets-plugins](../secrets-plugins/SKILL.md) to integrate or develop secre
 providers, compare the static and AWS clients, bind secret references, and
 verify retrieval, data types, metadata, and refresh behavior.
 
+Use [claims-enrichment](../claims-enrichment/SKILL.md) to maintain request-time
+attribute backends, their gatekeeper/validator hooks, and the static claims plugin.
+
 Read the [development blueprint](references/development-blueprint.md) when
 starting a plugin, introducing a category, or reviewing whether an extension
 has a complete consumer integration and validation plan.
@@ -85,7 +88,7 @@ A category or repository name alone does not establish an implementation.
 | [Session and refresh storage](references/plugin-categories.md#session-and-refresh-storage) | Store token families and enforce atomic rotation/revocation | `tokenrefresh.Store` injection into the engine; portal storage selection needs wiring |
 | [Cryptographic signing](references/plugin-categories.md#cryptographic-signing) | Sign approved claims with a selected key | `tokenrefresh.Signer` at engine level; general portal/OIDC signing needs integration |
 | [External authorization](references/plugin-categories.md#external-authorization) | Evaluate an authenticated subject's access to a resource | Proposed public decision interface and gatekeeper call sites |
-| [Claims enrichment](references/plugin-categories.md#claims-enrichment) | Retrieve and validate additional identity attributes | Proposed enrichment interface; existing transforms remain their own mechanism |
+| [Claims enrichment](references/plugin-categories.md#claims-enrichment) | Retrieve and validate additional identity attributes | `enrichment.Backend` and validator/gatekeeper attachment; static claims plugin available |
 
 ## Current core boundaries
 
@@ -173,7 +176,7 @@ task-specific Caddy implementation handoffs still belong only in ignored `tmp/`.
 - Messaging/registration interfaces are traced through their concrete config
   containers and consumers before claiming a configurable backend exists.
 - Engine-level storage/signing injection is distinguished from full portal
-  integration; claims enrichment and external authorization remain proposed
-  capabilities until their public APIs and consuming paths are implemented.
+  integration; request-time claims enrichment has explicit validator/gatekeeper
+  attachment, while external authorization remains proposed.
 - Documentation distinguishes inspected source, tests actually executed, desired
   new behavior, and integration that remains unavailable.

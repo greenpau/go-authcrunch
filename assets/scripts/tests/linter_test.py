@@ -24,7 +24,9 @@ class LinterTests(unittest.TestCase):
             shutil.copy2(ROOT / name, self.root / name)
         self.sources = ('fixture.go', 'cmd/example/main.go',
                         'internal/example/nested/fixture.go', 'pkg/example/nested/fixture.go',
-                        'pkg/example/tests/fixture_test.go')
+                        'pkg/example/tests/fixture_test.go',
+                        'plugins/claims-enrichment/static/fixture.go',
+                        'plugins/claims-enrichment/static/parser/fixture_test.go')
         for name in self.sources:
             self.write(name, CLEAN)
         self.env = {key: value for key, value in os.environ.items()

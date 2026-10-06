@@ -1,0 +1,4 @@
+interface:
+  display_name: "Claims Enrichment"
+  short_description: "Maintain request-time enrichment and static JSON claims"
+  default_prompt: "Use $claims-enrichment to maintain the static JSON claims plugin and request-time gatekeeper enforcement."

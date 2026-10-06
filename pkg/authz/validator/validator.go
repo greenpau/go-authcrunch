@@ -25,6 +25,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz/cache"
+	"github.com/greenpau/go-authcrunch/pkg/authz/enrichment"
 	"github.com/greenpau/go-authcrunch/pkg/authz/internal/uri"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -87,12 +88,22 @@ type TokenValidator struct {
 	apiKeyHeaderName    string
 	authRealmHeaderName string
 	logger              *zap.Logger
+	claimsEnricher      *enrichment.Enricher
 }
 
 // authorizeRequest checks every path interpretation before accepting an
 // identity. The backend may stop decoding at any stage, including one that
 // traverses a protected path before a later stage returns to a public path.
 func (v *TokenValidator) authorizeRequest(ctx context.Context, r *http.Request, usr *user.User) error {
+	if v.claimsEnricher != nil {
+		var err error
+		usr, err = v.claimsEnricher.Enrich(ctx, usr)
+		if err != nil {
+			// Never expose backend errors or allow an earlier ACL allow-stop to
+			// bypass required enrichment. The original cached user is untouched.
+			return errors.ErrAccessNotAllowed
+		}
+	}
 	if !v.opts.ValidateMethodPath && !v.opts.ValidateAccessListPathClaim {
 		return v.guardian.authorize(ctx, r, usr, "")
 	}
@@ -108,6 +119,19 @@ func (v *TokenValidator) authorizeRequest(ctx context.Context, r *http.Request, 
 			return err
 		}
 	}
+	return nil
+}
+
+// SetClaimsEnricher attaches required request-time enrichment before serving.
+// The caller owns the backend and must drain requests before replacing or closing
+// it. Nil is rejected so a failed construction cannot silently disable a policy.
+// Enriched claims are ACL-only; returned/cached users and identity headers retain
+// their original authenticated claims. Explicit bypass routes remain bypasses.
+func (v *TokenValidator) SetClaimsEnricher(enricher *enrichment.Enricher) error {
+	if enricher == nil || v.closed.Load() {
+		return fmt.Errorf("claims enricher is required on an open validator")
+	}
+	v.claimsEnricher = enricher
 	return nil
 }
 

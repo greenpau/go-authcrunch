@@ -36,10 +36,14 @@ func TestE2EStructTagCompliance(t *testing.T) {
 		wantMissing string
 	}{
 		{name: "registered source structs"},
+		{name: "reject unregistered plugin struct", extraFiles: []string{"plugins/claims-enrichment/static/claims.go"}, wantMissing: "fixture.Claims"},
 		{
 			name: "ignore generated and non-package directories",
 			extraFiles: []string{
 				".coverage/codeql/fixture/claims.go",
+				"tmp/consumer/claims.go",
+				"bin/claims.go",
+				"dist/claims.go",
 				".git/fixture/claims.go",
 				"_scratch/claims.go",
 				"testdata/fixture/claims.go",
