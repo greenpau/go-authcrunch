@@ -38,15 +38,20 @@ failure evidence, as `go-authcrunch_coverage_<artifact-id>`. Coverage is a
 workflow diagnostic artifact, separate from published distributions.
 
 The test workflow first runs `assets/scripts/select_ci_tests.py`. A `push` to
-`refs/heads/main` skips its full test job only when version projections are
-synchronized, HEAD matches `GITHUB_SHA`, and origin has the exact annotated
+`refs/heads/main` delegates validation to a release tag only when version
+projections are synchronized, HEAD matches `GITHUB_SHA`, and origin has the exact annotated
 `v<VERSION>` tag peeled to that same commit. The atomic release push therefore
 gets one full Actions gate, owned by the tag's release workflow. Missing,
-lightweight, mismatched, or unconfirmed remote tags retain branch testing;
-commit messages do not authorize skipping tests. PR, manual, and tag-triggered
-runs always retain their full gate. The selection job runs for every invocation
-and emits `run_tests` through `GITHUB_OUTPUT`; `core` depends on that successful
-selection. Its Git queries are read-only and bounded. Local Git/process fixtures
+lightweight, mismatched, or unconfirmed remote tags proceed through ordinary
+change selection; commit messages do not authorize skipping tests. Tag and manual
+runs always retain their full gate, even when their commits change no code.
+Ordinary branch/PR changes follow the shared
+[change-based testing](../scripts-and-automation/references/change-tests.md)
+policy: known non-code changes skip tests, while code changes run selected tests
+before the full gate. The selection job runs for every invocation and emits
+`run_tests`, `mode`, and commit endpoints through `GITHUB_OUTPUT`; `core` requires
+successful selection and, when applicable, selected tests. Git queries are
+read-only and bounded. Local Git/process fixtures
 in `assets/scripts/tests/ci_test_selection_test.py` cover both release events
 and conservative fallback behavior.
 

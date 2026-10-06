@@ -29,6 +29,7 @@ boundary for these workflows.
 | `make dep` | Download/verify modules and resolve pinned `go tool` commands |
 | `make linter` | Run pinned golint on the root package and `cmd`, `internal`, and `pkg` trees |
 | `make test` | Race-enabled, uncached Go tests and complete tested reports |
+| `make change-test` | Tests selected from staged, unstaged, and untracked changes; `CHANGE_DRY_RUN=1` previews selection |
 | `make test TEST_DIR='./pkg/authn/...' TEST='TestPortalRefresh'` | Same lifecycle with selected packages/test pattern |
 | `make qtest QUICK_TEST_DIR='./pkg/authn/token_refresh/...'` | Token engine and public parser lifecycle under `.coverage/quick`; default scope is `./pkg/system` |
 | `make run-reports` | Rebuild presentations from the existing tested evidence bundle |
@@ -52,6 +53,13 @@ lock, including invocations from other terminals or agents. Read
 the memory watchdog, concurrency, cancellation, output limits, or diagnosing a
 resource abort. Do not start additional expensive validation alongside a test
 run or bypass the guard to force an over-budget suite to finish.
+
+Read [change-based testing](references/change-tests.md) when maintaining change
+classification, Git ranges, affected-package selection, local `change-test`,
+or GitHub's selected-then-full gates. Keep CI and local classification shared;
+unknown impact retains validation. `make test` and `make ci-check` remain full
+validation entry points.
+
 `TEST` is a regex, not a fragment of Go flags. `TEST_TIMEOUT` is a quoted
 Go per-package duration (default `30m`) forwarded through tested; use it instead
 of embedding flags in `TEST`. Environment overrides apply to both full and quick

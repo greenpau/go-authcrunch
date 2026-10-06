@@ -88,6 +88,8 @@ or go-test-report into the lifecycle.
 
 ```sh
 make test
+make change-test
+make change-test CHANGE_DRY_RUN=1
 make test TEST_DIR='./pkg/authn/...' TEST='TestPortalRefresh'
 make test TEST_DIR='./pkg/authn' TEST='^TestE2EPortalJWKS' COVERAGE_DIR='.coverage/jwks-e2e'
 make qtest QUICK_TEST_DIR='./pkg/authn/token_refresh/...'
@@ -407,13 +409,22 @@ it complements the Chrome E2E journeys and does not replace them.
 ## CI Workflow
 
 `.github/workflows/test.yml` runs on pushes/PRs to main, manual dispatch, and
-reusable workflow calls. Its selection job avoids duplicate branch tests for an
-exact annotated release tag; `release-and-versioning` owns that decision and
-its fallback rules. It selects Ubuntu 24.04, Go 1.26.8, Node 24, Python 3,
-and the existing NSS test utilities. It resolves versioned artifact identity,
-runs `make dep` and `make ci-check`, checks that tracked source did not change,
-and always uploads `.coverage/` after the gate was attempted, including hidden
-files. Missing artifacts fail the upload; test failures remain failures.
+reusable workflow calls. Its lightweight selection skips known non-code changes.
+Code changes run affected tests first, followed by the full `make ci-check` on
+success. Global/unknown changes and version-tag/manual runs use the full gate.
+`make change-test` uses the same policy locally for staged, unstaged, and
+untracked files, retaining package E2E tests and the normal guarded lifecycle.
+Read [change-based testing](../scripts-and-automation/references/change-tests.md)
+for ranges, impact rules, reports, and conservative fallbacks. The
+`release-and-versioning` skill owns exact annotated-tag deduplication.
+
+Both test jobs select Ubuntu 24.04, Go 1.26.8, Node 24, Python 3, and NSS test
+utilities. Each retains a 45-minute deadline. The full job resolves versioned
+artifact identity and runs `make dep` before the complete gate. Both jobs check
+source cleanliness and upload their separate evidence bundles after tests were
+attempted, including on failure. Missing artifacts fail upload; failed selected
+tests explicitly fail the existing `Tests and coverage` check before full tests
+can start. CodeQL shares non-code selection, with scheduled/manual scans retained.
 
 The complete local reproduction is `make dep` followed by `make ci-check`.
 The workflow uses read-only contents permission and immutable action pins.

@@ -43,8 +43,16 @@ Use Go 1.26 or newer (CI uses 1.26.8), Node 24, Python 3.9+, and Make.
 
 ```sh
 make dep
+make change-test
 make ci-check
 ```
+
+`make change-test` tests staged, unstaged, and untracked changes. Use
+`make change-test CHANGE_DRY_RUN=1` to inspect its selection. Documentation-only
+changes skip tests; Go changes select owning packages and affected consumers.
+Selected Go reports are in `.coverage/changes/go/index.html`. See
+[change-based testing](.codex/skills/scripts-and-automation/references/change-tests.md)
+for commit ranges, fallbacks, and GitHub's selected-then-full validation flow.
 
 `make test` runs race-enabled Go tests through pinned `tested` and writes the
 coverage/report bundle to `.coverage/index.html`. Use `make test-ui` for browser

@@ -22,18 +22,70 @@ jobs:
     timeout-minutes: 2
     outputs:
       run_tests: ${{ steps.selection.outputs.run_tests }}
+      mode: ${{ steps.selection.outputs.mode }}
+      base: ${{ steps.selection.outputs.base }}
+      head: ${{ steps.selection.outputs.head }}
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          fetch-depth: 0
           persist-credentials: false
-      - name: Check whether the release tag owns validation
+      - name: Select validation from changed inputs
         id: selection
         run: python3 assets/scripts/select_ci_tests.py
+  changed:
+    name: Tests for changed code
+    needs: selection
+    if: ${{ needs.selection.outputs.mode == 'focused' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GOTOOLCHAIN: local
+      PYTHONDONTWRITEBYTECODE: '1'
+      CHANGE_BASE: ${{ needs.selection.outputs.base }}
+      CHANGE_HEAD: ${{ needs.selection.outputs.head }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.26.8'
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes make libnss3-tools python3
+      - name: Run tests for changed code
+        id: tests
+        run: make change-test
+      - name: Verify validation did not modify source
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        run: |
+          git diff --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"
+      - name: Upload selected test evidence
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: go-authcrunch_changed-tests_${{ github.sha }}
+          path: .coverage/changes/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
   core:
     name: Tests and coverage
-    needs: selection
-    if: ${{ needs.selection.outputs.run_tests == 'true' }}
+    needs: [selection, changed]
+    # Override implicit success(): a failed selected run must fail this existing
+    # required check, not turn it into a successful skipped check.
+    if: ${{ !cancelled() && (needs.selection.result != 'success' || needs.selection.outputs.run_tests == 'true') }}
     runs-on: ubuntu-24.04
     # Allow the 30-minute Go package budget plus setup, other gates, and upload.
     timeout-minutes: 45
@@ -41,6 +93,16 @@ jobs:
       GOTOOLCHAIN: local
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
+      - name: Require successful selection and changed tests
+        env:
+          SELECTION_RESULT: ${{ needs.selection.result }}
+          SELECTION_MODE: ${{ needs.selection.outputs.mode }}
+          CHANGED_RESULT: ${{ needs.changed.result }}
+        run: |
+          test "$SELECTION_RESULT" = success
+          if [ "$SELECTION_MODE" = focused ]; then
+            test "$CHANGED_RESULT" = success
+          fi
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:

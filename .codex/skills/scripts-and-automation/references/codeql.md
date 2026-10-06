@@ -9,6 +9,12 @@ the Go exceptions. Only the Go initialization loads
 Go builds with the repository CI toolchain and `go build` rather than test,
 release or maintenance targets.
 
+Push/PR runs first apply the shared
+[change classification](change-tests.md), skipping scans and their fixture tests
+for known non-code changes. Scheduled and manual scans always run. Pass
+`--no-release-dedup` to the selector: the release workflow owns full tests but
+does not replace CodeQL analysis. Retain all four language jobs for code changes.
+
 The Go configuration retains default queries and adds the local query pack.
 Its exclusion matches both `go/clear-text-logging` and the upstream query path
 `Security/CWE-312/CleartextLogging.ql`. The replacement has a different filename

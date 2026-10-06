@@ -23,6 +23,10 @@ QUICK_TEST_DIR ?= ./pkg/system
 COVERAGE_DIR ?= .coverage
 MINIMUM_COVERAGE ?= 1
 export TEST TEST_DIR TEST_TIMEOUT QUICK_TEST_DIR COVERAGE_DIR MINIMUM_COVERAGE
+CHANGE_BASE ?=
+CHANGE_HEAD ?=
+CHANGE_DRY_RUN ?= 0
+export CHANGE_BASE CHANGE_HEAD CHANGE_DRY_RUN
 export TEST_PACKAGE_PARALLELISM TEST_PARALLELISM TEST_GOMAXPROCS TEST_GO_MEMORY_MB
 export TEST_WALL_TIMEOUT TEST_MAX_PROCESSES TEST_ARTIFACT_MB
 # Unset means auto-detect a budget; do not export an undefined Make variable.
@@ -32,7 +36,7 @@ endif
 export APP_VERSION GIT_COMMIT GIT_BRANCH BUILD_USER BUILD_DATE
 export PYTHONDONTWRITEBYTECODE := 1
 
-.PHONY: all info build linter dep install-test-tools test run-tests qtest run-quick-tests run-reports test-ui test-automation test-codeql ci-check brand-assets brand-assets-check generate-acl version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release fast-release fast-minor-release release-git-check release-update-version release-git-commit
+.PHONY: all info build linter dep install-test-tools test change-test run-tests qtest run-quick-tests run-reports test-ui test-automation test-codeql ci-check brand-assets brand-assets-check generate-acl version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release fast-release fast-minor-release release-git-check release-update-version release-git-commit
 
 all: info build
 
@@ -70,6 +74,9 @@ install-test-tools:
 	@go tool tested version
 
 test: run-tests
+
+change-test:
+	@$(PYTHON) assets/scripts/change_tests.py
 
 run-tests:
 	@$(PYTHON) assets/scripts/test_guard.py run go tool tested run --output-dir "$$COVERAGE_DIR" \
