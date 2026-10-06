@@ -20,7 +20,6 @@ import (
 	stderrors "errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -30,7 +29,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
-	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -40,11 +38,31 @@ import (
 )
 
 func (p *Portal) handleHTTPLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
-	p.injectRedirectURL(ctx, w, r, rr)
 	if (p.refresh != nil || p.oidc != nil) && r.Method == http.MethodPost {
 		return p.handleHTTPLoginRequest(ctx, w, r, rr)
 	}
-	if r.Method == http.MethodGet && r.URL.Query().Get("fresh") == "1" {
+	// A fresh login is completed interactively, even by a signed-in browser.
+	fresh := r.URL.Query().Get("fresh") == "1"
+	if !fresh {
+		// A tab returns to the destination its own login URL carries, without
+		// the redirect cookie, which every tab of the browser shares: a login
+		// page a signed-in browser loads, a login form left open while the user
+		// logged in from another tab and submitted again, or a session that
+		// continues with a refresh. A signed-in return requires this portal's
+		// session, as the portal page it would otherwise pass through does.
+		// With refresh tokens or OIDC, a POST never gets here: it starts a new
+		// login above, whose sandbox carries the destination.
+		if returnURL := p.loginReturnURL(r, rr); returnURL != "" {
+			switch {
+			case usr != nil && p.hasPortalSession(usr):
+				return p.returnToLoginDestination(w, r, rr, returnURL)
+			case usr == nil && r.Method == http.MethodGet && p.hasRefreshCookie(r):
+				return p.handleSessionPage(ctx, w, r, rr, "continue")
+			}
+		}
+	}
+	p.injectRedirectURL(ctx, w, r, rr)
+	if fresh && r.Method == http.MethodGet {
 		p.disableClientCache(w)
 		// A still-valid access JWT must not send the submitted login back to
 		// the portal. Retain refresh cookies for revocation on login completion.
@@ -76,6 +94,13 @@ func (p *Portal) handleHTTPLoginScreen(ctx context.Context, w http.ResponseWrite
 	resp.Data["authenticated"] = rr.Response.Authenticated
 	resp.Data["login_options"] = p.loginOptions
 	resp.Data["cross_device_enabled"] = p.crossDevice != nil
+	resp.Data["login_return_url"] = p.loginReturnURL(r, rr)
+	// A fresh login must be completed on this page. A session that another tab
+	// holds or renews is not evidence of it, so the page does not watch for one,
+	// and its form keeps the login fresh for a later return to this page.
+	fresh := r.URL.Query().Get("fresh") == "1"
+	resp.Data["login_fresh"] = fresh
+	resp.Data["login_elsewhere_enabled"] = !fresh
 
 	resp.Data["i18n_provide_username_or_email"] = translate.Translate("provide_username_or_email", p.ui.Language, nil)
 	resp.Data["i18n_back_action"] = translate.Translate("back_action", p.ui.Language, nil)
@@ -159,6 +184,9 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 		rr.Response.Code = http.StatusBadRequest
 		return p.handleHTTPErrorWithLog(ctx, w, r, rr, http.StatusBadRequest, err.Error())
 	}
+	// The login form posts to its page's own URL, which carries the destination.
+	usr.LoginReturnURL = p.loginReturnURL(r, rr)
+	usr.LoginFresh = r.URL.Query().Get("fresh") == "1"
 
 	if err := p.sandboxes.Add(usr.Authenticator.TempSessionID, usr); err != nil {
 		rr.Response.Code = http.StatusInternalServerError
@@ -436,12 +464,27 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	// Delete sandbox cookie, if present.
 	w.Header().Add("Set-Cookie", p.cookie.GetDeleteSandboxIDCookie(rr.Upstream.BasePath))
 
+	// The destination carried by this login flow wins over the redirect cookie,
+	// which every tab of the browser shares and the last one to arrive wrote.
+	if rr.Response.ReturnURL != "" {
+		if returnURL := p.trustedLoginReturnURL(rr.Response.ReturnURL); returnURL != "" {
+			redirectLocation = returnURL
+		} else {
+			p.logger.Warn(
+				"Login flow destination is not trusted, ignoring",
+				zap.String("session_id", rr.Upstream.SessionID),
+				zap.String("request_id", rr.ID),
+			)
+		}
+	}
+
 	// Determine whether redirect cookie is present and redirect to the page that
-	// forwarded a user to the authentication portal.
+	// forwarded a user to the authentication portal. The cookie is consumed even
+	// when the flow's own destination is used, so a stale value cannot linger.
 	if cookie, err := r.Cookie(p.cookie.RefererCookieName); err == nil {
-		if redirectURL, err := url.Parse(cookie.Value); err == nil {
-			if len(p.config.TrustedLoginRedirectURIConfigs) > 0 && redirects.Match(redirectURL, p.config.TrustedLoginRedirectURIConfigs) {
-				redirectLocation = redirectURL.String()
+		if redirectLocation == "" {
+			if redirectURL := p.trustedLoginRedirectURL(cookie.Value); redirectURL != "" {
+				redirectLocation = redirectURL
 				p.logger.Debug(
 					"Detected cookie-based redirect",
 					zap.String("session_id", rr.Upstream.SessionID),
@@ -453,7 +496,7 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 					"Redirect cookie value is not trusted, ignoring",
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
-					zap.String("redirect_url", redirectURL.String()),
+					zap.String("redirect_url", cookie.Value),
 				)
 			}
 		}

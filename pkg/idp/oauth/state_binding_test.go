@@ -32,7 +32,7 @@ const (
 
 func addStateBinding(t *testing.T, sm *stateManager, state string) {
 	t.Helper()
-	if err := sm.addLogin(state, stateBindingNonce, stateBindingVerifier, stateBindingSession, stateBindingCallback); err != nil {
+	if err := sm.addLogin(state, stateBindingNonce, stateBindingVerifier, stateBindingSession, stateBindingCallback, ""); err != nil {
 		t.Fatalf("addLogin() error = %v", err)
 	}
 }
@@ -132,7 +132,7 @@ func TestStateBindingDeletionReleasesCapacity(t *testing.T) {
 	sm := newStateManager()
 	sm.maxStates = 1
 	addStateBinding(t, sm, stateBindingState)
-	if err := sm.addLogin("at-capacity", stateBindingNonce, stateBindingVerifier, stateBindingSession, stateBindingCallback); err == nil {
+	if err := sm.addLogin("at-capacity", stateBindingNonce, stateBindingVerifier, stateBindingSession, stateBindingCallback, ""); err == nil {
 		t.Fatal("addLogin() succeeded at capacity")
 	}
 	if !sm.beginCallback(stateBindingState, stateBindingSession, stateBindingCallback) {
@@ -140,7 +140,7 @@ func TestStateBindingDeletionReleasesCapacity(t *testing.T) {
 	}
 	sm.del(stateBindingState)
 
-	if err := sm.addLogin("replacement", stateBindingNonce, stateBindingVerifier, stateBindingSession, stateBindingCallback); err != nil {
+	if err := sm.addLogin("replacement", stateBindingNonce, stateBindingVerifier, stateBindingSession, stateBindingCallback, ""); err != nil {
 		t.Fatalf("addLogin() after deletion error = %v", err)
 	}
 	sm.mux.Lock()
@@ -159,7 +159,7 @@ func TestStateBindingRequiresBrowserAndCallback(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			sm := newStateManager()
-			if err := sm.addLogin(stateBindingState, stateBindingNonce, stateBindingVerifier, tc.sessionID, tc.callback); err == nil {
+			if err := sm.addLogin(stateBindingState, stateBindingNonce, stateBindingVerifier, tc.sessionID, tc.callback, ""); err == nil {
 				t.Fatal("addLogin() accepted incomplete browser binding")
 			}
 			if sm.exists(stateBindingState) {
@@ -207,5 +207,39 @@ func TestStateBindingCancellationRequiresExactOwner(t *testing.T) {
 				t.Fatal("cancellation retained transaction data")
 			}
 		})
+	}
+}
+
+// The destination recorded for a login is published with its binding and lives
+// and dies with it: deletion or cancellation drops it.
+func TestStateBindingReturnURL(t *testing.T) {
+	const returnURL = "https://app.example/after-login?x=one%26two"
+	sm := newStateManager()
+	addStateBinding(t, sm, "unbound")
+	if got := sm.getReturnURL("unbound"); got != "" {
+		t.Fatalf("login without destination = %q, want none", got)
+	}
+	if err := sm.addLogin(stateBindingState, stateBindingNonce, stateBindingVerifier, stateBindingSession, stateBindingCallback, returnURL); err != nil {
+		t.Fatalf("addLogin() error = %v", err)
+	}
+	if !sm.beginCallback(stateBindingState, stateBindingSession, stateBindingCallback) {
+		t.Fatal("matching callback was rejected")
+	}
+	if got := sm.getReturnURL(stateBindingState); got != returnURL {
+		t.Fatalf("claimed login destination = %q, want %q", got, returnURL)
+	}
+	sm.del(stateBindingState)
+	if got := sm.getReturnURL(stateBindingState); got != "" {
+		t.Fatalf("deleted login destination = %q, want none", got)
+	}
+
+	if err := sm.addLogin("canceled", stateBindingNonce, stateBindingVerifier, stateBindingSession, stateBindingCallback, returnURL); err != nil {
+		t.Fatalf("addLogin() error = %v", err)
+	}
+	if !sm.cancelLogin("canceled", sha256.Sum256([]byte(stateBindingSession)), stateBindingCallback) {
+		t.Fatal("exact cancellation was rejected")
+	}
+	if got := sm.getReturnURL("canceled"); got != "" {
+		t.Fatalf("canceled login destination = %q, want none", got)
 	}
 }

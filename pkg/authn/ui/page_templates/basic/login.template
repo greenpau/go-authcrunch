@@ -35,7 +35,7 @@
           {{ if eq .Data.login_options.form_required "yes" }}
             <div id="loginform" {{ if ne $authenticatorCount 1 }}class="hidden"{{ end }}>
               <div>
-                <form class="space-y-6" action="{{ pathjoin .ActionEndpoint "/login" }}" method="POST">
+                <form class="space-y-6" action="{{ pathjoin .ActionEndpoint "/login" }}{{ if .Data.login_fresh }}?fresh=1{{ with .Data.login_return_url }}&redirect_url={{ . }}{{ end }}{{ else }}{{ with .Data.login_return_url }}?redirect_url={{ . }}{{ end }}{{ end }}" method="POST">
                   <div>
                     <label for="username" class="app-inp-lbl">{{ .Data.i18n_provide_username_or_email }}</label>
                     <div class="app-inp-box">
@@ -117,7 +117,7 @@
               {{ range .Data.login_options.authenticators }}
                 <div>
                   {{ if .endpoint }}
-                    <a href="{{ .endpoint }}">
+                    <a href="{{ .endpoint }}{{ if eq .login_return_url_enabled "yes" }}{{ with $.Data.login_return_url }}?redirect_url={{ . }}{{ end }}{{ end }}">
                       <div class="app-login-btn-box">
                         <div class="p-4 bg-[{{ .background_color }}] text-[{{ .color }}] shadow-sm rounded-l-md text-2xl">
                           <i class="{{ .class_name }}"></i>
@@ -159,7 +159,7 @@
       </div>
     </div>
     <!-- JavaScript -->
-    <script src="{{ pathjoin .ActionEndpoint "/assets/js/login.js" }}"></script>
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/login.js" }}"{{ if .Data.login_elsewhere_enabled }} data-whoami="{{ pathjoin .ActionEndpoint "/whoami" }}?probe=login" data-return-url="{{ with .Data.login_return_url }}{{ . }}{{ else }}{{ pathjoin .ActionEndpoint "/portal" }}{{ end }}"{{ end }}></script>
     {{ if eq .Data.ui_options.custom_js_required "yes" }}
       <script src="{{ pathjoin .ActionEndpoint "/assets/js/custom.js" }}"></script>
     {{ end }}

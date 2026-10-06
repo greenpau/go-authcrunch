@@ -90,6 +90,10 @@ portal, register or cross-device remains a provider realm. JSON negotiation
 cannot bypass protocol query validation. The route emits no-store and no-referrer
 headers, and never logs ticket-bearing redirects. Hosting access logs must redact
 callback query credentials; application-issued redirect logs need the same care.
+The login page links this provider without the tab's `redirect_url`, which the
+first request would reject; a ticket login returns through the portal's shared
+redirect cookie, as described under
+[per-flow login destinations](../threat-hunting/references/redirects.md#per-flow-login-destinations).
 
 The normal portal applies transforms, current challenge requirements and signing.
 Origin is pinned back to the selected realm after transforms. AMR is server-owned
@@ -121,5 +125,7 @@ Host and query negotiation, invalid-port reload rejection without spending a
 pending ticket, restored-cookie replay, logout, transforms/MFA denial and
 independently verified JWTs. Run the external-module driver as well. Core tests
 exercise malformed optional capability output, cookie collisions, namespace
-precedence and unchanged OAuth/SAML redirects. Run public units/parser/consumer
+precedence and unchanged OAuth/SAML redirects.
+`TestE2ESQLiteTicketPortalLoginPageDestination` starts the login from a login page
+that carries a destination and lands on it. Run public units/parser/consumer
 with CGO_ENABLED=0, excluding the external driver which enables the race detector.

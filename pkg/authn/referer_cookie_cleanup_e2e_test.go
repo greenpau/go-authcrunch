@@ -309,8 +309,23 @@ func TestE2ERefererCookieCleanup(t *testing.T) {
 		f.assertDeletion(t, response)
 	})
 
+	// A signed-in tab returns to the destination its login URL carries without
+	// the shared cookie, so the cookie the portal consumes is one a signed-out
+	// tab issued earlier.
+	t.Run("authenticated login returns without referer cookie", func(t *testing.T) {
+		response := f.request(t, http.MethodGet, f.path("/login")+"?redirect_url="+url.QueryEscape(f.returnURL), nil)
+		if response.status != http.StatusSeeOther || response.header.Get("Location") != f.returnURL {
+			t.Fatalf("signed-in login returned HTTP %d to %q, want its own destination", response.status, response.header.Get("Location"))
+		}
+		for _, raw := range response.header.Values("Set-Cookie") {
+			if cookie, err := http.ParseSetCookie(raw); err == nil && cookie.Name == f.cookieName {
+				t.Fatal("signed-in login wrote the shared referer cookie")
+			}
+		}
+	})
+
 	t.Run("authenticated portal trusted redirect", func(t *testing.T) {
-		f.issueRefererCookie(t, http.StatusFound)
+		f.overwriteRefererCookie(t, f.returnURL)
 		response := f.request(t, http.MethodGet, f.path("/portal"), nil)
 		if response.status != http.StatusSeeOther || response.header.Get("Location") != f.returnURL {
 			t.Fatalf("portal returned HTTP %d to %q, want trusted redirect", response.status, response.header.Get("Location"))
@@ -325,7 +340,6 @@ func TestE2ERefererCookieCleanup(t *testing.T) {
 		{name: "malformed redirect", value: "http://[::1"},
 	} {
 		t.Run("authenticated portal rejects "+tc.name, func(t *testing.T) {
-			f.issueRefererCookie(t, http.StatusFound)
 			f.overwriteRefererCookie(t, tc.value)
 			response := f.request(t, http.MethodGet, f.path("/portal"), nil)
 			if response.status != http.StatusOK || !strings.Contains(string(response.body), "Applications") {

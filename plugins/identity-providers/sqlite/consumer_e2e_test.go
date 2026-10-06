@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -35,6 +36,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	tickets "github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite"
 	"github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite/parser"
@@ -294,5 +296,101 @@ func TestE2ESQLiteTicketPortal(t *testing.T) {
 	}
 	if resp, _ := fetch(browser(), active.Load().CallbackURL(), false, ""); resp.StatusCode != 401 || resp.Header.Get("Location") != "" || resp.Header.Get("Authorization") != "" {
 		t.Fatal("closed backend authenticated or redirected")
+	}
+}
+
+// A login page that carries its tab's destination still starts a ticket login:
+// the provider link has no query, which the ticket protocol rejects, and the
+// completed login returns through the portal's redirect cookie to that page.
+func TestE2ESQLiteTicketPortalLoginPageDestination(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	var active atomic.Pointer[tickets.Provider]
+	var portal atomic.Pointer[authn.Portal]
+	issuer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := active.Load()
+		q := r.URL.Query()
+		ticket, err := p.Issue(r.Context(), q.Get("request"), &idp.LoginIdentity{Subject: "alice", Email: "alice@example.test", Roles: []string{"authp/user"}})
+		if r.URL.Path != "/login" || q.Get("callback") != p.CallbackURL() || err != nil {
+			http.Error(w, "bad request", 400)
+			return
+		}
+		http.Redirect(w, r, p.CallbackURL()+"?"+url.Values{"state": {q.Get("request")}, "ticket": {ticket}}.Encode(), 303)
+	}))
+	defer issuer.Close()
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := portal.Load().ServeHTTP(r.Context(), w, r, requests.NewRequest()); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+	cfg, err := parser.NewSQLiteTicketProviderConfigFromDirectives([]string{"name tickets", "realm application", fmt.Sprintf("path %q", filepath.Join(dir, "tickets.db")), "public_origin " + server.URL, "base_path /auth", "issuer_url " + issuer.URL + "/login", "cookie_name APP_TICKET_BINDING"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := tickets.New(t.Context(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	active.Store(provider)
+	defer provider.Close()
+	trusted, err := redirects.NewRedirectURIMatchConfig("exact", "app.example.test", "prefix", "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := authn.NewPortal(authn.PortalParameters{Config: &authn.PortalConfig{Name: "ticket-destination", IdentityProviders: []string{"tickets"}, RawCryptoKeyStoreConfig: []string{"crypto key sign-verify synthetic-ticket-destination-key-0123456789"}, TrustedLoginRedirectURIConfigs: []*redirects.RedirectURIMatchConfig{trusted}}, Logger: zap.NewNop(), IdentityProviders: []idp.IdentityProvider{provider}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	portal.Store(p)
+	defer p.Close()
+
+	client := *server.Client()
+	client.Timeout = 10 * time.Second
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	if client.Jar, err = cookiejar.New(nil); err != nil {
+		t.Fatal(err)
+	}
+	get := func(target string) (*http.Response, string) {
+		t.Helper()
+		resp, err := client.Get(target)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		resp.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp, string(body)
+	}
+
+	destination := "https://app.example.test/tab?x=one%26two"
+	login, err := url.Parse(server.URL + "/auth/login?redirect_url=" + url.QueryEscape(destination))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, page := get(login.String())
+	link := regexp.MustCompile(`<a href="(provider/application[^"]*)"`).FindStringSubmatch(page)
+	if resp.StatusCode != 200 || link == nil || link[1] != "provider/application" {
+		t.Fatalf("login page returned HTTP %d with ticket provider link %q", resp.StatusCode, link)
+	}
+	start, err := login.Parse(link[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, _ = get(start.String())
+	if resp.StatusCode != 302 || !strings.HasPrefix(resp.Header.Get("Location"), issuer.URL+"/login?") {
+		t.Fatalf("ticket login did not start from the login page link: HTTP %d", resp.StatusCode)
+	}
+	resp, _ = get(resp.Header.Get("Location"))
+	if resp.StatusCode != 303 {
+		t.Fatalf("issuer returned HTTP %d", resp.StatusCode)
+	}
+	resp, _ = get(resp.Header.Get("Location"))
+	if resp.StatusCode != 303 || resp.Header.Get("Authorization") == "" || resp.Header.Get("Location") != destination {
+		t.Fatalf("ticket login completed with HTTP %d to %q, want %q", resp.StatusCode, resp.Header.Get("Location"), destination)
 	}
 }

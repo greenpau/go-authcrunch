@@ -302,3 +302,106 @@ func TestE2EOAuthTokenCallbackStateBinding(t *testing.T) {
 		})
 	}
 }
+
+// Each login hands back only the destination the embedding application bound
+// when it started, however the callbacks interleave and whatever destination
+// the callback request itself carries. A failed or unadmitted callback hands
+// back none.
+func TestE2EOAuthTokenCallbackReturnsBoundDestination(t *testing.T) {
+	key, private := newOAuthEdKey(t, "destination-key", "EdDSA")
+	var server *httptest.Server
+	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/metadata":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"issuer": server.URL, "authorization_endpoint": server.URL + "/authorize",
+				"token_endpoint": server.URL + "/token", "jwks_uri": server.URL + "/keys",
+			})
+		case "/keys":
+			_ = json.NewEncoder(w).Encode(map[string]any{"keys": []*JwksKey{key}})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	cfg := lifecycleOAuthConfig(server.URL)
+	provider, err := NewIdentityProvider(cfg, zap.NewNop())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer provider.Close()
+	if err := provider.Configure(); err != nil {
+		t.Fatal(err)
+	}
+
+	const browserSession = "destination-browser-session"
+	newRequest := func(query url.Values, returnURL string) *requests.Request {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://portal.example/oauth2/test?"+query.Encode(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := requests.NewRequest()
+		r.Upstream = requests.Upstream{
+			BaseURL: "https://portal.example", Method: "oauth2", Realm: "test",
+			Request: req, SessionID: browserSession,
+		}
+		r.Response.ReturnURL = returnURL
+		return r
+	}
+	// start begins a login bound to returnURL and returns its signed callback.
+	start := func(returnURL string) url.Values {
+		t.Helper()
+		login := newRequest(nil, returnURL)
+		if err := provider.Authenticate(login); err != nil || login.Response.Code != http.StatusFound {
+			t.Fatalf("initiate login: code=%d error=%v", login.Response.Code, err)
+		}
+		if login.Response.RedirectURL == returnURL || login.Response.ReturnURL != returnURL {
+			t.Fatal("login start mixed the destination into the provider redirect")
+		}
+		redirect, err := url.Parse(login.Response.RedirectURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if redirect.Query().Has("redirect_url") || redirect.Query().Has("return_url") {
+			t.Fatal("authorization redirect disclosed the login destination")
+		}
+		claims := oauthEdClaims()
+		claims["iss"], claims["aud"], claims["nonce"] = server.URL, cfg.ClientID, redirect.Query().Get("nonce")
+		token := signOAuthEdToken(t, private, map[string]any{"alg": "EdDSA", "kid": key.KeyID}, claims)
+		return url.Values{"state": {redirect.Query().Get("state")}, "id_token": {token}, "access_token": {"opaque"}}
+	}
+
+	first := start("https://app.example/first")
+	second := start("https://app.example/second?view=one%26two")
+	unbound := start("")
+	failed := start("https://app.example/failed")
+	failed.Del("id_token")
+	failed.Del("access_token")
+	failed.Set("error", "access_denied")
+
+	for _, tc := range []struct {
+		name     string
+		callback url.Values
+		carried  string
+		want     string
+		wantErr  bool
+	}{
+		{name: "second tab first", callback: second, want: "https://app.example/second?view=one%26two"},
+		{name: "first tab carries another destination", callback: first, carried: "https://app.example/chosen-by-callback", want: "https://app.example/first"},
+		{name: "login without destination", callback: unbound, carried: "https://app.example/chosen-by-callback"},
+		{name: "failed login", callback: failed, carried: "https://app.example/chosen-by-callback", wantErr: true},
+		{name: "unknown state", callback: url.Values{"state": {"unknown-state"}, "code": {"unused"}}, carried: "https://app.example/chosen-by-callback", wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			callback := newRequest(tc.callback, tc.carried)
+			err := provider.Authenticate(callback)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("callback error = %v, want error %t", err, tc.wantErr)
+			}
+			if callback.Response.ReturnURL != tc.want {
+				t.Fatalf("callback destination = %q, want %q", callback.Response.ReturnURL, tc.want)
+			}
+		})
+	}
+}

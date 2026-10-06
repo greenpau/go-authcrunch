@@ -26,6 +26,12 @@ The embedded profile client also uses a top-level GET navigation to
 `<mount>/login?fresh=1`, including when refresh is disabled. With refresh enabled,
 the configured origin and mount must match. This compatibility path never
 rotates credentials; ordinary API GETs retain their method/availability errors.
+A `fresh=1` login page does not probe the identity endpoint for a login completed
+in another tab; ordinary login pages do. A continue page reached from the login
+page with a trusted `redirect_url` replaces itself with that destination after the
+refresh, else with the portal, and deletes the shared redirect cookie when it
+holds that destination; see [per-flow login
+destinations](../threat-hunting/references/redirects.md#per-flow-login-destinations).
 
 Refresh exchanges require the exact configured HTTPS origin, effective host, and
 canonical mount.

@@ -292,3 +292,20 @@ test('localized session recovery handles both owned and browser-generated failur
     assert.equal(env.calls, 0);
   }
 });
+
+// A login page that continues a session with a refresh returns the tab to the
+// destination its own login URL carried, not through the shared portal page.
+test("a continued session returns to its own destination, else the portal", async () => {
+  for (const [next, want] of [["https://app.example.test/tab?x=one%26two", "https://app.example.test/tab?x=one%26two"], ["", "/auth/portal"]]) {
+    const env = environment();
+    const replaced = [];
+    const window = {
+      addEventListener() {}, dispatchEvent() {},
+      location: { assign() {}, replace: (target) => replaced.push(target) }
+    };
+    env.tab({ window, document: { currentScript: { dataset: { base: "/auth", action: "continue", next } }, getElementById: () => null } });
+    for (let i = 0; i < 50 && replaced.length === 0; i++) await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(replaced, [want]);
+    assert.equal(env.calls, 1);
+  }
+});

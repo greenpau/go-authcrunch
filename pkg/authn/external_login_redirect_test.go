@@ -31,6 +31,8 @@ import (
 
 type externalLoginTestProvider struct {
 	redirectURL string
+	// returnURL is the login flow destination the portal handed over.
+	returnURL string
 }
 
 func (p *externalLoginTestProvider) GetRealm() string          { return "upstream" }
@@ -47,6 +49,7 @@ func (p *externalLoginTestProvider) GetLogoutURL() string               { return
 func (p *externalLoginTestProvider) GetIdentityTokenCookieName() string { return "" }
 func (p *externalLoginTestProvider) Request(op operator.Type, r *requests.Request) error {
 	if op == operator.Authenticate {
+		p.returnURL = r.Response.ReturnURL
 		r.Response.Code = http.StatusFound
 		if p.redirectURL != "" {
 			r.Response.RedirectURL = p.redirectURL
@@ -72,6 +75,9 @@ func TestExternalLoginSeparatesReturnURLFromProviderRedirect(t *testing.T) {
 		wantLocation     string
 		wantReturnCookie bool
 		staleRedirectURL string
+		// wantBoundURL is the destination bound to the login itself. Only
+		// OAuth binds one; a SAML callback URL must not be able to choose it.
+		wantBoundURL string
 	}{
 		{
 			name:             "trusted return URL does not replace provider destination",
@@ -81,6 +87,7 @@ func TestExternalLoginSeparatesReturnURLFromProviderRedirect(t *testing.T) {
 			wantStatus:       http.StatusFound,
 			wantLocation:     providerURL,
 			wantReturnCookie: true,
+			wantBoundURL:     returnURL,
 		},
 		{
 			name:             "trusted return URL does not replace SAML provider destination",
@@ -106,6 +113,7 @@ func TestExternalLoginSeparatesReturnURLFromProviderRedirect(t *testing.T) {
 			wantStatus:       http.StatusBadGateway,
 			wantReturnCookie: true,
 			staleRedirectURL: "https://stale.example.test/authorize",
+			wantBoundURL:     returnURL,
 		},
 		{
 			name:             "missing SAML provider destination fails closed",
@@ -162,6 +170,9 @@ func TestExternalLoginSeparatesReturnURLFromProviderRedirect(t *testing.T) {
 			}
 			if gotReturnCookie != tc.wantReturnCookie {
 				t.Fatalf("return cookie present = %t, want %t", gotReturnCookie, tc.wantReturnCookie)
+			}
+			if provider.returnURL != tc.wantBoundURL {
+				t.Fatalf("login flow destination = %q, want %q", provider.returnURL, tc.wantBoundURL)
 			}
 		})
 	}

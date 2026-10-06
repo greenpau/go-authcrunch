@@ -43,6 +43,10 @@ do not replace HTTP/3 with a modified HTTP/1 request or silently fall back to
 another protocol. See the
 [redirect owner](../../threat-hunting/references/redirects.md#regression-ownership)
 for the full login journey and request-target invariants.
+Per-tab login destinations extend that fixture with
+`TestE2EServerAuthorizationLoginRedirectPerTab` and
+`TestE2EServerAuthorizationLoginRedirectNotCarried`, which share one cookie jar
+across tabs as a browser does.
 
 Use [authorization-policy-oauth](../../authorization-policy-oauth/SKILL.md) to
 validate direct OAuth policy login, callbacks, sessions, and logout.

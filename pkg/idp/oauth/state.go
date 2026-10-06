@@ -31,6 +31,9 @@ type loginBinding struct {
 	callback      string
 	nonceRequired bool
 	claimed       bool
+	// returnURL is the embedding application's post-login destination for
+	// this login, opaque to the provider.
+	returnURL string
 }
 
 type stateManager struct {
@@ -70,7 +73,8 @@ func (sm *stateManager) add(state, nonce string) error {
 // addLogin publishes the nonce, verifier and browser binding together before
 // the authorization redirect is returned. SessionID is supplied by the
 // embedding application from its protected per-browser cookie, never a query.
-func (sm *stateManager) addLogin(state, nonce, verifier, sessionID, callback string) error {
+// ReturnURL is the embedding application's destination for this login, if any.
+func (sm *stateManager) addLogin(state, nonce, verifier, sessionID, callback, returnURL string) error {
 	sm.mux.Lock()
 	defer sm.mux.Unlock()
 	if sessionID == "" || callback == "" {
@@ -82,8 +86,15 @@ func (sm *stateManager) addLogin(state, nonce, verifier, sessionID, callback str
 	sm.states[state] = time.Now()
 	sm.nonces[state] = nonce
 	sm.verifiers[state] = verifier
-	sm.bindings[state] = loginBinding{sessionID: sessionID, callback: callback, nonceRequired: nonce != ""}
+	sm.bindings[state] = loginBinding{sessionID: sessionID, callback: callback, nonceRequired: nonce != "", returnURL: returnURL}
 	return nil
+}
+
+// getReturnURL returns the post-login destination recorded for a login.
+func (sm *stateManager) getReturnURL(state string) string {
+	sm.mux.Lock()
+	defer sm.mux.Unlock()
+	return sm.bindings[state].returnURL
 }
 
 // beginCallback admits only one response from the initiating browser, at the

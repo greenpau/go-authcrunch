@@ -18,10 +18,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
-	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -38,12 +36,20 @@ func getEndpoint(p, s string) (string, error) {
 
 func (p *Portal) handleHTTPPortal(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, parsedUser *user.User) error {
 	p.disableClientCache(w)
+	// A signed-in tab returns to the destination its own URL carries, as on the
+	// login page, without handing it to the redirect cookie.
+	if parsedUser != nil {
+		if returnURL := p.loginReturnURL(r, rr); returnURL != "" && p.hasPortalSession(parsedUser) {
+			return p.returnToLoginDestination(w, r, rr, returnURL)
+		}
+	}
 	p.injectRedirectURL(ctx, w, r, rr)
 	if parsedUser == nil {
 		if p.hasRefreshCookie(r) {
 			return p.handleSessionPage(ctx, w, r, rr, "continue")
 		}
-		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
+		// Keep the destination in this tab's URL, as the portal root does.
+		return p.handleHTTPRedirect(ctx, w, r, rr, loginPageLocation(p.loginReturnURL(r, rr), false))
 	}
 	usr, err := p.sessions.Get(parsedUser.Claims.ID)
 	if err != nil {
@@ -62,27 +68,24 @@ func (p *Portal) handleHTTPPortal(ctx context.Context, w http.ResponseWriter, r 
 
 func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
 	if cookie, err := r.Cookie(p.cookie.RefererCookieName); err == nil {
-		redirectURL, err := url.Parse(cookie.Value)
-		if err == nil {
-			if len(p.config.TrustedLoginRedirectURIConfigs) > 0 && redirects.Match(redirectURL, p.config.TrustedLoginRedirectURIConfigs) {
-				p.logger.Debug(
-					"Cookie-based redirect",
-					zap.String("session_id", rr.Upstream.SessionID),
-					zap.String("request_id", rr.ID),
-					zap.String("redirect_url", redirectURL.String()),
-				)
-				w.Header().Set("Location", redirectURL.String())
-				w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
-				w.WriteHeader(http.StatusSeeOther)
-				return nil
-			}
-			p.logger.Warn(
-				"Redirect cookie value is not trusted, ignoring",
+		if redirectURL := p.trustedLoginRedirectURL(cookie.Value); redirectURL != "" {
+			p.logger.Debug(
+				"Cookie-based redirect",
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
-				zap.String("redirect_url", redirectURL.String()),
+				zap.String("redirect_url", redirectURL),
 			)
+			w.Header().Set("Location", redirectURL)
+			w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
+			w.WriteHeader(http.StatusSeeOther)
+			return nil
 		}
+		p.logger.Warn(
+			"Redirect cookie value is not trusted, ignoring",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID),
+			zap.String("redirect_url", cookie.Value),
+		)
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
 	}
 	resp := p.ui.GetArgs()

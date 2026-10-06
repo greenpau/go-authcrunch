@@ -7,11 +7,13 @@ const path = require("node:path");
 const vm = require("node:vm");
 const source = fs.readFileSync(path.join(__dirname, "../core/js/login.js"), "utf8");
 
-function environment(view) {
+function environment(view, page = {}) {
   const elements = new Map();
   const listeners = new Map();
   const document = {
     activeElement: null,
+    currentScript: page.dataset ? { dataset: page.dataset } : null,
+    visibilityState: page.visibility || "visible",
     getElementById: (id) => elements.get(id) || null,
     createElement: (tag) => element(tag),
     addEventListener: (name, callback) => listeners.set(name, callback),
@@ -45,9 +47,20 @@ function environment(view) {
     element("authenticators", view === "selected" ? ["hidden"] : []);
     element("provider");
   }
-  const context = { document, console };
+  const windowListeners = new Map();
+  const intervals = [];
+  const replaced = [];
+  const context = {
+    document, console,
+    fetch: page.fetch,
+    setInterval: (callback, delay) => intervals.push({ callback, delay }),
+    window: {
+      addEventListener: (name, callback) => windowListeners.set(name, callback),
+      location: { replace: (target) => replaced.push(target) },
+    },
+  };
   vm.runInNewContext(source, context);
-  return { ...context, elements, listeners };
+  return { ...context, elements, listeners, windowListeners, intervals, replaced };
 }
 
 for (const view of ["providers", "selected", "single", "external"]) {
@@ -112,4 +125,81 @@ test("QR image uses the portal's localized accessible name", () => {
   elements.get("qrcode").dataset.qrAlt = "رمز QR";
   showQRCode("/auth/qrcode/login.png");
   assert.equal(elements.get("qrcode").children[0].alt, "رمز QR");
+});
+
+// A tab left on the login page while the user signs in from another tab must
+// leave for its own destination once the browser is signed in, without a second
+// login. It asks the portal only while the tab is in view.
+// status is the probe's answer: 200 signed in, 401 signed out, and 403 signed
+// in with an account this portal does not admit.
+function signInElsewhere(status, visibility = "visible") {
+  const probes = [];
+  const fetch = async (url, options) => {
+    probes.push({ url, options });
+    return { ok: status === 200, status };
+  };
+  return { probes, ...environment("single", {
+    dataset: { whoami: "/auth/whoami?probe=login", returnUrl: "https://app.example.test/tab/b?x=1" },
+    fetch, visibility,
+  }) };
+}
+
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+test("a signed-in browser sends the waiting tab to its own destination", async () => {
+  for (const trigger of ["visibilitychange", "focus", "interval"]) {
+    const env = signInElsewhere(200);
+    if (trigger === "visibilitychange") env.listeners.get("visibilitychange")();
+    if (trigger === "focus") env.windowListeners.get("focus")();
+    if (trigger === "interval") env.intervals[0].callback();
+    await settle();
+    assert.deepEqual(env.replaced, ["https://app.example.test/tab/b?x=1"], trigger);
+    assert.equal(env.probes.length, 1, trigger);
+    assert.equal(env.probes[0].url, "/auth/whoami?probe=login");
+    assert.equal(env.probes[0].options.headers.Accept, "application/json");
+    // A followed redirect would turn a signed-out answer into a 200 login page.
+    assert.equal(env.probes[0].options.redirect, "manual");
+    assert.equal(env.probes[0].options.cache, "no-store");
+    assert.equal(env.probes[0].options.credentials, "same-origin");
+  }
+});
+
+test("a signed-out browser stays on the login page", async () => {
+  const env = signInElsewhere(401);
+  env.windowListeners.get("focus")();
+  // A check still waiting for its answer absorbs the next one.
+  env.intervals[0].callback();
+  await settle();
+  env.intervals[0].callback();
+  await settle();
+  assert.equal(env.probes.length, 2);
+  assert.deepEqual(env.replaced, []);
+});
+
+test("a tab out of view does not ask the portal", async () => {
+  const env = signInElsewhere(200, "hidden");
+  env.intervals[0].callback();
+  env.listeners.get("visibilitychange")();
+  await settle();
+  assert.equal(env.probes.length, 0);
+  assert.deepEqual(env.replaced, []);
+  assert.ok(env.intervals[0].delay >= 2000, "polls no faster than every two seconds");
+});
+
+test("an account this portal does not admit stops the watch", async () => {
+  const env = signInElsewhere(403);
+  env.intervals[0].callback();
+  await settle();
+  env.windowListeners.get("focus")();
+  env.listeners.get("visibilitychange")();
+  env.intervals[0].callback();
+  await settle();
+  assert.equal(env.probes.length, 1);
+  assert.deepEqual(env.replaced, []);
+});
+
+test("a login page without a destination does not watch", () => {
+  const env = environment("single", { fetch: async () => ({ ok: true }) });
+  assert.equal(env.intervals.length, 0);
+  assert.equal(env.listeners.has("visibilitychange"), false);
 });

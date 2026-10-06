@@ -19,13 +19,30 @@ import (
 	"strings"
 )
 
-// Match matches HTTP URL to the redirect URI match configuration.
+// Match matches HTTP URL to the redirect URI match configuration. A path with
+// dot segments never matches: a browser removes them, literal or percent-encoded,
+// before it requests the URL, so the path it requests is not the path matched.
 func Match(u *url.URL, cfgs []*RedirectURIMatchConfig) bool {
+	if hasDotSegment(u.Path) {
+		return false
+	}
 	for _, cfg := range cfgs {
 		if cfg == nil {
 			continue
 		}
 		if matchRedirectURIPath(u.Path, cfg) && matchRedirectURIDomain(u.Host, cfg) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasDotSegment reports whether the decoded URL path holds a "." or ".."
+// segment. Decoding turns the percent-encoded forms into literal dots, and a
+// backslash counts as a separator, as browsers and some servers treat it.
+func hasDotSegment(requestPath string) bool {
+	for _, segment := range strings.FieldsFunc(requestPath, func(r rune) bool { return r == '/' || r == '\\' }) {
+		if segment == "." || segment == ".." {
 			return true
 		}
 	}

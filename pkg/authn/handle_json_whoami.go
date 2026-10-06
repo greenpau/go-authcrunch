@@ -30,6 +30,13 @@ func (p *Portal) handleJSONWhoami(ctx context.Context, w http.ResponseWriter, r 
 	if usr == nil {
 		return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Access denied")
 	}
+	if isLoginElsewhereProbe(r) {
+		// The waiting login page leaves for portal pages, which also require this
+		// portal's session; without one they would delete the browser's tokens.
+		if !p.hasPortalSession(usr) {
+			return p.handleJSONError(ctx, w, http.StatusForbidden, "Forbidden")
+		}
+	}
 
 	// Check whether probe is being requested.
 	probeEnabled := r.URL.Query().Get("probe")

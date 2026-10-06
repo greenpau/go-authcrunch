@@ -137,7 +137,7 @@
   window.AuthCrunchSession = { refresh, logout };
   ready = initialize();
   ready.then(() => {
-    if (action === "continue") refresh().then(() => window.location.replace(base + "/portal")).catch(showError);
+    if (action === "continue") refresh().then(() => window.location.replace(script.dataset.next || base + "/portal")).catch(showError);
     if (action === "refresh") schedule(read());
   }).catch(showError);
   const button = document.getElementById("session-logout");

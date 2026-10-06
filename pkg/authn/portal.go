@@ -493,6 +493,9 @@ func (p *Portal) configureLoginOptions() error {
 
 func (p *Portal) configureLoginIcons() error {
 	var entries []*icons.LoginIcon
+	// An HTTP login provider owns its query and accepts none on the first
+	// request, so its link cannot carry the tab's own destination.
+	httpLogin := make(map[*icons.LoginIcon]bool)
 
 	for _, store := range p.identityStores {
 		icon := store.GetLoginIcon()
@@ -509,6 +512,7 @@ func (p *Portal) configureLoginIcons() error {
 			icon = &copyIcon
 			icon.SetRealm(provider.GetRealm())
 			icon.SetEndpoint(path.Join("provider", provider.GetRealm()))
+			httpLogin[icon] = true
 		}
 		entries = append(entries, icon)
 	}
@@ -521,6 +525,9 @@ func (p *Portal) configureLoginIcons() error {
 
 	for i, icon := range entries {
 		iconConfig := icon.GetConfig()
+		if iconConfig["endpoint"] != "" && !httpLogin[icon] {
+			iconConfig["login_return_url_enabled"] = "yes"
+		}
 		iconConfigs = append(iconConfigs, iconConfig)
 		if i == 0 {
 			p.loginOptions["default_realm"] = iconConfig["realm"]

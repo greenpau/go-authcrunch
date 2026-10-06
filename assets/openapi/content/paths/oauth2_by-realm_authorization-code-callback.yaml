@@ -13,7 +13,8 @@ get:
     is ignored: issuer trust comes from configured/discovered issuer and cryptographically verified token
     claims. With no state/code/error/access_token parameter, this URL starts a new upstream login. Keep
     browser HTML negotiation. Successful upstream verification still passes portal authorization/transforms
-    before issuing a session.'
+    before issuing a session. A redirect_url on the callback URL never chooses the post-login destination:
+    only the one bound when this login started is returned, and only from a successful callback.'
   security: []
   responses:
     '200':

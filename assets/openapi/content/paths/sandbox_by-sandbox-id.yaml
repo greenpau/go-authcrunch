@@ -6,7 +6,9 @@ get:
   description: Browser challenge page selected by the server after form login. Retain the sandbox cookie
     and submit only the fields supplied by the current rendered checkpoint. Fields differ for password,
     TOTP and WebAuthn. JSON/native clients use POST /login instead. This is temporary authentication state,
-    not a final access-token session.
+    not a final access-token session. Going back (the terminate action) or starting over after a terminal
+    failure leads to the login page with the trusted redirect_url and fresh=1 the login form was posted with,
+    and the last checkpoint returns to that destination ahead of the shared redirect cookie.
   security: []
   responses:
     '200':
@@ -25,6 +27,7 @@ get:
       $ref: ../components/responses/HTML.yaml
   x-source-files:
   - pkg/authn/handle_http_sandbox.go
+  - pkg/authn/inject_redirect_url.go
   parameters:
   - name: sandbox_id
     in: path

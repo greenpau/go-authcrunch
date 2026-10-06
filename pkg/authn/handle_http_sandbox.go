@@ -129,7 +129,8 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		return p.handleHTTPSandboxMfaBarcode(ctx, w, r, sandboxPartition)
 	case sandboxPartition == "terminate":
 		p.sandboxes.Delete(sandboxID)
-		return p.handleHTTPRedirectSeeOther(ctx, w, r, rr, "login")
+		// Back to this tab's own login page, which keeps its destination.
+		return p.handleHTTPRedirectSeeOther(ctx, w, r, rr, loginPageLocation(usr.LoginReturnURL, usr.LoginFresh))
 	}
 
 	p.logger.Debug(
@@ -179,6 +180,9 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		switch data["view"] {
 		case "terminate":
 			p.sandboxes.Delete(sandboxID)
+			// Starting over returns to this tab's own login page.
+			data["login_return_url"] = usr.LoginReturnURL
+			data["login_fresh"] = usr.LoginFresh
 		case "redirect":
 			return p.handleHTTPRedirectSeeOther(ctx, w, r, rr, "sandbox/"+sandboxID)
 		}
@@ -204,6 +208,8 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		if err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
 		}
+		// The issued user is built afresh; the destination stays on the sandbox.
+		rr.Response.ReturnURL = proof.LoginReturnURL
 		responseHeaders := w.Header().Clone()
 		if err := p.grantAccess(ctx, w, r, rr, issued); err != nil {
 			cleanupErr := p.discardUndeliveredRefresh(ctx, tokens, proof.RefreshTransport)

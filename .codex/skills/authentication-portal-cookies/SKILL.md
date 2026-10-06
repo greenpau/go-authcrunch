@@ -64,7 +64,12 @@ Return-cookie consumption in `grantAccess` and `handleHTTPPortalScreen` uses
 malformed return destinations. Do not construct an additional deletion by
 mutating `r.Cookie`: request cookies carry names and values, without their
 original scope or security attributes. The factory owns the host-only portal
-mount scope and preserves the configured security policy. Keep trusted redirects,
+mount scope and preserves the configured security policy. A login flow's own
+trusted destination takes precedence over the cookie at `grantAccess`, which
+still consumes the cookie. A signed-in tab with its own trusted destination
+neither writes nor reads the cookie. The cookie and the flow share one set of
+trust rules; see
+[per-flow login destinations](../threat-hunting/references/redirects.md#per-flow-login-destinations). Keep trusted redirects,
 ignored destinations, cookie removal, and unrelated-cookie preservation covered
 through the real login and authenticated portal routes.
 

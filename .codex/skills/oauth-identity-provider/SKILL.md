@@ -218,9 +218,23 @@ state entries fail closed to nonce-required behavior. Missing state still fails.
 Signature, issuer, audience, browser state, expiry, replay and PKCE validation
 remain active when nonce compatibility is disabled.
 
+The login binding also carries the embedding application's post-login destination:
+the `requests.Response.ReturnURL` present when login starts is published with the
+binding and is opaque to the provider. It never enters the authorization URL.
+Every callback request clears any `ReturnURL` it carried before the state is
+claimed, and sets the bound value only on success, so neither a callback URL nor a
+failed or unadmitted callback can choose a destination. The value is read before
+the claim; it never changes once published. The destination shares the binding's
+capacity, lifetime, single use and removal on completion, cancellation and expiry.
+The embedding portal validates it before login and again before use. `RedirectURL`
+stays reserved for the authorization endpoint.
+
 Keep `nonce_policy_test.go`, `state_binding_test.go`, parser round-trip OAuth TLS
 coverage and `oauth_state_e2e_test.go` for both settings, wrong/missing nonce,
 wrong browser/callback, replay and malformed signed identity tokens.
+`TestStateBindingReturnURL` and `TestE2EOAuthTokenCallbackReturnsBoundDestination`
+cover the bound destination's lifecycle, interleaved callbacks, callback-carried
+destinations, failed callbacks and unknown states.
 
 ## Claims and Protocol Compatibility
 
