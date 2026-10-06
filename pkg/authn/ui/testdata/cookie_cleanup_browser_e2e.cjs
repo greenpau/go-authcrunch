@@ -122,7 +122,11 @@ async function page(contextId) {
     assert.equal(await hasCookie(config.sentinel), true, "login cleanup removed the unrelated sentinel");
 
     stage = "authenticated trusted portal cleanup";
+    // A signed-in tab returns to its own destination without the shared
+    // cookie, so the cookie the portal consumes comes from an earlier tab.
     await issueReferer();
+    assert.equal(await hasCookie(config.referer), false, "signed-in login wrote the shared referer cookie");
+    await setReferer(config.return_url);
     assert.equal(await hasCookie(config.referer), true, "authenticated browser did not store trusted referer cookie");
     await consumePortal();
     assert.equal(await hasCookie(config.referer), false, "trusted portal redirect retained referer cookie");

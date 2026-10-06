@@ -36,7 +36,9 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 	switch {
 	case r.URL.Path == "/" || r.URL.Path == "/auth" || r.URL.Path == "/auth/" || r.URL.Path == rr.Upstream.BasePath:
 		p.injectRedirectURL(ctx, w, r, rr)
-		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
+		// Keep the destination in this tab's URL too: the cookie is shared by
+		// every tab of the browser, so the last tab to arrive would win it.
+		return p.handleHTTPRedirect(ctx, w, r, rr, loginPageLocation(p.loginReturnURL(r, rr), false))
 	case providerLoginRouteIndex(r.URL.Path) >= 0:
 		return p.handleHTTPProviderLogin(ctx, w, r, rr)
 	case strings.Contains(r.URL.Path, "/profile/"):
@@ -269,6 +271,12 @@ func (p *Portal) authorizeRequest(ctx context.Context, w http.ResponseWriter, r 
 		case "no token found":
 			return nil, nil
 		default:
+			if usr != nil && isLoginElsewhereProbe(r) {
+				// The token is valid, but this portal does not admit it. Its
+				// gatekeepers may still do so, and the waiting login page asking
+				// must not remove it from every tab of the browser.
+				return nil, errLoginElsewhereNotAdmitted
+			}
 			w.Header().Add("Set-Cookie", p.cookie.GetDeleteAccessTokenCookie(addrutil.GetSourceHost(r)))
 			if strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon") {
 				return nil, nil

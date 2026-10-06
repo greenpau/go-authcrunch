@@ -18,6 +18,9 @@ get:
     Lax or Strict. On verified identity, the portal applies transforms/challenge
     policy and issues its ordinary browser credentials with federated evidence and
     origin set to the realm. Required local password/MFA policy can still deny issuance.
+    Login page links to this route carry no redirect_url, because a provider may
+    reject any query on initiation; a completed login returns through the shared
+    redirect cookie, which the login page request records.
   security: []
   parameters:
   - name: realm
@@ -60,3 +63,4 @@ get:
   - pkg/authn/serve_http.go
   - pkg/authn/handle_http_login.go
   - pkg/idp/http_login.go
+  - pkg/authn/portal.go

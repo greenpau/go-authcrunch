@@ -6,10 +6,12 @@ get:
   description: Keep Accept as text/html. The dashboard requires a valid access token AND its stored portal
     session. A valid token without that session clears its access cookie and redirects to login. Without
     a valid token, a present refresh cookie selects the browser continuation page when refresh is enabled;
-    otherwise login is selected. Continuation only runs at the configured HTTPS origin/mount and can fail
-    with HTML 403. With a stored session, a trusted redirect cookie (default AUTHP_REDIRECT_URL) is consumed
-    and produces 303 to the configured trusted destination; untrusted redirect cookies are deleted and
-    the dashboard is rendered.
+    otherwise login is selected, keeping a trusted redirect_url in the login page URL as the portal root
+    does. A continuation page reached with a trusted redirect_url returns there after the refresh. Continuation only runs at the configured HTTPS origin/mount and can fail
+    with HTML 403. With a stored session, a redirect_url carried per login produces 303 to it without the
+    shared cookie. Otherwise a trusted redirect cookie (default AUTHP_REDIRECT_URL) is consumed and produces
+    303 to the configured trusted destination; untrusted redirect cookies are deleted and the dashboard
+    is rendered.
   security:
   - PortalBearer: []
   - PortalCookie: []
@@ -29,3 +31,13 @@ get:
   - pkg/authn/handle_http_portal.go
   - pkg/authn/handle_http_session.go
   - pkg/authn/inject_redirect_url.go
+  parameters:
+  - name: redirect_url
+    in: query
+    description: Post-login destination, accepted when it is a configured trusted absolute HTTP(S) URL without
+      dot path segments. A signed-in browser returns to it when it is at most 2048 bytes after login_hint
+      is removed; otherwise it is recorded in the shared redirect cookie and, within that bound, kept in
+      the login page URL.
+    required: false
+    schema:
+      type: string

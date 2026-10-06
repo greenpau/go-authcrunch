@@ -141,7 +141,8 @@ discovery. Both use standard-library facilities. The default Go suite also runs
 profile and actual TLS portal. Supply `AUTHCRUNCH_TEST_BROWSER` when the executable
 is not discoverable. Missing browsers are a validation failure; the Node VM
 suite does not substitute for this E2E. The default suite also runs
-`TestE2EOIDCThemedBrowser` with the same browser discovery and startup helpers.
+`TestE2EOIDCThemedBrowser` and `TestE2ELoginElsewhereSendsWaitingTabsHomeBrowser`
+with the same browser discovery and startup helpers.
 Use [refresh-token-transports](../refresh-token-transports/SKILL.md) to maintain
 the refresh browser fixture and its rotation/recovery assertions. The
 [OIDC browser-page matrix](../authentication-portal-oidc/references/browser-pages.md#validation)

@@ -47,6 +47,15 @@ func (p *Portal) handleSessionPage(ctx context.Context, w http.ResponseWriter, r
 		}
 		resp.Data["session_next"] = next
 	}
+	if action == "continue" {
+		// After the refresh, the tab returns to the destination its own login
+		// URL carries, not through the redirect cookie that every tab shares.
+		if returnURL := p.loginReturnURL(r, rr); returnURL != "" {
+			p.consumeOwnRedirectCookie(w, r, rr, returnURL)
+			resp.Data["session_next"] = returnURL
+			resp.Data["login_return_url"] = returnURL
+		}
+	}
 	content, err := p.ui.Render("session", resp)
 	if err != nil {
 		return p.handleHTTPRenderError(ctx, w, r, rr, err)

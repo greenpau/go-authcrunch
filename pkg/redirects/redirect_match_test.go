@@ -242,3 +242,41 @@ func TestMatchRequiresPathAndDomainFromSameConfig(t *testing.T) {
 		})
 	}
 }
+
+// A browser removes dot segments, literal or percent-encoded, before it
+// requests a URL. A path restriction must hold for the path it requests.
+func TestMatchRejectsDotSegments(t *testing.T) {
+	cfg, err := NewRedirectURIMatchConfig("exact", "app.example.com", "prefix", "/allowed/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for input, want := range map[string]bool{
+		"https://app.example.com/allowed/safe":                    true,
+		"https://app.example.com/allowed/a%2Fb?x=..&y=./z#../..":  true,
+		"https://app.example.com/allowed/..safe/.hidden/a..b/...": true,
+		"https://app.example.com/allowed/%252e%252e/outside":      true,
+		"https://app.example.com/outside":                         false,
+		"https://app.example.com/allowed/../outside":              false,
+		"https://app.example.com/allowed/./../outside":            false,
+		"https://app.example.com/allowed/%2e%2e/outside":          false,
+		"https://app.example.com/allowed/%2E%2E/outside":          false,
+		"https://app.example.com/allowed/.%2e/outside":            false,
+		"https://app.example.com/allowed/%2e./outside":            false,
+		"https://app.example.com/allowed/%2e/../outside":          false,
+		"https://app.example.com/allowed/sub/..":                  false,
+		"https://app.example.com/allowed/sub/.":                   false,
+		"https://app.example.com/allowed/..%5Coutside":            false,
+		"https://app.example.com/allowed/a%2F..%2F..%2Foutside":   false,
+		"https://app.example.com/allowed/x/../safe":               false,
+	} {
+		t.Run(input, func(t *testing.T) {
+			u, err := url.Parse(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := Match(u, []*RedirectURIMatchConfig{cfg}); got != want {
+				t.Errorf("Match(%q) = %t, want %t", input, got, want)
+			}
+		})
+	}
+}

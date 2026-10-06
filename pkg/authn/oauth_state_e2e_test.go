@@ -15,12 +15,18 @@
 package authn_test
 
 import (
+	"html"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"regexp"
+	"slices"
+	"strings"
 	"testing"
 
+	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 )
 
@@ -164,5 +170,181 @@ func TestE2EExternalLoginReturnURLIsSeparateFromProviderRedirect(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+var providerLoginLink = regexp.MustCompile(`<a href="(oauth2/upstream[^"]*)"`)
+
+// startOAuthTab follows a tab from the portal root to its login page, starts the
+// login through the provider link that page offers, and returns the callback.
+func startOAuthTab(t *testing.T, portal *oidcE2EPortal, client *http.Client, returnURL string) string {
+	t.Helper()
+	next, err := url.Parse(portal.server.URL + "/auth/?redirect_url=" + url.QueryEscape(returnURL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for next.Path != "/auth/login" {
+		resp := oauthStateRequest(t, client, next.String())
+		if resp.StatusCode != http.StatusFound {
+			t.Fatalf("portal root returned HTTP %d", resp.StatusCode)
+		}
+		if next, err = next.Parse(resp.Header.Get("Location")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	resp, err := client.Get(next.String())
+	if err != nil {
+		t.Fatal("login page request failed")
+	}
+	page, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	resp.Body.Close()
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("login page returned HTTP %d", resp.StatusCode)
+	}
+	m := providerLoginLink.FindSubmatch(page)
+	if m == nil {
+		t.Fatal("login page offers no provider link")
+	}
+	start, err := next.Parse(html.UnescapeString(string(m[1])))
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := oauthStateRequest(t, client, start.String())
+	if started.StatusCode != http.StatusFound {
+		t.Fatalf("external login returned HTTP %d", started.StatusCode)
+	}
+	authorized := oauthStateRequest(t, client, started.Header.Get("Location"))
+	if authorized.StatusCode != http.StatusFound {
+		t.Fatalf("synthetic provider returned HTTP %d", authorized.StatusCode)
+	}
+	return authorized.Header.Get("Location")
+}
+
+// loginElsewhereProbe asks whoami as a waiting login page does.
+func loginElsewhereProbe(t *testing.T, client *http.Client, location string) *http.Response {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, location, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Accept", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal("login probe request failed")
+	}
+	_, readErr := io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
+	resp.Body.Close()
+	if readErr != nil {
+		t.Fatal("could not read login probe response")
+	}
+	return resp
+}
+
+func newPerTabOAuthPortal(t *testing.T, admitted bool) (*oidcE2EPortal, *http.Client) {
+	t.Helper()
+	issuer := newOIDCE2EIssuer(t, "Ed25519", "opaque", "", false)
+	issuerURL, err := url.Parse(issuer.server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	trusted, err := redirects.NewRedirectURIMatchConfig("exact", issuerURL.Host, "prefix", "/post-login/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	trust := oidcE2ETrustConfig{loginRedirects: []*redirects.RedirectURIMatchConfig{trusted}}
+	if admitted {
+		// The portal admits the provider's users, so a tab still on its login
+		// page can see from whoami that the browser is signed in.
+		trust.configurePortal = func(c *authn.PortalConfig) {
+			c.AccessListConfigs = []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer"}, Action: "allow stop"}}
+		}
+	}
+	portal := newOIDCE2EPortal(t, issuer, "/auth", "RS512", "discovery", trust)
+	client := *portal.client
+	client.Jar, err = cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return portal, &client
+}
+
+// Two tabs of one browser start OAuth logins from their own login pages, the
+// way a user does after several tabs hit the login redirect at once. However
+// their callbacks interleave, each must return to its own page: the shared
+// redirect cookie holds only the destination of the tab that arrived last.
+func TestE2EExternalLoginReturnsEachTabToItsOwnPage(t *testing.T) {
+	portal, client := newPerTabOAuthPortal(t, true)
+	first := portal.issuer.server.URL + "/post-login/first"
+	second := portal.issuer.server.URL + "/post-login/second?view=one%26two"
+	firstCallback := startOAuthTab(t, portal, client, first)
+	secondCallback := startOAuthTab(t, portal, client, second)
+	// The provider chooses the callback URL, so a destination it carries does
+	// not replace the one its login started with.
+	firstCallback += "&redirect_url=" + url.QueryEscape(portal.issuer.server.URL+"/post-login/chosen-by-callback")
+
+	for _, tab := range []struct{ callback, want string }{{secondCallback, second}, {firstCallback, first}} {
+		completed := oauthStateRequest(t, client, tab.callback)
+		if completed.StatusCode != http.StatusSeeOther || completed.Header.Get("Location") != tab.want {
+			t.Errorf("tab for %q completed with HTTP %d to %q", tab.want, completed.StatusCode, completed.Header.Get("Location"))
+		}
+	}
+	// A tab still on its login page asks whoami whether the browser is signed in.
+	if probe := loginElsewhereProbe(t, client, portal.server.URL+"/auth/whoami?probe=login"); probe.StatusCode != http.StatusOK {
+		t.Errorf("login probe after an OAuth login returned HTTP %d, want 200", probe.StatusCode)
+	}
+}
+
+// A portal need not admit every account its gatekeepers accept. A login page
+// waiting in another tab must then neither leave for the portal nor, by asking,
+// delete the access token the browser's other tabs use. Tokens that are invalid
+// rather than not admitted are still removed.
+func TestE2ELoginElsewhereProbeKeepsTokenThePortalDoesNotAdmit(t *testing.T) {
+	portal, client := newPerTabOAuthPortal(t, false)
+	destination := portal.issuer.server.URL + "/post-login/app"
+	completed := oauthStateRequest(t, client, startOAuthTab(t, portal, client, destination))
+	if completed.StatusCode != http.StatusSeeOther || completed.Header.Get("Location") != destination {
+		t.Fatalf("OAuth login completed with HTTP %d", completed.StatusCode)
+	}
+	// The fixture's keystore names the access token.
+	const accessName = "oauth_portal_token"
+	issued := completed.Cookies()
+	i := slices.IndexFunc(issued, func(c *http.Cookie) bool { return c.Name == accessName && c.Value != "" })
+	if i < 0 {
+		t.Fatal("OAuth login issued no access token cookie")
+	}
+	token := issued[i].Value
+	deletes := func(resp *http.Response) bool {
+		for _, c := range resp.Cookies() {
+			if c.Name == accessName && c.MaxAge < 0 {
+				return true
+			}
+		}
+		return false
+	}
+
+	for range 2 {
+		probe := loginElsewhereProbe(t, client, portal.server.URL+"/auth/whoami?probe=login")
+		if probe.StatusCode != http.StatusForbidden || deletes(probe) {
+			t.Fatalf("login probe for an account the portal does not admit returned HTTP %d, deleting the token: %t", probe.StatusCode, deletes(probe))
+		}
+	}
+	if whoami := loginElsewhereProbe(t, client, portal.server.URL+"/auth/whoami"); whoami.StatusCode != http.StatusUnauthorized || !deletes(whoami) {
+		t.Fatalf("whoami outside the login probe returned HTTP %d, deleting the token: %t", whoami.StatusCode, deletes(whoami))
+	}
+
+	invalid := *client
+	var err error
+	invalid.Jar, err = cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	portalURL, err := url.Parse(portal.server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	forged := token[:strings.LastIndex(token, ".")+1] + "AAAA" + token[strings.LastIndex(token, ".")+5:]
+	invalid.Jar.SetCookies(portalURL, []*http.Cookie{{Name: accessName, Value: forged, Path: "/"}})
+	if probe := loginElsewhereProbe(t, &invalid, portal.server.URL+"/auth/whoami?probe=login"); probe.StatusCode != http.StatusUnauthorized || !deletes(probe) {
+		t.Fatalf("login probe with an invalid token returned HTTP %d, deleting it: %t", probe.StatusCode, deletes(probe))
 	}
 }

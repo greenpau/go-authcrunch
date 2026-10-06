@@ -35,6 +35,12 @@ validation; failed verification requires a new initiation. Capacity is bounded;
 expiry reclamation must not allow replay or evict active state to admit another
 request. No unconditional IdP-initiated acceptance is supported.
 
+SAML binds no post-login destination to the transaction. A trusted `redirect_url`
+on the initiating GET only refreshes the portal's shared redirect cookie, and the
+portal never reads one from the ACS callback URL; see the
+[redirect trust boundaries](../threat-hunting/references/redirects.md#portal-login-and-external-providers).
+`TestE2ESAMLCallbackIgnoresDestinationOnItsURL` keeps that boundary.
+
 The portal browser binding must survive a real cross-site HTTP-POST callback.
 A default/Lax session cookie is insufficient even if Go's cookiejar sends it in
 TLS tests. Use the dedicated factory-managed SAML binding cookie with host-only,

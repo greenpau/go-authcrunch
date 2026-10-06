@@ -55,6 +55,11 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	reqParams := parseOAuthAuthenticateRequestParams(r.Upstream.Request.URL.Query())
 
 	if reqParams.isOAuthResponse() {
+		// Only the destination bound when this login started may come back, and
+		// only from a successful callback. The binding never changes once
+		// published, so it is read before the claim that deletion may follow.
+		r.Response.ReturnURL = ""
+		returnURL := b.state.getReturnURL(reqParams.state)
 		if len(reqParams.values["state"]) != 1 || !b.state.beginCallback(reqParams.state, r.Upstream.SessionID, reqPath+"/authorization-code-callback") {
 			return errors.ErrIdentityProviderOauthAuthorizationStateNotFound
 		}
@@ -154,6 +159,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 
 			r.Response.Payload = m
 			r.Response.Code = http.StatusOK
+			r.Response.ReturnURL = returnURL
 			b.logger.Debug(
 				"decoded claims from OAuth 2.0 authorization server access token",
 				zap.String("request_id", r.ID),
@@ -172,6 +178,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 
 			r.Response.Payload = m
 			r.Response.Code = http.StatusOK
+			r.Response.ReturnURL = returnURL
 
 			if b.config.IdentityTokenCookieEnabled {
 				r.Response.IdentityTokenCookie.Enabled = true
@@ -214,7 +221,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		codeChallenge = base64.RawURLEncoding.EncodeToString(h[:])
 	}
 
-	if err := b.state.addLogin(state, nonce, codeVerifier, r.Upstream.SessionID, reqPath+"/authorization-code-callback"); err != nil {
+	if err := b.state.addLogin(state, nonce, codeVerifier, r.Upstream.SessionID, reqPath+"/authorization-code-callback", r.Response.ReturnURL); err != nil {
 		return errors.ErrIdentityProviderOauthAuthorizationStateLimitReached
 	}
 	r.Response.Code = http.StatusFound

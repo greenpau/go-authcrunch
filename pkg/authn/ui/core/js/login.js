@@ -77,3 +77,33 @@ function showLoginForm(storeName, registrationEnabled, usernameRecoveryEnabled, 
   document.getElementById('username').value = '';
   document.getElementById('username').focus();
 }
+
+// Another tab may finish the login while this one waits. Once the browser is
+// signed in, leave for this tab's own destination instead of a second login.
+(function watchForLoginElsewhere() {
+  const script = document.currentScript;
+  const probe = script?.dataset.whoami;
+  const destination = script?.dataset.returnUrl;
+  if (!probe || !destination || typeof fetch !== 'function') return;
+  let checking = false;
+  let stopped = false;
+  async function check() {
+    if (stopped || checking || document.visibilityState === 'hidden') return;
+    checking = true;
+    try {
+      const response = await fetch(probe, {
+        credentials: 'same-origin', cache: 'no-store', redirect: 'manual', headers: { Accept: 'application/json' },
+      });
+      if (response.ok) window.location.replace(destination);
+      // Signed in, but not admitted by this portal: asking again cannot change that.
+      if (response.status === 403) stopped = true;
+    } catch (e) {
+      // The next check tries again.
+    } finally {
+      checking = false;
+    }
+  }
+  document.addEventListener('visibilitychange', check);
+  window.addEventListener('focus', check);
+  setInterval(check, 5000);
+})();

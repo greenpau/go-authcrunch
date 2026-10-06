@@ -52,6 +52,11 @@ type User struct {
 	// transformations. Checkpoints must never select an account from Claims.
 	LoginUsername string `json:"-" xml:"-" yaml:"-"`
 	LoginEmail    string `json:"-" xml:"-" yaml:"-"`
+	// LoginReturnURL is the trusted post-login destination of the login flow
+	// this sandbox user belongs to, and LoginFresh whether that login started as
+	// a fresh one, which going back to the login page must keep.
+	LoginReturnURL string `json:"-" xml:"-" yaml:"-"`
+	LoginFresh     bool   `json:"-" xml:"-" yaml:"-"`
 
 	Claims          *Claims       `json:"claims,omitempty" xml:"claims,omitempty" yaml:"claims,omitempty"`
 	Token           string        `json:"token,omitempty" xml:"token,omitempty" yaml:"token,omitempty"`

@@ -8,6 +8,13 @@ get:
     no token or invalid token returns 401; custom claims are retained. In HTML mode, a valid token renders
     identity details without requiring the stored profile session; missing/invalid credentials redirect
     to login. HTML adds human-readable time strings for display, not extra JSON claims.
+
+
+    The login page script sends probe=login in JSON mode to learn whether another tab signed the browser
+    in. It answers 200 only when the token is valid, admitted by the portal and has its stored portal session;
+    401 without a usable token. A valid token that the portal ACL rejects, or one without a portal session,
+    answers 403 and, unlike other requests, the rejected access cookie is not deleted, because gatekeepers
+    may still accept it. Invalid or expired tokens are still deleted.
   security:
   - PortalBearer: []
   - PortalCookie: []
@@ -30,6 +37,8 @@ get:
           description: Do not store credentials or protocol responses.
     '401':
       $ref: ../components/responses/PortalError.yaml
+    '403':
+      $ref: ../components/responses/PortalError.yaml
     '302':
       $ref: ../components/responses/Redirect.yaml
     '500':
@@ -37,6 +46,9 @@ get:
   x-source-files:
   - pkg/authn/handle_json_whoami.go
   - pkg/authn/handle_http_whoami.go
+  - pkg/authn/respond_http.go
+  - pkg/authn/respond_json.go
+  - pkg/authn/inject_redirect_url.go
   - pkg/authn/serve_http.go
   - pkg/util/request_id.go
   parameters:
@@ -51,10 +63,14 @@ get:
   - name: probe
     in: query
     description: Only the literal true enables the probe and adds authenticated/expires_in. Takes precedence
-      over id_token=true.
+      over id_token=true. The literal login is the login page's signed-in check described above; it returns
+      the ordinary claims on 200.
     required: false
     schema:
-      type: boolean
+      oneOf:
+      - type: boolean
+      - type: string
+        const: login
   - name: id_token
     in: query
     description: Only the literal true requests the configured upstream ID-token cookie; omitted when

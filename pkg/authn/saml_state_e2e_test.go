@@ -51,6 +51,7 @@ import (
 	cookieparser "github.com/greenpau/go-authcrunch/pkg/authn/cookie/parser"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	upstreamsaml "github.com/greenpau/go-authcrunch/pkg/idp/saml"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
@@ -443,5 +444,27 @@ func TestE2ESAMLBrowserCrossSitePOSTBinding(t *testing.T) {
 	}
 	if json.Unmarshal(output, &result) != nil || !result.Passed {
 		t.Fatal("browser did not confirm SAML binding")
+	}
+}
+
+// A SAML login has no per-flow destination: the identity provider posts back
+// to its registered callback, so a redirect_url on the callback URL was never
+// chosen by the tab that started the login and must not pick where it lands.
+func TestE2ESAMLCallbackIgnoresDestinationOnItsURL(t *testing.T) {
+	trusted, err := redirects.NewRedirectURIMatchConfig("exact", "trusted.example.test", "prefix", "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := newSAMLE2EFixture(t, func(c *authn.PortalConfig) {
+		c.TrustedLoginRedirectURIConfigs = append(c.TrustedLoginRedirectURIConfigs, trusted)
+	})
+	injected := "https://trusted.example.test/chosen-by-the-callback-url"
+	form := f.begin(t)
+	resp := samlE2EPost(t, f.client, f.portalURL+"/auth/saml/upstream?redirect_url="+url.QueryEscape(injected), form)
+	if resp.StatusCode != http.StatusSeeOther || resp.Header.Get("Authorization") == "" {
+		t.Fatalf("signed callback returned HTTP %d, want a completed login", resp.StatusCode)
+	}
+	if got := resp.Header.Get("Location"); got == injected {
+		t.Fatalf("callback URL chose the post-login destination %q", got)
 	}
 }

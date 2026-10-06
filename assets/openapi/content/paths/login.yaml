@@ -4,15 +4,26 @@ get:
   - Authentication Portal
   summary: Open the login page
   description: Browser entry point. Keep Accept as text/html. fresh=1 forces a new login; a refresh cookie
-    can otherwise open the session continuation page.
+    can otherwise open the session continuation page. A trusted redirect_url is this tab's own destination
+    in addition to the shared redirect cookie the request records. The rendered form target and OAuth/SAML
+    provider links carry it (and fresh=1), and the continuation page returns to it after a refresh, removing
+    the shared cookie only when it holds the same destination. Except on a fresh login, the page script
+    polls whoami with probe=login while visible and then leaves for that destination, or the portal. A
+    signed-in GET with a trusted redirect_url, without fresh=1 and with a stored portal session receives
+    303 to that destination without the shared cookie; any other signed-in GET redirects to the portal,
+    which consumes the cookie.
   security: []
   responses:
     '200':
       $ref: ../components/responses/HTML.yaml
     '302':
       $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
   x-source-files:
   - pkg/authn/handle_http_login.go
+  - pkg/authn/handle_http_session.go
+  - pkg/authn/inject_redirect_url.go
   parameters:
   - name: fresh
     in: query
@@ -24,7 +35,8 @@ get:
       - '1'
   - name: redirect_url
     in: query
-    description: Only configured trusted destinations are accepted.
+    description: Only configured trusted absolute HTTP(S) destinations without dot path segments are accepted;
+      at most 2048 bytes after login_hint is removed are carried per login. Only the first value is used.
     required: false
     schema:
       type: string
@@ -44,7 +56,11 @@ post:
     body transport enabled, and send no Cookie, Origin or Sec-Fetch headers. API-key login is access-only.
     An invalid pre-existing access token can fail authorization before login. Responses disable caching.
     Browser form login is also available at this path and returns redirects/HTML instead of the JSON challenge
-    protocol. Sandbox creation/policy errors can render HTML even when JSON was requested. Check response
+    protocol. A browser form posted to /login?redirect_url=... keeps that trusted destination with its sandbox
+    and is returned there after the last checkpoint, ahead of the shared redirect cookie; fresh=1 is kept for
+    a return to the login page. Without refresh tokens or OIDC, a browser that is already signed in with a
+    stored portal session and posts the form with a trusted redirect_url and without fresh=1 receives 303
+    to that destination instead of a new login. Sandbox creation/policy errors can render HTML even when JSON was requested. Check response
     Content-Type before decoding. MFA selection uses a TOTP code directly or the literal webauthn, followed
     by its signed assertion; see LoginWebAuthnOptions.
 
@@ -122,6 +138,8 @@ post:
   - pkg/apiauth/auth_request.go
   - pkg/authn/handle_json_api_key_login.go
   - pkg/authn/respond_http.go
+  - pkg/authn/handle_http_login.go
+  - pkg/authn/inject_redirect_url.go
   requestBody:
     required: true
     content:
@@ -163,6 +181,21 @@ post:
               description: Login realm selecting the enabled identity store.
               minLength: 1
   parameters:
+  - name: redirect_url
+    in: query
+    description: 'Browser form only: the login page''s trusted HTTP(S) destination, at most 2048 bytes after
+      login_hint is removed. Only the first value is used.'
+    required: false
+    schema:
+      type: string
+  - name: fresh
+    in: query
+    description: 'Browser form only: the form belongs to a fresh login, which a signed-in browser still completes.'
+    required: false
+    schema:
+      type: string
+      enum:
+      - '1'
   - name: format
     in: query
     description: Use json to select the JSON protocol.

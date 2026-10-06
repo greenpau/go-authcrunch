@@ -24,7 +24,7 @@
           <p class="brand-message" id="session-message">{{ .Message }}</p>
           <div class="brand-actions">
             {{ if eq .Data.session_action "logout" }}<button class="app-btn-pri" id="session-logout" type="button">{{ .Translate "sign_out" }}</button>{{ end }}
-            <a href="{{ pathjoin .ActionEndpoint "/login" }}?fresh=1">{{ .Translate "sign_in" }}</a>
+            <a href="{{ pathjoin .ActionEndpoint "/login" }}?fresh=1{{ with .Data.login_return_url }}&redirect_url={{ . }}{{ end }}">{{ .Translate "sign_in" }}</a>
           </div>
           <noscript><p class="brand-message">{{ .Translate "session_javascript_required" }}</p></noscript>
         </main>

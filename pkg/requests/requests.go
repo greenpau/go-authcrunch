@@ -64,6 +64,10 @@ type Response struct {
 	Workflow string `json:"workflow,omitempty" xml:"workflow,omitempty" yaml:"workflow,omitempty"`
 	Title    string `json:"title,omitempty" xml:"title,omitempty" yaml:"title,omitempty"`
 	Message  string `json:"message,omitempty" xml:"message,omitempty" yaml:"message,omitempty"`
+	// ReturnURL is the post-login destination carried by this login flow. It
+	// is separate from RedirectURL, which identity providers use for their
+	// authorization endpoint.
+	ReturnURL string `json:"-" xml:"-" yaml:"-"`
 }
 
 // IdentityTokenCookie holds the id_token cookie name and payload.

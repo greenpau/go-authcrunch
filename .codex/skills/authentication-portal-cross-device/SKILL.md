@@ -55,6 +55,12 @@ This is a browser login transfer, not an RFC 8628 device authorization endpoint.
 | `/cross-device/poll` | POST | Pending/slow-down status, or one-time cookie issuance and a next destination |
 | `/cross-device/cancel` | POST | Cancels an unconsumed interaction |
 
+The fresh login opened when the approving browser binds an interaction renders
+without the login page's signed-in-elsewhere probe, so a session another tab
+holds or renews cannot carry the approving browser away before it completes the
+interactive login. Going back from the password step or starting over keeps that
+login fresh.
+
 POSTs require HTTPS, exactly one matching Origin, compatible Fetch Metadata,
 and a form body bounded to 4 KiB, including unknown-length/chunked requests.
 Require one valid Content-Type header; accept URL-encoded media types with

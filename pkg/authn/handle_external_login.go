@@ -71,6 +71,12 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 	if authMethod == "saml" {
 		p.injectSAMLSessionID(w, r, rr)
 	}
+	// An OAuth provider binds the destination to the login it starts here and
+	// hands it back on that login's callback, whose URL cannot carry it. SAML
+	// binds none, so its callback URL must not be able to choose one.
+	if authMethod == "oauth2" {
+		rr.Response.ReturnURL = p.loginReturnURL(r, rr)
+	}
 	err = provider.Request(operator.Authenticate, rr)
 	if authMethod == "saml" {
 		rr.Upstream.SessionID = portalSessionID

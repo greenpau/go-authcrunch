@@ -56,7 +56,7 @@ frame policy as separate response values.
 
 | Alias | Preserve while changing presentation |
 | --- | --- |
-| `login` | `.Data.login_options` branches, authenticator loop, username/realm POST, registration/recovery/support visibility, QR controls |
+| `login` | `.Data.login_options` branches, authenticator loop, username/realm POST, registration/recovery/support visibility, QR controls, per-flow destination on the form, provider links and login script |
 | `sandbox` | Every `.Data.view` branch, server-provided sandbox ID, credential forms, MFA setup/challenge controls, cancel/retry/error views |
 | `portal` | `.PrivateLinks` loop with target/icon flags, sign-out navigation, conditional refresh script |
 | `register` | `register`, `registered`, `ack`, `ackfail`, `acked` views; realm/registration IDs, policy attributes, terms/code conditions, alerts and inline DOM consumers |
@@ -66,7 +66,7 @@ frame policy as separate response values.
 | `apps_mobile_access` | Instructional content and navigation; the current baseline does not itself render a mobile QR image |
 | `oidc` | All `.Data.oidc.Kind` branches: consent CSRF/decisions, form-post action/values/nonce/manual Continue, and local error message; see the [owning contract](../../authentication-portal-oidc/references/browser-pages.md#page-and-template-contract) |
 | `cross_device` | `.Data.view` request/activate/confirm/approve/deny branches, matching-code warnings, CSRF/decision form fields, and external cross-device client hooks; see the [presentation contract](cross-device.md) and [feature contract](../../authentication-portal-cross-device/SKILL.md) |
-| `session` | `.Message`, continuation/logout action, confirmation button, fresh-login link, external refresh client and data attributes |
+| `session` | `.Message`, continuation/logout action, confirmation button, fresh-login link with optional `.Data.login_return_url`, external refresh client and data attributes (`data-next` is the continuation or logout destination) |
 
 Handlers live in `pkg/authn/handle_http_login.go`,
 `handle_http_sandbox.go`, `handle_http_portal.go`, `handle_register.go`,
@@ -86,6 +86,23 @@ The HTML login starts by submitting `username` and `realm` to
 `{{ pathjoin .ActionEndpoint "/login" }}` using POST. Password authentication
 is a later sandbox view with `secret`; do not collapse these into an invented
 single-step password form.
+
+`.Data.login_return_url` is the page's trusted destination, or empty, and
+`.Data.login_fresh` is true on a `fresh=1` login. Append both to the login form
+target as the query `fresh=1` and `redirect_url={{ . }}` (each only when set), and
+the destination as `?redirect_url={{ . }}` after each identity-provider
+`.endpoint` whose `.login_return_url_enabled` is `yes`, inside `with`, so the URL
+query context encodes it. The portal sets that flag for OAuth and SAML endpoints
+only: an HTTP login provider rejects any query on its first request, so its link
+must stay bare.
+When `.Data.login_elsewhere_enabled` is true, give the `login.js` script tag
+`data-whoami` (the mounted identity endpoint with `probe=login`) and
+`data-return-url` (the destination, else the mounted portal page). The script then
+sends a waiting tab to that destination once another tab completes the login. Omit
+both attributes otherwise, notably for a `fresh=1` login. The sandbox `terminate`
+view's start-over link receives the same two keys and builds the same login page
+query. Templates without these keys fall back to the redirect cookie.
+See [per-flow login destinations](../../threat-hunting/references/redirects.md#per-flow-login-destinations).
 
 `core/js/login.js` uses `loginform`, `authenticators`, `username`, `realm`,
 `user_actions`, `user_register_link`, `forgot_username_link`,

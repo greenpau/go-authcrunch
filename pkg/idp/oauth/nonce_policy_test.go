@@ -48,7 +48,7 @@ func TestValidateAccessTokenUsesTransactionNoncePolicy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			provider, privateKey, jwksKey := newOAuthValidatorTestProvider(t, "id_token")
 			const state = "transaction-state"
-			if err := provider.state.addLogin(state, tc.storedNonce, "verifier", "browser", "https://portal.example/callback"); err != nil {
+			if err := provider.state.addLogin(state, tc.storedNonce, "verifier", "browser", "https://portal.example/callback", ""); err != nil {
 				t.Fatal(err)
 			}
 			// The callback must use the policy captured at initiation, not a
@@ -96,7 +96,7 @@ func TestStateBindingCapturesNonceRequirement(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			sm := newStateManager()
-			if err := sm.addLogin("state", tc.nonce, "verifier", "browser", "https://portal.example/callback"); err != nil {
+			if err := sm.addLogin("state", tc.nonce, "verifier", "browser", "https://portal.example/callback", ""); err != nil {
 				t.Fatal(err)
 			}
 			if !tc.required {

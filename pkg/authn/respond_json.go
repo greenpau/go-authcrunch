@@ -17,6 +17,7 @@ package authn
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -83,6 +84,10 @@ func (p *Portal) handleJSON(ctx context.Context, w http.ResponseWriter, r *http.
 	)
 
 	usr, err := p.authorizeRequest(ctx, w, r, rr)
+	if errors.Is(err, errLoginElsewhereNotAdmitted) {
+		// The login page stops asking; the account is signed in elsewhere.
+		return p.handleJSONError(ctx, w, http.StatusForbidden, "Forbidden")
+	}
 	if err != nil {
 		return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusUnauthorized, err.Error())
 	}
