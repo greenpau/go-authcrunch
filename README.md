@@ -71,10 +71,55 @@ Please open issues in [caddy-security](https://github.com/greenpau/caddy-securit
 
 ## Plugins
 
-* Identity Stores:
-  - [`go-authcrunch-ids-consul`](https://github.com/greenpau/go-authcrunch-ids-consul): Identity Store Plugin for Consul Key/Value (KV) Store Integration
-  - [`go-authcrunch-ids-dynamodb`](https://github.com/greenpau/go-authcrunch-ids-dynamodb): Identity Store Plugin for Amazon DynamoDB Integration
+Plugins are separate Go modules. Secrets plugins retrieve values for an
+embedding application to apply to AuthCrunch configuration. Host registration
+and configuration syntax belong to that application's adapter; this library
+does not automatically discover or load plugins.
 
-* Credentials:
-  - [`go-authcrunch-creds-aws-secrets-manager`](https://github.com/greenpau/go-authcrunch-creds-aws-secrets-manager): Credentials Plugin for AWS Secrets Manager Integration
-  - [`go-authcrunch-creds-aws-ssm-parameter-store`](https://github.com/greenpau/go-authcrunch-creds-aws-ssm-parameter-store): Credentials Plugin for AWS SSM Parameter Store Integration
+### Secrets
+
+| Plugin | Backend |
+| --- | --- |
+| [`go-authcrunch-secrets-static-secrets-manager`](https://github.com/greenpau/go-authcrunch-secrets-static-secrets-manager) | Statically configured secret maps |
+| [`go-authcrunch-secrets-aws-secrets-manager`](https://github.com/greenpau/go-authcrunch-secrets-aws-secrets-manager) | JSON secrets retrieved from AWS Secrets Manager |
+
+See the [secrets plugin contracts](.codex/skills/secrets-plugins/SKILL.md) for
+their APIs, integration examples, and lifecycle differences. To build a plugin,
+start with the [plugin architecture](.codex/skills/plugin-development/SKILL.md)
+and [development blueprint](.codex/skills/plugin-development/references/development-blueprint.md).
+
+### Plugin categories
+
+Beyond secrets, the architecture covers the following extension categories.
+Existing Go interfaces support some forms of direct composition; other entries
+describe proposed integration work. This is a development map, not a list of
+installed or automatically loadable backends.
+
+| Category | Purpose | Integration status |
+| --- | --- | --- |
+| [Identity stores](.codex/skills/plugin-development/references/plugin-categories.md#identity-stores) | Account databases such as PostgreSQL, DynamoDB, or Consul | Direct portal injection; new root-config kinds need dispatch integration |
+| [Identity providers](.codex/skills/plugin-development/references/plugin-categories.md#identity-providers) | Federation services and authentication protocols | Direct portal injection; new protocols also need routing and flow support |
+| [Credential authenticators](.codex/skills/plugin-development/references/plugin-categories.md#credential-authenticators) | External Basic-credential or API-key verification | Gatekeeper authenticator injection with configured realm binding |
+| [Messaging](.codex/skills/plugin-development/references/plugin-categories.md#messaging) | Email APIs and notification delivery | Provider interface exists; new backends need config and consumer wiring |
+| [Registration workflows](.codex/skills/plugin-development/references/plugin-categories.md#registration-workflows) | Invitations, approvals, and account creation | Direct registry attachment; root configuration is local-only |
+| [Session and refresh storage](.codex/skills/plugin-development/references/plugin-categories.md#session-and-refresh-storage) | Shared token-family storage and revocation | Refresh-engine interface exists; portal backend selection needs wiring |
+| [Cryptographic signing](.codex/skills/plugin-development/references/plugin-categories.md#cryptographic-signing) | Remote KMS or HSM signing | Refresh-engine signer exists; general portal/OIDC integration needs work |
+| [External authorization](.codex/skills/plugin-development/references/plugin-categories.md#external-authorization) | Decisions from an external policy service | Proposed decision interface and gatekeeper integration |
+| [Claims enrichment](.codex/skills/plugin-development/references/plugin-categories.md#claims-enrichment) | Trusted organization, group, or entitlement attributes | Proposed enrichment interface, separate from existing claim transforms |
+
+The [category contracts](.codex/skills/plugin-development/references/plugin-categories.md)
+describe current APIs, implementation gaps, lifecycle requirements, and acceptance
+scenarios for each category. Backend examples do not imply published support.
+
+### Other plugin projects
+
+At the inspected revisions linked below, these repositories contain project
+scaffolding only, with no Go backend implementation or module manifest. They are
+project references, not usable plugins. Check implementation and consumer
+compatibility when revisiting a newer revision.
+
+| Category | Project | Inspected status |
+| --- | --- | --- |
+| Identity stores | [`go-authcrunch-ids-consul`](https://github.com/greenpau/go-authcrunch-ids-consul) — Consul KV | [Scaffold](https://github.com/greenpau/go-authcrunch-ids-consul/tree/0e5fc8d9669559ef0770280491c042dffde02908) |
+| Identity stores | [`go-authcrunch-ids-dynamodb`](https://github.com/greenpau/go-authcrunch-ids-dynamodb) — Amazon DynamoDB | [Scaffold](https://github.com/greenpau/go-authcrunch-ids-dynamodb/tree/c274052b44f9588df267670333876843520b28df) |
+| Credentials | [`go-authcrunch-creds-aws-ssm-parameter-store`](https://github.com/greenpau/go-authcrunch-creds-aws-ssm-parameter-store) — AWS SSM Parameter Store | [Scaffold](https://github.com/greenpau/go-authcrunch-creds-aws-ssm-parameter-store/tree/5e6d455275419921c2fe9695bae4ff9110de7d8f) |

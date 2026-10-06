@@ -1,0 +1,4 @@
+interface:
+  display_name: "Secrets Plugins"
+  short_description: "Integrate and develop AuthCrunch secrets providers"
+  default_prompt: "Use $secrets-plugins to integrate a secrets provider using the verified static and AWS plugin contracts."

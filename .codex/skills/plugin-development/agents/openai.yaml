@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plugin Development"
+  short_description: "Build standalone plugins, references, and companions"
+  default_prompt: "Use $plugin-development to develop an AuthCrunch plugin with the appropriate reference layout, standalone repository guidance, and companion host integration."

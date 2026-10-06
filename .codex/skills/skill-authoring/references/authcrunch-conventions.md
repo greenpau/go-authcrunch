@@ -32,6 +32,12 @@ validation guidance in the owning skill or its linked references.
 Follow the [repository scope](../../coding-directives/SKILL.md#repository-scope)
 rule for Caddy agent handoff placement. Preserve reusable library contracts in
 skills when moving consumer-specific handoff notes to `tmp/`.
+Reusable plugin-repository bootstrap patterns and companion guidance composition
+are durable contracts owned by
+[plugin-development](../../plugin-development/SKILL.md), including its portable
+`AGENTS.md` templates. Keep project-specific Caddy implementation tasks in
+temporary handoffs; do not mistake the shared guidance for such a handoff or for
+authorization to edit an external repository.
 
 Before retiring standalone guidance, audit every inbound reference and assign
 each durable statement to its authoritative declaration or owning skill.

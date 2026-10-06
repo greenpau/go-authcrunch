@@ -36,6 +36,10 @@ changes, including corrected paths or examples after a refactor.
 
 ## Implementation workflows
 
+- Use [plugin-development](../plugin-development/SKILL.md) to design or integrate
+  AuthCrunch extension modules, maintain category reference plugins, and apply
+  standalone-repository and companion-host development guidance; follow its
+  secrets-specific route for providers.
 - Use [authentication-portal-cross-device](../authentication-portal-cross-device/SKILL.md) to
   maintain optional cross-device login, approval/polling, its parser, browser
   binding, transferred login evidence, and TLS/browser acceptance tests.
@@ -105,9 +109,9 @@ changes, including corrected paths or examples after a refactor.
 
 ## Repository Scope
 
-Keep all repository changes inside `go-authcrunch`. Never change sibling
-directories. Sibling projects will be updated separately; these workflows have
-no cross-repository exception or approval path.
+When `go-authcrunch` is the task's active repository, keep all repository changes
+inside it. Never change sibling directories. Sibling projects will be updated
+separately; these workflows have no cross-repository exception or approval path.
 
 This prohibition covers creating, editing, deleting, restoring, staging, or
 committing files, and changes to code, tests, fixtures, dependency files, skills,
@@ -126,6 +130,13 @@ Write Caddy integration agent handoff notes only in the repository-root ignored
 documentation, skill bodies, or skill reference files. Keep reusable,
 host-independent library contracts in their owning skills; temporary handoffs
 may link to those contracts, but skills must not depend on temporary handoffs.
+
+Reusable plugin-repository bootstrap instructions, upstream/local `AGENTS.md`
+templates, and the contract for layering companion-host guidance belong in the
+[plugin-development references](../plugin-development/references/repository-workflow.md).
+They are durable development contracts, not task-specific Caddy handoffs. They
+guide separately scoped plugin tasks without authorizing sibling changes from
+this checkout.
 
 For embedding-server configuration and reload work, read the
 [integration boundaries](references/embedding-integration.md). They identify
@@ -148,6 +159,16 @@ Put behavior in the package that owns the AuthCrunch surface:
 - `pkg/ids` and `pkg/idp`: shared dispatch config and interfaces for identity
   stores and identity providers. Put provider-specific behavior in
   `pkg/ids/local`, `pkg/ids/ldap`, `pkg/idp/oauth`, or `pkg/idp/saml`.
+- External plugin modules own backend clients; embedding applications own their
+  registration and adapters. This checkout has no general plugin registry or
+  secrets loader. The [plugin architecture](../plugin-development/SKILL.md)
+  distinguishes existing integration points from proposed extension contracts.
+- `plugins/<category>/<name>` is the layout for in-repository category reference
+  plugins, including runnable synthetic/mock backends. Keep them distinct from
+  production plugins developed in separate repositories. Their
+  [reference contract](../plugin-development/references/synthetic-reference.md)
+  owns public consumer coverage, isolation, module boundaries, and CI inclusion;
+  the layout alone does not add a runtime registry or claim a package exists.
 - `pkg/sso`, `pkg/kms`, `pkg/registry`, `pkg/messaging`, `pkg/identity`,
   `pkg/user`, `pkg/translate`, and focused utility packages own their models,
   validation, and tests. Configuration directive parsers have separate public
