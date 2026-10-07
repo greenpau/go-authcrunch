@@ -37,6 +37,8 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 	case r.URL.Path == "/" || r.URL.Path == "/auth" || r.URL.Path == "/auth/" || r.URL.Path == rr.Upstream.BasePath:
 		p.injectRedirectURL(ctx, w, r, rr)
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
+	case providerLoginRouteIndex(r.URL.Path) >= 0:
+		return p.handleHTTPProviderLogin(ctx, w, r, rr)
 	case strings.Contains(r.URL.Path, "/profile/"):
 		return p.handleHTTPApps(ctx, w, r, rr, usr, "profile")
 	case strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon"):

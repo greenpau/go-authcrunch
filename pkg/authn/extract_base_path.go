@@ -62,6 +62,8 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 	case r.URL.Path == "/auth":
 		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
 		rr.Upstream.BasePath = "/auth/"
+	case providerLoginRouteIndex(r.URL.Path) >= 0:
+		extractBaseURLPath(ctx, r, rr, "/provider/")
 	case crossDeviceIndex >= 0:
 		// Include the segment delimiter even for the terminal page route, so
 		// GetBaseURL cannot match a mount prefix such as /cross-device-team.

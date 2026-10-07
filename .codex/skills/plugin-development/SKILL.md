@@ -35,6 +35,9 @@ and [AWS host adapter](https://github.com/greenpau/caddy-security-secrets-aws-se
 provide concrete evidence of that boundary. Their registration and provisioning
 are host-framework behavior, not capabilities exported by the backend modules.
 
+Use [sqlite-ticket-provider](../sqlite-ticket-provider/SKILL.md) to maintain
+trusted ticket issuance, browser binding and the optional portal HTTP login hook.
+
 Use [sqlite-registration](../sqlite-registration/SKILL.md) to maintain durable
 email confirmation, recoverable account creation and the optional portal hook.
 
@@ -105,7 +108,7 @@ A category or repository name alone does not establish an implementation.
 | --- | --- | --- |
 | Secrets | Retrieve values for configuration | SQLite bound-record plugin and external libraries; specialized skill above |
 | [Identity stores](references/plugin-categories.md#identity-stores) | Account lookup, authentication, and supported account operations | SQLite password store and configured `ids.IdentityStore` injection into `NewPortal` |
-| [Identity providers](references/plugin-categories.md#identity-providers) | Authenticate through a federation/protocol backend | Configured `idp.IdentityProvider` injection; protocol routes still matter |
+| [Identity providers](references/plugin-categories.md#identity-providers) | Authenticate through a federation/protocol backend | SQLite tickets through optional `idp.HTTPLoginProvider` and direct portal injection |
 | [Credential authenticators](references/plugin-categories.md#credential-authenticators) | Validate Basic credentials or API keys | SQLite API keys and `authproxy.Authenticator` through `Gatekeeper.AddAuthenticators` |
 | [Messaging](references/plugin-categories.md#messaging) | Deliver registration or notification messages | SQLite outbox and `messaging.Config.AddProvider` runtime injection |
 | [Registration workflows](references/plugin-categories.md#registration-workflows) | Manage enrollment, confirmation, approval, and account creation | SQLite enrollment and optional `ConfirmationProvider` via `Portal.AddUserRegistry`; root dispatch is local-only |

@@ -109,9 +109,14 @@ configured metadata and `Request(operator.Type, *requests.Request) error`.
 Supply a configured implementation through
 `authn.PortalParameters.IdentityProviders`, selected by name in
 `PortalConfig.IdentityProviders`. The [shared configuration](../../../../pkg/idp/config.go)
-and factory support `oauth` and `saml`. Injection alone does not install callback
-routes, browser-state handling, or a new protocol's login UI: trace
-[portal routing](../../../../pkg/authn/respond_http.go) and the actual request flow.
+and factory support `oauth` and `saml`. Optional `idp.HTTPLoginProvider` supplies
+a typed Login result and a declared browser-cookie name through the canonical
+`/provider/<realm>` route and login icon. The portal checks the boundary and signs
+validated identity; the backend owns protocol verification, expiry and replay.
+The [SQLite ticket provider](../../sqlite-ticket-provider/SKILL.md) implements this
+capability with trusted application issuance and browser-bound consumption.
+Other protocol extensions still require their own verification and integration;
+implementing IdentityProvider alone does not install arbitrary callback routes.
 
 **Implementation contract:** bind issuer/tenant and immutable upstream subject;
 validate protocol state, destination, audience, signatures, and replay at the

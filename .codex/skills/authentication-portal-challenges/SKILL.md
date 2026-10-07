@@ -280,3 +280,13 @@ and together, and preserve direct Basic/API-key/system-request boundaries.
 ```sh
 make test TEST_DIR='./pkg/authchal/... ./pkg/authn/transformer/... ./pkg/user ./pkg/acl ./pkg/identity ./pkg/ids/local ./pkg/ids/ldap ./pkg/authn ./internal/tag' COVERAGE_DIR=.coverage/authentication-challenges
 ```
+
+## Optional HTTP provider evidence
+
+Use [sqlite-ticket-provider](../sqlite-ticket-provider/SKILL.md) to maintain the
+HTTP login capability's browser-bound federation. It supplies no local registered
+factor inventory. The normal transform path selects policy, then direct-policy
+validation rejects every unsatisfied checkpoint before signing. Core pins AMR to
+`federated` and origin to the selected realm after transforms. A consumed ticket
+is not restored after policy rejection; retry requires a fresh login. Do not infer
+password/MFA evidence from issuer-supplied roles or display attributes.

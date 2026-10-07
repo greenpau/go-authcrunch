@@ -78,6 +78,12 @@ func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.R
 		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 		return nil
 	}
+	// Provider protocol routes retain their own strict query validation, regardless
+	// of JSON negotiation requested by an unauthenticated caller.
+	if providerLoginRouteIndex(r.URL.Path) >= 0 {
+		return p.handleHTTP(ctx, w, r, rr)
+	}
+
 	switch {
 	case strings.Contains(r.URL.Path, "/api/"):
 		return p.handleAPI(ctx, w, r, rr)

@@ -93,9 +93,8 @@ func NewFactory(c *Config) (*Factory, error) {
 	return f, nil
 }
 
-// HasCookieNameOverlaps checks if any cookie names are identical.
-func (f *Factory) HasCookieNameOverlaps() (bool, string) {
-	checkMap := map[string]string{
+func (f *Factory) cookieNames() map[string]string {
+	return map[string]string{
 		"RefererCookieName":              f.RefererCookieName,
 		"SessionIDCookieName":            f.SessionIDCookieName,
 		"SandboxIDCookieName":            f.SandboxIDCookieName,
@@ -107,6 +106,11 @@ func (f *Factory) HasCookieNameOverlaps() (bool, string) {
 		"SAMLSessionIDCookieName":        f.SAMLSessionIDCookieName,
 		"CrossDeviceSessionIDCookieName": f.CrossDeviceSessionIDCookieName,
 	}
+}
+
+// HasCookieNameOverlaps checks if any cookie names are identical.
+func (f *Factory) HasCookieNameOverlaps() (bool, string) {
+	checkMap := f.cookieNames()
 
 	// seen stores: [cookie_value] -> field_name
 	seen := make(map[string]string)

@@ -1,0 +1,4 @@
+interface:
+  display_name: "SQLite Ticket Provider"
+  short_description: "Maintain browser-bound SQLite sign-in tickets"
+  default_prompt: "Use $sqlite-ticket-provider to maintain trusted ticket issuance, the portal HTTP login hook, replay protection, and TLS consumer tests."

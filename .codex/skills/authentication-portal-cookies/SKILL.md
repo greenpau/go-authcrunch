@@ -86,6 +86,16 @@ impossible legacy `__Host-` cookie or suppress active root-cookie deletion.
 
 ## Consumer Boundaries
 
+Use [sqlite-ticket-provider](../sqlite-ticket-provider/SKILL.md) to maintain
+provider-owned HTTP login binding cookies and trusted ticket federation.
+Its independently configured cookie_name defaults AUTHP_PROVIDER_SESSION_ID;
+it does not inherit a portal prefix. It is always Secure/HttpOnly, host-only,
+SameSite=Lax and callback-scoped. Factory.ValidateProviderLoginCookieName checks
+its name against the central cookieNames inventory with protocol-owned security
+attributes. The optional HTTP login capability declares its cookie name before
+portal construction and may emit only that name. Prefixes remain optional.
+
+
 Cross-device login uses `CrossDeviceSessionIDCookieName`, defaulting to
 `AUTHP_CROSS_DEVICE_SESSION_ID`. The complete directive is
 `cookie cross-device session id name <name>`; prefixes cover it too. Its factory

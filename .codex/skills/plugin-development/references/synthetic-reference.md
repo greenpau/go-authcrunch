@@ -33,6 +33,8 @@ The SQLite outbox at `plugins/messaging/sqlite` is owned by
 [sqlite-messaging](../../sqlite-messaging/SKILL.md).
 The SQLite enrollment workflow at `plugins/registration-workflows/sqlite` is
 owned by [sqlite-registration](../../sqlite-registration/SKILL.md).
+The SQLite ticket identity provider at `plugins/identity-providers/sqlite` is
+owned by [sqlite-ticket-provider](../../sqlite-ticket-provider/SKILL.md).
 Other category paths remain layout contracts
 until implemented. A path in this guide is
 not proof that a plugin, constructor, parser, or category integration is present.

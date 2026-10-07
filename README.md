@@ -108,7 +108,7 @@ installed or automatically loadable backends.
 | Category | Purpose | Integration status |
 | --- | --- | --- |
 | [Identity stores](.codex/skills/plugin-development/references/plugin-categories.md#identity-stores) | Account databases such as PostgreSQL, DynamoDB, or Consul | [SQLite password plugin](plugins/identity-stores/sqlite) with portal injection; new root-config kinds need dispatch integration |
-| [Identity providers](.codex/skills/plugin-development/references/plugin-categories.md#identity-providers) | Federation services and authentication protocols | Direct portal injection; new protocols also need routing and flow support |
+| [Identity providers](.codex/skills/plugin-development/references/plugin-categories.md#identity-providers) | Federation services and authentication protocols | [SQLite sign-in tickets](plugins/identity-providers/sqlite), trusted issuance and browser-bound portal login |
 | [Credential authenticators](.codex/skills/plugin-development/references/plugin-categories.md#credential-authenticators) | External Basic-credential or API-key verification | [SQLite API-key plugin](plugins/credential-authenticators/sqlite), fresh gatekeeper verification and configured realm binding |
 | [Messaging](.codex/skills/plugin-development/references/plugin-categories.md#messaging) | Email APIs and notification delivery | [SQLite outbox](plugins/messaging/sqlite), runtime provider binding and registration notifications |
 | [Registration workflows](.codex/skills/plugin-development/references/plugin-categories.md#registration-workflows) | Invitations, approvals, and account creation | [SQLite email confirmation](plugins/registration-workflows/sqlite), recoverable account creation and portal attachment; root configuration is local-only |

@@ -30,6 +30,7 @@ func TestExtractBasePathCookieMount(t *testing.T) {
 	}
 	for _, mount := range []string{"", "/auth", "/tenant/auth", "/tenant%20name/auth", "/cross-device-team/auth"} {
 		for _, endpoint := range []string{
+			"/provider/application", "/provider/logout", "/provider/cross-device", "/provider/register", "/provider/portal", "/provider/beacon",
 			"/login", "/portal", "/logout", "/whoami", "/beacon?format=json",
 			"/api/refresh_token", "/api/refresh_session", "/api/logout",
 			"/api/profile", "/api/profile/ssh", "/api/server/metadata",

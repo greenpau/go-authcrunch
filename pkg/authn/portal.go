@@ -501,6 +501,15 @@ func (p *Portal) configureLoginIcons() error {
 
 	for _, provider := range p.identityProviders {
 		icon := provider.GetLoginIcon()
+		if _, ok := provider.(idp.HTTPLoginProvider); ok {
+			if icon == nil {
+				return fmt.Errorf("HTTP login provider icon missing")
+			}
+			copyIcon := *icon
+			icon = &copyIcon
+			icon.SetRealm(provider.GetRealm())
+			icon.SetEndpoint(path.Join("provider", provider.GetRealm()))
+		}
 		entries = append(entries, icon)
 	}
 
@@ -616,6 +625,29 @@ func (p *Portal) configureIdentityProviderLogin() error {
 	for _, provider := range p.identityProviders {
 		if err := p.cookie.ValidateIdentityTokenCookieName(provider.GetIdentityTokenCookieName()); err != nil {
 			return fmt.Errorf("identity provider cookie: %w", err)
+		}
+		if login, ok := provider.(idp.HTTPLoginProvider); ok {
+			if err := p.cookie.ValidateProviderLoginCookieName(login.GetLoginCookieName(), path.Join("/provider", provider.GetRealm())); err != nil {
+				return err
+			}
+			for _, candidate := range p.identityProviders {
+				if login.GetLoginCookieName() != "" && strings.EqualFold(candidate.GetIdentityTokenCookieName(), login.GetLoginCookieName()) {
+					return fmt.Errorf("provider login cookie conflicts with identity cookie")
+				}
+			}
+			if !validProviderRealm(provider.GetRealm()) || p.getIdentityStoreByRealm(provider.GetRealm()) != nil {
+				return fmt.Errorf("invalid HTTP login provider realm")
+			}
+			count := 0
+			for _, candidate := range p.identityProviders {
+				if candidate.GetRealm() == provider.GetRealm() {
+					count++
+				}
+			}
+			if count != 1 {
+				return fmt.Errorf("duplicate HTTP login provider realm")
+			}
+			continue
 		}
 		icon := provider.GetLoginIcon()
 		icon.SetRealm(provider.GetRealm())

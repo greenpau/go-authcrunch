@@ -31,7 +31,10 @@ All routes are relative to the portal mount; nested and root mounts work. Match
 the complete route segment so mounts such as `/cross-device-team/auth` continue
 to serve ordinary login and the transfer flow. Existing route namespaces retain
 ownership of names such as `/oauth2/cross-device` and `/assets/js/cross-device`,
-whether the feature is enabled or disabled. An unknown child beneath the actual
+whether the feature is enabled or disabled. The `/provider/<realm>` namespace
+also retains ownership; `/provider/cross-device` is a provider login, while
+`/cross-device/provider/...` remains an invalid transfer endpoint. The optional
+HTTP login capability does not supply cross-device completion evidence. An unknown child beneath the actual
 transfer route must remain a 404, including children resembling other routes.
 This is a browser login transfer, not an RFC 8628 device authorization endpoint.
 

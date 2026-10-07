@@ -145,6 +145,13 @@ the refresh browser fixture and its rotation/recovery assertions. The
 defines consent/continuation assertions, browser isolation, and screenshot capture.
 Loopback `httptest` listeners are expected.
 
+Go package discovery does not honor `.gitignore`. Keep incomplete Go scratch
+files under `tmp/` as `.go.txt` or inside a dot-prefixed directory; a standalone
+`.go` snapshot can make `go test ./...` build an unintended, broken package.
+Use `go list -mod=readonly ./...` to inspect discovery when temporary artifacts
+are involved. Preserve diagnostic snapshots and failed-run evidence when fixing
+this problem; do not exclude real repository packages or weaken the test gate.
+
 ### Browser Engine
 
 Use headless Google Chrome (`--headless=new`) for repository browser tests,

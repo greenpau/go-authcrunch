@@ -300,7 +300,7 @@ func (p *Portal) authorizeLoginUser(ctx context.Context, r *http.Request, rr *re
 	m := make(map[string]interface{})
 
 	switch rr.Upstream.Method {
-	case "oauth2", "saml":
+	case "oauth2", "saml", "provider":
 		switch pm := rr.Response.Payload.(type) {
 		case map[string]interface{}:
 			m = pm
@@ -339,6 +339,13 @@ func (p *Portal) authorizeLoginUser(ctx context.Context, r *http.Request, rr *re
 			return nil, err
 		}
 		m["amr"] = []string{"pwd"}
+	}
+	if rr.Upstream.Method == "provider" {
+		if err := p.checkDirectAuthenticationPolicy(rr, m, nil); err != nil {
+			return nil, err
+		}
+		m["amr"] = []string{"federated"}
+		m["origin"] = rr.Upstream.Realm
 	}
 	injectPortalRoles(m, p.config)
 	usr, err := user.NewUser(m)
