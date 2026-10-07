@@ -31,6 +31,9 @@ are 1–32 bounded identifiers. Passwords are exact UTF-8 plaintext, 12–72 byt
 nonblank, hashed with bcrypt default cost. No password import grammar is exposed
 on login, and no password is stored in Account or ordinary metadata.
 
+Use [sqlite-registration](../sqlite-registration/SKILL.md) to change the email
+confirmation workflow that composes this store with the SQLite outbox.
+
 `HashPassword` and `CreateEnrollment(ctx, UUID, account, hash)` support trusted
 registration composition. Enrollment accepts only validated default-cost bcrypt
 hashes. Identical enrollment input returns the existing account without mutation;

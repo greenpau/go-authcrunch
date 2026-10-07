@@ -498,6 +498,18 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 	}
 
+	if confirmer, ok := userRegistry.(registry.ConfirmationProvider); ok {
+		if len(r.PostForm["registration_code"]) != 1 || len(r.Form["registration_code"]) != 1 {
+			reg.message = "Registration confirmation denied"
+			return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
+		}
+		if err := confirmer.ConfirmRegistration(ctx, registrationID, registrationCode); err != nil {
+			reg.message = "Registration confirmation denied"
+			return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
+		}
+		return p.handleHTTPRedirectSeeOther(ctx, w, r, rr, "/login")
+	}
+
 	usr, err := userRegistry.GetRegistrationEntry(registrationID)
 	if err != nil {
 		reg.message = "Registration identifier not found"

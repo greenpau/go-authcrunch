@@ -31,6 +31,8 @@ The SQLite password store at `plugins/identity-stores/sqlite` is owned by
 [sqlite-identity-store](../../sqlite-identity-store/SKILL.md).
 The SQLite outbox at `plugins/messaging/sqlite` is owned by
 [sqlite-messaging](../../sqlite-messaging/SKILL.md).
+The SQLite enrollment workflow at `plugins/registration-workflows/sqlite` is
+owned by [sqlite-registration](../../sqlite-registration/SKILL.md).
 Other category paths remain layout contracts
 until implemented. A path in this guide is
 not proof that a plugin, constructor, parser, or category integration is present.

@@ -79,6 +79,7 @@ import (
 	"github.com/greenpau/go-authcrunch/plugins/external-authorization/httpjson"
 	identitiessqlite "github.com/greenpau/go-authcrunch/plugins/identity-stores/sqlite"
 	messagingsqlite "github.com/greenpau/go-authcrunch/plugins/messaging/sqlite"
+	registrationsqlite "github.com/greenpau/go-authcrunch/plugins/registration-workflows/sqlite"
 	secretssqlite "github.com/greenpau/go-authcrunch/plugins/secrets/sqlite"
 	"github.com/greenpau/go-authcrunch/plugins/session-and-refresh-storage/sqlite"
 )
@@ -100,6 +101,8 @@ func TestTagCompliance(t *testing.T) {
 		{name: "test enrichment.Result struct", entry: &enrichment.Result{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"identity": true, "observed_at": true, "expires_at": true}}},
 		{name: "test enrichment.Enricher struct", entry: &enrichment.Enricher{}, opts: &Options{}},
 		{name: "test sqlitedb.Database struct", entry: &sqlitedb.Database{}, opts: &Options{}},
+		{name: "test registration sqlite.Config struct", entry: &registrationsqlite.Config{}, opts: &Options{}},
+		{name: "test registration sqlite.Workflow struct", entry: &registrationsqlite.Workflow{}, opts: &Options{}},
 		{name: "test messaging sqlite.Config struct", entry: &messagingsqlite.Config{}, opts: &Options{}},
 		{name: "test messaging sqlite.Message struct", entry: &messagingsqlite.Message{}, opts: &Options{}},
 		{name: "test messaging sqlite.Outbox struct", entry: &messagingsqlite.Outbox{}, opts: &Options{}},

@@ -246,12 +246,18 @@ construction changes if it must be selected through that path. Directly attached
 providers remain caller-owned; `Portal.Close` does not close registries.
 
 The portal's [confirmation handler](../../../../pkg/authn/handle_register.go)
-reads and verifies the pending code, deletes the registration entry, and then
-calls `AddUser`, passing the registration ID as `req.Query.ID`. These are separate
-operations; the interface does not expose a combined atomic consume-and-create
-operation. A failed `AddUser` follows evidence deletion. Stronger atomicity and
-recoverable enrollment may require changes to the consumer and public API,
-beyond implementing a new provider.
+uses optional `registry.ConfirmationProvider` before any legacy pending-entry
+read/delete/AddUser calls. Success means a confirmed enabled account and produces
+a 303 to login; failure does not fall through or send an admin approval notice.
+The [SQLite workflow](../../sqlite-registration/SKILL.md) binds hashed pending
+credentials to the SQLite account store, creates idempotently, and queues
+confirmation through the SQLite outbox. Its two database files use recoverable
+enrollment IDs, not a claimed cross-file transaction.
+
+Providers without the capability retain the legacy read/code-check/delete/AddUser
+sequence, passing the registration ID as req.Query.ID. Those separate operations
+still lack the stronger recovery contract and can delete evidence before a failed
+AddUser. Do not claim the new SQLite semantics apply to legacy registries.
 
 **Implementation contract:** define the enrollment states and authorized
 transitions, expiry, single-use confirmation/approval, username/email conflicts,

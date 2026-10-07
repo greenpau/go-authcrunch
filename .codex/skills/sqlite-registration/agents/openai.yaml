@@ -1,0 +1,4 @@
+interface:
+  display_name: "SQLite Registration"
+  short_description: "Maintain durable SQLite email-confirmed enrollment"
+  default_prompt: "Use $sqlite-registration to maintain SQLite enrollment, recoverable confirmation, and real portal registration tests."
