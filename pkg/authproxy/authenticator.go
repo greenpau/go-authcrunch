@@ -14,9 +14,26 @@
 
 package authproxy
 
+import "context"
+
 // Authenticator is an interface to an identity store.
 type Authenticator interface {
 	GetName() string
 	BasicAuth(*Request) error
 	APIKeyAuth(*Request) error
+}
+
+// ContextAuthenticator optionally propagates the protected HTTP request deadline.
+// Legacy authenticators retain the original interface and their own timeout.
+type ContextAuthenticator interface {
+	Authenticator
+	BasicAuthContext(context.Context, *Request) error
+	APIKeyAuthContext(context.Context, *Request) error
+}
+
+// FreshAuthenticator opts out of credential result caching. Implementations
+// return a stable value for their lifetime; runtime reconfiguration is not safe.
+type FreshAuthenticator interface {
+	Authenticator
+	RequireFreshAuthentication() bool
 }

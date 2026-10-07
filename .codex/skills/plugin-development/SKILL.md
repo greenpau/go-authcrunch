@@ -35,6 +35,9 @@ and [AWS host adapter](https://github.com/greenpau/caddy-security-secrets-aws-se
 provide concrete evidence of that boundary. Their registration and provisioning
 are host-framework behavior, not capabilities exported by the backend modules.
 
+Use [credential-authenticators](../credential-authenticators/SKILL.md) to maintain
+SQLite API keys, context-aware authentication, cache isolation and gatekeeper tests.
+
 Use [secrets-plugins](../secrets-plugins/SKILL.md) to integrate or develop secrets
 providers, compare the static and AWS clients, bind secret references, and
 verify retrieval, data types, metadata, and refresh behavior.
@@ -94,7 +97,7 @@ A category or repository name alone does not establish an implementation.
 | Secrets | Retrieve values for configuration | SQLite bound-record plugin and external libraries; specialized skill above |
 | [Identity stores](references/plugin-categories.md#identity-stores) | Account lookup, authentication, and supported account operations | Configured `ids.IdentityStore` injection into `NewPortal` |
 | [Identity providers](references/plugin-categories.md#identity-providers) | Authenticate through a federation/protocol backend | Configured `idp.IdentityProvider` injection; protocol routes still matter |
-| [Credential authenticators](references/plugin-categories.md#credential-authenticators) | Validate Basic credentials or API keys | `authproxy.Authenticator` through `Gatekeeper.AddAuthenticators` |
+| [Credential authenticators](references/plugin-categories.md#credential-authenticators) | Validate Basic credentials or API keys | SQLite API keys and `authproxy.Authenticator` through `Gatekeeper.AddAuthenticators` |
 | [Messaging](references/plugin-categories.md#messaging) | Deliver registration or notification messages | `messaging.Provider` exists; configuration and consumers use concrete built-ins |
 | [Registration workflows](references/plugin-categories.md#registration-workflows) | Manage enrollment, confirmation, approval, and account creation | `registry.Provider` through `Portal.AddUserRegistry`; root dispatch is local-only |
 | [Session and refresh storage](references/plugin-categories.md#session-and-refresh-storage) | Store token families and enforce atomic rotation/revocation | SQLite plugin and `tokenrefresh.Store` engine injection; portal selection needs wiring |

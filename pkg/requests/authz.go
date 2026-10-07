@@ -35,6 +35,8 @@ type AuthorizationResponse struct {
 
 // AuthorizationToken holds the token found in an authorization request.
 type AuthorizationToken struct {
+	// CacheDisabled is set by an authenticator capability, never client claims.
+	CacheDisabled  bool   `json:"-" xml:"-" yaml:"-"`
 	Found          bool   `json:"found,omitempty" xml:"found,omitempty" yaml:"found,omitempty"`
 	Payload        string `json:"payload,omitempty" xml:"payload,omitempty" yaml:"payload,omitempty"`
 	Name           string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`

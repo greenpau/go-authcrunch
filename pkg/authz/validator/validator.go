@@ -471,6 +471,9 @@ func (v *TokenValidator) addAccessList(_ context.Context, accessList *acl.Access
 
 // CacheUser adds a user to token validator cache.
 func (v *TokenValidator) CacheUser(usr *user.User) error {
+	if usr != nil && usr.CacheDisabled {
+		return nil
+	}
 	return v.cache.Add(usr)
 }
 

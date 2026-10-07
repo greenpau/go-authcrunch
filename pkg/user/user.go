@@ -42,6 +42,8 @@ var reservedFields = map[string]interface{}{
 
 // User is a user with claims and status.
 type User struct {
+	// CacheDisabled requires fresh backend verification for each protected request.
+	CacheDisabled bool `json:"-" xml:"-" yaml:"-"`
 	// LoginEvidence and RefreshTransport are server-only sandbox state.
 	LoginEvidence    requests.AuthenticationEvidence `json:"-" xml:"-" yaml:"-"`
 	RefreshTransport string                          `json:"-" xml:"-" yaml:"-"`

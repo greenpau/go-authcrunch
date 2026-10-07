@@ -45,7 +45,7 @@ func (v *TokenValidator) parseCustomAuthHeader(ctx context.Context, r *http.Requ
 	return nil
 }
 
-func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
+func (v *TokenValidator) parseCustomBasicAuthHeader(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
 	var tokenSecret, tokenRealm string
 	hdrs := r.Header.Values("Authorization")
 	if len(hdrs) == 0 {
@@ -86,8 +86,18 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 			Secret:  tokenSecret,
 		}
 
-		remoteCacheKey := credentialCacheKey("remote", apr)
-		if v.cache.Get(remoteCacheKey) != nil {
+		authProxy, err := v.authProxyConfig.GetAuthenticator(tokenRealm)
+		if err != nil {
+			return err
+		}
+		if authProxy == nil {
+			return errors.ErrValidatorRealmAuthProxyNotFound.WithArgs(tokenRealm)
+		}
+		if fresh, ok := authProxy.(authproxy.FreshAuthenticator); ok {
+			ar.Token.CacheDisabled = fresh.RequireFreshAuthentication()
+		}
+		remoteCacheKey := credentialCacheKey("remote", "basic", apr)
+		if !ar.Token.CacheDisabled && v.cache.Get(remoteCacheKey) != nil {
 			// This is the use case where remote authenticator was able to
 			// successfully authenticate user based on provided credentials
 			// before.
@@ -98,8 +108,8 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 			return nil
 		}
 
-		localCacheKey := credentialCacheKey("local", apr)
-		if usr := v.cache.Get(localCacheKey); usr != nil {
+		localCacheKey := credentialCacheKey("local", "basic", apr)
+		if usr := v.credentialCacheUser(localCacheKey, ar.Token.CacheDisabled); usr != nil {
 			// This is the use case where local authenticator was able to
 			// successfully authenticate user based on provided credentials
 			// before.
@@ -111,11 +121,7 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 			return nil
 		}
 
-		authProxy, err := v.authProxyConfig.GetAuthenticator(tokenRealm)
-		if err != nil {
-			return err
-		}
-		if err := authProxy.BasicAuth(apr); err != nil {
+		if err := authenticateCredential(ctx, authProxy, apr, true); err != nil {
 			return err
 		}
 
@@ -134,7 +140,7 @@ func (v *TokenValidator) parseCustomBasicAuthHeader(_ context.Context, r *http.R
 	return nil
 }
 
-func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
+func (v *TokenValidator) parseCustomAPIKeyAuthHeader(ctx context.Context, r *http.Request, ar *requests.AuthorizationRequest) error {
 	hdr := r.Header.Get(v.apiKeyHeaderName)
 	if hdr == "" {
 		return nil
@@ -160,8 +166,18 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 		Secret:  tokenSecret,
 	}
 
-	remoteCacheKey := credentialCacheKey("remote", apr)
-	if v.cache.Get(remoteCacheKey) != nil {
+	authProxy, err := v.authProxyConfig.GetAuthenticator(tokenRealm)
+	if err != nil {
+		return err
+	}
+	if authProxy == nil {
+		return errors.ErrValidatorRealmAuthProxyNotFound.WithArgs(tokenRealm)
+	}
+	if fresh, ok := authProxy.(authproxy.FreshAuthenticator); ok {
+		ar.Token.CacheDisabled = fresh.RequireFreshAuthentication()
+	}
+	remoteCacheKey := credentialCacheKey("remote", "api_key", apr)
+	if !ar.Token.CacheDisabled && v.cache.Get(remoteCacheKey) != nil {
 		// This is the use case where remote authenticator was able to
 		// successfully authenticate user based on provided credentials
 		// before.
@@ -172,8 +188,8 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 		return nil
 	}
 
-	localCacheKey := credentialCacheKey("local", apr)
-	if usr := v.cache.Get(localCacheKey); usr != nil {
+	localCacheKey := credentialCacheKey("local", "api_key", apr)
+	if usr := v.credentialCacheUser(localCacheKey, ar.Token.CacheDisabled); usr != nil {
 		// This is the use case where local authenticator was able to
 		// successfully authenticate user based on provided credentials
 		// before.
@@ -185,11 +201,7 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 		return nil
 	}
 
-	authProxy, err := v.authProxyConfig.GetAuthenticator(tokenRealm)
-	if err != nil {
-		return err
-	}
-	if err := authProxy.APIKeyAuth(apr); err != nil {
+	if err := authenticateCredential(ctx, authProxy, apr, false); err != nil {
 		return err
 	}
 	ar.Token.Name = apr.Response.Name
@@ -206,7 +218,30 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(_ context.Context, r *http.
 	return nil
 }
 
-func credentialCacheKey(kind string, r *authproxy.Request) string {
+func credentialCacheKey(kind, method string, r *authproxy.Request) string {
 	digest := sha256.Sum256([]byte(r.Secret))
-	return fmt.Sprintf("%s|%s|%s|%x", kind, r.Address, r.Realm, digest)
+	return fmt.Sprintf("%q|%q|%q|%q|%x", kind, method, r.Address, r.Realm, digest)
+}
+
+func authenticateCredential(ctx context.Context, a authproxy.Authenticator, r *authproxy.Request, basic bool) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	var err error
+	if contextual, ok := a.(authproxy.ContextAuthenticator); ok {
+		if basic {
+			err = contextual.BasicAuthContext(ctx, r)
+		} else {
+			err = contextual.APIKeyAuthContext(ctx, r)
+		}
+	} else if basic {
+		err = a.BasicAuth(r)
+	} else {
+		err = a.APIKeyAuth(r)
+	}
+	if ctx.Err() != nil {
+		r.Response = authproxy.Response{}
+		return ctx.Err()
+	}
+	return err
 }

@@ -165,15 +165,13 @@ Reject credentials for the wrong realm and never return a success payload after
 a backend error. Credential success remains subject to gatekeeper policy. Keep
 secrets out of metadata, errors, and cache keys exposed to operators.
 
-The current methods and request model carry no `context.Context`. A backend can
-bound its own network calls, but automatic HTTP-request cancellation requires an
-additive context-aware interface and consumer wiring. Authentication results can
-be cached by the validator: specify revocation/expiry behavior at that consumer,
-not merely in the external credential service. The current credential cache key
-contains payload class, address, realm, and a secret digest, but omits the
-Basic/API-key method. When both methods are enabled, identical presented secret
-strings can therefore share a cached identity. Independent method authority
-requires consumer cache isolation; do not promise it from plugin handlers alone.
+The optional `ContextAuthenticator` propagates HTTP cancellation and
+`FreshAuthenticator` bypasses credential cache reads/writes when current backend
+state must be checked on every request. Legacy methods remain compatible.
+Cache keys include the Basic/API-key method, payload class, source address,
+realm and secret digest. Use the
+[credential owner](../../credential-authenticators/SKILL.md) for the SQLite
+API-key implementation and exact capability semantics.
 Attach once before concurrent use; the host retains lifecycle ownership of
 manually supplied authenticators.
 

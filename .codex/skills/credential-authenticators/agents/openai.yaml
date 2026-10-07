@@ -1,0 +1,4 @@
+interface:
+  display_name: "Credential Authenticators"
+  short_description: "Maintain SQLite API keys and credential runtime hooks"
+  default_prompt: "Use $credential-authenticators to maintain the SQLite API-key plugin and gatekeeper integration."

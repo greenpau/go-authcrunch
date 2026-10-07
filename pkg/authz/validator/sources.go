@@ -202,7 +202,7 @@ func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *req
 	}
 
 	if ar.Token.IsPlainPayload {
-		usr = v.cache.Get(ar.Token.CacheKey)
+		usr = v.credentialCacheUser(ar.Token.CacheKey, ar.Token.CacheDisabled)
 		if usr == nil {
 			v.logger.Debug("cache miss for plaintext credentials",
 				zap.String("session_id", ar.SessionID),
@@ -218,7 +218,7 @@ func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *req
 		}
 	} else {
 		if ar.Token.Source == tokenSourceBasicAuth || ar.Token.Source == tokenSourceAPIAuth {
-			usr = v.cache.Get(ar.Token.CacheKey)
+			usr = v.credentialCacheUser(ar.Token.CacheKey, ar.Token.CacheDisabled)
 		} else {
 			usr = v.cache.Get(ar.Token.Payload)
 		}
@@ -254,6 +254,7 @@ func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *req
 		return usr, err
 	}
 
+	usr.CacheDisabled = ar.Token.CacheDisabled
 	usr.TokenSource = ar.Token.Source
 	usr.TokenName = ar.Token.Name
 
@@ -263,4 +264,11 @@ func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *req
 		usr.Token = ar.Token.Payload
 	}
 	return usr, nil
+}
+
+func (v *TokenValidator) credentialCacheUser(key string, disabled bool) *user.User {
+	if disabled {
+		return nil
+	}
+	return v.cache.Get(key)
 }
