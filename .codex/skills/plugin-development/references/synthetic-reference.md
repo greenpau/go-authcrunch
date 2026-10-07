@@ -20,7 +20,10 @@ local PS256 signer is implemented at `plugins/cryptographic-signing/rsapss`; its
 and core verification boundaries. The HTTP JSON authorizer is implemented at
 `plugins/external-authorization/httpjson`; its
 [owner](../../external-authorization/SKILL.md) defines decision and enforcement
-contracts. Other category paths remain layout contracts
+contracts. The SQLite refresh store is implemented at
+`plugins/session-and-refresh-storage/sqlite`; its
+[owner](../../session-and-refresh-storage/SKILL.md) defines local database durability,
+atomic operations, and public refresh-engine composition. Other category paths remain layout contracts
 until implemented. A path in this guide is
 not proof that a plugin, constructor, parser, or category integration is present.
 Inspect the working tree before naming an available reference. Establish a

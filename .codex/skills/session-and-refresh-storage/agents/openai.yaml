@@ -1,0 +1,4 @@
+interface:
+  display_name: "Session and Refresh Storage"
+  short_description: "SQLite refresh families and atomic rotation"
+  default_prompt: "Use $session-and-refresh-storage to maintain the SQLite store, public parser, durability contracts, and refresh-engine consumer tests."

@@ -174,6 +174,12 @@ distributed continuity, upstream refresh, or immediate revocation of stateless
 access JWTs. Local restart continuity is supplied by the runtime-state integration,
 not by the Store interface alone.
 
+Use [session-and-refresh-storage](../session-and-refresh-storage/SKILL.md) to
+maintain the optional SQLite adapter, its public parser, local cross-process
+atomicity, and engine-level consumer fixtures. Portal backend selection remains
+a separate integration; SQLite persistence does not preserve identity epochs or
+signing keys by itself.
+
 ## Validation
 
 Use `make test TEST_DIR='./pkg/authn/... ./pkg/identity ./pkg/ids/local ./pkg/kms'`

@@ -271,14 +271,20 @@ separation of local config/runtime and worker ownership.
 ## Session and refresh storage
 
 **Purpose:** retain refresh families and support atomic issuance, rotation,
-revocation, and replay detection across consumers. A SQL or Redis-backed store
-is a potential implementation; a generic key/value cache is insufficient.
+revocation, and replay detection across consumers. A generic key/value cache
+is insufficient for the required atomic semantics.
 
 **Current APIs:** [tokenrefresh.Store](../../../../pkg/authn/token_refresh/store.go)
 defines `Create`, `Lookup`, `Rotate`, and `Revoke` with contexts.
 `tokenrefresh.NewManager(store, identity, signer, policy, binding)` accepts a
 custom store. Optional `ReplacementStore` and `SessionValidator` add atomic
 fresh-login replacement and non-rotating liveness checks.
+
+The working [SQLite reference](../../session-and-refresh-storage/SKILL.md) lives
+at `plugins/session-and-refresh-storage/sqlite`. Its public parser configures a
+dedicated local database shared by compatible clients and processes. It supports
+atomic rotation, fresh-login replacement, liveness checks, and durable replay
+revocation. TLS, process, and external-module consumers exercise engine injection.
 
 The [portal integration](../../../../pkg/authn/token_refresh_runtime.go) constructs
 `MemoryStore` itself and retains that concrete type. Configurable portal backend

@@ -75,6 +75,7 @@ import (
 	"github.com/greenpau/go-authcrunch/plugins/claims-enrichment/static"
 	"github.com/greenpau/go-authcrunch/plugins/cryptographic-signing/rsapss"
 	"github.com/greenpau/go-authcrunch/plugins/external-authorization/httpjson"
+	"github.com/greenpau/go-authcrunch/plugins/session-and-refresh-storage/sqlite"
 )
 
 func TestTagCompliance(t *testing.T) {
@@ -93,6 +94,8 @@ func TestTagCompliance(t *testing.T) {
 		{name: "test enrichment.Request struct", entry: &enrichment.Request{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"identity": true}}},
 		{name: "test enrichment.Result struct", entry: &enrichment.Result{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"identity": true, "observed_at": true, "expires_at": true}}},
 		{name: "test enrichment.Enricher struct", entry: &enrichment.Enricher{}, opts: &Options{}},
+		{name: "test sqlite.Config struct", entry: &sqlite.Config{}, opts: &Options{}},
+		{name: "test sqlite.Store struct", entry: &sqlite.Store{}, opts: &Options{}},
 		{name: "test rsapss.Config struct", entry: &rsapss.Config{}, opts: &Options{}},
 		{name: "test external.Config struct", entry: &external.Config{}, opts: &Options{}},
 		{name: "test external.Identity struct", entry: &external.Identity{}, opts: &Options{}},
