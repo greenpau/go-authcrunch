@@ -18,6 +18,15 @@ VS Code or other unrelated applications.
 | `TEST_ARTIFACT_MB` | `256` | Regular files directly inside the selected output directory, in MiB |
 | `TEST_TIMEOUT` | `30m` | Existing Go timeout per package |
 
+These are local defaults. The Actions Go shards explicitly use 7168 MiB
+aggregate memory, a 1024 MiB Go target, four Go threads, two package workers,
+four parallel tests, 256 processes, 512 MiB artifacts, a 45-minute package
+timeout, and a 5400-second watchdog. The 100-minute job deadline leaves time
+for setup and upload. These settings target public Ubuntu runners with 4 CPUs
+and 16 GB RAM; they do not resize the VM or apply to developer laptops or the
+automation-fixture job. Keep the guard's half-of-physical-RAM ceiling and host
+pressure checks. See [parallel CI validation](ci-shards.md) for reproduction.
+
 All numeric guard settings must be positive integers; zero never disables a
 guard. `TEST_MEMORY_MB` may not exceed half of physical RAM. Make arguments
 override environment values and survive recursive quick runs. The guard sets

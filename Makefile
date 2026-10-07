@@ -27,6 +27,8 @@ CHANGE_BASE ?=
 CHANGE_HEAD ?=
 CHANGE_DRY_RUN ?= 0
 export CHANGE_BASE CHANGE_HEAD CHANGE_DRY_RUN
+CI_SHARD ?=
+export CI_SHARD
 export TEST_PACKAGE_PARALLELISM TEST_PARALLELISM TEST_GOMAXPROCS TEST_GO_MEMORY_MB
 export TEST_WALL_TIMEOUT TEST_MAX_PROCESSES TEST_ARTIFACT_MB
 # Unset means auto-detect a budget; do not export an undefined Make variable.
@@ -36,7 +38,7 @@ endif
 export APP_VERSION GIT_COMMIT GIT_BRANCH BUILD_USER BUILD_DATE
 export PYTHONDONTWRITEBYTECODE := 1
 
-.PHONY: all info build linter dep install-test-tools test change-test run-tests qtest run-quick-tests run-reports test-ui test-automation test-codeql ci-check brand-assets brand-assets-check generate-acl version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release fast-release fast-minor-release release-git-check release-update-version release-git-commit
+.PHONY: all info build linter dep install-test-tools test change-test run-tests qtest run-quick-tests run-reports test-ui test-automation test-codeql ci-check ci-quality ci-test-shard brand-assets brand-assets-check generate-acl version-check version-sync artifact-id templates license docs clean upgrade mod-tidy release minor-release fast-release fast-minor-release release-git-check release-update-version release-git-commit
 
 all: info build
 
@@ -107,15 +109,22 @@ brand-assets:
 brand-assets-check:
 	@$(PYTHON) assets/scripts/update_brand_assets.py --check
 
-# Recursive invocations deliberately serialize gates, even with make -j.
-ci-check:
+# Actions runs these gates on a separate runner from each Go test shard.
+ci-quality:
 	@$(MAKE) version-check
 	@$(MAKE) brand-assets-check
 	@$(MAKE) test-automation
 	@$(MAKE) linter
-	@$(MAKE) test TEST=. TEST_DIR=./... COVERAGE_DIR=.coverage MINIMUM_COVERAGE=1
 	@$(MAKE) test-ui
 	@$(MAKE) build
+
+ci-test-shard:
+	@$(PYTHON) assets/scripts/ci_tests.py run "$$CI_SHARD"
+
+# Local/release validation remains complete and serial, even with make -j.
+ci-check:
+	@$(MAKE) ci-quality
+	@$(MAKE) test TEST=. TEST_DIR=./... COVERAGE_DIR=.coverage MINIMUM_COVERAGE=1
 
 version-check:
 	@$(PYTHON) assets/scripts/version.py check

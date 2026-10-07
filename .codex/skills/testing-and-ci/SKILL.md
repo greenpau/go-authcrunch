@@ -98,7 +98,7 @@ make test-automation
 make ci-check
 ```
 
-Go lifecycle runs use `-mod=readonly -race -count=1 -p 1 -parallel 2 -timeout 30m -v`.
+Local Go lifecycle runs use `-mod=readonly -race -count=1 -p 1 -parallel 2 -timeout 30m -v`.
 The macOS/Linux resource supervisor covers compilation, test descendants and
 report generation. It defaults to two Go execution threads, a 512 MiB Go memory
 target per process, and a sampled aggregate budget of the smaller of 3 GiB or
@@ -109,8 +109,9 @@ for overrides, evidence, platform limits and abort recovery. Never raise or
 disable safeguards simply to make a failing run appear successful.
 `TEST_TIMEOUT` overrides the per-package limit through the quoted Go flag.
 The real-login suite can exceed twenty minutes under race instrumentation.
-The CI job allows 45 minutes for setup, compilation, the package budget, other
-quality gates, and artifact upload. Keep individual network/browser timeouts.
+CI overrides these conservative defaults for its dedicated runners: a 45-minute
+package limit, 90-minute guard, and 100-minute Go job. See the resource controls
+for its memory/CPU profile. Keep individual network/browser timeouts.
 For a package timeout, inspect `run.json` and `test_output.jsonl`: compare elapsed
 times of completed top-level tests with the package limit and inspect the active
 stack. Subtest times overlap their parents; do not add both. A recently started
@@ -268,8 +269,9 @@ Raw test output and coverage source are unredacted: use synthetic fixtures and
 never print real credentials. Ignore all report artifacts in Git.
 
 Tests and builds do not run license rewrites, version synchronization, or
-module tidy. `make ci-check` serializes version checks, automation fixtures,
-existing golint, full Go coverage, browser tests, and both executable builds.
+module tidy. `make ci-check` serializes `ci-quality` (version/asset checks,
+automation fixtures, existing golint, Node client tests, and both executable
+builds), then full Go coverage including browser E2E tests.
 Maintenance side effects are specified by [scripts-and-automation](../scripts-and-automation/SKILL.md);
 release/tag operations are specified by [release-and-versioning](../release-and-versioning/SKILL.md).
 
@@ -436,21 +438,25 @@ it complements the Chrome E2E journeys and does not replace them.
 
 `.github/workflows/test.yml` runs on pushes/PRs to main, manual dispatch, and
 reusable workflow calls. Its lightweight selection skips known non-code changes.
-Code changes run affected tests first, followed by the full `make ci-check` on
-success. Global/unknown changes and version-tag/manual runs use the full gate.
-`make change-test` uses the same policy locally for staged, unstaged, and
-untracked files, retaining package E2E tests and the normal guarded lifecycle.
+Code changes run the full Go suite once across disjoint portal, identity,
+and remaining-package shards, alongside `make ci-quality`. Global/unknown
+changes and version-tag/manual runs use the same full gate. Local
+`make change-test` remains the selected development workflow.
 Read [change-based testing](../scripts-and-automation/references/change-tests.md)
 for ranges, impact rules, reports, and conservative fallbacks. The
 `release-and-versioning` skill owns exact annotated-tag deduplication.
 
-Both test jobs select Ubuntu 24.04, Go 1.26.8, Node 24, Python 3, and NSS test
-utilities. Each retains a 45-minute deadline. The full job resolves versioned
-artifact identity and runs `make dep` before the complete gate. Both jobs check
-source cleanliness and upload their separate evidence bundles after tests were
-attempted, including on failure. Missing artifacts fail upload; failed selected
-tests explicitly fail the existing `Tests and coverage` check before full tests
-can start. CodeQL shares non-code selection, with scheduled/manual scans retained.
+Go and quality jobs select Ubuntu 24.04, Go 1.26.8, Node 24, Python 3, and NSS
+utilities. Each Go shard has a 100-minute job deadline and explicit CI resource
+budgets; quality checks retain local fixture defaults and a 45-minute job.
+Separate dependency and per-commit/per-shard build caches retain useful compiled
+outputs. Each shard verifies source cleanliness, publishes timings, and uploads
+its evidence even after failure. The existing `Tests and coverage` check fails
+for unsuccessful selection, any failed or unexpectedly skipped job, or incomplete
+coverage evidence. Only an explicit non-code/release-owned selection accepts
+skipped jobs. CodeQL shares non-code selection, with scheduled/manual scans retained.
+Read [parallel CI validation](../scripts-and-automation/references/ci-shards.md)
+for package completeness, merged profiles, partial reruns, and failure-gate tests.
 
 The complete local reproduction is `make dep` followed by `make ci-check`.
 The workflow uses read-only contents permission and immutable action pins.

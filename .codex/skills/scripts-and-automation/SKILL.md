@@ -38,7 +38,9 @@ boundary for these workflows.
 | `make test-codeql` | Real CodeQL fixture scan verifying accepted diagnostic logging exceptions and retained alerts; requires CodeQL CLI |
 | `make brand-assets` / `make brand-assets-check` | Regenerate SVG branding and shared colors from the palette, or check drift without writes |
 | `make generate-acl` | Regenerate the four ACL condition/rule source and test files from the local Python generator |
-| `make ci-check` | Sequential version, brand-asset consistency, automation, lint, Go tests, UI tests, and build gates |
+| `make ci-check` | Complete sequential quality gates and full Go tests |
+| `make ci-quality` | Version, brand assets, automation, lint, UI tests, and both executable builds |
+| `make ci-test-shard CI_SHARD=portal` | All Go tests in the portal, identity, or other package shard |
 | `make version-check` / `make version-sync` | Check or explicitly synchronize version-bearing Go defaults |
 | `make artifact-id` | Validate and print the versioned artifact identity |
 | `make docs` | Generate ignored `.doc/index.txt` from `go doc -all` |
@@ -56,16 +58,22 @@ run or bypass the guard to force an over-budget suite to finish.
 
 Read [change-based testing](references/change-tests.md) when maintaining change
 classification, Git ranges, affected-package selection, local `change-test`,
-or GitHub's selected-then-full gates. Keep CI and local classification shared;
+or GitHub's decision to require validation. Keep CI and local classification shared;
 unknown impact retains validation. `make test` and `make ci-check` remain full
 validation entry points.
+
+Read [parallel CI validation](references/ci-shards.md) when changing Actions
+jobs, package shards, cache keys, combined coverage, or the required check.
+CI runs the full Go suite once across disjoint shards alongside `ci-quality`;
+local `change-test` remains available for faster development feedback.
 
 `TEST` is a regex, not a fragment of Go flags. `TEST_TIMEOUT` is a quoted
 Go per-package duration (default `30m`) forwarded through tested; use it instead
 of embedding flags in `TEST`. Environment overrides apply to both full and quick
 runs; a Make command-line assignment takes precedence and survives recursive
-quick-test invocations. The workflow job allows 45 minutes, including setup,
-other gates, and evidence upload. Follow the
+quick-test invocations. CI explicitly allows 45 minutes per package, a 90-minute
+guard, and 100 minutes per Go job, including setup and evidence upload. Local
+defaults remain conservative. Follow the
 [timeout diagnosis](../testing-and-ci/SKILL.md#test-lifecycle) before changing
 these budgets. Preserve individual request/process deadlines.
 

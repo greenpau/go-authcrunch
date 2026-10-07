@@ -33,9 +33,13 @@ tag fails. `GITHUB_SHA` binds the identity to the actual checked commit, and
 `GITHUB_OUTPUT` receives validated `version` and `artifact_id` values.
 
 `.github/workflows/test.yml` is reusable by the release workflow. It runs
-`make ci-check` and uploads the complete ignored `.coverage/` bundle, including
-failure evidence, as `go-authcrunch_coverage_<artifact-id>`. Coverage is a
-workflow diagnostic artifact, separate from published distributions.
+the complete gate as `make ci-quality` plus disjoint full-suite Go shards.
+Selection computes one artifact identity for all jobs. Each shard uploads its
+available evidence, including failures, with a `_shard_<name>` suffix. The final
+required check verifies and combines successful shards into the complete ignored
+`.coverage/` bundle as `go-authcrunch_coverage_<artifact-id>`. Partial reruns replace
+only their shard artifact under the shared identity. Coverage is a workflow
+diagnostic artifact, separate from published distributions.
 
 The test workflow first runs `assets/scripts/select_ci_tests.py`. A `push` to
 `refs/heads/main` delegates validation to a release tag only when version
@@ -47,10 +51,11 @@ change selection; commit messages do not authorize skipping tests. Tag and manua
 runs always retain their full gate, even when their commits change no code.
 Ordinary branch/PR changes follow the shared
 [change-based testing](../scripts-and-automation/references/change-tests.md)
-policy: known non-code changes skip tests, while code changes run selected tests
-before the full gate. The selection job runs for every invocation and emits
+policy: known non-code changes skip expensive jobs, while code changes run the
+full gate once. The selection job runs for every invocation and emits
 `run_tests`, `mode`, and commit endpoints through `GITHUB_OUTPUT`; `core` requires
-successful selection and, when applicable, selected tests. Git queries are
+successful selection and, when validation is required, successful quality checks,
+all Go shards, and complete coverage evidence. Git queries are
 read-only and bounded. Local Git/process fixtures
 in `assets/scripts/tests/ci_test_selection_test.py` cover both release events
 and conservative fallback behavior.

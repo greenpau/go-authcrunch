@@ -80,19 +80,21 @@ to its SHA, covering every commit in a multi-commit push. PRs compare the
 merge base of the event's base/head SHAs to the PR head, while executing tests
 on GitHub's merge checkout. Base-branch-only edits do not become PR changes.
 
-Documentation-only changes skip expensive jobs. A focused change runs
-`make change-test` in `changed`; only success allows `core` to run the complete
-unchanged `make ci-check`. The existing `Tests and coverage` check explicitly
-fails when selection or selected tests fail; dependency failure must not turn
-it into an accepted skipped check. Each test job retains its own 45-minute
-budget. Failure evidence from selected and full jobs uses separate artifacts.
+Documentation-only changes skip expensive jobs. Both focused and full code
+changes run the full Go suite once, partitioned into disjoint package shards,
+alongside `make ci-quality`. Do not put a selected run ahead of a full run:
+widely imported portal changes otherwise execute the slowest suites twice.
+Local `make change-test` retains its impact analysis and selected execution.
+The existing `Tests and coverage` check requires successful selection, all
+shards, quality checks, and verified combined coverage. Failed or unexpectedly
+skipped dependencies fail that check. Read [parallel CI validation](ci-shards.md)
+for budgets, artifacts, caching, and the executable failure-gate fixtures.
 
 Tag/manual/reusable invocations without a reliable change range run the full
 gate. New branches, unavailable history, malformed payloads, and a checkout
 that disagrees with GITHUB_SHA also retain full validation. Globally classified
-changes go straight to the full gate because their selected scope is already
-the full suite. Go graph errors found later by the focused job can also expand
-that run; its success still requires the subsequent full quality gate.
+changes also use the full gate. Go graph errors in shard discovery fail
+validation; they must never produce an empty successful selection.
 
 The release workflow calls this test workflow for every version tag. Only the
 matching annotated tag can own an accompanying branch push's validation; the
@@ -110,6 +112,6 @@ multi-commit pushes, divergent PR bases/merge checkouts, missing history,
 non-code scaffolding, full overrides, and release ownership with bare remotes.
 Keep these fixtures independent of repository history or GitHub credentials.
 
-Validate changed Actions syntax with actionlint and exercise the prerequisite
-gate for successful, failed, skipped, and cancelled dependencies. A local
+Validate changed Actions syntax with actionlint and exercise the final required
+check for successful, failed, skipped, and cancelled dependencies. A local
 workflow lint is not evidence of a completed hosted Actions run.

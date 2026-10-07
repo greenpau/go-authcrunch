@@ -52,12 +52,13 @@ make ci-check
 changes skip tests; Go changes select owning packages and affected consumers.
 Selected Go reports are in `.coverage/changes/go/index.html`. See
 [change-based testing](.codex/skills/scripts-and-automation/references/change-tests.md)
-for commit ranges, fallbacks, and GitHub's selected-then-full validation flow.
+for commit ranges and fallbacks. GitHub runs the full suite once across parallel
+package shards; see [parallel CI validation](.codex/skills/scripts-and-automation/references/ci-shards.md).
 
 `make test` runs race-enabled Go tests through pinned `tested` and writes the
 coverage/report bundle to `.coverage/index.html`. Use `make test-ui` for browser
 session tests and `make build` for `bin/authdb` and `bin/authdbctl`.
-Tests run one package at a time with a memory/process watchdog on macOS and
+Local tests run one package at a time with a memory/process watchdog on macOS and
 Linux. An exceeded budget stops the run and records the reason in
 `.coverage/resource-usage.json`. See the
 [test resource controls](.codex/skills/scripts-and-automation/references/test-resources.md)
