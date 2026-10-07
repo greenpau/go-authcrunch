@@ -31,7 +31,11 @@ Reads use a consistent read transaction and discard it. Writes acquire an
 immediate transaction with bounded BUSY retries before invoking the callback.
 Callbacks use bound SQL values, must not reenter the database, and must not
 publish results before successful completion. Preserve domain errors while
-redacting SQL/paths/values. Never retry COMMIT. A real COMMIT error quarantines
+redacting SQL/paths/values. Competing BEGIN attempts can briefly hold shared locks
+and cause a busy COMMIT even without a long-lived reader. Single-use concurrency
+tests require at most one successful publication; verify recovery separately for
+uncertain outcomes.
+Never retry COMMIT. A real COMMIT error quarantines
 the handle as `ErrCommitUncertain`; drain, reconcile through a fresh handle, and
 only then decide whether retry is safe. Cancellation before driver commit rolls
 back. Cancellation observed after successful commit withholds results as

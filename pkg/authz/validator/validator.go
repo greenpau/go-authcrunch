@@ -154,7 +154,7 @@ func (v *TokenValidator) authorizeExternal(ctx context.Context, r *http.Request,
 // Enriched claims are ACL-only; returned/cached users and identity headers retain
 // their original authenticated claims. Explicit bypass routes remain bypasses.
 func (v *TokenValidator) SetClaimsEnricher(enricher *enrichment.Enricher) error {
-	if enricher == nil || v.closed.Load() {
+	if v == nil || enricher == nil || v.closed.Load() {
 		return fmt.Errorf("claims enricher is required on an open validator")
 	}
 	v.claimsEnricher = enricher

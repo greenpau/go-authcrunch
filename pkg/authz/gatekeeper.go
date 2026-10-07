@@ -16,6 +16,7 @@ package authz
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -59,6 +60,9 @@ type Gatekeeper struct {
 // The host owns the backend lifetime. See validator.SetClaimsEnricher for the
 // ACL-only, cache, bypass and replacement contracts.
 func (g *Gatekeeper) SetClaimsEnricher(enricher *enrichment.Enricher) error {
+	if g == nil || g.tokenValidator == nil {
+		return fmt.Errorf("claims enrichment requires an initialized gatekeeper")
+	}
 	return g.tokenValidator.SetClaimsEnricher(enricher)
 }
 

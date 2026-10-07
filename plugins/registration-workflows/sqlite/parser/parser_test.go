@@ -16,9 +16,11 @@ package parser_test
 
 import (
 	"fmt"
-	"github.com/greenpau/go-authcrunch/plugins/registration-workflows/sqlite/parser"
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch/plugins/registration-workflows/sqlite/parser"
 )
 
 func TestSQLiteRegistrationParser(t *testing.T) {
@@ -28,14 +30,14 @@ func TestSQLiteRegistrationParser(t *testing.T) {
 	if err != nil || c.Timeout != "1s" || c.BasePath != "/auth" || !slices.Equal(original, valid) {
 		t.Fatal(c, err)
 	}
-	for _, extra := range []string{"name duplicate", "unknown value", "timeout 31s", "timeout 0", "base_path //bad", "base_path /../bad", "base_path /auth/", "base_path https://evil", "timeout x y", "timeout \"\"", "timeout \"", "timeout 1s\n", "timeout \x00", "timeout \xff"} {
+	for _, extra := range []string{"name duplicate", "unknown value", "timeout 31s", "timeout 0", "base_path //bad", "base_path /api/auth", "base_path /tenant/provider", "base_path /auth/register", "base_path /" + strings.Repeat("a", 513), "base_path /../bad", "base_path /auth/", "base_path https://evil", "timeout x y", "timeout \"\"", "timeout \"", "timeout 1s\n", "timeout \x00", "timeout \xff"} {
 		bad := append(slices.Clone(valid), extra)
 		got, err := parser.NewSQLiteRegistrationConfigFromDirectives(bad)
 		if got != nil || err == nil {
 			t.Fatal("invalid directive accepted", extra)
 		}
 	}
-	for _, origin := range []string{"http://portal.example.test", "https://user@portal.example.test", "https://portal.example.test/", "https://portal.example.test?x=1", "https://portal.example.test#fragment", "//portal.example.test", "https://", "https://portal.example.test:bad"} {
+	for _, origin := range []string{"http://portal.example.test", "https://user@portal.example.test", "https://portal.example.test/", "https://portal.example.test?x=1", "https://portal.example.test#fragment", "//portal.example.test", "https://", "https://portal.example.test:bad", "https://portal.example.test:", "https://portal.example.test:0", "https://portal.example.test:65536", "https://[::1]:99999"} {
 		bad := slices.Clone(valid)
 		bad[len(bad)-1] = "public_origin " + origin
 		if got, err := parser.NewSQLiteRegistrationConfigFromDirectives(bad); got != nil || err == nil {

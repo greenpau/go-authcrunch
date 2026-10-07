@@ -225,6 +225,13 @@ func TestE2EClaimsEnrichmentLogin(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Cleanup(gate.Close)
+		// Host provisioning errors must return normally so the valid candidate can
+		// still be attached and enforce the TLS authorization journey below.
+		for _, missing := range []*authz.Gatekeeper{nil, {}} {
+			if err := missing.SetClaimsEnricher(enricher); err == nil {
+				t.Fatal("missing runtime accepted enrichment")
+			}
+		}
 		if mode != "unattached" {
 			if err := gate.SetClaimsEnricher(enricher); err != nil {
 				t.Fatal(err)

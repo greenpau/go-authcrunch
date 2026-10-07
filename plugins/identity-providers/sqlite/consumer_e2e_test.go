@@ -30,13 +30,14 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	tickets "github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite"
 	"github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite/parser"
-	"go.uber.org/zap"
 )
 
 func TestE2ESQLiteTicketPortal(t *testing.T) {
@@ -221,6 +222,20 @@ func TestE2ESQLiteTicketPortal(t *testing.T) {
 		t.Fatal("anonymous issuer accepted")
 	}
 	callback := issue(client, authorization)
+	// A failed reload cannot consume or replace a live browser-bound ticket.
+	for _, change := range []func(*tickets.Config){
+		func(c *tickets.Config) { c.PublicOrigin = "https://portal.example.test:0" },
+		func(c *tickets.Config) { c.IssuerURL = "https://issuer.example.test:65536/login" },
+	} {
+		candidate := restored
+		change(&candidate)
+		if got, err := tickets.New(t.Context(), &candidate); got != nil || err == nil {
+			if got != nil {
+				got.Close()
+			}
+			t.Fatal("invalid ticket reload constructed a provider")
+		}
+	}
 	callbackURL, _ := url.Parse(callback)
 	savedBinding := client.Jar.Cookies(callbackURL)
 	if resp, _ := fetch(browser(), callback, false, ""); resp.StatusCode != 401 || resp.Header.Get("Authorization") != "" {

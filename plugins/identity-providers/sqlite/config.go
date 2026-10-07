@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/internal/sqlitedb"
@@ -45,6 +46,15 @@ func secureURL(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
 	if err != nil || !sqlitedb.ValidText(raw, 2048) || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.RawFragment != "" || u.RawPath != "" || strings.ToLower(u.Host) != u.Host || strings.Contains(raw, "#") || raw != u.String() {
 		return nil, ErrInvalid
+	}
+	if strings.HasSuffix(u.Host, ":") {
+		return nil, ErrInvalid
+	}
+	if port := u.Port(); port != "" {
+		n, err := strconv.Atoi(port)
+		if err != nil || n < 1 || n > 65535 {
+			return nil, ErrInvalid
+		}
 	}
 	return u, nil
 }

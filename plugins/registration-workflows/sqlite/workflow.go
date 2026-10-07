@@ -215,6 +215,7 @@ func (w *Workflow) ConfirmRegistration(ctx context.Context, id, code string) err
 	candidate := sha256.Sum256([]byte(code))
 	denied := false
 	accountCommitted, accountUncertain := false, false
+	var expires time.Time
 	err := w.db.Write(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		p, err := w.read(ctx, tx, id)
 		if err != nil {
@@ -228,11 +229,20 @@ func (w *Workflow) ConfirmRegistration(ctx context.Context, id, code string) err
 			_, err := tx.ExecContext(ctx, "UPDATE registrations SET attempts=attempts+1 WHERE id=?", digest[:])
 			return err
 		}
+		// Waiting for the account database must not extend the code's lifetime.
+		// Keep this deadline through both writes; a committed account followed by
+		// an expired confirmation remains an uncertain, recoverable operation.
+		expires = time.Unix(p.expires, 0)
+		ctx, cancel := context.WithDeadline(ctx, expires)
+		defer cancel()
 		if _, err := w.store.CreateEnrollment(ctx, p.enrollment, &accounts.Account{Username: p.username, Email: p.email, Roles: []string{"authp/user"}}, p.password); err != nil {
 			accountUncertain = errors.Is(err, accounts.ErrCommitUncertain)
 			return ErrUnavailable
 		}
 		accountCommitted = true
+		if !time.Now().Before(expires) {
+			return ErrDenied
+		}
 		_, err = tx.ExecContext(ctx, "UPDATE registrations SET state='confirmed',password=NULL,code=NULL WHERE id=?", digest[:])
 		return err
 	})
@@ -241,6 +251,9 @@ func (w *Workflow) ConfirmRegistration(ctx context.Context, id, code string) err
 			return errors.Join(ErrCommitUncertain, err)
 		}
 		return err
+	}
+	if accountCommitted && !time.Now().Before(expires) {
+		return errors.Join(ErrCommitUncertain, ErrDenied)
 	}
 	if denied {
 		return ErrDenied

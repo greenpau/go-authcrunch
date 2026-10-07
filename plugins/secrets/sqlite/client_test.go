@@ -149,3 +149,56 @@ func TestSecretsValidationCancellationAndConcurrency(t *testing.T) {
 		}
 	}
 }
+
+func TestSecretsRejectLossyJSON(t *testing.T) {
+	c, _ := fixture(t)
+	if err := c.Put(t.Context(), map[string]any{"secret": "original"}); err != nil {
+		t.Fatal(err)
+	}
+	for name, value := range map[string]any{
+		"string": "bad\xff", "nested key": map[string]any{"bad\xff": "value"},
+		"array string": []any{"bad\xff"}, "string list": []string{"bad\xff"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := c.Put(t.Context(), map[string]any{"secret": value}); !errors.Is(err, ErrInvalid) {
+				t.Fatal("lossy secret replacement accepted", err)
+			}
+			if got, err := c.GetString(t.Context(), "secret"); err != nil || got != "original" {
+				t.Fatal("invalid input replaced stored credential", err)
+			}
+		})
+	}
+}
+
+func TestSecretsJSONBoundsAndPreservation(t *testing.T) {
+	c, _ := fixture(t)
+	var deep any = nil
+	for range 16 {
+		deep = []any{deep}
+	}
+	cycle := map[string]any{}
+	cycle["self"] = cycle
+	for name, value := range map[string]any{
+		"cycle": cycle, "depth": deep, "nodes": make([]any, 4096),
+		"non JSON number": json.Number("null"), "empty number": json.Number(""),
+		"infinity": math.Inf(1), "raw JSON": json.RawMessage(`"implicit"`),
+		"implicit bytes": []byte("implicit"), "typed object": map[string]string{"key": "value"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := c.Put(t.Context(), map[string]any{"value": value}); !errors.Is(err, ErrInvalid) {
+				t.Fatal("invalid JSON graph accepted", err)
+			}
+		})
+	}
+	// Multiline key material may exceed signing-claim string limits. Preserve it
+	// and every JSON scalar/container type without credential coercion.
+	large := strings.Repeat("x", 8192) + "\n\x00"
+	values := map[string]any{"string": large, "array": []any{nil, true, json.Number("9007199254740993")}, "object": map[string]any{"key": "value"}, "list": []string{"one", "two"}, "nilList": []any(nil), "nilObject": map[string]any(nil), "int": int64(-3), "float": 1.5}
+	if err := c.Put(t.Context(), values); err != nil {
+		t.Fatal(err)
+	}
+	got, err := c.GetSecrets(t.Context())
+	if err != nil || got["string"] != large || got["nilList"] != nil || got["nilObject"] != nil || got["int"] != json.Number("-3") || got["float"] != json.Number("1.5") {
+		t.Fatal("JSON value changed", err)
+	}
+}

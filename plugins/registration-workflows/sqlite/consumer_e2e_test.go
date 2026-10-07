@@ -15,6 +15,8 @@
 package sqlite_test
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,6 +33,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
+
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
@@ -39,7 +43,6 @@ import (
 	notifications "github.com/greenpau/go-authcrunch/plugins/messaging/sqlite"
 	enrollment "github.com/greenpau/go-authcrunch/plugins/registration-workflows/sqlite"
 	"github.com/greenpau/go-authcrunch/plugins/registration-workflows/sqlite/parser"
-	"go.uber.org/zap"
 )
 
 func TestE2ESQLiteRegistrationPortal(t *testing.T) {
@@ -66,7 +69,7 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	cfg, err := parser.NewSQLiteRegistrationConfigFromDirectives([]string{"name enrollment", fmt.Sprintf("path %q", filepath.Join(dir, "registration.db")), "identity_store accounts", "realm staff", "email_provider mail", "public_origin " + server.URL, "base_path /auth", "timeout 5s"})
+	cfg, err := parser.NewSQLiteRegistrationConfigFromDirectives([]string{"name enrollment", fmt.Sprintf("path %q", filepath.Join(dir, "registration.db")), "identity_store accounts", "realm staff", "email_provider mail", "public_origin " + server.URL, "base_path /tenant/auth", "timeout 5s"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,6 +107,19 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 		}
 	}
 	install()
+	for _, change := range []func(*enrollment.Config){
+		func(c *enrollment.Config) { c.BasePath = "/api/auth" },
+		func(c *enrollment.Config) { c.PublicOrigin = "https://portal.example.test:65536" },
+	} {
+		candidate := restored
+		change(&candidate)
+		if got, err := enrollment.New(t.Context(), &candidate, store, out); err == nil || got != nil {
+			if got != nil {
+				got.Close()
+			}
+			t.Fatal("invalid registration reload constructed a workflow")
+		}
+	}
 	client := server.Client()
 	client.Timeout = 15 * time.Second
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
@@ -134,10 +150,10 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 		}
 		return resp.StatusCode, resp.Header.Get("Location"), string(data)
 	}
-	if status, _, _ := request("GET", server.URL+"/auth/register/staff", nil, ""); status != 200 {
+	if status, _, _ := request("GET", server.URL+"/tenant/auth/register/staff", nil, ""); status != 200 {
 		t.Fatal("registration form", status)
 	}
-	if status, _, body := request("POST", server.URL+"/auth/register/staff", url.Values{"registrant": {"alice"}, "registrant_password": {password}, "registrant_email": {"alice@example.test"}}, "attacker.example.test"); status != 200 {
+	if status, _, body := request("POST", server.URL+"/tenant/auth/register/staff", url.Values{"registrant": {"alice"}, "registrant_password": {password}, "registrant_email": {"alice@example.test"}}, "attacker.example.test"); status != 200 {
 		t.Fatal("registration submission", status, body)
 	}
 	if _, err := store.FetchUserData("alice", "alice@example.test"); err == nil {
@@ -163,7 +179,7 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 		t.Fatal("confirmation mail lacks link or code", string(decoded))
 	}
 	link, code := linkMatch[1], codeMatch[1]
-	if !strings.HasPrefix(link, server.URL+"/auth/register/staff/ack/") {
+	if !strings.HasPrefix(link, server.URL+"/tenant/auth/register/staff/ack/") {
 		t.Fatal("noncanonical confirmation URL", link)
 	}
 	if err := out.Acknowledge(t.Context(), message.ID, message.Lease); err != nil {
@@ -202,13 +218,54 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 	if _, err := store.FetchUserData("alice", "alice@example.test"); err == nil {
 		t.Fatal("invalid confirmation created account")
 	}
+	// A real competing reader makes the pending COMMIT fail after account
+	// creation. HTTP must withhold success; fresh handles reconcile the same ID.
+	competing, err := sql.Open("sqlite", restored.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer competing.Close()
+	readTx, err := competing.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer readTx.Rollback()
+	var pendingCount int
+	if err := readTx.QueryRowContext(t.Context(), "SELECT count(*) FROM registrations").Scan(&pendingCount); err != nil {
+		t.Fatal(err)
+	}
+	if status, location, body := request("POST", link, url.Values{"registration_code": {code}}, ""); status != 200 || location != "" || !strings.Contains(body, "Registration confirmation denied") {
+		t.Fatal("uncertain commit published HTTP success", status)
+	}
+	if err := readTx.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	if err := competing.Close(); err != nil {
+		t.Fatal(err)
+	}
+	created, err := store.FetchUserData("alice", "alice@example.test")
+	if err != nil {
+		t.Fatal("fixture did not commit the account first", err)
+	}
+	if err := workflow.Close(); err != nil {
+		t.Fatal(err)
+	}
+	workflow, err = enrollment.New(t.Context(), &restored, store, out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	install()
 	if status, location, body := request("POST", link, url.Values{"registration_code": {code}}, ""); status != 303 || !strings.HasSuffix(location, "/auth/login") {
 		t.Fatal("confirmation did not activate login", status, location, body)
+	}
+	reconciled, err := store.FetchUserData("alice", "alice@example.test")
+	if err != nil || created["id"] != reconciled["id"] {
+		t.Fatal("recovery replaced account identity", err)
 	}
 	if status, _, body := request("POST", link, url.Values{"registration_code": {code}}, ""); status != 200 || !strings.Contains(body, "Registration confirmation denied") {
 		t.Fatal("confirmation replay accepted", status, body)
 	}
-	native, err := authclient.NewClient(&authclient.Config{BaseURL: server.URL + "/auth", Realm: "staff", Username: "alice", Password: password}, authclient.Options{HTTPClient: client})
+	native, err := authclient.NewClient(&authclient.Config{BaseURL: server.URL + "/tenant/auth", Realm: "staff", Username: "alice", Password: password}, authclient.Options{HTTPClient: client})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,10 +285,71 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 	if len(roles) != 1 || roles[0] != "authp/user" {
 		t.Fatal("registration granted unexpected role")
 	}
+
+	t.Run("expiry while account database is locked", func(t *testing.T) {
+		if status, _, _ := request("POST", server.URL+"/tenant/auth/register/staff", url.Values{"registrant": {"eve"}, "registrant_password": {password}, "registrant_email": {"eve@example.test"}}, ""); status != 200 {
+			t.Fatal("submission", status)
+		}
+		message, err := out.Claim(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoded, err := io.ReadAll(quotedprintable.NewReader(strings.NewReader(message.Body)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		links := regexp.MustCompile(`href="([^"]+)"`).FindStringSubmatch(string(decoded))
+		codes := regexp.MustCompile(`<code>([A-Za-z0-9]{6,8})</code>`).FindStringSubmatch(string(decoded))
+		if len(links) != 2 || len(codes) != 2 {
+			t.Fatal("missing confirmation")
+		}
+		pending, err := sql.Open("sqlite", restored.Path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer pending.Close()
+		deadline := time.Now().Truncate(time.Second).Add(3 * time.Second)
+		if _, err := pending.ExecContext(t.Context(), "UPDATE registrations SET expires=? WHERE username=?", deadline.Unix(), "eve"); err != nil {
+			t.Fatal(err)
+		}
+		blocker, err := sql.Open("sqlite", filepath.Join(dir, "accounts.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer blocker.Close()
+		conn, err := blocker.Conn(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer conn.Close()
+		if _, err := conn.ExecContext(t.Context(), "BEGIN IMMEDIATE"); err != nil {
+			t.Fatal(err)
+		}
+		defer conn.ExecContext(context.Background(), "ROLLBACK")
+		released := make(chan error, 1)
+		timer := time.AfterFunc(time.Until(deadline)+100*time.Millisecond, func() {
+			_, err := conn.ExecContext(t.Context(), "ROLLBACK")
+			released <- err
+		})
+		defer timer.Stop()
+		status, location, body := request("POST", links[1], url.Values{"registration_code": {codes[1]}}, "")
+		if err := <-released; err != nil {
+			t.Fatal(err)
+		}
+		if status != 200 || location != "" || !strings.Contains(body, "Registration confirmation denied") {
+			t.Fatal("expired confirmation accepted", status)
+		}
+		if _, err := store.FetchUserData("eve", "eve@example.test"); err == nil {
+			t.Fatal("expired confirmation created account")
+		}
+		if err := out.Acknowledge(t.Context(), message.ID, message.Lease); err != nil {
+			t.Fatal(err)
+		}
+	})
 	if err := out.Close(); err != nil {
 		t.Fatal(err)
 	}
-	status, _, body := request("POST", server.URL+"/auth/register/staff", url.Values{"registrant": {"bob"}, "registrant_password": {password}, "registrant_email": {"bob@example.test"}}, "")
+	status, _, body := request("POST", server.URL+"/tenant/auth/register/staff", url.Values{"registrant": {"bob"}, "registrant_password": {password}, "registrant_email": {"bob@example.test"}}, "")
 	if status != 200 || !strings.Contains(body, "Internal registration messaging error") {
 		t.Fatal("unexpected messaging failure response", status)
 	}

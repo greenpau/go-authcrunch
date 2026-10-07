@@ -18,7 +18,9 @@ Construct a backend and enricher, then call
 `Gatekeeper.SetClaimsEnricher(*enrichment.Enricher)` or
 `TokenValidator.SetClaimsEnricher(*enrichment.Enricher)` before serving requests.
 A nil attachment fails without changing the active attachment. Closed validators
-reject attachment. The host owns backend cleanup; drain requests before replacing
+reject attachment. Nil validators and nil/unconstructed gatekeepers return an
+error without panicking, so failed host provisioning cannot crash attachment.
+The host owns backend cleanup; drain requests before replacing
 an attachment or closing the backend. Construct a new detached runtime for reload.
 There is no global registry or JSON backend loader in root `Config` or `authdb`.
 

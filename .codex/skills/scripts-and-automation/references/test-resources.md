@@ -102,6 +102,16 @@ and output size alone do not reveal its memory demand. The macOS Force Quit
 application grouping does not establish which test, editor extension or agent
 caused a historical spike. Preserve the original incident evidence.
 
+For time-sensitive authentication failures on a laptop, compare the raw event
+timestamps with the test's reported elapsed time and the host's sleep/wake log.
+Suspension can expire TOTP codes, login state and access credentials while the
+reported execution time remains brief. Preserve that evidence and rerun affected
+journeys while the host remains awake; do not relax expiry checks or deadlines.
+Use only temporary, process-scoped sleep prevention when needed. Ordinary idle
+prevention may not stop maintenance sleep, and no assertion guarantees against
+explicit sleep or lid closure. Report interrupted validation separately from a
+passing uninterrupted run.
+
 The portal's HTML/JSON session-cache and gatekeeper OAuth capacity journeys use
 `tests.IsolateCapacityTest` from `internal/tests/capacity.go` to run each in a
 child of the same test binary with a five-minute deadline. Their real 64 MiB

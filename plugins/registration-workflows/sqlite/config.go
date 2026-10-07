@@ -18,6 +18,7 @@ package sqlite
 import (
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/internal/sqlitedb"
@@ -41,14 +42,30 @@ func (c *Config) Validate() error {
 		return ErrInvalid
 	}
 	u, err := url.Parse(c.PublicOrigin)
-	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || c.PublicOrigin != "https://"+u.Host || strings.ToLower(u.Host) != u.Host || len(c.PublicOrigin) > 2048 {
+	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || c.PublicOrigin != "https://"+u.Host || strings.ToLower(u.Host) != u.Host || !sqlitedb.ValidText(c.PublicOrigin, 2048) || strings.HasSuffix(u.Host, ":") {
 		return ErrInvalid
+	}
+	if port := u.Port(); port != "" {
+		n, err := strconv.Atoi(port)
+		if err != nil || n < 1 || n > 65535 {
+			return ErrInvalid
+		}
 	}
 	if c.BasePath == "" {
 		c.BasePath = "/auth"
 	}
-	if c.BasePath != "/" && !matches(`^(/[A-Za-z0-9_-]+)+$`, c.BasePath) {
+	if len(c.BasePath) > 512 || (c.BasePath != "/" && !matches(`^(/[A-Za-z0-9_-]+)+$`, c.BasePath)) {
 		return ErrInvalid
+	}
+	// Portal routing owns these namespaces before a mounted registration flow.
+	for segment := range strings.SplitSeq(c.BasePath, "/") {
+		if strings.HasPrefix(segment, "favicon") {
+			return ErrInvalid
+		}
+		switch segment {
+		case "provider", "api", "profile", "sandbox", "register", "apps", "barcode", "saml", "oauth2", "basic", "assets", "favicon", "cross-device", "qrcode", "portal":
+			return ErrInvalid
+		}
 	}
 	return sqlitedb.Normalize(&c.Path, &c.Timeout)
 }

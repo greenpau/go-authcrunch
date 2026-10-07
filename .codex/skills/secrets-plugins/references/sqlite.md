@@ -14,6 +14,15 @@ Parsing has no filesystem effects. Constructors snapshot caller configuration.
 
 `Put(ctx, map[string]any)` atomically replaces the bound object. Empty objects,
 invalid keys, non-JSON values, over 128 keys, or encoded objects over 64 KiB fail.
+Validate the value graph before marshaling so invalid UTF-8 cannot become
+replacement characters in secrets or nested keys. Accept nil, booleans, UTF-8
+strings (including multiline values), finite native numeric scalars, valid
+json.Number, []string, []any and map[string]any. Typed nil containers encode null.
+Reject other Go shapes, custom marshalers, cycles, over 16 container levels
+(including the root), or over 4096 value nodes. Numeric literals are at most 128
+bytes; aggregate key/value text and encoded JSON are each at most 64 KiB. These
+bounds precede allocation-heavy marshaling. Invalid replacement leaves the prior
+record intact; do not coerce or silently normalize a malformed credential.
 At most 1024 named records fit in a database. `Delete(ctx)` removes only the
 bound record and is idempotent. These are trusted provisioning APIs: a host
 must not expose them as anonymous endpoints.
@@ -39,11 +48,13 @@ closed clients, invalid schemas, cancellation, and lock deadlines fail closed.
 mutation. Never log retrieved values or reflect them into errors.
 
 Acceptance: unit tests cover detached values, exact numeric representation,
-record binding, invalid inputs, cancellation, concurrent access, and reopen
-persistence. `consumer_e2e_test.go` resolves a real signing key, serves protected
-TLS requests through an AuthCrunch gatekeeper, rotates the backend value, and
-proves explicit adoption and failure without fallback. The same fixture runs
-from an isolated external module. Run:
+record binding, malformed UTF-8, graph bounds, invalid inputs, cancellation,
+concurrent access, and reopen persistence. `consumer_e2e_test.go` resolves a real
+signing key, serves protected TLS requests through an AuthCrunch gatekeeper,
+rotates the backend value, and
+proves explicit adoption, rejected lossy replacement preserving the last valid
+credential through a fresh consumer rebuild, and failure without fallback. The
+same fixture runs from an isolated external module. Run:
 
 ```
 make test TEST_DIR='./internal/sqlitedb ./plugins/secrets/sqlite/... ./internal/tag'

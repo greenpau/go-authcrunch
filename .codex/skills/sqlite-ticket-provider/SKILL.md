@@ -17,7 +17,8 @@ Use `parser.NewSQLiteTicketProviderConfigFromDirectives([]string)`. Required:
 one value once. Realm uses 1–64 ASCII letters/digits/underscore/hyphen. Origin is
 canonical HTTPS with no path, credentials, query or fragment. Issuer URL is HTTPS
 with a nonempty path of ASCII letters/digits/underscore/hyphen segments, no query,
-fragment or userinfo, and must differ from the portal callback. No discovery or
+fragment or userinfo, and must differ from the portal callback. Explicit ports
+on either URL must be 1–65535; a trailing empty port is invalid. No discovery or
 network request runs during parsing or construction.
 
 Optional `base_path` defaults `/auth`; `/` and unreserved nested paths work.
@@ -116,7 +117,8 @@ issuer and destination, duplicates, expiry, capacity, cancellation, detached
 identity, typed/parser validation and actual commit failure withholding identity.
 The public-only TLS consumer runs a locally authenticated issuer application,
 real portal, separate cookie jars, config roundtrip/restart, wrong credentials,
-Host and query negotiation, restored-cookie replay, logout, transforms/MFA denial and
+Host and query negotiation, invalid-port reload rejection without spending a
+pending ticket, restored-cookie replay, logout, transforms/MFA denial and
 independently verified JWTs. Run the external-module driver as well. Core tests
 exercise malformed optional capability output, cookie collisions, namespace
 precedence and unchanged OAuth/SAML redirects. Run public units/parser/consumer

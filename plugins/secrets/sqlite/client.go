@@ -20,6 +20,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+
 	"github.com/greenpau/go-authcrunch/internal/sqlitedb"
 )
 
@@ -70,7 +71,10 @@ func (c *Client) GetConfig() map[string]any {
 
 // Put atomically replaces the bound record. Provisioning is a trusted host API,
 // not a public HTTP endpoint. Values must be JSON; numbers read as json.Number.
-// Records are plaintext private data, limited to 64 KiB and 128 top-level keys.
+// Records are plaintext private data, limited to 64 KiB, 128 top-level keys,
+// 4096 value nodes and 16 container levels including the root. Supported Go
+// values are nil, bool, UTF-8 string, native numbers, json.Number, []string,
+// []any and map[string]any. Custom marshalers and other Go shapes are rejected.
 func (c *Client) Put(ctx context.Context, values map[string]any) error {
 	if c == nil {
 		return ErrUnavailable
@@ -82,6 +86,10 @@ func (c *Client) Put(ctx context.Context, values map[string]any) error {
 		if !sqlitedb.ValidText(key, 256) {
 			return ErrInvalid
 		}
+	}
+	nodes, text := 4096, 65536
+	if !validSecretJSON(values, 0, &nodes, &text) {
+		return ErrInvalid
 	}
 	data, err := json.Marshal(values)
 	if err != nil || len(data) > 65536 {

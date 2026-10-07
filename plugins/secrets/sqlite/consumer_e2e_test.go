@@ -18,14 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/greenpau/go-authcrunch/pkg/acl"
-	"github.com/greenpau/go-authcrunch/pkg/authz"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
-	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
-	secretssqlite "github.com/greenpau/go-authcrunch/plugins/secrets/sqlite"
-	"github.com/greenpau/go-authcrunch/plugins/secrets/sqlite/parser"
-	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -33,6 +25,16 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
+
+	"github.com/greenpau/go-authcrunch/pkg/acl"
+	"github.com/greenpau/go-authcrunch/pkg/authz"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
+	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
+	secretssqlite "github.com/greenpau/go-authcrunch/plugins/secrets/sqlite"
+	"github.com/greenpau/go-authcrunch/plugins/secrets/sqlite/parser"
 )
 
 // Public parser -> durable lookup -> private gatekeeper configuration -> TLS
@@ -113,6 +115,19 @@ func TestE2ESQLiteSecretsGatekeeper(t *testing.T) {
 			t.Fatalf("status %d, want %d", response.StatusCode, want)
 		}
 	}
+	check(first, http.StatusNoContent)
+	// Invalid UTF-8 must not silently replace a credential with normalized bytes.
+	if err := writer.Put(t.Context(), map[string]any{"signing_key": first + "\xff"}); !errors.Is(err, secretssqlite.ErrInvalid) {
+		t.Fatal("lossy credential accepted", err)
+	}
+	unchanged, err := build(t.Context())
+	if err != nil {
+		t.Fatal("invalid update destroyed last valid configuration", err)
+	}
+	mu.Lock()
+	gate.Close()
+	gate = unchanged
+	mu.Unlock()
 	check(first, http.StatusNoContent)
 	if err := writer.Put(t.Context(), map[string]any{"signing_key": second}); err != nil {
 		t.Fatal(err)

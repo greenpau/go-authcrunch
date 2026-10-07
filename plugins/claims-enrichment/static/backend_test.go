@@ -24,7 +24,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/authz/enrichment"
+	"github.com/greenpau/go-authcrunch/pkg/authz/validator"
 	"github.com/greenpau/go-authcrunch/plugins/claims-enrichment/static"
 )
 
@@ -169,5 +171,21 @@ func TestStaticJSONSnapshots(t *testing.T) {
 	var missingContext context.Context
 	if _, err := backend.Lookup(missingContext, lookupRequest()); err == nil {
 		t.Fatal("nil context accepted")
+	}
+}
+
+func TestClaimsAttachmentRejectsMissingRuntime(t *testing.T) {
+	for name, attach := range map[string]func(*enrichment.Enricher) error{
+		"nil gatekeeper":           (*authz.Gatekeeper)(nil).SetClaimsEnricher,
+		"unconstructed gatekeeper": new(authz.Gatekeeper).SetClaimsEnricher,
+		"nil validator":            (*validator.TokenValidator)(nil).SetClaimsEnricher,
+	} {
+		t.Run(name, func(t *testing.T) {
+			for _, enricher := range []*enrichment.Enricher{nil, new(enrichment.Enricher)} {
+				if err := attach(enricher); err == nil {
+					t.Fatal("missing runtime accepted attachment")
+				}
+			}
+		})
 	}
 }

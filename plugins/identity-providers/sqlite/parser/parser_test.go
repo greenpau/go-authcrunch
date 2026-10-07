@@ -16,9 +16,10 @@ package parser_test
 
 import (
 	"fmt"
-	"github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite/parser"
 	"slices"
 	"testing"
+
+	"github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite/parser"
 )
 
 func TestSQLiteTicketParser(t *testing.T) {
@@ -38,7 +39,7 @@ func TestSQLiteTicketParser(t *testing.T) {
 			t.Fatal("missing required setting", i)
 		}
 	}
-	for _, bad := range []string{"public_origin http://portal.example.test", "public_origin https://portal.example.test/", "public_origin https://user@portal.example.test", "public_origin https://portal.example.test#", "issuer_url https://issuer.example.test/login?", "issuer_url https://issuer.example.test/login?callback=evil", "issuer_url https://issuer.example.test/../login", "issuer_url https://issuer.example.test", "issuer_url https://portal.example.test/auth/provider/application"} {
+	for _, bad := range []string{"public_origin http://portal.example.test", "public_origin https://portal.example.test:", "public_origin https://portal.example.test:0", "public_origin https://[::1]:65536", "issuer_url https://issuer.example.test:99999/login", "issuer_url https://issuer.example.test:/login", "public_origin https://portal.example.test/", "public_origin https://user@portal.example.test", "public_origin https://portal.example.test#", "issuer_url https://issuer.example.test/login?", "issuer_url https://issuer.example.test/login?callback=evil", "issuer_url https://issuer.example.test/../login", "issuer_url https://issuer.example.test", "issuer_url https://portal.example.test/auth/provider/application"} {
 		candidate := slices.Clone(valid)
 		index := 3
 		if len(bad) > 10 && bad[:10] == "issuer_url" {

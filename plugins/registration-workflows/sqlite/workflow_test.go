@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	accounts "github.com/greenpau/go-authcrunch/plugins/identity-stores/sqlite"
@@ -165,12 +166,45 @@ func TestRegistrationConcurrentConfirmationAndBinding(t *testing.T) {
 	for err := range results {
 		if err == nil {
 			success++
-		} else if !errors.Is(err, ErrDenied) {
+		} else if !errors.Is(err, ErrDenied) && !errors.Is(err, ErrCommitUncertain) {
 			t.Fatal(err)
 		}
 	}
-	if success != 1 {
+	if success > 1 {
 		t.Fatal("confirmation not single-use")
+	}
+	// Concurrent BEGIN attempts can briefly hold read locks and make COMMIT
+	// return BUSY. This is an allowed uncertain outcome, never a second success.
+	// Drain and reopen before reconciling; never retry a quarantined handle.
+	before, err := w.store.FetchUserData("alice", "alice@example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := second.Close(); err != nil {
+		t.Fatal(err)
+	}
+	fresh, err := New(t.Context(), config, w.store, w.outbox)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fresh.Close()
+	err = fresh.ConfirmRegistration(t.Context(), id, "ABC123")
+	if success == 0 {
+		if err != nil {
+			t.Fatal("uncertain confirmation did not recover", err)
+		}
+	} else if !errors.Is(err, ErrDenied) {
+		t.Fatal("confirmed enrollment was consumed again", err)
+	}
+	after, err := w.store.FetchUserData("alice", "alice@example.test")
+	if err != nil || before["id"] != after["id"] {
+		t.Fatal("reconciliation replaced account", err)
+	}
+	if err := fresh.ConfirmRegistration(t.Context(), id, "ABC123"); !errors.Is(err, ErrDenied) {
+		t.Fatal("reconciled confirmation replayed", err)
 	}
 }
 func TestRegistrationCrashRecovery(t *testing.T) {
@@ -447,5 +481,55 @@ func TestRegistrationAccountCommitUncertainty(t *testing.T) {
 	defer fresh.Close()
 	if err := fresh.ConfirmRegistration(t.Context(), id, "ABC123"); err != nil {
 		t.Fatal("failed to recover account commit", err)
+	}
+}
+
+// A live code must not gain extra lifetime while waiting for another database.
+func TestRegistrationExpiryDuringAccountLock(t *testing.T) {
+	w, config := setupWorkflow(t)
+	id := strings.Repeat("k", 64)
+	if err := w.AddRegistrationEntry(id, enrollment("alice")); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Truncate(time.Second).Add(3 * time.Second)
+	if err := w.db.Write(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+		_, err := tx.ExecContext(ctx, "UPDATE registrations SET expires=?", deadline.Unix())
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	blocker, err := sql.Open("sqlite", filepath.Join(filepath.Dir(config.Path), "accounts.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer blocker.Close()
+	conn, err := blocker.Conn(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if _, err := conn.ExecContext(t.Context(), "BEGIN IMMEDIATE"); err != nil {
+		t.Fatal(err)
+	}
+	defer conn.ExecContext(context.Background(), "ROLLBACK")
+	done := make(chan error, 1)
+	go func() { done <- w.ConfirmRegistration(t.Context(), id, "ABC123") }()
+	// The account lock is held until the credential is definitely expired.
+	timer := time.NewTimer(time.Until(deadline) + 100*time.Millisecond)
+	defer timer.Stop()
+	<-timer.C
+	if _, err := conn.ExecContext(t.Context(), "ROLLBACK"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("expired confirmation created an account after its lock wait")
+		}
+	case <-time.After(6 * time.Second):
+		t.Fatal("confirmation exceeded bounded lock wait")
+	}
+	if _, err := w.store.FetchUserData("alice", "alice@example.test"); err == nil {
+		t.Fatal("expired registration persisted an account")
 	}
 }
