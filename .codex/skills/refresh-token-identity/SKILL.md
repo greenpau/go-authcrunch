@@ -23,8 +23,11 @@ transformation, challenge-policy checks, and signing. Compare current username
 and email with the canonical sandbox fields, never transformed claims. Security
 version changes, reloads, deleted/recreated accounts, or newly required factors
 deny issuance. Credential mutation during an outstanding login, including MFA
-enrollment, requires a new completed login. Other stores retain their
-`IdentifyUser` contract and canonical username/email comparison; this fallback
+enrollment, requires a new completed login. The SQLite identity-store plugin
+supplies the same optional transaction
+capability with its own immutable IDs, versions and per-instance epochs.
+Stores without that capability retain their `IdentifyUser` contract and canonical
+username/email comparison; this fallback
 does not promise transactional credential-version verification.
 
 HTML and JSON access-only login both support email claim transformations.

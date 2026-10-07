@@ -27,6 +27,8 @@ contracts. The SQLite refresh store is implemented at
 atomic operations, and public refresh-engine composition. The SQLite API-key authenticator at
 `plugins/credential-authenticators/sqlite` has real gatekeeper composition; its
 [owner](../../credential-authenticators/SKILL.md) defines freshness and revocation.
+The SQLite password store at `plugins/identity-stores/sqlite` is owned by
+[sqlite-identity-store](../../sqlite-identity-store/SKILL.md).
 Other category paths remain layout contracts
 until implemented. A path in this guide is
 not proof that a plugin, constructor, parser, or category integration is present.

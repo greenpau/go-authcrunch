@@ -273,7 +273,7 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 		return err
 	}
 	var err error
-	if rr.Upstream.Method == "local" || rr.Upstream.Method == "ldap" {
+	if store := p.getIdentityStoreByRealm(rr.Upstream.Realm); store != nil && store.GetKind() == rr.Upstream.Method {
 		err = p.withDirectAuthenticationIdentity(ctx, rr, issue)
 	} else {
 		err = issue()
@@ -334,7 +334,7 @@ func (p *Portal) authorizeLoginUser(ctx context.Context, r *http.Request, rr *re
 	if err := p.transformUser(ctx, rr, m); err != nil {
 		return nil, err
 	}
-	if rr.Upstream.Method == "local" || rr.Upstream.Method == "ldap" {
+	if store := p.getIdentityStoreByRealm(rr.Upstream.Realm); store != nil && store.GetKind() == rr.Upstream.Method {
 		if err := p.checkDirectAuthenticationPolicy(rr, m, []string{"password"}); err != nil {
 			return nil, err
 		}

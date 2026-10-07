@@ -77,12 +77,13 @@ but still must satisfy the consuming authentication flow and metadata/icon APIs.
 Audit every exposed issuance route for a new kind. On `/basic/login/<realm>`,
 the [authentication path](../../../../pkg/authn/handle_authenticate_basic_auth_request.go)
 sets the method from `GetKind()`, while
-[login issuance](../../../../pkg/authn/handle_http_login.go) applies its direct
-identity transaction and challenge-policy checks only to `local`/`ldap` methods.
-Implementing `WithRefreshIdentity` alone does not enable those guards for another
-kind on this route. Integrate the new kind into the required enforcement paths,
-or have the host explicitly exclude unsupported routes, before claiming the
-same guarantees. A login success alone cannot establish equivalent protection.
+[login issuance](../../../../pkg/authn/handle_http_login.go) now applies identity
+transaction and challenge-policy checks to the selected identity store when its
+kind matches the authentication method, including injected SQLite stores.
+`WithRefreshIdentity` provides the transaction; stores without it retain their
+legacy nontransactional behavior. The
+[SQLite owner](../../sqlite-identity-store/SKILL.md) defines password-only support,
+immutable evidence, enrollment replay protection and portal acceptance.
 
 **Acceptance:** real login through the selected realm; unknown, disabled, and
 recreated accounts; rejected cross-realm operations; concurrent credential

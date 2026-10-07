@@ -35,6 +35,9 @@ and [AWS host adapter](https://github.com/greenpau/caddy-security-secrets-aws-se
 provide concrete evidence of that boundary. Their registration and provisioning
 are host-framework behavior, not capabilities exported by the backend modules.
 
+Use [sqlite-identity-store](../sqlite-identity-store/SKILL.md) to maintain the
+SQLite password backend, atomic login evidence, enrollment and portal tests.
+
 Use [credential-authenticators](../credential-authenticators/SKILL.md) to maintain
 SQLite API keys, context-aware authentication, cache isolation and gatekeeper tests.
 
@@ -95,7 +98,7 @@ A category or repository name alone does not establish an implementation.
 | Category | Responsibility | Current extension boundary |
 | --- | --- | --- |
 | Secrets | Retrieve values for configuration | SQLite bound-record plugin and external libraries; specialized skill above |
-| [Identity stores](references/plugin-categories.md#identity-stores) | Account lookup, authentication, and supported account operations | Configured `ids.IdentityStore` injection into `NewPortal` |
+| [Identity stores](references/plugin-categories.md#identity-stores) | Account lookup, authentication, and supported account operations | SQLite password store and configured `ids.IdentityStore` injection into `NewPortal` |
 | [Identity providers](references/plugin-categories.md#identity-providers) | Authenticate through a federation/protocol backend | Configured `idp.IdentityProvider` injection; protocol routes still matter |
 | [Credential authenticators](references/plugin-categories.md#credential-authenticators) | Validate Basic credentials or API keys | SQLite API keys and `authproxy.Authenticator` through `Gatekeeper.AddAuthenticators` |
 | [Messaging](references/plugin-categories.md#messaging) | Deliver registration or notification messages | `messaging.Provider` exists; configuration and consumers use concrete built-ins |

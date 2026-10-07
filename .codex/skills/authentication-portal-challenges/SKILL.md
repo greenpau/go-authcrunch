@@ -202,8 +202,11 @@ check must not authorize issuance from stale identification data. Preserve the
 verification proof across API-key identification; lookup-only evidence is not
 authentication. `RefreshIdentity.AuthChallengePolicy` carries the current stored
 policy marker, including an explicit password-only preference. Deliver tokens
-and update sessions after the callback releases the identity lock. Other stores
-retain their existing authentication contract. Exact API-key binding and
+and update sessions after the callback releases the identity lock. Injected
+identity stores whose kind matches the direct login method receive
+these checks too; transaction-capable stores such as SQLite hold their own
+identity transaction. Stores without the capability retain their existing
+authentication contract. Exact API-key binding and
 revocation are owned by [local identity transactions](../local-identity-database/SKILL.md).
 
 Remote gatekeepers consume `system.AuthResponseMessage.UserData` as authenticated
