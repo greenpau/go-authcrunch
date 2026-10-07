@@ -1,0 +1,4 @@
+interface:
+  display_name: "SQLite Messaging"
+  short_description: "Maintain durable SQLite notification outboxes"
+  default_prompt: "Use $sqlite-messaging to maintain the SQLite outbox, provider injection, worker leases, and registration notification tests."

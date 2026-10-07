@@ -194,17 +194,18 @@ extension if its addressing and content requirements are modeled explicitly.
 defines `Validate`, `AsMap`, `Kind`, and `Send(*messaging.SendInput) error`.
 [SendInput](../../../../pkg/messaging/send_input.go) has subject, body, recipients,
 and credentials. The factory and [Config](../../../../pkg/messaging/config.go)
-recognize concrete email and file providers. Registration's
-[delivery selection](../../../../pkg/registry/local_user_registry.go) also branches
-on those provider types. Implementing `Provider` alone does not make a new
-backend configurable or selectable by that consumer.
+recognize concrete email and file providers. `Config.AddProvider(name, Provider)`
+binds caller-owned runtime backends before Validate; bindings are not serialized.
+Registration's [delivery selection](../../../../pkg/registry/local_user_registry.go)
+consumes these generic providers in addition to built-in email/file handling.
+The [SQLite outbox](../../sqlite-messaging/SKILL.md) supplies durable acceptance
+and trusted worker claim/acknowledgement operations. It does not deliver SMTP.
 
 **Implementation contract:** specify typed sender/destination configuration,
 credential references, supported content/recipient formats, and bounded delivery.
-Add parser, selection, config storage, and consumer wiring together. A generic
-provider collection is a possible design change, not an existing public field.
-The current `Send` method has no context; cancellation support requires an API
-extension rather than a documentation promise.
+Add parser, runtime binding, lifecycle, and consumer wiring together. `Send` has
+no context; SQLite additionally exposes SendContext, while existing registration
+calls remain bounded by the configured queue timeout.
 
 Define whether success means provider acceptance or final delivery; existing
 `Send` returns only an error. Design delivery IDs/status separately if needed.

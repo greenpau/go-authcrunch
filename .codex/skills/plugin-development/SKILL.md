@@ -35,6 +35,9 @@ and [AWS host adapter](https://github.com/greenpau/caddy-security-secrets-aws-se
 provide concrete evidence of that boundary. Their registration and provisioning
 are host-framework behavior, not capabilities exported by the backend modules.
 
+Use [sqlite-messaging](../sqlite-messaging/SKILL.md) to maintain the durable
+SQLite outbox, runtime provider bindings and registration notification tests.
+
 Use [sqlite-identity-store](../sqlite-identity-store/SKILL.md) to maintain the
 SQLite password backend, atomic login evidence, enrollment and portal tests.
 
@@ -101,7 +104,7 @@ A category or repository name alone does not establish an implementation.
 | [Identity stores](references/plugin-categories.md#identity-stores) | Account lookup, authentication, and supported account operations | SQLite password store and configured `ids.IdentityStore` injection into `NewPortal` |
 | [Identity providers](references/plugin-categories.md#identity-providers) | Authenticate through a federation/protocol backend | Configured `idp.IdentityProvider` injection; protocol routes still matter |
 | [Credential authenticators](references/plugin-categories.md#credential-authenticators) | Validate Basic credentials or API keys | SQLite API keys and `authproxy.Authenticator` through `Gatekeeper.AddAuthenticators` |
-| [Messaging](references/plugin-categories.md#messaging) | Deliver registration or notification messages | `messaging.Provider` exists; configuration and consumers use concrete built-ins |
+| [Messaging](references/plugin-categories.md#messaging) | Deliver registration or notification messages | SQLite outbox and `messaging.Config.AddProvider` runtime injection |
 | [Registration workflows](references/plugin-categories.md#registration-workflows) | Manage enrollment, confirmation, approval, and account creation | `registry.Provider` through `Portal.AddUserRegistry`; root dispatch is local-only |
 | [Session and refresh storage](references/plugin-categories.md#session-and-refresh-storage) | Store token families and enforce atomic rotation/revocation | SQLite plugin and `tokenrefresh.Store` engine injection; portal selection needs wiring |
 | [Cryptographic signing](references/plugin-categories.md#cryptographic-signing) | Sign approved claims with a selected key | `tokenrefresh.Signer` and local PS256 plugin at engine level; general portal/OIDC signing needs integration |

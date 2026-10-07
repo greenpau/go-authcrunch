@@ -15,6 +15,11 @@
 package messaging
 
 import (
+	"fmt"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 )
 
@@ -22,6 +27,8 @@ const passwordlessKeyword = "passwordless"
 
 // Config represents a collection of various messaging providers.
 type Config struct {
+	// providers contains caller-owned runtime injections; bind before concurrent use.
+	providers      map[string]Provider
 	RawConfigs     [][]string       `json:"raw_configs,omitempty" xml:"raw_configs,omitempty" yaml:"raw_configs,omitempty"`
 	EmailProviders []*EmailProvider `json:"email_providers,omitempty" xml:"email_providers,omitempty" yaml:"email_providers,omitempty"`
 	FileProviders  []*FileProvider  `json:"file_providers,omitempty" xml:"file_providers,omitempty" yaml:"file_providers,omitempty"`
@@ -36,7 +43,12 @@ func (cfg *Config) Add(instructions []string) {
 func (cfg *Config) Validate() error {
 	emailProviders := []*EmailProvider{}
 	fileProviders := []*FileProvider{}
-	count := 0
+	count := len(cfg.providers)
+	for _, provider := range cfg.providers {
+		if err := provider.Validate(); err != nil {
+			return fmt.Errorf("invalid injected messaging provider")
+		}
+	}
 
 	for _, instructions := range cfg.RawConfigs {
 		providerRaw, err := NewProvider(instructions)
@@ -46,9 +58,15 @@ func (cfg *Config) Validate() error {
 
 		switch provider := providerRaw.(type) {
 		case *EmailProvider:
+			if _, exists := cfg.providers[provider.Name]; exists {
+				return fmt.Errorf("duplicate messaging provider name")
+			}
 			emailProviders = append(emailProviders, provider)
 			count++
 		case *FileProvider:
+			if _, exists := cfg.providers[provider.Name]; exists {
+				return fmt.Errorf("duplicate messaging provider name")
+			}
 			fileProviders = append(fileProviders, provider)
 			count++
 		}
@@ -65,6 +83,12 @@ func (cfg *Config) Validate() error {
 
 // FindProvider search for Provider by name.
 func (cfg *Config) FindProvider(s string) bool {
+	if cfg == nil {
+		return false
+	}
+	if _, ok := cfg.providers[s]; ok {
+		return true
+	}
 	for _, p := range cfg.EmailProviders {
 		if p.Name == s {
 			return true
@@ -94,6 +118,12 @@ func (cfg *Config) FindProviderCredentials(s string) string {
 
 // GetProviderType returns type of a messaging provider.
 func (cfg *Config) GetProviderType(s string) string {
+	if cfg == nil {
+		return UnknownMessagingProviderKindLabel
+	}
+	if provider := cfg.providers[s]; provider != nil {
+		return provider.Kind()
+	}
 	for _, p := range cfg.EmailProviders {
 		if p.Name == s {
 			return EmailMessagingProviderKindLabel
@@ -130,6 +160,12 @@ func (cfg *Config) ExtractFileProvider(s string) *FileProvider {
 
 // ExtractProvider returns Provider by name.
 func (cfg *Config) ExtractProvider(s string) Provider {
+	if cfg == nil {
+		return nil
+	}
+	if provider := cfg.providers[s]; provider != nil {
+		return provider
+	}
 	var provider Provider
 	for _, p := range cfg.EmailProviders {
 		if p.Name == s {
@@ -142,4 +178,29 @@ func (cfg *Config) ExtractProvider(s string) Provider {
 		}
 	}
 	return provider
+}
+
+// AddProvider binds an already constructed, caller-owned messaging backend.
+// Runtime bindings are excluded from serialization. Call Validate after binding
+// all providers and before publishing the configuration; no concurrent mutation
+// or automatic backend Close is performed. Built-in kinds retain their factories.
+func (cfg *Config) AddProvider(name string, provider Provider) error {
+	if cfg == nil || provider == nil || name == "" || len(name) > 128 || strings.TrimSpace(name) != name || !utf8.ValidString(name) || strings.ContainsFunc(name, unicode.IsControl) {
+		return fmt.Errorf("invalid messaging provider binding")
+	}
+	if cfg.FindProvider(name) {
+		return fmt.Errorf("duplicate messaging provider name")
+	}
+	if err := provider.Validate(); err != nil {
+		return fmt.Errorf("invalid injected messaging provider")
+	}
+	kind := provider.Kind()
+	if kind == "" || kind == EmailMessagingProviderKindLabel || kind == FileMessagingProviderKindLabel || kind == UnknownMessagingProviderKindLabel {
+		return fmt.Errorf("reserved messaging provider kind")
+	}
+	if cfg.providers == nil {
+		cfg.providers = make(map[string]Provider)
+	}
+	cfg.providers[name] = provider
+	return nil
 }

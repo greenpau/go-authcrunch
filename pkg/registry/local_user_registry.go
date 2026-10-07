@@ -571,7 +571,13 @@ func (p *LocalUserRegistryProvider) Notify(data map[string]string) error {
 			return errors.ErrNotifyRequestEmail.WithArgs(p.EmailProviderName, err)
 		}
 	default:
-		return errors.ErrNotifyRequestProviderTypeUnsupported.WithArgs(p.EmailProviderName, providerType)
+		provider := p.messaging.ExtractProvider(p.EmailProviderName)
+		if provider == nil {
+			return errors.ErrNotifyRequestProviderTypeUnsupported.WithArgs(p.EmailProviderName, providerType)
+		}
+		if err := provider.Send(&messaging.SendInput{Subject: qpEmailSubj, Body: qpEmailBody, Recipients: rcpts}); err != nil {
+			return errors.ErrNotifyRequestEmail.WithArgs(p.EmailProviderName, err)
+		}
 	}
 	return nil
 }
