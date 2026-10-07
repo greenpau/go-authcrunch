@@ -40,7 +40,7 @@ boundary for these workflows.
 | `make generate-acl` | Regenerate the four ACL condition/rule source and test files from the local Python generator |
 | `make ci-check` | Complete sequential quality gates and full Go tests |
 | `make ci-quality` | Version, brand assets, automation, lint, UI tests, and both executable builds |
-| `make ci-test-shard CI_SHARD=portal` | All Go tests in the portal, identity, or other package shard |
+| `make ci-test-shard CI_SHARD=portal-core` | Run one of eight portal-test or package shards; see parallel CI validation |
 | `make version-check` / `make version-sync` | Check or explicitly synchronize version-bearing Go defaults |
 | `make artifact-id` | Validate and print the versioned artifact identity |
 | `make docs` | Generate ignored `.doc/index.txt` from `go doc -all` |

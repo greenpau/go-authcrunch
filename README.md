@@ -53,7 +53,7 @@ changes skip tests; Go changes select owning packages and affected consumers.
 Selected Go reports are in `.coverage/changes/go/index.html`. See
 [change-based testing](.codex/skills/scripts-and-automation/references/change-tests.md)
 for commit ranges and fallbacks. GitHub runs the full suite once across parallel
-package shards; see [parallel CI validation](.codex/skills/scripts-and-automation/references/ci-shards.md).
+test and package shards; see [parallel CI validation](.codex/skills/scripts-and-automation/references/ci-shards.md).
 
 `make test` runs race-enabled Go tests through pinned `tested` and writes the
 coverage/report bundle to `.coverage/index.html`. Use `make test-ui` for browser

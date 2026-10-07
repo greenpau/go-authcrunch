@@ -81,7 +81,7 @@ merge base of the event's base/head SHAs to the PR head, while executing tests
 on GitHub's merge checkout. Base-branch-only edits do not become PR changes.
 
 Documentation-only changes skip expensive jobs. Both focused and full code
-changes run the full Go suite once, partitioned into disjoint package shards,
+changes run the full Go suite once, partitioned into disjoint test/package shards,
 alongside `make ci-quality`. Do not put a selected run ahead of a full run:
 widely imported portal changes otherwise execute the slowest suites twice.
 Local `make change-test` retains its impact analysis and selected execution.

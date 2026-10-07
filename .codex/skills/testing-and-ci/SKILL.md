@@ -438,9 +438,11 @@ it complements the Chrome E2E journeys and does not replace them.
 
 `.github/workflows/test.yml` runs on pushes/PRs to main, manual dispatch, and
 reusable workflow calls. Its lightweight selection skips known non-code changes.
-Code changes run the full Go suite once across disjoint portal, identity,
-and remaining-package shards, alongside `make ci-quality`. Global/unknown
-changes and version-tag/manual runs use the same full gate. Local
+Code changes run the full Go suite once across four disjoint portal test groups,
+one identity package group, and three remaining-package groups, alongside
+`make ci-quality`. Portal inventories and terminal events prove that every
+top-level portal test runs exactly once; shared coverage counters are summed.
+Global/unknown changes and version-tag/manual runs use the same full gate. Local
 `make change-test` remains the selected development workflow.
 Read [change-based testing](../scripts-and-automation/references/change-tests.md)
 for ranges, impact rules, reports, and conservative fallbacks. The

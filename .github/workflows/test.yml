@@ -26,6 +26,7 @@ jobs:
       base: ${{ steps.selection.outputs.base }}
       head: ${{ steps.selection.outputs.head }}
       artifact_id: ${{ steps.artifact.outputs.artifact_id }}
+      matrix: ${{ steps.shards.outputs.matrix }}
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -39,6 +40,11 @@ jobs:
         if: ${{ steps.selection.outputs.run_tests == 'true' }}
         id: artifact
         run: make artifact-id
+      - name: Select complete shard matrix
+        id: shards
+        run: |
+          matrix=$(python3 assets/scripts/ci_tests.py matrix)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
   quality:
     name: Repository quality gates
     needs: selection
@@ -101,8 +107,7 @@ jobs:
     strategy:
       # Preserve every shard's evidence if one fails.
       fail-fast: false
-      matrix:
-        shard: [portal, identity, other]
+      matrix: ${{ fromJSON(needs.selection.outputs.matrix) }}
     env:
       GOTOOLCHAIN: local
       PYTHONDONTWRITEBYTECODE: '1'
@@ -142,6 +147,8 @@ jobs:
           restore-keys: |
             go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-
             go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-${{ matrix.shard }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-${{ matrix.cache_group }}-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-${{ matrix.cache_group }}-
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
