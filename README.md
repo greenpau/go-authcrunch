@@ -89,6 +89,7 @@ does not automatically discover or load plugins.
 
 | Plugin | Backend |
 | --- | --- |
+| [SQLite](plugins/secrets/sqlite) | Private local JSON records with explicit consumer adoption, pure Go |
 | [`go-authcrunch-secrets-static-secrets-manager`](https://github.com/greenpau/go-authcrunch-secrets-static-secrets-manager) | Statically configured secret maps |
 | [`go-authcrunch-secrets-aws-secrets-manager`](https://github.com/greenpau/go-authcrunch-secrets-aws-secrets-manager) | JSON secrets retrieved from AWS Secrets Manager |
 

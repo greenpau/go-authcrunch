@@ -1,6 +1,6 @@
 ---
 name: secrets-plugins
-description: Integrate and develop AuthCrunch secrets plugins using the working static and AWS Secrets Manager modules. Covers exact APIs, resource binding, payload types, safe metadata, lifecycle, parser gaps, and consumer validation; excludes identity-store authentication and host-specific module implementation.
+description: Integrate and develop AuthCrunch secrets plugins using the SQLite, static, and AWS Secrets Manager implementations. Covers exact APIs, resource binding, payload types, safe metadata, lifecycle, parser gaps, and consumer validation; excludes identity-store authentication and host-specific module implementation.
 ---
 
 # Secrets Plugins
@@ -12,7 +12,10 @@ does not authenticate users, hash passwords, authorize requests, or install
 signing keys by itself. Backend credential acquisition is also distinct from
 the password, API key, or signing material contained in the retrieved record.
 
-The working reference modules are:
+Read [SQLite bound secrets](references/sqlite.md) to maintain the pure-Go local
+plugin, its public parser, provisioning API, and gatekeeper consumer tests.
+
+The external reference modules are:
 
 - [Static Secrets Manager](https://github.com/greenpau/go-authcrunch-secrets-static-secrets-manager),
   provider label `static_secrets_manager`.
@@ -33,7 +36,7 @@ repository's own implementation skill. A companion host plugin adds its host's
 plugin-development guidance and local adapter contracts. In-repository synthetic
 secrets plugins use `plugins/secrets/<name>` under the
 [reference contract](../plugin-development/references/synthetic-reference.md);
-that planned layout is separate from the two existing external modules above.
+the implemented SQLite reference is separate from the two external modules above.
 
 ## Essential compatibility rules
 

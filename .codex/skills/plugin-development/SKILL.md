@@ -69,7 +69,7 @@ implementation skills. Keep guidance revisions separate from runtime versions.
 
 Read [synthetic reference plugins](references/synthetic-reference.md) to implement
 an in-repository category example under `plugins/<category>/<name>`, such as
-`plugins/secrets/mock`, with a typed parser and real consumer acceptance.
+`plugins/secrets/sqlite`, with a typed parser and real consumer acceptance.
 Inspect availability first; the layout and acceptance contract do not imply a
 reference implementation or new category API already exists.
 
@@ -91,7 +91,7 @@ A category or repository name alone does not establish an implementation.
 
 | Category | Responsibility | Current extension boundary |
 | --- | --- | --- |
-| Secrets | Retrieve values for configuration | External libraries and consumer adapters; specialized skill above |
+| Secrets | Retrieve values for configuration | SQLite bound-record plugin and external libraries; specialized skill above |
 | [Identity stores](references/plugin-categories.md#identity-stores) | Account lookup, authentication, and supported account operations | Configured `ids.IdentityStore` injection into `NewPortal` |
 | [Identity providers](references/plugin-categories.md#identity-providers) | Authenticate through a federation/protocol backend | Configured `idp.IdentityProvider` injection; protocol routes still matter |
 | [Credential authenticators](references/plugin-categories.md#credential-authenticators) | Validate Basic credentials or API keys | `authproxy.Authenticator` through `Gatekeeper.AddAuthenticators` |

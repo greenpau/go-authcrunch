@@ -10,8 +10,9 @@ executable examples and fixtures for their shared contracts.
 Use `plugins/<category>/<name>` for in-repository plugin implementations.
 Categories use lowercase hyphenated slugs matching the
 [catalog anchors](plugin-categories.md), plus `secrets`; choose a concise backend
-name such as `mock`. For example, the intended secrets reference lives at
-`plugins/secrets/mock`.
+name such as `sqlite`. The bound-record secrets reference lives at
+`plugins/secrets/sqlite`; its [owner](../../secrets-plugins/SKILL.md) defines
+retrieval and consumer adoption.
 
 The claims-enrichment reference is implemented at `plugins/claims-enrichment/static`;
 its [owner](../../claims-enrichment/SKILL.md) defines APIs and acceptance. The
@@ -34,7 +35,7 @@ A documentation-only task records the contract without claiming implementation.
 ```text
 plugins/
     secrets/
-        mock/
+        sqlite/
             doc.go
             config.go
             client.go
