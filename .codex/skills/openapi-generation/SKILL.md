@@ -62,6 +62,12 @@ changes also require review even when wrapper hashes stay unchanged.
 4. Copy the reviewed candidate to the tracked inventory only after semantic
    review. Never refresh fingerprints automatically in CI to conceal drift.
 
+Logging-only edits to fingerprinted handlers still require this review and an
+inventory update in the same PR. If requests, responses and authentication
+decisions are unchanged, retain the existing YAML contract and record that
+finding in the change description. Refresh only the reviewed entries and run
+`make ci-quality` and `make openapi-test` before publishing the correction.
+
 The inventory uses module identity and repository-relative paths, without
 checkout paths, timestamps or release version. Only `versioned` metadata
 literals in `cmd/authdb/main.go` and `pkg/identity/database.go` are normalized;
