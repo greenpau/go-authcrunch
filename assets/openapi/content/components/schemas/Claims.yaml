@@ -1,0 +1,123 @@
+type: object
+properties:
+  sub:
+    type: string
+    description: Subject identifying the authenticated principal, usually the local username or mapped
+      provider subject. User transforms may change this public claim; profile ownership uses separately
+      retained canonical login identity.
+  email:
+    type: string
+    description: Email claim supplied by the identity store/provider and optional transforms. Presence
+      alone does not mean the address was verified.
+  name:
+    type: string
+    description: Display name supplied by the identity store/provider and optional transforms.
+  roles:
+    type: array
+    items:
+      type: string
+    description: Role/entitlement names produced by the identity store and user transforms; authorization
+      depends on configured policy, not a fixed enum.
+  origin:
+    type: string
+    description: Authentication realm/provider identifier, such as local. This claim is not an HTTP Origin
+      header or necessarily a URL.
+  iss:
+    type: string
+    description: Issuer assigned to the portal token, normally the authentication URL. It is distinct
+      from the external provider issuer and the separately configured OIDC issuer.
+  exp:
+    $ref: UnixTime.yaml
+    description: Expiration time of the access token; validation rejects expired tokens according to the
+      configured validator policy. Whole seconds since 1970-01-01T00:00:00Z (UTC), excluding leap seconds;
+      a Unix timestamp, not milliseconds or an ISO date string.
+  iat:
+    $ref: UnixTime.yaml
+    description: Time the access token was issued; refresh issuance sets a new value. Whole seconds since
+      1970-01-01T00:00:00Z (UTC), excluding leap seconds; a Unix timestamp, not milliseconds or an ISO
+      date string.
+  nbf:
+    $ref: UnixTime.yaml
+    description: Time before which the token is not valid. Portal issuance can backdate this value to
+      accommodate clock skew. Whole seconds since 1970-01-01T00:00:00Z (UTC), excluding leap seconds;
+      a Unix timestamp, not milliseconds or an ISO date string.
+  jti:
+    type: string
+    description: Identifier of this issued access token. Stored browser sessions use it for lookup; token
+      refresh rotates it while retaining the separate refresh session_id.
+  amr:
+    type: array
+    items:
+      type: string
+    description: Verified authentication method references (for example pwd, otp, hwk). These describe
+      completed factors, not the next challenge or the account’s registered methods.
+  authenticated:
+    type: boolean
+    description: True for an authenticated probe=true response. This is a probe annotation, not an additional
+      credential.
+  expires_in:
+    type: integer
+    description: Remaining access-token lifetime in seconds, computed as exp minus the current Unix time;
+      added only for probe=true. This is a duration, not an absolute timestamp. No positive minimum is
+      imposed because this is sampled after token validation.
+    format: int64
+  id_token:
+    type: string
+    description: Upstream identity-token cookie returned only when id_token=true and the provider/cookie
+      are configured and present. probe=true takes precedence. Keep secret; this is not the portal-issued
+      access token.
+  aud:
+    oneOf:
+    - type: string
+    - type: array
+      items:
+        type: string
+    description: Intended audience or audiences of the token. Preserves the supplied claim representation;
+      accepted audiences depend on authorization configuration.
+  realm:
+    type: string
+    description: Authentication realm when included by the selected issuance path.
+  scopes:
+    type: array
+    items:
+      type: string
+    description: Portal permission scopes when supplied. This array is separate from the space-delimited
+      OIDC scope field.
+  org:
+    type: array
+    items:
+      type: string
+    description: Organization memberships supplied by the identity source or transforms.
+  addr:
+    type: string
+    description: Source address recorded at issuance after trusted proxy handling; may include an address/port
+      representation.
+  picture:
+    type: string
+    description: Profile image location supplied by the identity source or transforms; no universal URI
+      validator is applied to this claim.
+  metadata:
+    type: object
+    additionalProperties: true
+    description: Additional identity metadata retained by the token mapper; keys are deployment dependent.
+additionalProperties: true
+description: Portal claims are extensible and depend on the identity provider and user transforms. probe=true
+  takes precedence over id_token=true.
+x-source-files:
+- pkg/user/user.go
+- pkg/authn/handle_json_whoami.go
+- pkg/authn/token_issuer.go
+examples:
+- sub: alice
+  email: alice@example.test
+  name: Alice Example
+  roles:
+  - authp/user
+  origin: local
+  iss: https://auth.myfiosgateway.com:8443/auth/login
+  iat: 1791331200
+  nbf: 1791331140
+  exp: 1791334800
+  jti: example-access-token-id
+  amr:
+  - pwd

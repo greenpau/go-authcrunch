@@ -1,0 +1,38 @@
+oneOf:
+- $ref: ProfileFetchDebug.yaml
+- $ref: ProfileFetchUserDashboardData.yaml
+- $ref: ProfileFetchUserInfo.yaml
+- $ref: ProfileUpdateUserPassword.yaml
+- $ref: ProfileFetchUserAuthChallenges.yaml
+- $ref: ProfileOverwriteUserAuthChallenges.yaml
+- $ref: ProfileFetchUserMultiFactorAuthenticators.yaml
+- $ref: ProfileFetchUserMultiFactorAuthenticator.yaml
+- $ref: ProfileDeleteUserMultiFactorAuthenticator.yaml
+- $ref: ProfileFetchUserAppMultiFactorAuthenticatorCode.yaml
+- $ref: ProfileTestUserAppMultiFactorAuthenticator.yaml
+- $ref: ProfileAddUserAppMultiFactorAuthenticator.yaml
+- $ref: ProfileTestUserAppTokenPasscode.yaml
+- $ref: ProfileTestUserWebauthnToken.yaml
+- $ref: ProfileFetchUserU2FRegParams.yaml
+- $ref: ProfileFetchUserU2FVerParams.yaml
+- $ref: ProfileTestUserU2FReg.yaml
+- $ref: ProfileAddUserU2FToken.yaml
+- $ref: ProfileFetchUserApiKeys.yaml
+- $ref: ProfileFetchUserApiKey.yaml
+- $ref: ProfileDeleteUserApiKey.yaml
+- $ref: ProfileAddUserApiKey.yaml
+- $ref: ProfileTestUserApiKey.yaml
+- $ref: ProfileFetchUserSshKeys.yaml
+- $ref: ProfileFetchUserSshKey.yaml
+- $ref: ProfileDeleteUserSshKey.yaml
+- $ref: ProfileAddUserSshKey.yaml
+- $ref: ProfileTestUserSshKey.yaml
+- $ref: ProfileFetchUserGpgKeys.yaml
+- $ref: ProfileFetchUserGpgKey.yaml
+- $ref: ProfileDeleteUserGpgKey.yaml
+- $ref: ProfileAddUserGpgKey.yaml
+- $ref: ProfileTestUserGpgKey.yaml
+discriminator:
+  propertyName: kind
+description: 'Only the canonical locally authenticated profile owner is accessed. Extra identity fields
+  never select another account. Maximum JSON body: 1 MiB.'

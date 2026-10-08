@@ -1,0 +1,248 @@
+type: object
+description: Private signing JWK returned only by explicitly enabled administrator export. Public parameters
+  identify the paired verification key; d and the RSA factors are secret signing material. These fields
+  are never part of public JWKS discovery. The d value is a minimal unsigned RSA exponent, a fixed-width
+  private scalar for EC (32/48/66 bytes), or an Ed25519 32-byte seed. It is never the 64-byte Go Ed25519
+  private-key representation.
+required:
+- kty
+- use
+- alg
+- d
+properties:
+  kty:
+    $ref: PublicJWK.yaml#/properties/kty
+  use:
+    $ref: PublicJWK.yaml#/properties/use
+  alg:
+    $ref: PublicJWK.yaml#/properties/alg
+  kid:
+    $ref: PublicJWK.yaml#/properties/kid
+  n:
+    $ref: JWKUnsignedInteger.yaml
+    description: RSA modulus.
+  e:
+    $ref: JWKUnsignedInteger.yaml
+    description: RSA public exponent; the common value 65537 is AQAB.
+  crv:
+    $ref: PublicJWK.yaml#/properties/crv
+  x:
+    $ref: PublicJWK.yaml#/properties/x
+  y:
+    $ref: PublicJWK.yaml#/properties/y
+  d:
+    type: string
+    pattern: ^[A-Za-z0-9_-]+$
+    description: Unpadded base64url. RSA uses the unsigned private exponent; EC uses the fixed-width private
+      scalar (32, 48 or 66 bytes for P-256, P-384 or P-521); Ed25519 uses its 32-byte seed, not Go's 64-byte
+      private-key representation.
+  p:
+    $ref: JWKUnsignedInteger.yaml
+    description: RSA first prime factor, unsigned big-endian bytes in unpadded base64url.
+  q:
+    $ref: JWKUnsignedInteger.yaml
+    description: RSA second prime factor, unsigned big-endian bytes in unpadded base64url.
+  dp:
+    $ref: JWKUnsignedInteger.yaml
+    description: RSA private exponent modulo p-1, unsigned big-endian bytes in unpadded base64url.
+  dq:
+    $ref: JWKUnsignedInteger.yaml
+    description: RSA private exponent modulo q-1, unsigned big-endian bytes in unpadded base64url.
+  qi:
+    $ref: JWKUnsignedInteger.yaml
+    description: RSA inverse of q modulo p, unsigned big-endian bytes in unpadded base64url.
+  oth:
+    type: array
+    minItems: 1
+    description: Additional factors for a multiprime RSA key; omitted for two-prime RSA and other families.
+    items:
+      type: object
+      additionalProperties: false
+      required:
+      - r
+      - d
+      - t
+      properties:
+        r:
+          $ref: JWKUnsignedInteger.yaml
+          description: Additional prime factor, unsigned big-endian bytes in unpadded base64url.
+        d:
+          $ref: JWKUnsignedInteger.yaml
+          description: Private exponent modulo r-1, unsigned big-endian bytes in unpadded base64url.
+        t:
+          $ref: JWKUnsignedInteger.yaml
+          description: Chinese-remainder coefficient for this factor, unsigned big-endian bytes in unpadded
+            base64url.
+additionalProperties: false
+oneOf:
+- properties:
+    kty:
+      const: RSA
+    alg:
+      enum:
+      - RS256
+      - RS384
+      - RS512
+    crv:
+      not: {}
+      description: Not emitted for RSA signing keys.
+    x:
+      not: {}
+      description: Not emitted for RSA signing keys.
+    y:
+      not: {}
+      description: Not emitted for RSA signing keys.
+    d:
+      $ref: JWKUnsignedInteger.yaml
+  required:
+  - n
+  - e
+  - p
+  - q
+  - dp
+  - dq
+  - qi
+  title: RSA signing key
+- properties:
+    kty:
+      const: EC
+    crv:
+      enum:
+      - P-256
+      - P-384
+      - P-521
+    n:
+      not: {}
+      description: Not emitted for elliptic-curve signing keys.
+    e:
+      not: {}
+      description: Not emitted for elliptic-curve signing keys.
+    p:
+      not: {}
+      description: Private RSA factor; not emitted for this key family.
+    q:
+      not: {}
+      description: Private RSA factor; not emitted for this key family.
+    dp:
+      not: {}
+      description: Private RSA factor; not emitted for this key family.
+    dq:
+      not: {}
+      description: Private RSA factor; not emitted for this key family.
+    qi:
+      not: {}
+      description: Private RSA factor; not emitted for this key family.
+    oth:
+      not: {}
+      description: Multiprime RSA factors; not emitted for this key family.
+  required:
+  - crv
+  - x
+  - y
+  oneOf:
+  - properties:
+      x:
+        minLength: 43
+        maxLength: 43
+        pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+      y:
+        minLength: 43
+        maxLength: 43
+        pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+      d:
+        minLength: 43
+        maxLength: 43
+        pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+      crv:
+        const: P-256
+      alg:
+        const: ES256
+    title: P-256 (ES256)
+  - properties:
+      x:
+        minLength: 64
+        maxLength: 64
+        pattern: ^[A-Za-z0-9_-]{64}$
+      y:
+        minLength: 64
+        maxLength: 64
+        pattern: ^[A-Za-z0-9_-]{64}$
+      d:
+        minLength: 64
+        maxLength: 64
+        pattern: ^[A-Za-z0-9_-]{64}$
+      crv:
+        const: P-384
+      alg:
+        const: ES384
+    title: P-384 (ES384)
+  - properties:
+      x:
+        minLength: 88
+        maxLength: 88
+        pattern: ^A[A-Za-f][A-Za-z0-9_-]{86}$
+      y:
+        minLength: 88
+        maxLength: 88
+        pattern: ^A[A-Za-f][A-Za-z0-9_-]{86}$
+      d:
+        minLength: 88
+        maxLength: 88
+        pattern: ^A[A-Za-f][A-Za-z0-9_-]{86}$
+      crv:
+        const: P-521
+      alg:
+        const: ES512
+    title: P-521 (ES512)
+  title: EC signing key
+- properties:
+    kty:
+      const: OKP
+    crv:
+      const: Ed25519
+    d:
+      pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+    alg:
+      enum:
+      - EdDSA
+      - Ed25519
+    x:
+      minLength: 43
+      maxLength: 43
+      pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+    n:
+      not: {}
+      description: Not emitted for Ed25519 signing keys.
+    e:
+      not: {}
+      description: Not emitted for Ed25519 signing keys.
+    y:
+      not: {}
+      description: Not emitted for Ed25519 signing keys.
+    p:
+      not: {}
+      description: Private RSA factor; not emitted for this key family.
+    q:
+      not: {}
+      description: Private RSA factor; not emitted for this key family.
+    dp:
+      not: {}
+      description: Private RSA factor; not emitted for this key family.
+    dq:
+      not: {}
+      description: Private RSA factor; not emitted for this key family.
+    qi:
+      not: {}
+      description: Private RSA factor; not emitted for this key family.
+    oth:
+      not: {}
+      description: Multiprime RSA factors; not emitted for this key family.
+  required:
+  - crv
+  - x
+  title: Ed25519 signing key
+x-source-files:
+- pkg/kms/jwks.go
+- pkg/kms/jwks_private_keys.go
+- pkg/kms/methods.go
+- pkg/kms/crypto_key.go

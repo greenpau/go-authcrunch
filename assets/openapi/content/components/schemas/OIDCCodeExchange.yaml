@@ -1,0 +1,54 @@
+type: object
+required:
+- grant_type
+- code
+- redirect_uri
+properties:
+  grant_type:
+    type: string
+    const: authorization_code
+    description: OAuth grant selecting this request variant.
+  code:
+    $ref: OIDCOpaqueToken.yaml
+    writeOnly: true
+    description: Single-use authorization code returned to the validated callback. Must match this client,
+      redirect URI, and PKCE binding; a repeated redemption revokes the resulting grant. Codes expire
+      60 seconds after creation. A wrong client, redirect URI or verifier fails without consuming a fresh
+      code; a repeated redemption by the correct client revokes its grant before redirect/PKCE revalidation.
+  redirect_uri:
+    type: string
+    format: uri
+    description: The exact redirect_uri used for this authorization request, including the actual native
+      loopback port. It must match the stored grant byte-for-byte.
+    maxLength: 2048
+  code_verifier:
+    type: string
+    writeOnly: true
+    description: 'Original PKCE verifier: 43–128 ASCII letters/digits or - . _ ~. Its SHA-256/base64url
+      digest must match the authorization challenge. Required when a challenge was supplied; omitted/empty
+      only when no PKCE was used. Supplying a nonempty verifier for a code issued without PKCE also fails.'
+    pattern: ^(?:[A-Za-z0-9._~-]{43,128})?$
+    maxLength: 128
+  client_id:
+    type: string
+    description: Registered client ID (maximum 256 bytes). Required for public/client_secret_post authentication;
+      optional with HTTP Basic only when it exactly matches the decoded Basic identifier.
+    minLength: 1
+    maxLength: 256
+  client_secret:
+    type: string
+    writeOnly: true
+    description: Registered confidential-client secret (32–1024 bytes at registration). Only for client_secret_post;
+      presence together with HTTP Basic is rejected, even if empty. Limits count UTF-8 bytes, not Unicode
+      characters; no trimming is performed.
+    minLength: 1
+    maxLength: 1024
+    x-minBytes: 32
+    x-maxBytes: 1024
+dependentRequired:
+  client_secret:
+  - client_id
+x-source-files:
+- pkg/oidc/token.go
+- pkg/oidc/refresh.go
+- pkg/oidc/config.go

@@ -1,0 +1,111 @@
+post:
+  operationId: systemAuthentication
+  tags:
+  - System
+  summary: Authenticate with an encrypted system request
+  description: Encrypted AuthCrunch machine-to-machine authentication using a configured system key; not
+    gated by enable admin api. Send the SystemEncryptedMessage wire format containing SystemBasicAuthMessage
+    or SystemAPIKeyAuthMessage. Successful decryption/authentication returns an encrypted SystemAuthResponseMessage
+    with authenticated=true. Credential or policy failures return a non-200 JSON error. Maximum encrypted
+    body is 1 MiB. Existing invalid portal credentials and disallowed browser origins can fail before
+    message handling. The inner request has no expiry or replay-ID field; the random encryption nonce
+    is not an application expiry check.
+  security: []
+  responses:
+    '200':
+      description: Encrypted successful authentication assertion; decrypt with the configured system key.
+      content:
+        text/plain:
+          schema:
+            $ref: ../components/schemas/SystemEncryptedMessage.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '400':
+      description: Encrypted-message or portal admission failure.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/SystemError.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '401':
+      description: Encrypted-message or portal admission failure.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/SystemError.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '403':
+      description: Encrypted-message or portal admission failure.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/SystemError.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '413':
+      description: Encrypted-message or portal admission failure.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/SystemError.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '500':
+      description: Encrypted-message or portal admission failure.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/SystemError.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+  x-source-files:
+  - pkg/authn/handle_api_system.go
+  - pkg/system/message.go
+  - pkg/authn/respond_api.go
+  - pkg/authn/api_origin.go
+  requestBody:
+    required: true
+    content:
+      text/plain:
+        schema:
+          $ref: ../components/schemas/SystemEncryptedMessage.yaml
+    x-maxBytes: 1048576
+  parameters:
+  - $ref: ../components/parameters/APIOrigin.yaml
+  - $ref: ../components/parameters/APIFetchSite.yaml

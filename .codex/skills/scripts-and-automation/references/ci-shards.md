@@ -80,6 +80,15 @@ GitHub's cache quota; correctness must not depend on a warm cache.
 
 ## Evidence and reruns
 
+After `ci-quality`, the quality job runs `make openapi-artifact`, verifies source
+cleanliness, and uploads `go-authcrunch_openapi_<artifact-id>` separately. It
+contains the standalone `openapi.json` and `openapi.yaml` from
+`assets/openapi/generated/artifact/`. The export/upload must require successful
+preceding steps, fail on missing output, and reuse selection's identity on rerun.
+The existing coverage-only download pattern must not match this artifact.
+The [OpenAPI owner](../../openapi-generation/SKILL.md) defines export semantics
+and the executable fixture that verifies the workflow's actual packaging path.
+
 Each shard writes `.coverage/shards/<shard>/` with the usual tested bundle,
 `selection.json`, resource measurements, and `timing.json`. The job summary
 shows elapsed time, peak memory, and slow packages; timing JSON also includes

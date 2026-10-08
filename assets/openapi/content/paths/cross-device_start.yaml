@@ -1,0 +1,143 @@
+post:
+  operationId: crossDeviceStart
+  tags:
+  - Cross-Device Sign-In
+  summary: Start a cross-device sign-in request
+  description: 'Requires explicitly enabled cross-device login and HTTPS. This browser-bound transfer
+    is not the OAuth Device Authorization Grant. The QR/activation link contains only the code; the requester
+    retains its secret. POSTs require the exact same-origin Origin and form encoding, at most 4096 bytes,
+    without repeated body fields. Fresh login on the approving browser and a separate approve decision
+    are required. All responses are no-store.
+
+
+    Creates a pending transfer. Admission/rate limit returns 429. Content-Type parameters such as charset=utf-8
+    are accepted. Form fields are read from the body, without trimming; query fields cannot supply code,
+    secret or csrf. Repeated body fields fail, including unrecognized fields. Pending transfers are volatile
+    and are discarded on portal stop/restart; refresh-state persistence does not persist them. The response
+    QR is a 256 by 256 pixel PNG.'
+  security: []
+  responses:
+    '200':
+      description: Requester credentials and public activation link.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceStart.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '400':
+      description: Malformed form encoding, missing/malformed Content-Type, or repeated body fields.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '403':
+      description: HTTPS origin, browser fetch context, or required approving-browser binding/CSRF check
+        failed.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '404':
+      $ref: ../components/responses/PlainError.yaml
+    '405':
+      description: Method not supported at this exact endpoint; see Allow.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+        Allow:
+          schema:
+            type: string
+            const: POST
+          description: Methods accepted at this endpoint.
+    '413':
+      description: URL-encoded form body exceeds 4096 bytes.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '415':
+      description: Content-Type is not application/x-www-form-urlencoded.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '429':
+      description: Requester admission limit reached (at most eight pending transfers per source address
+        and 1024 total); body is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '500':
+      description: QR generation failed; body is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+  x-source-files:
+  - pkg/authn/cross_device_http.go
+  requestBody:
+    required: false
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          properties: {}
+    x-maxBytes: 4096
+  parameters:
+  - name: Origin
+    in: header
+    description: Exact HTTPS portal origin.
+    required: true
+    schema:
+      type: string
+      description: Exact HTTPS portal origin. Compare scheme, host and port exactly; a path or trailing
+        slash is not part of an origin.

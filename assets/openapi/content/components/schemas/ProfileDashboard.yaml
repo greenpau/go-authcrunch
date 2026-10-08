@@ -1,0 +1,51 @@
+type: object
+description: entry for fetch_user_dashboard_data.
+properties:
+  metadata:
+    $ref: UserMetadata.yaml
+  roles:
+    type: array
+    items:
+      type: string
+      description: Effective role name.
+    description: Effective roles from the presented portal token; these can differ from stored account
+      roles after transforms.
+  asset_count:
+    type: object
+    description: Counts returned by each credential store query.
+    properties:
+      api_key:
+        type: integer
+        description: Enabled API-key records; the backend excludes disabled keys even when IncludeAll
+          is requested.
+        minimum: 0
+      ssh_key:
+        type: integer
+        description: SSH-key records including disabled records.
+        minimum: 0
+      gpg_key:
+        type: integer
+        description: GPG-key records including disabled records.
+        minimum: 0
+      mfa_2fa:
+        type: integer
+        description: MFA records including disabled records.
+        minimum: 0
+    required:
+    - api_key
+    - ssh_key
+    - gpg_key
+    - mfa_2fa
+  connected_accounts:
+    type: array
+    items: {}
+    description: Reserved field; the selected implementation always returns an empty array.
+    maxItems: 0
+required:
+- metadata
+- roles
+- asset_count
+- connected_accounts
+x-source-files:
+- pkg/authn/api_fetch_user_dashboard_data.go
+- pkg/identity/database.go

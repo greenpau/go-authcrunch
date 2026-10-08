@@ -1,0 +1,45 @@
+get:
+  operationId: beacon
+  tags:
+  - Authentication Portal
+  summary: Probe portal authentication
+  description: 'Send Accept: application/json or format=json and a valid portal access token. No token
+    or an invalid token returns 401. The success body is the two bytes OK, despite Content-Type: application/json.
+    Do not JSON-decode it. JSON routing requires the exact Accept value application/json or format=json;
+    Accept lists and media parameters do not qualify. Without JSON routing there is no HTML beacon and
+    the response is an HTML 404.'
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: Authenticated.
+      content:
+        application/json:
+          schema:
+            type: string
+            const: OK
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '401':
+      $ref: ../components/responses/PortalError.yaml
+    '404':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_json_beacon.go
+  - pkg/authn/respond_http.go
+  - pkg/authn/serve_http.go
+  - pkg/util/request_id.go
+  parameters:
+  - name: format
+    in: query
+    description: Select JSON routing.
+    required: false
+    schema:
+      type: string
+      enum:
+      - json

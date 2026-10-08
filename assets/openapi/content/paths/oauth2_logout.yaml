@@ -1,0 +1,42 @@
+post:
+  operationId: directOAuthLogout
+  tags:
+  - External Authentication
+  summary: Revoke a direct OAuth session
+  description: Same-origin POST at {portalBasePath}/oauth2/logout. Configure the policy's full oauth base
+    path to match this layout (default /auth/oauth2), and route these exact paths through the gatekeeper before
+    a catch-all portal route. Revokes the policy session and pending login, deletes both cookies
+    and returns 204 even if already logged out. This is distinct from GET portal /logout and POST portal
+    /api/logout. No portal bearer token is required.
+  security: []
+  responses:
+    '204':
+      description: Local policy session revoked; empty body.
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '400':
+      $ref: ../components/responses/PlainError.yaml
+    '403':
+      $ref: ../components/responses/PlainError.yaml
+    '404':
+      $ref: ../components/responses/PlainError.yaml
+    '405':
+      $ref: ../components/responses/PlainError.yaml
+    '503':
+      $ref: ../components/responses/PlainError.yaml
+  x-source-files:
+  - pkg/authz/oauth.go
+  - pkg/authz/oauth_config.go
+  parameters:
+  - name: Origin
+    in: header
+    description: Exact protected application origin.
+    required: true
+    schema:
+      type: string
+      description: Exact protected application origin. Compare scheme, host and port exactly; a path or
+        trailing slash is not part of an origin.

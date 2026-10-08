@@ -1,0 +1,16 @@
+type: object
+required:
+- realm
+properties:
+  realm:
+    type: string
+    description: Exact enabled identity-store realm. Unknown-realm behavior differs by operation; consult
+      its response contract. Case-sensitive and not whitespace-trimmed.
+    examples:
+    - local
+    minLength: 1
+  query:
+    type: string
+    description: Backend-specific selector. The selected local store ignores this field for both user
+      listing and realm metadata, returning all local records; it provides no filtering or pagination.
+      Omission, an empty string and all have identical local behavior.

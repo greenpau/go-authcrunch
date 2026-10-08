@@ -1,0 +1,28 @@
+type: object
+required:
+- keys
+properties:
+  keys:
+    type: array
+    items:
+      type: object
+      required:
+      - public_key
+      - private_key
+      properties:
+        public_key:
+          $ref: PublicJWK.yaml
+          description: Public JWK paired with this private key.
+        private_key:
+          oneOf:
+          - type: string
+            description: PEM text with PRIVATE KEY (PKCS#8), RSA PRIVATE KEY (PKCS#1), or EC PRIVATE KEY
+              (SEC1) armor; encoding=der instead returns standard padded Base64 of the DER bytes.
+          - $ref: PrivateJWK.yaml
+          description: Sensitive private key. PKCS#8/PKCS#1/SEC1 export is PEM text or base64-encoded
+            DER according to encoding; format=jwk returns a private JWK object.
+    description: Sensitive exported key pairs for every eligible signer. Export is all-or-nothing if a
+      format is incompatible with any selected key.
+additionalProperties: false
+x-source-files:
+- pkg/kms/jwks_private_keys.go

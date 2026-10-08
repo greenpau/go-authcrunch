@@ -1,0 +1,9 @@
+type: integer
+description: Whole seconds since 1970-01-01T00:00:00Z (UTC), excluding leap seconds; a Unix timestamp,
+  not milliseconds or an ISO date string.
+format: int64
+examples:
+- 1791331200
+externalDocs:
+  description: JWT NumericDate (RFC 7519)
+  url: https://www.rfc-editor.org/rfc/rfc7519.html#section-2

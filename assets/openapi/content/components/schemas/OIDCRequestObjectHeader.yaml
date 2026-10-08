@@ -1,0 +1,60 @@
+type: object
+description: Decoded protected JOSE header of an authorization Request Object. Both header and payload
+  require canonical unpadded base64url of UTF-8 JSON objects with no duplicate members. Client registration
+  controls the permitted algorithm and trusted public keys. Unrecognized header members are ignored, except
+  crit, b64, enc, zip, jku, jwk, x5u and x5c, which are forbidden even when null.
+required:
+- alg
+properties:
+  alg:
+    type: string
+    description: none requires an empty signature segment and no kid. RS256 requires a valid RSA PKCS#1
+      v1.5 SHA-256 signature from a registered key.
+    enum:
+    - none
+    - RS256
+  kid:
+    type: string
+    description: Optional exact registered RSA key identifier. When omitted for RS256, each registered
+      key is tried. An empty or non-string value is rejected.
+    minLength: 1
+  crit:
+    description: Unsupported JOSE header. Presence is rejected, including an empty or null value.
+    not: {}
+  b64:
+    description: Unsupported JOSE header. Presence is rejected, including an empty or null value.
+    not: {}
+  enc:
+    description: Unsupported JOSE header. Presence is rejected, including an empty or null value.
+    not: {}
+  zip:
+    description: Unsupported JOSE header. Presence is rejected, including an empty or null value.
+    not: {}
+  jku:
+    description: Request-supplied key material is forbidden, including null. Signature trust comes only
+      from registered public keys.
+    not: {}
+  jwk:
+    description: Request-supplied key material is forbidden, including null. Signature trust comes only
+      from registered public keys.
+    not: {}
+  x5u:
+    description: Request-supplied key material is forbidden, including null. Signature trust comes only
+      from registered public keys.
+    not: {}
+  x5c:
+    description: Request-supplied key material is forbidden, including null. Signature trust comes only
+      from registered public keys.
+    not: {}
+if:
+  properties:
+    alg:
+      const: none
+then:
+  not:
+    required:
+    - kid
+additionalProperties: true
+x-source-files:
+- pkg/oidc/request_object.go
+- pkg/oidc/request_keys.go

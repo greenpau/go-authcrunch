@@ -30,6 +30,9 @@ class CITestSelectionTests(unittest.TestCase):
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / 'assets/scripts' / name, dest)
         (self.root / 'VERSION').write_text('1.2.0\n')
+        api = self.root / 'assets/openapi/content/openapi.yaml'
+        api.parent.mkdir(parents=True, exist_ok=True)
+        api.write_text('openapi: 3.1.1\ninfo:\n  title: Fixture\n  version: 1.2.0\n  description: Fixture API\n')
         for name in ('cmd/authdb/main.go', 'cmd/authdbctl/main.go', 'pkg/identity/database.go'):
             dest = self.root / name
             dest.parent.mkdir(parents=True, exist_ok=True)

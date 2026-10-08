@@ -1,0 +1,9 @@
+type: string
+description: 'Opaque rotating portal credential: acr1_ followed by the canonical unpadded base64url encoding
+  of 32 random bytes (48 characters total). Keep secret. Successful rotation replaces it; replay revokes
+  the family. It is distinct from an OIDC refresh token.'
+minLength: 48
+maxLength: 48
+pattern: ^acr1_[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+x-source-files:
+- pkg/authn/token_refresh/token.go

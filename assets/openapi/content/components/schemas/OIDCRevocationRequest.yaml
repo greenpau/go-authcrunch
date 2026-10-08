@@ -1,0 +1,43 @@
+type: object
+required:
+- token
+properties:
+  token:
+    type: string
+    writeOnly: true
+    description: Nonempty token to revoke. Unknown tokens still succeed without revealing ownership; therefore
+      this endpoint intentionally does not constrain the token format.
+    minLength: 1
+  token_type_hint:
+    type: string
+    description: Optional access_token or refresh_token hint. The implementation ignores this field, including
+      unknown values; ownership and grant revocation do not depend on it.
+    examples:
+    - refresh_token
+  client_id:
+    type: string
+    description: Registered client ID (maximum 256 bytes). Required for public/client_secret_post authentication;
+      optional with HTTP Basic only when it exactly matches the decoded Basic identifier.
+    minLength: 1
+    maxLength: 256
+  client_secret:
+    type: string
+    writeOnly: true
+    description: Registered confidential-client secret (32–1024 bytes at registration). Only for client_secret_post;
+      presence together with HTTP Basic is rejected, even if empty. Limits count UTF-8 bytes, not Unicode
+      characters; no trimming is performed.
+    minLength: 1
+    maxLength: 1024
+    x-minBytes: 32
+    x-maxBytes: 1024
+dependentRequired:
+  client_secret:
+  - client_id
+description: Revoke a current access token or any retained refresh credential owned by the authenticated
+  client. A spent refresh credential can still revoke its family until expiry. The hint is ignored. Unknown,
+  expired/forgotten, and other-client tokens return the same empty HTTP 200. A pre-rotation access token
+  is no longer indexed, so revoking it does not revoke the current successor. Revocation affects this
+  grant, not independent grants, the OP browser session or already issued stateless ID-token signatures.
+x-source-files:
+- pkg/oidc/token.go
+- pkg/oidc/refresh.go

@@ -1,0 +1,12 @@
+oneOf:
+- $ref: AdminUserInfo.yaml
+- $ref: AdminUserAdd.yaml
+- $ref: AdminUserDelete.yaml
+- $ref: AdminUserDisable.yaml
+- $ref: AdminUserEnable.yaml
+- $ref: AdminUserResetPassword.yaml
+- $ref: AdminUserOverwriteRoles.yaml
+- $ref: AdminUserAddRoles.yaml
+- $ref: AdminUserOverwriteAuthChallenges.yaml
+discriminator:
+  propertyName: operation

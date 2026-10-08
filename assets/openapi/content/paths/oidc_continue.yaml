@@ -1,0 +1,119 @@
+get:
+  operationId: oidcContinueGet
+  tags:
+  - OpenID Connect
+  summary: Resume OIDC authorization or review consent
+  description: 'Requires an enabled portal OIDC provider and the exact configured issuer origin/mount.
+    OIDC access/refresh credentials and signing keys are separate from portal JWTs and portal refresh
+    tokens. All responses are no-store.
+
+
+    Requires the pending-request cookie and completed OP browser session produced by this authorization
+    journey. GET renders consent or completes a previously approved grant. POST requires the form CSRF
+    credential, a trusted issuer origin and permitted browser fetch context and decision allow/deny. No
+    query parameters. A portal bearer token is insufficient. Origin may be absent; when present it must
+    occur once and exactly match the issuer origin (an empty value fails). Sec-Fetch-Site may be absent,
+    empty, same-origin or none. A consent decision consumes the pending request and clears its cookie;
+    replay fails. Form media-type parameters are accepted; repeated fields fail.'
+  security:
+  - OIDCBrowserSession: []
+    OIDCPendingRequest: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/OAuthError.yaml
+    '403':
+      $ref: ../components/responses/OAuthError.yaml
+    '405':
+      $ref: ../components/responses/OAuthError.yaml
+    '503':
+      $ref: ../components/responses/OAuthError.yaml
+  x-source-files:
+  - pkg/oidc/authorization.go
+post:
+  operationId: oidcContinuePost
+  tags:
+  - OpenID Connect
+  summary: Submit an OIDC consent decision
+  description: 'Requires an enabled portal OIDC provider and the exact configured issuer origin/mount.
+    OIDC access/refresh credentials and signing keys are separate from portal JWTs and portal refresh
+    tokens. All responses are no-store.
+
+
+    Requires the pending-request cookie and completed OP browser session produced by this authorization
+    journey. GET renders consent or completes a previously approved grant. POST requires the form CSRF
+    credential, a trusted issuer origin and permitted browser fetch context and decision allow/deny. No
+    query parameters. A portal bearer token is insufficient. Origin may be absent; when present it must
+    occur once and exactly match the issuer origin (an empty value fails). Sec-Fetch-Site may be absent,
+    empty, same-origin or none. A consent decision consumes the pending request and clears its cookie;
+    replay fails. Form media-type parameters are accepted; repeated fields fail.'
+  security:
+  - OIDCBrowserSession: []
+    OIDCPendingRequest: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/OAuthError.yaml
+    '403':
+      $ref: ../components/responses/OAuthError.yaml
+    '405':
+      $ref: ../components/responses/OAuthError.yaml
+    '503':
+      $ref: ../components/responses/OAuthError.yaml
+  x-source-files:
+  - pkg/oidc/authorization.go
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          required:
+          - csrf
+          - decision
+          properties:
+            csrf:
+              type: string
+              writeOnly: true
+              description: Exact CSRF capability from the rendered consent form, bound to its pending-request
+                cookie and same-origin browser session.
+              pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+              minLength: 43
+              maxLength: 43
+            decision:
+              type: string
+              enum:
+              - allow
+              - deny
+              description: Explicit consent choice for this pending authorization request.
+    x-maxBytes: 16384
+  parameters:
+  - name: Origin
+    in: header
+    description: Optional, but when present exactly one value must match the issuer origin. Empty, duplicate
+      or foreign values fail.
+    required: false
+    schema:
+      type: string
+      description: Optional, but when present exactly one value must match the issuer origin. Empty, duplicate
+        or foreign values fail.
+  - name: Sec-Fetch-Site
+    in: header
+    required: false
+    description: Optional fetch context; cross-site and same-site are rejected.
+    schema:
+      type: string
+      enum:
+      - ''
+      - same-origin
+      - none

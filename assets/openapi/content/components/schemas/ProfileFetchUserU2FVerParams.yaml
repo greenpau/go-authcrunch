@@ -1,0 +1,27 @@
+type: object
+required:
+- kind
+- webauthn_register
+- webauthn_challenge
+properties:
+  kind:
+    type: string
+    const: fetch_user_u2f_ver_params
+    description: Profile action discriminator; selects this payload and response behavior.
+  webauthn_register:
+    type: string
+    description: Base64-encoded JSON registration result from the browser. The server validates key type,
+      origin, relying party, challenge, and session-bound enrollment proof.
+  webauthn_challenge:
+    type: string
+    description: Original creation challenge from fetch_user_u2f_reg_params, retained through all four
+      enrollment stages. This is not the later assertion/proof challenge from fetch_user_u2f_ver_params.
+      Bound to account, credential/backend version, browser session and origin; expires after five minutes.
+    pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+    minLength: 43
+    maxLength: 43
+description: Return verification options for a candidate WebAuthn registration.
+additionalProperties: true
+x-source-files:
+- pkg/authn/webauthn_enrollment.go
+- pkg/identity/webauthn_registration.go

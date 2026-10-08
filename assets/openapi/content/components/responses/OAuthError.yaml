@@ -1,0 +1,11 @@
+description: OAuth/OIDC protocol error; error is a string.
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/OAuthError.yaml
+headers:
+  Cache-Control:
+    schema:
+      type: string
+      const: no-store
+    description: Do not store credentials or protocol responses.

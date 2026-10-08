@@ -1,0 +1,53 @@
+type: object
+required:
+- code
+- secret
+- verification_uri
+- display_code
+- qr
+- expires_in
+- interval
+properties:
+  code:
+    type: string
+    description: Public activation code included in the verification URI/QR. It identifies a five-minute
+      pending transfer and is not sufficient to poll or approve it.
+    minLength: 26
+    maxLength: 26
+    pattern: ^[A-Z2-7]{26}$
+  secret:
+    type: string
+    description: Requester-only poll/cancel capability. Keep it private on the requesting browser and
+      never put it in a QR code or verification link.
+    minLength: 26
+    maxLength: 26
+    pattern: ^[A-Z2-7]{26}$
+  verification_uri:
+    type: string
+    format: uri
+    description: Absolute HTTPS activation URL containing code only. Opening it starts a separate approving-browser
+      journey; login and explicit approval are still required.
+    pattern: ^https://
+  display_code:
+    type: string
+    description: Human comparison code shown on both devices to identify this transfer; not an authentication
+      credential.
+    pattern: ^[A-Z2-7]{4}-[A-Z2-7]{4}$
+    examples:
+    - ABCD-EFGH
+  qr:
+    type: string
+    description: PNG QR image as a data:image/png;base64 URI encoding verification_uri only.
+    pattern: ^data:image/png;base64,
+  expires_in:
+    type: integer
+    description: Pending-transfer lifetime in seconds from creation (five minutes).
+    const: 300
+  interval:
+    type: integer
+    description: 'Minimum delay between polls in seconds. Faster polling returns 429 slow_down and Retry-After:
+      2.'
+    const: 2
+x-source-files:
+- pkg/authn/cross_device_http.go
+- pkg/authn/cross_device_store.go

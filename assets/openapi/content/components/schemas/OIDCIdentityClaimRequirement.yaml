@@ -1,0 +1,20 @@
+description: Requirement for sub or acr. Values must be nonempty strings. sub constrains the account for
+  either claim location. Essential acr is enforced only under id_token against configured contexts backed
+  by completed login methods.
+allOf:
+- $ref: OIDCClaimRequirement.yaml
+- anyOf:
+  - type: 'null'
+  - type: object
+    properties:
+      value:
+        type: string
+        minLength: 1
+      values:
+        type: array
+        items:
+          type: string
+          minLength: 1
+x-source-files:
+- pkg/oidc/claims.go
+- pkg/oidc/request_object.go

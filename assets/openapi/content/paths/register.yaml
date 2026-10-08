@@ -1,0 +1,38 @@
+get:
+  operationId: registerDefaultGet
+  tags:
+  - Registration
+  summary: Reject a registration form request without a realm
+  description: This unscoped route does not select a default realm or render a registration form.
+    With registration configured, unauthenticated requests return HTTP 400 because the required realm
+    is missing. Disabled registration returns HTTP 503. Authenticated users redirect to the portal.
+    Use GET /register/{realm} to open the configured realm's registration form.
+  security: []
+  responses:
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '503':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_register.go
+post:
+  operationId: registerDefaultPost
+  tags:
+  - Registration
+  summary: Reject a registration submission without a realm
+  description: This unscoped route does not select a default realm or create a pending registration.
+    Unauthenticated requests return HTTP 400 before form processing because the required realm cannot
+    be resolved. Authenticated users redirect to the portal. Use POST /register/{realm} to submit a
+    registration request to a configured realm; submission does not itself guarantee account activation.
+  security: []
+  responses:
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '503':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_register.go

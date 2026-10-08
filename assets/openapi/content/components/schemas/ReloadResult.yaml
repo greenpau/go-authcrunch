@@ -1,0 +1,18 @@
+type: object
+required:
+- timestamp
+properties:
+  status:
+    type: string
+    enum:
+    - success
+    - failure
+    description: Backend reload outcome; failure can still use HTTP 200. An unmatched realm omits this
+      field.
+  timestamp:
+    type: string
+    format: date-time
+    description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
+      This is a date-time string, not Unix seconds.
+    readOnly: true
+description: HTTP 200 can contain status=failure. An unmatched realm currently returns only timestamp.

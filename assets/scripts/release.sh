@@ -46,7 +46,7 @@ fi
 
 # Stage only the version authority and its declared projections.
 git diff --cached --quiet || fail "validation staged unexpected changes"
-git add -- VERSION cmd/authdb/main.go cmd/authdbctl/main.go pkg/identity/database.go
+git add -- VERSION cmd/authdb/main.go cmd/authdbctl/main.go pkg/identity/database.go assets/openapi/content/openapi.yaml
 git diff --quiet || fail "validation left unrelated tracked changes"
 [ -z "$(git ls-files --others --exclude-standard)" ] || fail "validation left untracked files"
 git diff --cached --quiet && fail "no version changes to commit"

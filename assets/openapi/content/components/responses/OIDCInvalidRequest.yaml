@@ -1,0 +1,27 @@
+description: Malformed request, parameters, media type or issuer origin/path.
+content:
+  application/json:
+    schema:
+      type: object
+      required:
+      - error
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+          enum:
+          - invalid_request
+          description: Protocol failure code; no error_description or token fields are emitted.
+headers:
+  Cache-Control:
+    $ref: ../headers/NoStore.yaml
+  Pragma:
+    $ref: ../headers/NoCache.yaml
+  X-Content-Type-Options:
+    $ref: ../headers/NoSniff.yaml
+  Referrer-Policy:
+    $ref: ../headers/OIDCNoReferrer.yaml
+  X-Frame-Options:
+    $ref: ../headers/FrameDeny.yaml
+  Content-Security-Policy:
+    $ref: ../headers/OIDCResponseCSP.yaml

@@ -1,0 +1,64 @@
+get:
+  operationId: whoami
+  tags:
+  - Authentication Portal
+  summary: Read portal claims
+  description: Send the exact Accept header application/json or format=json for the JSON claims response.
+    Accept lists, quality parameters and application/json; charset=utf-8 do not select JSON. In JSON mode,
+    no token or invalid token returns 401; custom claims are retained. In HTML mode, a valid token renders
+    identity details without requiring the stored profile session; missing/invalid credentials redirect
+    to login. HTML adds human-readable time strings for display, not extra JSON claims.
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: Authenticated.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Claims.yaml
+        text/html:
+          schema:
+            type: string
+            description: Rendered identity page, selected without JSON negotiation.
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '401':
+      $ref: ../components/responses/PortalError.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_json_whoami.go
+  - pkg/authn/handle_http_whoami.go
+  - pkg/authn/serve_http.go
+  - pkg/util/request_id.go
+  parameters:
+  - name: format
+    in: query
+    description: Select JSON routing.
+    required: false
+    schema:
+      type: string
+      enum:
+      - json
+  - name: probe
+    in: query
+    description: Only the literal true enables the probe and adds authenticated/expires_in. Takes precedence
+      over id_token=true.
+    required: false
+    schema:
+      type: boolean
+  - name: id_token
+    in: query
+    description: Only the literal true requests the configured upstream ID-token cookie; omitted when
+      unavailable. probe=true takes precedence.
+    required: false
+    schema:
+      type: boolean

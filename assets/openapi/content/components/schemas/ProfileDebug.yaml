@@ -1,0 +1,37 @@
+type: object
+description: Illustrative fetch_debug entry. The database object is hard-coded demonstration data, not
+  this deployment’s storage settings.
+properties:
+  version:
+    type: string
+    description: Linked identity-library version.
+  database:
+    type: object
+    description: Demonstration database metadata.
+    properties:
+      name:
+        type: string
+        description: Example database name.
+        const: localdb
+      host:
+        type: string
+        description: Example host.
+        const: localhost
+      port:
+        type: integer
+        description: Example TCP port.
+        const: 5432
+      engine:
+        type: string
+        description: Example database engine.
+        const: postgresql
+    required:
+    - name
+    - host
+    - port
+    - engine
+required:
+- version
+- database
+x-source-files:
+- pkg/authn/api_fetch_debug.go

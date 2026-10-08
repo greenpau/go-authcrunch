@@ -1,0 +1,62 @@
+post:
+  operationId: listRealms
+  tags:
+  - Administration
+  summary: List identity-store realms
+  description: 'Requires enable admin api, a valid portal token, and an admin role. Stored profile-session
+    state is not required for these routes. Disabled admin endpoints and wrong methods fall through to
+    HTTP 400 (private export has its own 404/405 contract). Invalid tokens fail with 401; absent token/non-admin
+    role fail with 403. Browser mutation requests must satisfy same-origin checks. JSON decoding is bounded
+    to 1 MiB; an oversized first JSON value returns 413.
+
+
+    Returns enabled identity stores, including their kind.
+
+
+    The admin decoder consumes one JSON value and ignores unknown fields/trailing data; it does not independently
+    enforce Content-Type. Send one application/json object. A second value or padding after a completed
+    first value is not guaranteed to trigger the 1 MiB limit. Malformed first values fail with 400. Profile
+    requests use a different decoder and reject trailing non-whitespace data.'
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: Admin operation result.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/RealmsResult.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '400':
+      $ref: ../components/responses/PortalError.yaml
+    '401':
+      $ref: ../components/responses/PortalError.yaml
+    '403':
+      $ref: ../components/responses/PortalError.yaml
+    '413':
+      $ref: ../components/responses/PortalError.yaml
+    '500':
+      $ref: ../components/responses/PortalError.yaml
+  x-source-files:
+  - pkg/authn/handle_api_list_realms.go
+  - pkg/authn/respond_api.go
+  - pkg/authn/api_origin.go
+  - pkg/authn/handle_api_admin.go
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/RealmQuery.yaml
+    x-maxDecodedBytes: 1048576
+    description: Send one JSON object. The first decoded value is read through a 1048576-byte limit; trailing
+      data is not fully consumed or validated.
+  parameters:
+  - $ref: ../components/parameters/APIOrigin.yaml
+  - $ref: ../components/parameters/APIFetchSite.yaml

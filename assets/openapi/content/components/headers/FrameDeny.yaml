@@ -1,0 +1,4 @@
+description: Protocol responses cannot be embedded in frames.
+schema:
+  type: string
+  const: DENY

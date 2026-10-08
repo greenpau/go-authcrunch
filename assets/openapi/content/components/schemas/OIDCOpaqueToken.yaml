@@ -1,0 +1,11 @@
+type: string
+description: 'Opaque OpenID Provider credential: canonical unpadded base64url encoding of 32 random bytes
+  (43 characters). Keep secret and send only to the intended OIDC endpoint; this is not a portal JWT or
+  portal refresh credential.'
+minLength: 43
+maxLength: 43
+pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+x-source-files:
+- pkg/oidc/provider.go
+- pkg/oidc/token.go
+- pkg/oidc/refresh.go

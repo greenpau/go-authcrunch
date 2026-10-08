@@ -1,0 +1,11 @@
+name: Sec-Fetch-Site
+in: header
+required: false
+description: Optional on POST. If supplied, exactly one value must be same-origin or none. Empty, duplicate,
+  same-site and cross-site values fail with 403; omitted headers are accepted. Sec-Fetch-Mode and Sec-Fetch-Dest
+  are not checked by this API guard.
+schema:
+  type: string
+  enum:
+  - same-origin
+  - none

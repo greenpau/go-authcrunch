@@ -1,0 +1,38 @@
+type: object
+required:
+- kind
+- webauthn_register
+- webauthn_challenge
+- webauthn_request
+properties:
+  kind:
+    type: string
+    const: test_user_u2f_reg
+    description: Profile action discriminator; selects this payload and response behavior.
+  webauthn_register:
+    type: string
+    description: Base64-encoded JSON registration result from the browser. The server validates key type,
+      origin, relying party, challenge, and session-bound enrollment proof.
+  webauthn_challenge:
+    type: string
+    description: Original creation challenge from fetch_user_u2f_reg_params, retained through all four
+      enrollment stages. This is not the later assertion/proof challenge from fetch_user_u2f_ver_params.
+      Bound to account, credential/backend version, browser session and origin; expires after five minutes.
+    pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+    minLength: 43
+    maxLength: 43
+  webauthn_request:
+    type: string
+    description: Standard Base64 of the portal client’s JSON assertion. The signed client data must contain
+      the proof challenge from fetch_user_u2f_ver_params and the bound origin. Signature, credential ID,
+      RP hash, type=webauthn.get, crossOrigin=false and user presence are checked. This enrollment proof
+      is distinct from login counter/replay handling.
+    contentEncoding: base64
+    contentMediaType: application/json
+    contentSchema:
+      $ref: WebAuthnAssertion.yaml
+description: Validate the WebAuthn registration and assertion before saving.
+additionalProperties: true
+x-source-files:
+- pkg/authn/webauthn_enrollment.go
+- pkg/identity/webauthn_registration.go

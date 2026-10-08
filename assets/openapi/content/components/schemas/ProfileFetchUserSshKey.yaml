@@ -1,0 +1,19 @@
+type: object
+required:
+- kind
+- id
+properties:
+  kind:
+    type: string
+    const: fetch_user_ssh_key
+    description: Profile action discriminator; selects this payload and response behavior.
+  id:
+    type: string
+    description: Exact SSH public-key ID from fetch_user_ssh_keys; generated IDs contain 40 ASCII
+      letters/digits. Lookup belongs to the logged-in local account and does not trim this string.
+description: Return the owned SSH public-key record in entry. Fetch enforces ssh usage and excludes
+  disabled records. Missing, wrong-category or foreign IDs return HTTP 500 without an entry.
+additionalProperties: true
+x-source-files:
+- pkg/identity/database.go
+- pkg/identity/user.go

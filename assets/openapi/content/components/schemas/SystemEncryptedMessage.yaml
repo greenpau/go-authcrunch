@@ -1,0 +1,12 @@
+type: string
+description: 'AuthCrunch encrypted envelope: v4.local.<body>.<footer>. Both segments use unpadded base64url.
+  The body is a 24-byte nonce followed by authenticated XChaCha20-Poly1305 ciphertext; the decoded footer
+  is JSON with a nonempty kid selecting the configured 32-byte system key. Use the AuthCrunch system encryptor;
+  a generic JWT is not accepted. Request message validation checks kind and required nonempty fields,
+  not an expiry timestamp or application replay identifier.'
+pattern: ^v4\.local\.[A-Za-z0-9_\r\n-]+\.[A-Za-z0-9_\r\n-]+$
+x-source-files:
+- pkg/system/encrypt_decrypt.go
+- pkg/system/parser.go
+- pkg/system/basic_auth_message.go
+- pkg/system/api_key_auth_message.go

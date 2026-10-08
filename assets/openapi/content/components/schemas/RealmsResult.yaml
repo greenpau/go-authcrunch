@@ -1,0 +1,21 @@
+type: object
+required:
+- count
+- realms
+- timestamp
+properties:
+  count:
+    type: integer
+    minimum: 0
+    description: Number of entries returned in this response.
+  realms:
+    type: array
+    items:
+      $ref: RealmEntry.yaml
+    description: Enabled identity stores matching the requested realm query.
+  timestamp:
+    type: string
+    format: date-time
+    description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
+      This is a date-time string, not Unix seconds.
+    readOnly: true

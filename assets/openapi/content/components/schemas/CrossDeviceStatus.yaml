@@ -1,0 +1,11 @@
+description: Cross-device result variants. Each endpoint and HTTP status narrows the applicable variant;
+  approval returns next, while other variants have only status.
+oneOf:
+- $ref: CrossDevicePending.yaml
+- $ref: CrossDeviceApproved.yaml
+- $ref: CrossDeviceCancelled.yaml
+- $ref: CrossDeviceSlowDown.yaml
+- $ref: CrossDeviceUnavailable.yaml
+x-source-files:
+- pkg/authn/cross_device_http.go
+- pkg/authn/cross_device_store.go

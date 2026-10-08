@@ -1,0 +1,11 @@
+description: HTTP error text.
+content:
+  text/plain:
+    schema:
+      type: string
+headers:
+  Cache-Control:
+    schema:
+      type: string
+      const: no-store
+    description: Do not store credentials or protocol responses.

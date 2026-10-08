@@ -1,0 +1,25 @@
+type: object
+description: Structured postal address from the typed identity profile; disclosed by address scope or
+  a permitted claims request.
+properties:
+  formatted:
+    type: string
+    description: Full address for display; may contain line breaks.
+  street_address:
+    type: string
+    description: Street lines, including any house/apartment number.
+  locality:
+    type: string
+    description: City or locality.
+  region:
+    type: string
+    description: State, province or region.
+  postal_code:
+    type: string
+    description: Postal/ZIP code as a string, preserving leading zeros.
+  country:
+    type: string
+    description: Country value supplied by the identity profile; no country-code enum is imposed.
+x-source-files:
+- pkg/identity/profile.go
+- pkg/oidc/claims.go

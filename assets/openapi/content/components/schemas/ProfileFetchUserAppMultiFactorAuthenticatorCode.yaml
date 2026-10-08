@@ -1,0 +1,61 @@
+type: object
+required:
+- kind
+- period
+- digits
+- issuer
+- secret
+properties:
+  kind:
+    type: string
+    const: fetch_user_app_multi_factor_authenticator_code
+    description: Profile action discriminator; selects this payload and response behavior.
+  period:
+    type: number
+    description: TOTP period in seconds. Although the handler recognizes 15, QR construction rejects it;
+      supported enrollment URI periods are 30, 60 and 90. Send a whole number. The selected JSON handler
+      truncates a fractional number toward zero before checking the allowed integer values; numeric strings
+      are rejected.
+    examples:
+    - 30
+    anyOf:
+    - minimum: 30
+      exclusiveMaximum: 31
+    - minimum: 60
+      exclusiveMaximum: 61
+    - minimum: 90
+      exclusiveMaximum: 91
+  digits:
+    type: number
+    description: Number of decimal digits in a TOTP code. Send passcodes as strings so leading zeros survive.
+      Send a whole number. The selected JSON handler truncates a fractional number toward zero before
+      checking the allowed integer values; numeric strings are rejected.
+    examples:
+    - 4
+    anyOf:
+    - minimum: 4
+      exclusiveMaximum: 5
+    - minimum: 6
+      exclusiveMaximum: 7
+    - minimum: 8
+      exclusiveMaximum: 9
+  issuer:
+    type: string
+    description: TOTP issuer label; 3–50 ASCII letters/digits. The generated enrollment URI prefixes it
+      with AuthCrunch@.
+    pattern: ^[A-Za-z0-9]{3,50}$
+    minLength: 3
+    maxLength: 50
+    examples:
+    - Example
+  secret:
+    type: string
+    writeOnly: true
+    description: 'Raw TOTP HMAC secret: 10–200 ASCII letters/digits, used as literal bytes by the server.
+      The enrollment helper Base32-encodes these bytes into the otpauth URI; do not Base32-decode this
+      API field.'
+    pattern: ^[A-Za-z0-9]{10,200}$
+    minLength: 10
+    maxLength: 200
+description: Return entry.uri and entry.uri_encoded for TOTP enrollment.
+additionalProperties: true

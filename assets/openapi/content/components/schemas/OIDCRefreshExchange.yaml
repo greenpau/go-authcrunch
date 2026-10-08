@@ -1,0 +1,41 @@
+type: object
+required:
+- grant_type
+- refresh_token
+properties:
+  grant_type:
+    type: string
+    const: refresh_token
+    description: OAuth grant selecting this request variant.
+  refresh_token:
+    $ref: OIDCOpaqueToken.yaml
+    writeOnly: true
+    description: Current OIDC refresh token from the matching grant. Rotation replaces it; replay revokes
+      the entire grant. It is not a portal acr1_ token. Spent-token replay by the owning authenticated
+      client is checked before scope validation and revokes the current access token and all refresh successors.
+      A wrong-client attempt does not consume it.
+  scope:
+    $ref: OIDCRefreshScope.yaml
+  client_id:
+    type: string
+    description: Registered client ID (maximum 256 bytes). Required for public/client_secret_post authentication;
+      optional with HTTP Basic only when it exactly matches the decoded Basic identifier.
+    minLength: 1
+    maxLength: 256
+  client_secret:
+    type: string
+    writeOnly: true
+    description: Registered confidential-client secret (32–1024 bytes at registration). Only for client_secret_post;
+      presence together with HTTP Basic is rejected, even if empty. Limits count UTF-8 bytes, not Unicode
+      characters; no trimming is performed.
+    minLength: 1
+    maxLength: 1024
+    x-minBytes: 32
+    x-maxBytes: 1024
+dependentRequired:
+  client_secret:
+  - client_id
+x-source-files:
+- pkg/oidc/token.go
+- pkg/oidc/refresh.go
+- pkg/oidc/config.go

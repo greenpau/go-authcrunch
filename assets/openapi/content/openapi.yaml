@@ -1,0 +1,536 @@
+openapi: 3.1.1
+info:
+  title: AuthCrunch HTTP API
+  version: 1.3.11
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+  description: |-
+    HTTP contracts implemented by AuthCrunch authentication portals and authorization policies. The API reference version follows the repository VERSION and is synchronized during releases.
+
+    Set origin and portalBasePath to your deployment. Every documented path inherits this common prefix, including /oauth2 paths. With portalBasePath /auth, Direct OAuth uses /auth/oauth2/authorization-code-callback and /auth/oauth2/logout; portal federation uses /auth/oauth2/{realm} and its callback routes. Direct OAuth requires the policy's full oauth base path to match this layout and its exact callback/logout paths to be delegated to the policy before catch-all portal routes. Feature flags, enabled realms, signing algorithms and application registrations determine endpoint availability. Examples use reserved domains and nonfunctional credentials.
+
+    Portal access tokens, stored browser sessions, portal refresh credentials, OIDC tokens and direct OAuth sessions are separate credential boundaries. Retain browser cookies and CSRF state; do not substitute one credential for another. API JSON clients request Accept: application/json. Browser routes use text/html; many browser errors render HTML or redirects.
+
+    Configuration and host-server management APIs are outside this specification. Authorization policies apply to deployment-defined application paths; there is no fixed /authorize REST endpoint. Static UI assets, diagnostic image URLs, recovery placeholders and provider-specific UI pages are not versioned JSON APIs. Persistent-state failure or server shutdown can return an additional 503 text response before an endpoint handler runs.
+servers:
+- url: '{origin}{portalBasePath}'
+  description: Configured authentication portal. Adjust deployment variables before making requests. Browser
+    same-origin APIs must run from the actual portal origin; this documentation server does not proxy
+    requests or bypass CORS.
+  variables:
+    origin:
+      default: https://auth.myfiosgateway.com:8443
+      description: Public HTTPS origin without a trailing slash.
+    portalBasePath:
+      default: /auth
+      description: Actual portal mount without a trailing slash; empty for a root-mounted portal.
+tags:
+- name: Registration
+  description: Browser registration submission and acknowledgement.
+- name: Authentication Portal
+  description: JSON/API-key and Basic login, browser navigation, identity probes, and optional portal
+    session refresh and logout.
+- name: External Authentication
+  description: External OAuth/OIDC and SAML login, portal SSO metadata, and policy-owned Direct OAuth
+    callback/logout. Direct OAuth uses {portalBasePath}/oauth2 with matching policy configuration and
+    exact policy routes.
+- name: Cross-Device Sign-In
+  description: Optional explicit browser-to-browser sign-in approval and transfer.
+- name: Profile
+  description: User-owned local profile, credential and authentication-policy operations.
+- name: Discovery
+  description: Public signing-key discovery for portal access tokens.
+- name: OpenID Connect
+  description: Optional portal OpenID Provider with Authorization Code and rotating refresh grants.
+- name: Administration
+  description: Explicitly enabled administrative realm/user APIs and private export.
+- name: System
+  description: Encrypted AuthCrunch machine-to-machine authentication transport.
+paths:
+  /register/{realm}:
+    $ref: ./paths/register_by-realm.yaml
+  /register/{realm}/ack/{registration_id}:
+    $ref: ./paths/register_by-realm_ack_by-registration-id.yaml
+  /register:
+    $ref: ./paths/register.yaml
+  /:
+    $ref: ./paths/root.yaml
+  /login:
+    $ref: ./paths/login.yaml
+  /sandbox/{sandbox_id}:
+    $ref: ./paths/sandbox_by-sandbox-id.yaml
+  /basic/login/{realm}:
+    $ref: ./paths/basic_login_by-realm.yaml
+  /portal:
+    $ref: ./paths/portal.yaml
+  /beacon:
+    $ref: ./paths/beacon.yaml
+  /whoami:
+    $ref: ./paths/whoami.yaml
+  /api/refresh_session:
+    $ref: ./paths/api_refresh-session.yaml
+  /api/refresh_token:
+    $ref: ./paths/api_refresh-token.yaml
+  /api/logout:
+    $ref: ./paths/api_logout.yaml
+  /logout:
+    $ref: ./paths/logout.yaml
+  /oauth2/{realm}:
+    $ref: ./paths/oauth2_by-realm.yaml
+  /oauth2/{realm}/authorization-code-callback:
+    $ref: ./paths/oauth2_by-realm_authorization-code-callback.yaml
+  /oauth2/{realm}/authorization-code-js-callback:
+    $ref: ./paths/oauth2_by-realm_authorization-code-js-callback.yaml
+  /oauth2/{realm}/logout:
+    $ref: ./paths/oauth2_by-realm_logout.yaml
+  /saml/{realm}:
+    $ref: ./paths/saml_by-realm.yaml
+  /provider/{realm}:
+    $ref: ./paths/provider_by-realm.yaml
+  /apps/sso/{provider}/metadata.xml:
+    $ref: ./paths/apps_sso_by-provider_metadataxml.yaml
+  /oauth2/authorization-code-callback:
+    $ref: ./paths/oauth2_authorization-code-callback.yaml
+  /oauth2/logout:
+    $ref: ./paths/oauth2_logout.yaml
+  /cross-device:
+    $ref: ./paths/cross-device.yaml
+  /cross-device/start:
+    $ref: ./paths/cross-device_start.yaml
+  /cross-device/activate:
+    $ref: ./paths/cross-device_activate.yaml
+  /cross-device/begin:
+    $ref: ./paths/cross-device_begin.yaml
+  /cross-device/confirm:
+    $ref: ./paths/cross-device_confirm.yaml
+  /cross-device/poll:
+    $ref: ./paths/cross-device_poll.yaml
+  /cross-device/cancel:
+    $ref: ./paths/cross-device_cancel.yaml
+  /api/profile:
+    $ref: ./paths/api_profile.yaml
+  /.well-known/jwks.json:
+    $ref: ./paths/well-known_jwksjson.yaml
+  /.well-known/openid-configuration:
+    $ref: ./paths/well-known_openid-configuration.yaml
+  /oidc/jwks:
+    $ref: ./paths/oidc_jwks.yaml
+  /oidc/authorize:
+    $ref: ./paths/oidc_authorize.yaml
+  /oidc/continue:
+    $ref: ./paths/oidc_continue.yaml
+  /oidc/token:
+    $ref: ./paths/oidc_token.yaml
+  /oidc/userinfo:
+    $ref: ./paths/oidc_userinfo.yaml
+  /oidc/revoke:
+    $ref: ./paths/oidc_revoke.yaml
+  /api/server/metadata:
+    $ref: ./paths/api_server_metadata.yaml
+  /api/server/realms:
+    $ref: ./paths/api_server_realms.yaml
+  /api/server/info:
+    $ref: ./paths/api_server_info.yaml
+  /api/server/users:
+    $ref: ./paths/api_server_users.yaml
+  /api/server/user:
+    $ref: ./paths/api_server_user.yaml
+  /api/server/reload:
+    $ref: ./paths/api_server_reload.yaml
+  /api/server/private_keys:
+    $ref: ./paths/api_server_private-keys.yaml
+  /api/system:
+    $ref: ./paths/api_system.yaml
+components:
+  securitySchemes:
+    PortalBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Portal access token. User transforms and configured policy decide roles. This is not
+        an OIDC access token.
+    PortalCookie:
+      type: apiKey
+      in: cookie
+      name: AUTHP_ACCESS_TOKEN
+      description: Default portal access-token cookie. Cookie name/prefix is configurable; use the deployment
+        name. Profile endpoints additionally require stored local session evidence.
+    RefreshCookie:
+      type: apiKey
+      in: cookie
+      name: AUTHP_REFRESH_TOKEN
+      description: Default portal refresh cookie; deployment prefix/name may differ. Browser POST also
+        requires Origin and X-Authcrunch-Refresh.
+    BasicLogin:
+      type: http
+      scheme: basic
+      description: Identity-store username/password for the direct Basic login route. Standard-Base64
+        encode the raw username:password pair; do not form-percent-encode it as for OAuth client Basic.
+        The first colon separates the username from the password, with no trimming.
+    OIDCClientBasic:
+      type: http
+      scheme: basic
+      description: Registered OAuth client ID and client secret; form-percent-encode each separately,
+        join with a colon, then standard-Base64 encode for HTTP Basic. The server form-decodes both values,
+        so a literal plus must be encoded as %2B. Use the registered authentication method. Duplicate
+        Authorization headers, a body client_secret alongside Basic (even empty), or a mismatching body
+        client_id fail. This is distinct from identity-store Basic login.
+    OIDCAccessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Opaque OIDC access credential from /oidc/token; not a portal JWT or ID token.
+    OIDCBrowserSession:
+      type: apiKey
+      in: cookie
+      name: AUTHP_OIDC_SESSION_ID
+      description: Server-set OP browser session. Configurable name/prefix. Cannot be replaced with a
+        portal access token.
+    OIDCPendingRequest:
+      type: apiKey
+      in: cookie
+      name: AUTHP_OIDC_REQUEST_ID
+      description: Server-set pending authorization credential. Configurable name/prefix.
+    CrossDeviceBinding:
+      type: apiKey
+      in: cookie
+      name: AUTHP_CROSS_DEVICE_SESSION_ID
+      description: Approving-browser binding cookie. Configurable name/prefix; form csrf must match.
+    SAMLBrowserBinding:
+      type: apiKey
+      in: cookie
+      name: AUTHP_SAML_SESSION_ID
+      description: Dedicated host-only SAML browser-binding cookie issued by portal-started login. The
+        name can be configured. Secure, HttpOnly, SameSite=None, Path=/, Max-Age=300; exactly one matching
+        cookie must return with the IdP POST. RelayState and the signed response are independently required.
+  headers:
+    NoStore:
+      $ref: ./components/headers/NoStore.yaml
+    NoCache:
+      $ref: ./components/headers/NoCache.yaml
+    NoSniff:
+      $ref: ./components/headers/NoSniff.yaml
+    OIDCNoReferrer:
+      $ref: ./components/headers/OIDCNoReferrer.yaml
+    FrameDeny:
+      $ref: ./components/headers/FrameDeny.yaml
+    OIDCResponseCSP:
+      $ref: ./components/headers/OIDCResponseCSP.yaml
+  schemas:
+    BcryptHash:
+      $ref: ./components/schemas/BcryptHash.yaml
+    Argon2Hash:
+      $ref: ./components/schemas/Argon2Hash.yaml
+    LoginEmptyField:
+      $ref: ./components/schemas/LoginEmptyField.yaml
+    LoginBlankField:
+      $ref: ./components/schemas/LoginBlankField.yaml
+    OIDCRefreshScope:
+      $ref: ./components/schemas/OIDCRefreshScope.yaml
+    OIDCRevocationRequest:
+      $ref: ./components/schemas/OIDCRevocationRequest.yaml
+    JWKUnsignedInteger:
+      $ref: ./components/schemas/JWKUnsignedInteger.yaml
+    OIDCJWKS:
+      $ref: ./components/schemas/OIDCJWKS.yaml
+    LocalAccountEmail:
+      $ref: ./components/schemas/LocalAccountEmail.yaml
+    LocalRoleInput:
+      $ref: ./components/schemas/LocalRoleInput.yaml
+    IdentityName:
+      $ref: ./components/schemas/IdentityName.yaml
+    IdentityEmail:
+      $ref: ./components/schemas/IdentityEmail.yaml
+    IdentityRole:
+      $ref: ./components/schemas/IdentityRole.yaml
+    WebAuthnAssertion:
+      $ref: ./components/schemas/WebAuthnAssertion.yaml
+    WebAuthnAssertionClientData:
+      $ref: ./components/schemas/WebAuthnAssertionClientData.yaml
+    LoginWebAuthnOptions:
+      $ref: ./components/schemas/LoginWebAuthnOptions.yaml
+    CrossDeviceUnavailable:
+      $ref: ./components/schemas/CrossDeviceUnavailable.yaml
+    CrossDeviceSlowDown:
+      $ref: ./components/schemas/CrossDeviceSlowDown.yaml
+    CrossDeviceCancelled:
+      $ref: ./components/schemas/CrossDeviceCancelled.yaml
+    CrossDeviceApproved:
+      $ref: ./components/schemas/CrossDeviceApproved.yaml
+    CrossDevicePending:
+      $ref: ./components/schemas/CrossDevicePending.yaml
+    OIDCIDTokenClaims:
+      $ref: ./components/schemas/OIDCIDTokenClaims.yaml
+    CredentialLifecycle:
+      $ref: ./components/schemas/CredentialLifecycle.yaml
+    CredentialTag:
+      $ref: ./components/schemas/CredentialTag.yaml
+    ProfileAPIKeyRecord:
+      $ref: ./components/schemas/ProfileAPIKeyRecord.yaml
+    ProfilePublicKeyRecord:
+      $ref: ./components/schemas/ProfilePublicKeyRecord.yaml
+    ProfileAuthenticatorRecord:
+      $ref: ./components/schemas/ProfileAuthenticatorRecord.yaml
+    UserMetadata:
+      $ref: ./components/schemas/UserMetadata.yaml
+    ProfileUserInfo:
+      $ref: ./components/schemas/ProfileUserInfo.yaml
+    ProfileDashboard:
+      $ref: ./components/schemas/ProfileDashboard.yaml
+    ProfileTOTPEnrollment:
+      $ref: ./components/schemas/ProfileTOTPEnrollment.yaml
+    ProfileDiagnostic:
+      $ref: ./components/schemas/ProfileDiagnostic.yaml
+    ProfileWebAuthnCreation:
+      $ref: ./components/schemas/ProfileWebAuthnCreation.yaml
+    ProfileWebAuthnVerification:
+      $ref: ./components/schemas/ProfileWebAuthnVerification.yaml
+    ProfileDebug:
+      $ref: ./components/schemas/ProfileDebug.yaml
+    IdentityAddress:
+      $ref: ./components/schemas/IdentityAddress.yaml
+    IdentityProfile:
+      $ref: ./components/schemas/IdentityProfile.yaml
+    IdentityPasswordRecord:
+      $ref: ./components/schemas/IdentityPasswordRecord.yaml
+    AdminUserRecord:
+      $ref: ./components/schemas/AdminUserRecord.yaml
+    AdminUserMutation:
+      $ref: ./components/schemas/AdminUserMutation.yaml
+    SystemEncryptedMessage:
+      $ref: ./components/schemas/SystemEncryptedMessage.yaml
+    SystemBasicAuthMessage:
+      $ref: ./components/schemas/SystemBasicAuthMessage.yaml
+    SystemAPIKeyAuthMessage:
+      $ref: ./components/schemas/SystemAPIKeyAuthMessage.yaml
+    SystemAuthResponseMessage:
+      $ref: ./components/schemas/SystemAuthResponseMessage.yaml
+    RegistrationRequest:
+      $ref: ./components/schemas/RegistrationRequest.yaml
+    OIDCOpaqueToken:
+      $ref: ./components/schemas/OIDCOpaqueToken.yaml
+    PortalSessionID:
+      $ref: ./components/schemas/PortalSessionID.yaml
+    PortalRefreshToken:
+      $ref: ./components/schemas/PortalRefreshToken.yaml
+    UnixTime:
+      $ref: ./components/schemas/UnixTime.yaml
+    PortalError:
+      $ref: ./components/schemas/PortalError.yaml
+    OAuthError:
+      $ref: ./components/schemas/OAuthError.yaml
+    LoginStart:
+      $ref: ./components/schemas/LoginStart.yaml
+    LoginChallenge:
+      $ref: ./components/schemas/LoginChallenge.yaml
+    APIKeyLogin:
+      $ref: ./components/schemas/APIKeyLogin.yaml
+    LoginRequest:
+      $ref: ./components/schemas/LoginRequest.yaml
+    LoginCheckpoint:
+      $ref: ./components/schemas/LoginCheckpoint.yaml
+    AccessLogin:
+      $ref: ./components/schemas/AccessLogin.yaml
+    BrowserRefresh:
+      $ref: ./components/schemas/BrowserRefresh.yaml
+    NativeRefresh:
+      $ref: ./components/schemas/NativeRefresh.yaml
+    LoginResult:
+      $ref: ./components/schemas/LoginResult.yaml
+    RefreshRequest:
+      $ref: ./components/schemas/RefreshRequest.yaml
+    RefreshResult:
+      $ref: ./components/schemas/RefreshResult.yaml
+    SessionResult:
+      $ref: ./components/schemas/SessionResult.yaml
+    LogoutResult:
+      $ref: ./components/schemas/LogoutResult.yaml
+    Claims:
+      $ref: ./components/schemas/Claims.yaml
+    PublicJWK:
+      $ref: ./components/schemas/PublicJWK.yaml
+    JWKS:
+      $ref: ./components/schemas/JWKS.yaml
+    ProfileFetchDebug:
+      $ref: ./components/schemas/ProfileFetchDebug.yaml
+    ProfileFetchUserDashboardData:
+      $ref: ./components/schemas/ProfileFetchUserDashboardData.yaml
+    ProfileFetchUserInfo:
+      $ref: ./components/schemas/ProfileFetchUserInfo.yaml
+    ProfileUpdateUserPassword:
+      $ref: ./components/schemas/ProfileUpdateUserPassword.yaml
+    ProfileFetchUserAuthChallenges:
+      $ref: ./components/schemas/ProfileFetchUserAuthChallenges.yaml
+    ProfileOverwriteUserAuthChallenges:
+      $ref: ./components/schemas/ProfileOverwriteUserAuthChallenges.yaml
+    ProfileFetchUserMultiFactorAuthenticators:
+      $ref: ./components/schemas/ProfileFetchUserMultiFactorAuthenticators.yaml
+    ProfileFetchUserMultiFactorAuthenticator:
+      $ref: ./components/schemas/ProfileFetchUserMultiFactorAuthenticator.yaml
+    ProfileDeleteUserMultiFactorAuthenticator:
+      $ref: ./components/schemas/ProfileDeleteUserMultiFactorAuthenticator.yaml
+    ProfileFetchUserAppMultiFactorAuthenticatorCode:
+      $ref: ./components/schemas/ProfileFetchUserAppMultiFactorAuthenticatorCode.yaml
+    ProfileTestUserAppMultiFactorAuthenticator:
+      $ref: ./components/schemas/ProfileTestUserAppMultiFactorAuthenticator.yaml
+    ProfileAddUserAppMultiFactorAuthenticator:
+      $ref: ./components/schemas/ProfileAddUserAppMultiFactorAuthenticator.yaml
+    ProfileTestUserAppTokenPasscode:
+      $ref: ./components/schemas/ProfileTestUserAppTokenPasscode.yaml
+    ProfileTestUserWebauthnToken:
+      $ref: ./components/schemas/ProfileTestUserWebauthnToken.yaml
+    ProfileFetchUserU2FRegParams:
+      $ref: ./components/schemas/ProfileFetchUserU2FRegParams.yaml
+    ProfileFetchUserU2FVerParams:
+      $ref: ./components/schemas/ProfileFetchUserU2FVerParams.yaml
+    ProfileTestUserU2FReg:
+      $ref: ./components/schemas/ProfileTestUserU2FReg.yaml
+    ProfileAddUserU2FToken:
+      $ref: ./components/schemas/ProfileAddUserU2FToken.yaml
+    ProfileFetchUserApiKeys:
+      $ref: ./components/schemas/ProfileFetchUserApiKeys.yaml
+    ProfileFetchUserApiKey:
+      $ref: ./components/schemas/ProfileFetchUserApiKey.yaml
+    ProfileDeleteUserApiKey:
+      $ref: ./components/schemas/ProfileDeleteUserApiKey.yaml
+    ProfileAddUserApiKey:
+      $ref: ./components/schemas/ProfileAddUserApiKey.yaml
+    ProfileTestUserApiKey:
+      $ref: ./components/schemas/ProfileTestUserApiKey.yaml
+    ProfileFetchUserSshKeys:
+      $ref: ./components/schemas/ProfileFetchUserSshKeys.yaml
+    ProfileFetchUserSshKey:
+      $ref: ./components/schemas/ProfileFetchUserSshKey.yaml
+    ProfileDeleteUserSshKey:
+      $ref: ./components/schemas/ProfileDeleteUserSshKey.yaml
+    ProfileAddUserSshKey:
+      $ref: ./components/schemas/ProfileAddUserSshKey.yaml
+    ProfileTestUserSshKey:
+      $ref: ./components/schemas/ProfileTestUserSshKey.yaml
+    ProfileFetchUserGpgKeys:
+      $ref: ./components/schemas/ProfileFetchUserGpgKeys.yaml
+    ProfileFetchUserGpgKey:
+      $ref: ./components/schemas/ProfileFetchUserGpgKey.yaml
+    ProfileDeleteUserGpgKey:
+      $ref: ./components/schemas/ProfileDeleteUserGpgKey.yaml
+    ProfileAddUserGpgKey:
+      $ref: ./components/schemas/ProfileAddUserGpgKey.yaml
+    ProfileTestUserGpgKey:
+      $ref: ./components/schemas/ProfileTestUserGpgKey.yaml
+    ProfileRequest:
+      $ref: ./components/schemas/ProfileRequest.yaml
+    ProfileResult:
+      $ref: ./components/schemas/ProfileResult.yaml
+    RealmQuery:
+      $ref: ./components/schemas/RealmQuery.yaml
+    RealmEntry:
+      $ref: ./components/schemas/RealmEntry.yaml
+    RealmsResult:
+      $ref: ./components/schemas/RealmsResult.yaml
+    RealmRequest:
+      $ref: ./components/schemas/RealmRequest.yaml
+    ReloadRequest:
+      $ref: ./components/schemas/ReloadRequest.yaml
+    UsersResult:
+      $ref: ./components/schemas/UsersResult.yaml
+    RealmInfo:
+      $ref: ./components/schemas/RealmInfo.yaml
+    AdminMetadata:
+      $ref: ./components/schemas/AdminMetadata.yaml
+    ReloadResult:
+      $ref: ./components/schemas/ReloadResult.yaml
+    AdminUserInfo:
+      $ref: ./components/schemas/AdminUserInfo.yaml
+    AdminUserAdd:
+      $ref: ./components/schemas/AdminUserAdd.yaml
+    AdminUserDelete:
+      $ref: ./components/schemas/AdminUserDelete.yaml
+    AdminUserDisable:
+      $ref: ./components/schemas/AdminUserDisable.yaml
+    AdminUserEnable:
+      $ref: ./components/schemas/AdminUserEnable.yaml
+    AdminUserResetPassword:
+      $ref: ./components/schemas/AdminUserResetPassword.yaml
+    AdminUserOverwriteRoles:
+      $ref: ./components/schemas/AdminUserOverwriteRoles.yaml
+    AdminUserAddRoles:
+      $ref: ./components/schemas/AdminUserAddRoles.yaml
+    AdminUserOverwriteAuthChallenges:
+      $ref: ./components/schemas/AdminUserOverwriteAuthChallenges.yaml
+    AdminUserRequest:
+      $ref: ./components/schemas/AdminUserRequest.yaml
+    AdminUserResult:
+      $ref: ./components/schemas/AdminUserResult.yaml
+    PrivateKeyExport:
+      $ref: ./components/schemas/PrivateKeyExport.yaml
+    PrivateJWK:
+      $ref: ./components/schemas/PrivateJWK.yaml
+    SystemError:
+      $ref: ./components/schemas/SystemError.yaml
+    OIDCDiscovery:
+      $ref: ./components/schemas/OIDCDiscovery.yaml
+    OIDCTokens:
+      $ref: ./components/schemas/OIDCTokens.yaml
+    OIDCUserInfo:
+      $ref: ./components/schemas/OIDCUserInfo.yaml
+    OIDCAuthorizationRequest:
+      $ref: ./components/schemas/OIDCAuthorizationRequest.yaml
+    OIDCCodeExchange:
+      $ref: ./components/schemas/OIDCCodeExchange.yaml
+    OIDCRefreshExchange:
+      $ref: ./components/schemas/OIDCRefreshExchange.yaml
+    OIDCTokenRequest:
+      $ref: ./components/schemas/OIDCTokenRequest.yaml
+    CrossDeviceStart:
+      $ref: ./components/schemas/CrossDeviceStart.yaml
+    CrossDeviceStatus:
+      $ref: ./components/schemas/CrossDeviceStatus.yaml
+    OIDCClaimRequirement:
+      $ref: ./components/schemas/OIDCClaimRequirement.yaml
+    OIDCIdentityClaimRequirement:
+      $ref: ./components/schemas/OIDCIdentityClaimRequirement.yaml
+    OIDCClaimsMap:
+      $ref: ./components/schemas/OIDCClaimsMap.yaml
+    OIDCClaimsRequest:
+      $ref: ./components/schemas/OIDCClaimsRequest.yaml
+    OIDCRequestObjectHeader:
+      $ref: ./components/schemas/OIDCRequestObjectHeader.yaml
+    SAMLRelayState:
+      $ref: ./components/schemas/SAMLRelayState.yaml
+    SAMLCallback:
+      $ref: ./components/schemas/SAMLCallback.yaml
+    OIDCRequestObjectPayload:
+      $ref: ./components/schemas/OIDCRequestObjectPayload.yaml
+  responses:
+    PortalError:
+      $ref: ./components/responses/PortalError.yaml
+    OAuthError:
+      $ref: ./components/responses/OAuthError.yaml
+    HTML:
+      $ref: ./components/responses/HTML.yaml
+    Redirect:
+      $ref: ./components/responses/Redirect.yaml
+    PlainError:
+      $ref: ./components/responses/PlainError.yaml
+    OIDCPostOnly:
+      $ref: ./components/responses/OIDCPostOnly.yaml
+    OIDCUnavailable:
+      $ref: ./components/responses/OIDCUnavailable.yaml
+    OIDCInvalidRequest:
+      $ref: ./components/responses/OIDCInvalidRequest.yaml
+    OIDCCORSForbidden:
+      $ref: ./components/responses/OIDCCORSForbidden.yaml
+    OIDCGetPostOnly:
+      $ref: ./components/responses/OIDCGetPostOnly.yaml
+    OIDCGetHeadOnly:
+      $ref: ./components/responses/OIDCGetHeadOnly.yaml
+x-contract-scope:
+  authority: Local AuthCrunch implementation; see reviewed-sources.yaml.
+  excluded:
+  - Host-server administrative configuration API
+  - Static assets, favicon and theme-specific HTML profile pages
+  - QR/barcode image helpers and mobile-access presentation
+  - Unimplemented password recovery and SSO assume-role branches
+  - Provider-specific external HTTP endpoints not hosted by AuthCrunch
+  - Arbitrary protected application resources

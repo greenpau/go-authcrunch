@@ -5,6 +5,8 @@ description: Require corresponding tests for every Go code change, E2E coverage 
 
 # Testing and CI
 
+Use [openapi-generation](../openapi-generation/SKILL.md) to validate YAML/examples, generator/server units, native HTTP contracts and real Scalar browser journeys after API changes.
+
 ## Corresponding Tests
 
 Every Go code change must have corresponding automated tests. Identify the
@@ -147,8 +149,9 @@ defines consent/continuation assertions, browser isolation, and screenshot captu
 Loopback `httptest` listeners are expected.
 
 Go package discovery does not honor `.gitignore`. Keep incomplete Go scratch
-files under `tmp/` as `.go.txt` or inside a dot-prefixed directory; a standalone
-`.go` snapshot can make `go test ./...` build an unintended, broken package.
+files under `tmp/` as `.go.txt`, inside a dot- or underscore-prefixed directory,
+or behind a nested `go.mod` for an independent snapshot. A standalone `.go`
+snapshot can make `go test ./...` build an unintended, broken package.
 Use `go list -mod=readonly ./...` to inspect discovery when temporary artifacts
 are involved. Preserve diagnostic snapshots and failed-run evidence when fixing
 this problem; do not exclude real repository packages or weaken the test gate.

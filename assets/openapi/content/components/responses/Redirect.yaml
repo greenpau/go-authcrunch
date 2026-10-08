@@ -1,0 +1,17 @@
+description: Browser redirect. Follow Location with the browser cookie jar. Some handlers include a short
+  HTML link body; others send an empty body without Content-Type. The Location header owns the destination.
+content:
+  text/html:
+    schema:
+      type: string
+      description: Optional minimal HTML redirect page. Its link matches Location; this is not a JSON response.
+headers:
+  Location:
+    schema:
+      type: string
+    description: Server-selected destination. Browser flows retain their cookie jar.
+  Cache-Control:
+    schema:
+      type: string
+      const: no-store
+    description: Do not store credentials or protocol responses.

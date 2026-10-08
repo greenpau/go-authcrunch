@@ -7,6 +7,7 @@ GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 BUILD_USER := $(shell whoami)
 BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 PYTHON ?= python3
+OPENAPI_ADDR ?= 127.0.0.1:8080
 TEST ?= .
 TEST_DIR ?= ./...
 # Aggregate package budget for race-enabled real-login tests.
@@ -100,6 +101,27 @@ test-ui:
 test-automation:
 	@$(PYTHON) -m unittest discover -s assets/scripts/tests -p '*_test.py' -v
 
+.PHONY: openapi openapi-artifact serve-openapi openapi-check openapi-test openapi-browser-test
+openapi:
+	@go run -mod=readonly ./cmd/openapi generate
+
+openapi-artifact:
+	@go run -mod=readonly ./cmd/openapi artifact
+
+serve-openapi:
+	@go run -mod=readonly ./cmd/openapi -listen "$(OPENAPI_ADDR)" serve
+
+openapi-check:
+	@go run -mod=readonly ./cmd/openapi check
+
+openapi-test:
+	@$(MAKE) test TEST_DIR='./internal/openapi ./cmd/openapi' TEST='.' COVERAGE_DIR="$(COVERAGE_DIR)/openapi-tools"
+	@$(MAKE) test TEST_DIR='. ./pkg/authn' TEST='^TestE2EOpenAPIContract' COVERAGE_DIR="$(COVERAGE_DIR)/openapi-contracts"
+	@node --test assets/scripts/tests/openapi_scalar_test.mjs
+
+openapi-browser-test:
+	@COVERAGE_DIR="$(COVERAGE_DIR)/openapi-browser" $(PYTHON) assets/scripts/test_guard.py run node --test assets/scripts/tests/openapi_browser_test.mjs
+
 test-codeql:
 	@$(PYTHON) .github/codeql/test_scan.py
 
@@ -112,6 +134,9 @@ brand-assets-check:
 # Actions runs these gates on a separate runner from each Go test shard.
 ci-quality:
 	@$(MAKE) version-check
+	@$(MAKE) openapi
+	@$(MAKE) openapi-check
+	@node --test assets/scripts/tests/openapi_scalar_test.mjs
 	@$(MAKE) brand-assets-check
 	@$(MAKE) test-automation
 	@$(MAKE) linter

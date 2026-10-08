@@ -1,0 +1,21 @@
+type: object
+required:
+- kind
+- id
+properties:
+  kind:
+    type: string
+    const: delete_user_api_key
+    description: Profile action discriminator; selects this payload and response behavior.
+  id:
+    type: string
+    description: Exact owned API-key record ID returned by fetch_user_api_keys; normally 40 ASCII letters/digits.
+      It is neither the 24-character lookup prefix nor the raw secret. No whitespace trimming or cross-account
+      lookup is performed.
+description: Delete the owned API-key record and its prefix index; entry is the removed ID. Missing/foreign
+  IDs return HTTP 500. Subsequent login with that raw key fails. Deletion does not revoke an already issued
+  stateless access JWT; ordinary token expiry and authorization policy still apply.
+additionalProperties: true
+x-source-files:
+- pkg/identity/database.go
+- pkg/identity/user.go

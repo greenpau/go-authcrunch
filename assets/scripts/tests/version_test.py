@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'version.py'
@@ -18,6 +19,9 @@ class VersionTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         (self.root / 'VERSION').write_text('1.1.41\n')
+        api = self.root / 'assets/openapi/content/openapi.yaml'
+        api.parent.mkdir(parents=True, exist_ok=True)
+        api.write_text('openapi: 3.1.1\ninfo:\n  title: Fixture\n  version: 1.1.41\n  description: Fixture API\n')
         for target in version.TARGETS:
             path = self.root / target
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -53,6 +57,29 @@ class VersionTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 version.check_version(self.root)
             path.write_text(baseline)
+
+    def test_openapi_projection_check_and_sync(self):
+        api = self.root / version.OPENAPI_SOURCE
+        original = api.read_bytes()
+        api.write_bytes(original.replace(b'1.1.41', b'1.1.40'))
+        with self.assertRaisesRegex(ValueError, 'OpenAPI info.version'):
+            version.check_version(self.root)
+        with patch.object(version.subprocess, 'run') as run:
+            self.assertEqual(version.sync_version(self.root), '1.1.41')
+            self.assertEqual(run.call_count, len(version.TARGETS))
+        self.assertEqual(api.read_bytes(), original)
+
+    def test_ambiguous_openapi_fails_before_go_sync(self):
+        api = self.root / version.OPENAPI_SOURCE
+        original = api.read_bytes()
+        for malformed in (original + b'---\n{}\n', original.replace(b'  version:', b'  "version":'),
+                          original.replace(b'  version: 1.1.41', b'  version: 1.1.41\n  version: 1.1.41')):
+            api.write_bytes(malformed)
+            with patch.object(version.subprocess, 'run') as run, self.assertRaises(ValueError):
+                version.sync_version(self.root)
+            run.assert_not_called()
+            self.assertEqual(api.read_bytes(), malformed)
+        api.write_bytes(original)
 
     def test_patch_and_minor_arithmetic(self):
         self.assertEqual(version.next_version('1.1.41', 'patch'), '1.1.42')

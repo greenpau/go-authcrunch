@@ -1,0 +1,96 @@
+type: object
+required:
+- sub
+properties:
+  sub:
+    type: string
+    description: Stable subject from the verified local identity, always returned. Public subject semantics
+      apply; it is not a caller-supplied profile selector.
+  name:
+    type: string
+    description: Display name disclosed by granted profile scope or a permitted claims request.
+  email:
+    type: string
+    description: Email address disclosed by granted email scope or a permitted claims request.
+  email_verified:
+    type: boolean
+    description: Whether the identity source has verified the email address; it is not inferred merely
+      from an email value.
+  preferred_username:
+    type: string
+    description: Preferred login/display handle from the current identity.
+  given_name:
+    type: string
+    description: Given name from the current identity.
+  family_name:
+    type: string
+    description: Family name from the current identity.
+  auth_time:
+    $ref: UnixTime.yaml
+    description: Time of the end-user authentication that established this OP session; refresh does not
+      turn it into a new login time. Whole seconds since 1970-01-01T00:00:00Z (UTC), excluding leap seconds;
+      a Unix timestamp, not milliseconds or an ISO date string.
+  amr:
+    type: array
+    items:
+      type: string
+    description: Verified completed authentication-method references from this OP browser session (for
+      example pwd and otp).
+  acr:
+    type: string
+    description: Configured authentication-context value satisfied by the session’s verified methods.
+  middle_name:
+    type: string
+    description: Middle name.
+  nickname:
+    type: string
+    description: Casual/display name.
+  profile:
+    type: string
+    description: Profile-page URL supplied by the identity source.
+  picture:
+    type: string
+    description: Profile image URL supplied by the identity source.
+  website:
+    type: string
+    description: Website URL supplied by the identity source.
+  gender:
+    type: string
+    description: Self-described gender; no fixed enum.
+  birthdate:
+    type: string
+    description: Birthdate representation supplied by the identity source. The typed model does not enforce
+      a full-date pattern or disallow partial dates.
+  zoneinfo:
+    type: string
+    description: Time-zone name supplied by the identity source, conventionally an IANA zone such as America/New_York;
+      no zone validator is applied here.
+  locale:
+    type: string
+    description: Locale tag supplied by the identity source; no language-tag validator is applied here.
+  phone_number:
+    type: string
+    description: Phone number supplied by the identity source; no universal E.164 validator is applied
+      here.
+  phone_number_verified:
+    type: boolean
+    description: Explicit phone-verification state; omission differs from false. UserInfo suppresses it
+      when phone_number is empty.
+  updated_at:
+    $ref: UnixTime.yaml
+    description: Last update to the identity profile in Unix seconds. Zero is omitted; this is not token
+      issuance or authentication time.
+  address:
+    $ref: IdentityAddress.yaml
+additionalProperties: true
+description: Claims selected by granted scopes, requested claims and current identity. UserInfo does not
+  authenticate a portal JWT or browser cookie. profile scope selects profile/name/locale attributes; email,
+  address and phone each select their corresponding fields. Missing/empty source values remain omitted.
+  Requested claims remain limited to the client’s registered scopes. Explicit claim requests remain
+  attached to the grant after refresh scope narrowing; their allowed values can still be disclosed
+  even when the corresponding scope was removed. The stable sub remains present even if openid was
+  removed from an existing grant.
+x-source-files:
+- pkg/oidc/token.go
+- pkg/oidc/claims.go
+- pkg/oidc/identity.go

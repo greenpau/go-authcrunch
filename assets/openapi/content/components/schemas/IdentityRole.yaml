@@ -1,0 +1,13 @@
+type: object
+description: Stored role object, unlike the string roles in claims/list results. Empty name and organization
+  are omitted; / can therefore serialize as {}. The first slash in an input role separates organization,
+  with all later slashes retained in name. Case is preserved.
+properties:
+  name:
+    type: string
+    description: Role name.
+  organization:
+    type: string
+    description: Optional role organization prefix.
+x-source-files:
+- pkg/identity/role.go

@@ -5,6 +5,8 @@ description: Maintain AuthCrunch VERSION authority, versioned synchronization, p
 
 # Release and Versioning
 
+Use [openapi-generation](../openapi-generation/SKILL.md) to maintain the `VERSION` projection in `assets/openapi/content/openapi.yaml` and its release coverage.
+
 ## Authority and Projections
 
 `VERSION` is exactly `1.<minor>.<patch>`, optionally terminated by one newline,
@@ -14,9 +16,11 @@ feature does not itself authorize bumping or publishing a release.
 
 `assets/scripts/version.py` validates that namespace and the fallback metadata
 in `cmd/authdb/main.go`, `cmd/authdbctl/main.go`, and
-`pkg/identity/database.go`. `make version-check`
+`pkg/identity/database.go`, plus OpenAPI `info.version` in
+`assets/openapi/content/openapi.yaml`. `make version-check`
 is read-only. `make version-sync` invokes the pinned `go tool versioned
--release -sync` for all projections, then checks them. Committed branch/commit
+-release -sync` for Go projections, updates the validated YAML version literal, then checks
+all projections. YAML is validated before invoking the Go synchronizer. Committed branch/commit
 fallbacks are empty; actual build metadata comes from linker flags. Ordinary
 builds/tests never synchronize source or run `go mod tidy` implicitly.
 
@@ -39,7 +43,10 @@ available evidence, including failures, with a `_shard_<name>` suffix. The final
 required check verifies and combines successful shards into the complete ignored
 `.coverage/` bundle as `go-authcrunch_coverage_<artifact-id>`. Partial reruns replace
 only their shard artifact under the shared identity. Coverage is a workflow
-diagnostic artifact, separate from published distributions.
+diagnostic artifact, separate from published distributions. The quality job also
+uploads `go-authcrunch_openapi_<artifact-id>` containing standalone JSON and YAML
+specifications, using the same shared identity. OpenAPI exports follow the
+`openapi-generation` contract and remain separate from coverage and releases.
 
 The test workflow first runs `assets/scripts/select_ci_tests.py`. A `push` to
 `refs/heads/main` delegates validation to a release tag only when version

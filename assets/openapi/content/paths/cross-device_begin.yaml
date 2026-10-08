@@ -1,0 +1,125 @@
+post:
+  operationId: crossDeviceBegin
+  tags:
+  - Cross-Device Sign-In
+  summary: Start fresh login for cross-device approval
+  description: 'Requires explicitly enabled cross-device login and HTTPS. This browser-bound transfer
+    is not the OAuth Device Authorization Grant. The QR/activation link contains only the code; the requester
+    retains its secret. POSTs require the exact same-origin Origin and form encoding, at most 4096 bytes,
+    without repeated body fields. Fresh login on the approving browser and a separate approve decision
+    are required. All responses are no-store.
+
+
+    Checks the activation code and CSRF/binding cookie, deletes existing authentication cookies, and redirects
+    to login?fresh=1. Content-Type parameters such as charset=utf-8 are accepted. Form fields are read
+    from the body, without trimming; query fields cannot supply code, secret or csrf. Repeated body fields
+    fail, including unrecognized fields.'
+  security:
+  - CrossDeviceBinding: []
+  responses:
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      description: Malformed form encoding, missing/malformed Content-Type, or repeated body fields.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '403':
+      description: HTTPS origin, browser fetch context, or required approving-browser binding/CSRF check
+        failed.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '404':
+      $ref: ../components/responses/PlainError.yaml
+    '405':
+      description: Method not supported at this exact endpoint; see Allow.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+        Allow:
+          schema:
+            type: string
+            const: POST
+          description: Methods accepted at this endpoint.
+    '413':
+      description: URL-encoded form body exceeds 4096 bytes.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '415':
+      description: Content-Type is not application/x-www-form-urlencoded.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+  x-source-files:
+  - pkg/authn/cross_device_http.go
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          required:
+          - code
+          - csrf
+          properties:
+            code:
+              type: string
+              minLength: 26
+              maxLength: 26
+              pattern: ^[A-Z2-7]{26}$
+              description: Activation code from start; bound to this origin and portal mount.
+            csrf:
+              type: string
+              writeOnly: true
+              description: Exact approving-browser binding credential from the rendered form and its cookie;
+                keep the cookie jar.
+              minLength: 26
+              maxLength: 26
+              pattern: ^[A-Z2-7]{26}$
+    x-maxBytes: 4096
+  parameters:
+  - name: Origin
+    in: header
+    description: Exact HTTPS portal origin.
+    required: true
+    schema:
+      type: string
+      description: Exact HTTPS portal origin. Compare scheme, host and port exactly; a path or trailing
+        slash is not part of an origin.

@@ -1,0 +1,4 @@
+description: Do not send this protocol URL as a referrer.
+schema:
+  type: string
+  const: no-referrer

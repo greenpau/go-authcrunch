@@ -92,11 +92,22 @@ jobs:
       - name: Run repository quality gates
         id: tests
         run: make ci-quality
+      - name: Build OpenAPI specification artifact
+        id: openapi
+        run: make openapi-artifact
       - name: Verify validation did not modify source
         if: ${{ always() && steps.tests.outcome != 'skipped' }}
         run: |
           git diff --exit-code
           test -z "$(git ls-files --others --exclude-standard)"
+      - name: Upload OpenAPI specification
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: go-authcrunch_openapi_${{ needs.selection.outputs.artifact_id }}
+          path: assets/openapi/generated/artifact/
+          if-no-files-found: error
+          retention-days: 14
+          overwrite: true
   go:
     name: Go tests (${{ matrix.shard }})
     needs: selection

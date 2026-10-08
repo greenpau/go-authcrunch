@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>AuthCrunch HTTP API</title>
+    <style>
+      html, body { min-height: 100%; margin: 0; }
+      /* Scalar positions heading-link buttons outside the text flow. Reserve
+         their hit area so wrapped headings cannot widen the mobile viewport. */
+      #app .group\/heading > span:has(> button[aria-describedby]) {
+        display: inline-block;
+        width: 30px;
+      }
+      #app:empty::before {
+        display: block;
+        padding: 2rem;
+        color: CanvasText;
+        font: 1rem/1.5 system-ui, sans-serif;
+        content: "Loading AuthCrunch API reference\2026";
+      }
+      .scalar-load-error {
+        max-width: 48rem;
+        margin: 4rem auto;
+        padding: 0 2rem;
+        color: CanvasText;
+        font: 1rem/1.5 system-ui, sans-serif;
+      }
+    </style>
+    <script src="./scalar.js?v=14cdff489919" defer></script>
+  </head>
+  <body>
+    <main id="app" aria-label="AuthCrunch HTTP API reference"></main>
+    <noscript>
+      <p class="scalar-load-error">JavaScript is required to render this API reference.</p>
+    </noscript>
+  </body>
+</html>

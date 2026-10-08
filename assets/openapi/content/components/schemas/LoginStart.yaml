@@ -1,0 +1,49 @@
+type: object
+required:
+- username
+- realm
+properties:
+  username:
+    type: string
+    description: Login handle or email interpreted by the selected store. Leading/trailing whitespace
+      is trimmed; the result must be nonempty. Registration-only username rules do not apply to LDAP/provider
+      identities.
+    minLength: 1
+    examples:
+    - alice
+    pattern: "[^\\t\\n\\v\\f\\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]"
+  realm:
+    type: string
+    description: Enabled identity-store realm. Leading/trailing whitespace is trimmed; the result must
+      be nonempty and select a configured store.
+    minLength: 1
+    examples:
+    - local
+    pattern: "[^\\t\\n\\v\\f\\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]"
+  refresh_transport:
+    type:
+    - string
+    - 'null'
+    enum:
+    - ''
+    - cookie
+    - body
+    - null
+    default: cookie
+    description: cookie (also selected for an omitted or empty value) uses the browser transport; body
+      requires native transport enabled and must be repeated at every checkpoint. Body clients omit Cookie,
+      Origin and Sec-Fetch headers. JSON null has the same default as omission.
+  api_key:
+    $ref: LoginEmptyField.yaml
+  sandbox_id:
+    $ref: LoginBlankField.yaml
+  sandbox_secret:
+    $ref: LoginEmptyField.yaml
+  challenge_kind:
+    $ref: LoginEmptyField.yaml
+  challenge_response:
+    $ref: LoginBlankField.yaml
+additionalProperties: false
+x-source-files:
+- pkg/apiauth/auth_request.go
+- pkg/authn/handle_json_login.go

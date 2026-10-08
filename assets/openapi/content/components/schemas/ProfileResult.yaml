@@ -1,0 +1,89 @@
+type: object
+required:
+- status
+- timestamp
+properties:
+  status:
+    type: integer
+    description: HTTP status mirrored in the profile response.
+    minimum: 100
+    maximum: 599
+  timestamp:
+    type: string
+    format: date-time
+    description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
+      This is a date-time string, not Unix seconds.
+    readOnly: true
+  message:
+    description: Usually human-readable text. Some WebAuthn preparation failures assign a Go error value
+      directly, which serializes as an empty object {}; use HTTP status rather than parsing this field.
+    oneOf:
+    - type: string
+    - type: object
+      maxProperties: 0
+  entry:
+    description: Value selected by request kind; the response does not repeat that discriminator. See
+      the named variants. Add returns Created; password update returns Updated; API-key test returns OK;
+      delete returns the removed record ID.
+    anyOf:
+    - type: string
+      description: Mutation acknowledgement or deleted credential ID.
+    - $ref: ProfileAPIKeyRecord.yaml
+    - $ref: ProfilePublicKeyRecord.yaml
+    - $ref: ProfileAuthenticatorRecord.yaml
+    - $ref: ProfileUserInfo.yaml
+    - $ref: ProfileDashboard.yaml
+    - $ref: ProfileTOTPEnrollment.yaml
+    - $ref: ProfileDiagnostic.yaml
+    - $ref: ProfileWebAuthnCreation.yaml
+    - $ref: ProfileWebAuthnVerification.yaml
+    - $ref: ProfileDebug.yaml
+  entries:
+    type: array
+    items:
+      anyOf:
+      - $ref: ProfileAPIKeyRecord.yaml
+      - $ref: ProfilePublicKeyRecord.yaml
+      - $ref: ProfileAuthenticatorRecord.yaml
+      - type: string
+        description: Canonical authentication-challenge rule body.
+    description: Owned keys/authenticators or stored challenge-rule strings, selected by request kind.
+      Individual records depend on the selected kind; absent optional fields follow the credential serializer.
+  registered_methods:
+    type: array
+    items:
+      type: string
+      enum:
+      - password
+      - totp
+      - u2f
+    description: Enabled credential types currently registered on the local account, such as password,
+      totp and u2f. Availability does not prove successful authentication.
+    uniqueItems: true
+  effective_challenges:
+    type: array
+    items:
+      type: string
+    description: Ordered checkpoint types selected by the combined stored-account and portal policy for
+      a fresh login from this request context.
+  additional_challenges:
+    type: array
+    items:
+      type: string
+    description: Portal-added checkpoint types beyond the selected base policy.
+  policy_source:
+    type: string
+    enum:
+    - default
+    - user
+    - portal
+    description: 'Source of the selected base flow: built-in default, user-stored rules, or portal replacement.'
+  reauthentication_required:
+    type: boolean
+    description: True after a successful policy replacement that invalidates current login evidence. Start
+      fresh authentication instead of retrying with the old token.
+additionalProperties: true
+x-source-files:
+- pkg/authn/handle_api_profile.go
+- pkg/authn/profile_auth_challenges.go
+- pkg/authn/api_fetch_user_uni_sec_factor_ver_params.go

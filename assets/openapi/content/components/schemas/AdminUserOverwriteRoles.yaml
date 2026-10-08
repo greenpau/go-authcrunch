@@ -1,0 +1,51 @@
+type: object
+required:
+- realm
+- operation
+- user
+properties:
+  realm:
+    type: string
+    description: Exact enabled identity-store realm. Unknown realms currently return JSON null; they do
+      not create a new store.
+    minLength: 1
+  operation:
+    type: string
+    const: overwrite_roles
+    description: Administrative account action selecting this payload.
+  user:
+    type: object
+    required:
+    - username
+    - email
+    - roles
+    properties:
+      username:
+        type: string
+        description: Existing local account username. Lookup is case-insensitive but does not trim whitespace,
+          and rejects fewer than two UTF-8 bytes. Must select the same account as email.
+        minLength: 1
+      email:
+        type: string
+        description: Existing local account email selector. Case-insensitive lookup without whitespace
+          trimming; fewer than six UTF-8 bytes fail even if the address passed creation syntax. Any indexed
+          address may select the account, but username and email must resolve to the same account.
+        minLength: 1
+      roles:
+        type: array
+        items:
+          $ref: LocalRoleInput.yaml
+        minItems: 1
+        description: 'At least one role string is required. LocalRoleInput describes successful local
+          validation. The decoder ignores non-string array members, but clients should send only strings.
+          Duplicate normalized roles are ignored, not rejected. add_roles preserves existing roles; overwrite_roles
+          replaces them. Validate every role before mutation: a later invalid role can leave earlier in-memory
+          changes even when status=failure.'
+    description: Account selector and operation inputs. username and email must identify the same local
+      account for existing-account actions.
+x-source-files:
+- pkg/authn/handle_api_crud_user.go
+- pkg/ids/local/store.go
+- pkg/identity/database.go
+- pkg/identity/role.go
+- pkg/identity/user.go

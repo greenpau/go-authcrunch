@@ -1,0 +1,41 @@
+type: object
+required:
+- realm
+- api_key
+properties:
+  realm:
+    type: string
+    description: Enabled identity-store realm; trimmed and required to be nonempty.
+    minLength: 1
+    pattern: "[^\\t\\n\\v\\f\\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]"
+  api_key:
+    type: string
+    writeOnly: true
+    description: Raw account API key, preserved without trimming, not its stored bcrypt hash. Local lookup
+      requires 64–72 bytes and verifies the stored bcrypt hash; the profile enrollment API separately
+      requires ASCII letters/digits. Other enabled stores own their credential rules. Cannot be combined
+      with a nonempty username or sandbox challenge.
+    minLength: 1
+  refresh_transport:
+    type:
+    - string
+    - 'null'
+    description: API-key login is access-only; omitted/empty selects cookie. Native body refresh is rejected.
+      JSON null has the same default as omission.
+    enum:
+    - ''
+    - cookie
+    - null
+  username:
+    $ref: LoginBlankField.yaml
+  sandbox_id:
+    $ref: LoginBlankField.yaml
+  sandbox_secret:
+    $ref: LoginEmptyField.yaml
+  challenge_kind:
+    $ref: LoginEmptyField.yaml
+  challenge_response:
+    $ref: LoginBlankField.yaml
+additionalProperties: false
+x-source-files:
+- pkg/apiauth/auth_request.go

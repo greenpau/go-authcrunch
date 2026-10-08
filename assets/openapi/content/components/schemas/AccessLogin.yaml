@@ -1,0 +1,21 @@
+type: object
+required:
+- authenticated
+- access_token
+- access_token_name
+properties:
+  authenticated:
+    type: boolean
+    description: Successful access-only authentication indicator.
+    const: true
+  access_token:
+    type: string
+    description: Signed portal access credential. Use the configured bearer/cookie transport; its lifetime
+      and claims follow portal crypto and transform configuration. Keep secret.
+    minLength: 1
+  access_token_name:
+    type: string
+    description: Configured access-token cookie name, including any configured prefix; do not hard-code
+      a default name.
+    minLength: 1
+additionalProperties: false

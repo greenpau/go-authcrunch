@@ -1,0 +1,12 @@
+description: Portal error. The HTTP status is authoritative; the error property is a boolean, unlike OAuth
+  errors.
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/PortalError.yaml
+headers:
+  Cache-Control:
+    schema:
+      type: string
+      const: no-store
+    description: Do not store credentials or protocol responses.

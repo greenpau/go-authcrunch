@@ -1,0 +1,13 @@
+oneOf:
+- $ref: LoginStart.yaml
+- $ref: LoginChallenge.yaml
+- $ref: APIKeyLogin.yaml
+description: Canonical JSON login variants. Unknown fields in the decoded object fail. The decoder reads
+  one value through a 1024-byte limited reader; it does not require EOF or reject unread trailing data.
+  Field names also accept Go case-insensitive matching, repeated string fields take the last non-null
+  value, and null leaves an existing string unchanged. Use the canonical names and one complete object.
+  Blank optional fields do not select a challenge or API-key mode; nonblank values must satisfy that complete
+  variant. Body size, duplicate member ordering and case aliases are decoder rules beyond JSON Schema
+  object validation.
+x-source-files:
+- pkg/apiauth/auth_request.go

@@ -1,0 +1,15 @@
+type: object
+description: Requester cancellation succeeded. Cancelling again returns 410 unavailable; it is not an
+  idempotent success.
+required:
+- status
+properties:
+  status:
+    type: string
+    description: Requester cancellation succeeded. Cancelling again returns 410 unavailable; it is not
+      an idempotent success.
+    const: cancelled
+additionalProperties: false
+x-source-files:
+- pkg/authn/cross_device_http.go
+- pkg/authn/cross_device_store.go

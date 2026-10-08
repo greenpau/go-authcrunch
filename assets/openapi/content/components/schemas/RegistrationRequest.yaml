@@ -1,0 +1,54 @@
+type: object
+required:
+- registrant
+- registrant_password
+- registrant_email
+properties:
+  registrant:
+    type: string
+    description: 'Requested handle, nonempty and at most 25 UTF-8 bytes. The character check is case-insensitive:
+      ASCII letters/digits plus İ and K (which fold to ASCII) are accepted. The form does not trim input.
+      Prefer ASCII for interoperability; backend policy can be stricter.'
+    pattern: ^[A-Za-z0-9İK]{1,25}$
+    minLength: 1
+    maxLength: 25
+    examples:
+    - alice
+    x-maxBytes: 25
+  registrant_password:
+    type: string
+    description: 'Raw requested password. Required and at most 255 bytes; bcrypt:/argon2: serialized hash
+      imports are rejected after whitespace trimming. Registration acceptance is not account activation
+      or proof that the eventual database password policy is satisfied.'
+    minLength: 1
+    maxLength: 255
+    writeOnly: true
+    not:
+      pattern: "^[\\t\\n\\v\\f\\r \N   - \L\P  　]*(?:bcrypt:|argon2:)"
+    x-maxBytes: 255
+  registrant_email:
+    type: string
+    description: Requested email address. Checked with the registration email regex, plus optional domain
+      allow/deny and MX checks. The selected implementation has no effective overall email-length check;
+      no universal 254-character maximum is claimed.
+    pattern: ^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$
+    examples:
+    - alice@example.test
+  registrant_code:
+    type: string
+    description: Exact configured registry invitation/verification code, required only when the registry
+      has one. This differs from the emailed registration_code used later for acknowledgement.
+    writeOnly: true
+  accept_terms:
+    type: string
+    description: Checkbox value on is required when the registry requires terms acceptance. Omission/other
+      values do not accept the terms; they are ignored when terms acceptance is not required.
+    examples:
+    - 'on'
+description: Browser registration form. Registry configuration adds domain/MX, invitation-code and terms
+  requirements. Validation errors render HTML and may still have HTTP 200.
+x-source-files:
+- pkg/authn/handle_register.go
+- pkg/authn/validators/user_input.go
+- pkg/registry/domain_restriction_ruleset.go
+- pkg/util/charset/utils.go

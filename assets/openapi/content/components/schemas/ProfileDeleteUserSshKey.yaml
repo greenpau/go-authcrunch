@@ -1,0 +1,23 @@
+type: object
+required:
+- kind
+- id
+properties:
+  kind:
+    type: string
+    const: delete_user_ssh_key
+    description: Profile action discriminator; selects this payload and response behavior.
+  id:
+    type: string
+    description: Exact owned public-key identifier, normally obtained from fetch_user_ssh_keys. The
+      string is matched without trimming and cannot select another account’s record. OpenPGP IDs are
+      also accepted by this deletion action; usage is not checked.
+description: 'Delete the owned public key and return its ID in entry. The selected database deletes
+  public keys by owned ID without checking ssh/gpg usage. This
+  action can therefore remove an owned key from the other public-key category. It never selects another
+  account, an API key or an MFA record. Missing IDs return HTTP 500; do not infer a usage check from the
+  action name.'
+additionalProperties: true
+x-source-files:
+- pkg/identity/database.go
+- pkg/identity/user.go

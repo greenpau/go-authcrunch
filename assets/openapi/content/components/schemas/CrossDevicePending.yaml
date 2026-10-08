@@ -1,0 +1,13 @@
+type: object
+description: Approval has not been granted. Wait at least interval seconds before polling again.
+required:
+- status
+properties:
+  status:
+    type: string
+    description: Approval has not been granted. Wait at least interval seconds before polling again.
+    const: pending
+additionalProperties: false
+x-source-files:
+- pkg/authn/cross_device_http.go
+- pkg/authn/cross_device_store.go

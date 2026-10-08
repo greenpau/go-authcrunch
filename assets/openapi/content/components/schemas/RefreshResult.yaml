@@ -1,0 +1,3 @@
+oneOf:
+- $ref: BrowserRefresh.yaml
+- $ref: NativeRefresh.yaml

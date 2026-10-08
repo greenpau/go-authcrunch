@@ -1,0 +1,32 @@
+get:
+  operationId: browserLogout
+  tags:
+  - Authentication Portal
+  summary: Sign out of the portal
+  description: With a refresh cookie, renders confirmation and the browser completes POST /api/logout.
+    Without it, deletes portal cookies, revokes associated OP/cross-device evidence and redirects. OAuth
+    users can be redirected through their provider logout. Only configured trusted redirect_uri destinations
+    are honored. Keep Accept as text/html. The refresh-cookie confirmation page requires the configured
+    HTTPS origin/mount and may return HTML 403; merely rendering it does not revoke the session. Browser
+    cookie deletion does not invalidate copied stateless access JWTs. OAuth-provider logout takes precedence
+    over redirect_uri in the non-refresh branch.
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '403':
+      $ref: ../components/responses/HTML.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_http_logout.go
+  - pkg/authn/handle_http_session.go
+  parameters:
+  - name: redirect_uri
+    in: query
+    description: Configured trusted logout destination.
+    required: false
+    schema:
+      type: string

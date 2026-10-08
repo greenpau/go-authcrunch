@@ -1,0 +1,18 @@
+type: string
+minLength: 1
+pattern: "^[\\t\\n\\v\\f\\r \N   - \L\P  　]*(?:openid|profile|email|address|phone|offline_access)(?:[\\\
+  t\\n\\v\\f\\r \N   - \L\P  　]+(?:openid|profile|email|address|phone|offline_access))*[\\t\\n\\v\\f\\\
+  r \N   - \L\P  　]*$"
+description: Optional scope replacement for an existing refresh family. Omit this field to preserve current
+  scopes. An explicitly empty or whitespace-only value fails with invalid_scope. Split with Go Unicode
+  whitespace rules; at least one distinct scope is required, duplicates fail, and every scope must belong
+  to the current grant. Narrowing is permanent after successful issuance. Removing openid omits id_token;
+  removing offline_access does not stop an already established refresh family from rotating. Configuration
+  and prior consent, not this field, determine the original grant.
+examples:
+- openid profile
+- profile
+x-uniqueTokens: true
+x-source-files:
+- pkg/oidc/refresh.go
+- pkg/oidc/config.go

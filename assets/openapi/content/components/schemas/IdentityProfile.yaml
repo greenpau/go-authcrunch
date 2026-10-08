@@ -1,0 +1,56 @@
+type: object
+description: Stored typed profile attributes used for OIDC disclosure. Empty string attributes and zero
+  updated_at are omitted; phone verification is an optional boolean.
+properties:
+  given_name:
+    type: string
+    description: Given name.
+  family_name:
+    type: string
+    description: Family name.
+  middle_name:
+    type: string
+    description: Middle name.
+  nickname:
+    type: string
+    description: Casual/display name.
+  profile:
+    type: string
+    description: Profile-page URL supplied by the identity source.
+  picture:
+    type: string
+    description: Profile image URL supplied by the identity source.
+  website:
+    type: string
+    description: Website URL supplied by the identity source.
+  gender:
+    type: string
+    description: Self-described gender; no fixed enum.
+  birthdate:
+    type: string
+    description: Birthdate representation supplied by the identity source. The typed model does not enforce
+      a full-date pattern or disallow partial dates.
+  zoneinfo:
+    type: string
+    description: Time-zone name supplied by the identity source, conventionally an IANA zone such as America/New_York;
+      no zone validator is applied here.
+  locale:
+    type: string
+    description: Locale tag supplied by the identity source; no language-tag validator is applied here.
+  phone_number:
+    type: string
+    description: Phone number supplied by the identity source; no universal E.164 validator is applied
+      here.
+  phone_number_verified:
+    type: boolean
+    description: Explicit phone-verification state; omission differs from false. UserInfo suppresses it
+      when phone_number is empty.
+  updated_at:
+    $ref: UnixTime.yaml
+    description: Last update to the identity profile in Unix seconds. Zero is omitted; this is not token
+      issuance or authentication time.
+  address:
+    $ref: IdentityAddress.yaml
+x-source-files:
+- pkg/identity/profile.go
+- pkg/oidc/claims.go

@@ -1,0 +1,219 @@
+get:
+  operationId: oidcDiscoveryGet
+  tags:
+  - OpenID Connect
+  summary: Read OIDC discovery metadata
+  description: 'Requires an enabled portal OIDC provider and the exact configured issuer origin/mount.
+    OIDC access/refresh credentials and signing keys are separate from portal JWTs and portal refresh
+    tokens. All responses are no-store.
+
+
+    Public discovery. HEAD emits no body. The OIDC JWKS uses the provider''s dedicated RSA signing keys.
+    Query parameters are ignored on these public GET/HEAD endpoints. HEAD has no body and does not compute
+    the JSON GET Content-Length.'
+  security: []
+  responses:
+    '200':
+      description: Public provider metadata.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/OIDCDiscovery.yaml
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+    '400':
+      $ref: ../components/responses/OIDCInvalidRequest.yaml
+    '405':
+      $ref: ../components/responses/OIDCGetHeadOnly.yaml
+    '503':
+      $ref: ../components/responses/OIDCUnavailable.yaml
+  x-source-files:
+  - pkg/oidc/http.go
+head:
+  operationId: oidcDiscoveryHead
+  tags:
+  - OpenID Connect
+  summary: Read OIDC discovery metadata (headers only)
+  description: 'Requires an enabled portal OIDC provider and the exact configured issuer origin/mount.
+    OIDC access/refresh credentials and signing keys are separate from portal JWTs and portal refresh
+    tokens. All responses are no-store.
+
+
+    Public discovery. HEAD emits no body. The OIDC JWKS uses the provider''s dedicated RSA signing keys.
+    Query parameters are ignored on these public GET/HEAD endpoints. HEAD has no body and does not compute
+    the JSON GET Content-Length.'
+  security: []
+  responses:
+    '200':
+      description: Public provider metadata. No response body on HEAD.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+    '400':
+      description: Malformed request, parameters, media type or issuer origin/path. No response body on
+        HEAD.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+    '405':
+      description: Method is not allowed. No response body on HEAD.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Allow:
+          schema:
+            type: string
+            const: GET, HEAD
+          description: Methods accepted by this endpoint, distinct from generic CORS advertisement.
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+    '503':
+      description: Provider state is unavailable or capacity has been reached. No response body on HEAD.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+  x-source-files:
+  - pkg/oidc/http.go
+options:
+  operationId: oidcPreflightWellknownopenidconfiguration
+  tags:
+  - OpenID Connect
+  summary: Check CORS for OIDC discovery
+  description: 'Requires an enabled portal OIDC provider and the exact configured issuer origin/mount.
+    OIDC access/refresh credentials and signing keys are separate from portal JWTs and portal refresh
+    tokens. All responses are no-store.
+
+
+    With Origin, discovery/JWKS/UserInfo allow a requesting origin; token access allows only an exact
+    scheme://host origin from a registered redirect URI of a public client (token_endpoint_auth_method=none).
+    This includes a configured HTTP native-loopback origin. The origin comparison retains the registered
+    port; the native redirect exception for dynamically chosen ports does not broaden CORS. No credentialed
+    CORS. Only Authorization and Content-Type request headers are accepted. Requested methods GET/POST
+    are accepted, with token restricted to POST. Without Origin, normal method rejection applies. Allowed
+    request headers are Authorization and Content-Type (case-insensitive, comma-separated). The response
+    advertises GET, POST even though each endpoint retains its own allowed methods. No Access-Control-Allow-Credentials
+    header is emitted.
+
+
+    The CORS helper reads the first Origin/method/header-list values. It rejects disallowed preflights
+    with 403; for an ordinary token POST from a disallowed Origin, it omits Access-Control-Allow-Origin
+    but still processes the request. CORS controls browser readability and is not an authentication/origin
+    rejection for ordinary token requests. Discovery/JWKS/UserInfo echo the nonempty Origin without parsing
+    it, including the literal null. Allowed preflight methods are case-sensitive.'
+  security: []
+  responses:
+    '204':
+      description: Allowed preflight.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        Access-Control-Allow-Origin:
+          schema:
+            type: string
+        Access-Control-Allow-Methods:
+          schema:
+            type: string
+            const: GET, POST
+        Access-Control-Allow-Headers:
+          schema:
+            type: string
+            const: Authorization, Content-Type
+        Vary:
+          description: Caches must vary on the request origin, requested method and requested headers.
+            May be emitted as multiple header lines.
+          schema:
+            type: string
+            description: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+    '400':
+      $ref: ../components/responses/OIDCInvalidRequest.yaml
+    '403':
+      $ref: ../components/responses/OIDCCORSForbidden.yaml
+    '405':
+      $ref: ../components/responses/OIDCGetHeadOnly.yaml
+    '503':
+      $ref: ../components/responses/OIDCUnavailable.yaml
+  x-source-files:
+  - pkg/oidc/http.go
+  parameters:
+  - name: Origin
+    in: header
+    description: Requesting origin.
+    required: true
+    schema:
+      type: string
+      description: Requesting origin. Compare scheme, host and port exactly; a path or trailing slash
+        is not part of an origin.
+  - name: Access-Control-Request-Method
+    in: header
+    description: Requested method.
+    required: true
+    schema:
+      type: string
+      enum:
+      - GET
+      - POST
+  - name: Access-Control-Request-Headers
+    in: header
+    description: Comma-separated requested headers.
+    required: false
+    schema:
+      type: string

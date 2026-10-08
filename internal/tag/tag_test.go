@@ -24,6 +24,7 @@ import (
 	"unicode"
 
 	"github.com/greenpau/go-authcrunch"
+	"github.com/greenpau/go-authcrunch/internal/openapi"
 	"github.com/greenpau/go-authcrunch/internal/sqlitedb"
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/internal/testutils"
@@ -93,6 +94,8 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		// Review records retain both required fields even in an empty inventory.
+		{name: "test openapi.ReviewedSources struct", entry: &openapi.ReviewedSources{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"module": true, "files": true}}},
 		{name: "test acl.FieldConfig struct", entry: &acl.FieldConfig{}, opts: &Options{}},
 		{name: "test enrichment.Config struct", entry: &enrichment.Config{}, opts: &Options{}},
 		{name: "test enrichment.AttributeConfig struct", entry: &enrichment.AttributeConfig{}, opts: &Options{}},

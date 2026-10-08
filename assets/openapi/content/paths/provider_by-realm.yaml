@@ -1,0 +1,62 @@
+get:
+  operationId: externalProviderLogin
+  tags:
+  - External Authentication
+  summary: Sign in through an HTTP identity provider
+  description: >-
+    Optional injected IdentityProvider implementing HTTPLoginProvider. Its protocol,
+    query parameters, browser binding, destinations, expiry and replay prevention are
+    provider-owned; this is not a local password or MFA endpoint. The same GET route
+    handles initiation and provider return. Exactly one realm segment is accepted.
+    JSON negotiation does not bypass the protocol route. Only GET is allowed; other
+    methods return HTML 405 with Allow GET. Unknown providers and invalid realm paths
+    return HTML 400. Provider verification errors return HTML 401 without backend
+    details. Nil/ambiguous results, malformed identity, unsafe redirect or binding
+    cookie return HTML 502. Redirects must be HTTPS, contain no credentials/control
+    bytes and be at most 8192 UTF-8 bytes. A binding cookie must use the provider's
+    declared name, exact callback path, Secure, HttpOnly, host-only scope and SameSite
+    Lax or Strict. On verified identity, the portal applies transforms/challenge
+    policy and issues its ordinary browser credentials with federated evidence and
+    origin set to the realm. Required local password/MFA policy can still deny issuance.
+  security: []
+  parameters:
+  - name: realm
+    in: path
+    required: true
+    description: Enabled HTTP provider realm; unique and distinct from identity-store realms.
+    schema:
+      type: string
+      minLength: 1
+      maxLength: 64
+      pattern: ^[A-Za-z0-9_-]{1,64}$
+  responses:
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '401':
+      $ref: ../components/responses/HTML.yaml
+    '403':
+      $ref: ../components/responses/HTML.yaml
+    '405':
+      description: Only GET is accepted; HTML error page.
+      headers:
+        Allow:
+          schema:
+            type: string
+            const: GET
+      content:
+        text/html:
+          schema:
+            type: string
+    '500':
+      $ref: ../components/responses/HTML.yaml
+    '502':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_provider_login.go
+  - pkg/authn/serve_http.go
+  - pkg/authn/handle_http_login.go
+  - pkg/idp/http_login.go

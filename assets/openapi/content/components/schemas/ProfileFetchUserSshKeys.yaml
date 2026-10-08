@@ -1,0 +1,10 @@
+type: object
+required:
+- kind
+properties:
+  kind:
+    type: string
+    const: fetch_user_ssh_keys
+    description: Profile action discriminator; selects this payload and response behavior.
+description: 'Legacy RSA public keys: ssh-rsa or RSA PUBLIC KEY PEM. Return owned keys in entries.'
+additionalProperties: true

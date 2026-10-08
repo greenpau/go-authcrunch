@@ -14,6 +14,12 @@ ROOT = Path(__file__).resolve().parents[2]
 VERSION_PATTERN = re.compile(r"1\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 TARGETS = ("cmd/authdb/main.go", "cmd/authdbctl/main.go", "pkg/identity/database.go")
 
+OPENAPI_SOURCE = Path("assets/openapi/content/openapi.yaml")
+OPENAPI_INFO_PATTERN = re.compile(r"^(?:info|'info'|\"info\")\s*:", re.MULTILINE)
+OPENAPI_VERSION_KEY = re.compile(r"^  (?:version|'version'|\"version\")\s*:", re.MULTILINE)
+OPENAPI_VERSION_PATTERN = re.compile(
+    r"^(  version: )(1\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))(?=\n|$)", re.MULTILINE)
+
 
 def read_version(root=ROOT):
     raw = (root / "VERSION").read_text(encoding="utf-8")
@@ -38,16 +44,45 @@ def check_version(root=ROOT, tag=None):
             values = re.findall(r'app\.Set' + field + r'\(' + variable + r', "([^"]*)"\)', text)
             if values != [expected]:
                 raise ValueError(f"{target}: Set{field} fallback is not synchronized; run make version-sync")
+    _, api_version = openapi_version(root)
+    if api_version.group(2) != version:
+        raise ValueError("OpenAPI info.version differs from VERSION; run make version-sync")
     if tag is not None and tag != f"v{version}":
         raise ValueError(f"release tag must equal v{version}")
     return version
 
 
 def sync_version(root=ROOT):
-    read_version(root)
+    version = read_version(root)
+    source, match = openapi_version(root)
     for target in TARGETS:
         subprocess.run(["go", "tool", "versioned", "-release", "-sync", target], cwd=root, check=True)
+    if match.group(2) != version:
+        updated = source[:match.start(2)] + version + source[match.end(2):]
+        (root / OPENAPI_SOURCE).write_bytes(updated.encode("utf-8"))
     return check_version(root)
+
+
+def openapi_version(root):
+    """Locate the plain, two-space info.version field in the owned YAML format.
+
+    This is a narrow text projection, not a general YAML parser. Full YAML/OAS
+    validation belongs to make openapi; ambiguous or reformatted version fields
+    fail closed rather than letting release automation rewrite the document.
+    """
+    source = (root / OPENAPI_SOURCE).read_bytes().decode("utf-8")
+    infos = list(OPENAPI_INFO_PATTERN.finditer(source))
+    if (len(infos) != 1 or not source[infos[0].start():].startswith("info:\n")
+            or "\r" in source or re.search(r"^(?:---|\.\.\.)", source, re.MULTILINE)):
+        raise ValueError("expected one plain OpenAPI info block in a single LF-delimited YAML document")
+    start = infos[0].end() + 1
+    boundary = re.search(r"^[^\s#]", source[start:], re.MULTILINE)
+    end = start + boundary.start() if boundary else len(source)
+    keys = list(OPENAPI_VERSION_KEY.finditer(source, start, end))
+    matches = list(OPENAPI_VERSION_PATTERN.finditer(source, start, end))
+    if len(keys) != 1 or len(matches) != 1:
+        raise ValueError("expected one plain OpenAPI info.version line: '  version: 1.<minor>.<patch>'")
+    return source, matches[0]
 
 
 def next_version(version, kind):

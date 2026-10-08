@@ -1,0 +1,14 @@
+oneOf:
+- type: object
+  properties: {}
+  additionalProperties: false
+- type: object
+  required:
+  - refresh_token
+  properties:
+    refresh_token:
+      $ref: PortalRefreshToken.yaml
+      writeOnly: true
+  additionalProperties: false
+description: Exactly one JSON object, at most 1024 bytes. Browser sends {}; native sends refresh_token.
+  Unknown/duplicate fields, trailing JSON and query strings fail.

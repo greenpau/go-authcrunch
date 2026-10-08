@@ -1,0 +1,60 @@
+description: API-key record returned by fetch_user_api_key(s). The payload is a stored bcrypt hash, not
+  the raw key; the serializer exposes it to the authenticated owner. Fetch/list filter disabled records,
+  but the expired flag alone does not hide a record. Neither retrieval nor a successful diagnostic proves
+  that current login policy will accept it.
+x-source-files:
+- pkg/identity/api_key.go
+- pkg/identity/database.go
+- pkg/authn/api_fetch_user_api_keys.go
+type: object
+properties:
+  created_at:
+    $ref: CredentialLifecycle.yaml#/properties/created_at
+  expired_at:
+    $ref: CredentialLifecycle.yaml#/properties/expired_at
+  disabled_at:
+    $ref: CredentialLifecycle.yaml#/properties/disabled_at
+  expired:
+    $ref: CredentialLifecycle.yaml#/properties/expired
+  disabled:
+    $ref: CredentialLifecycle.yaml#/properties/disabled
+  id:
+    type: string
+    description: Owned credential record identifier. Newly created local records use 40 ASCII letters/digits;
+      retain the returned identifier for later lookup or deletion. This is not a bearer credential.
+    pattern: ^[A-Za-z0-9]{40}$
+  comment:
+    type: string
+    description: Supplied upload title; omitted if absent in a legacy stored record.
+  description:
+    type: string
+    description: Optional user-supplied description, omitted when empty.
+  tags:
+    type: array
+    items:
+      $ref: CredentialTag.yaml
+    description: Optional stored tags; empty string fields can be omitted in responses.
+  labels:
+    type: array
+    items:
+      type: string
+      description: Stored label.
+    description: Optional string labels.
+  usage:
+    type: string
+    description: Credential category.
+    const: api
+  prefix:
+    type: string
+    description: First 24 ASCII letters/digits of a profile-enrolled key, used as the database-wide account
+      lookup index. It is not the record ID or full secret. Prefix collisions affect keys owned by any
+      account.
+    minLength: 24
+    maxLength: 24
+    pattern: ^[A-Za-z0-9]{24}$
+  payload:
+    $ref: BcryptHash.yaml
+    description: Confidential bcrypt verifier of the raw API key. Profile enrollment generates cost 10;
+      imported credentials can have another supported cost. The full secret is never returned by fetch/list.
+required:
+- usage

@@ -28,3 +28,6 @@ dist/
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# JSON is generated from the canonical YAML OpenAPI contract.
+assets/openapi/generated/

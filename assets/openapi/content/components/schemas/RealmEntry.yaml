@@ -1,0 +1,16 @@
+type: object
+required:
+- realm
+- name
+- kind
+properties:
+  realm:
+    type: string
+    description: Realm used in portal login and administrative requests.
+  name:
+    type: string
+    description: Configured identity-store instance name.
+  kind:
+    type: string
+    description: Identity-store implementation kind (for example local or ldap); enabled stores determine
+      the available values.

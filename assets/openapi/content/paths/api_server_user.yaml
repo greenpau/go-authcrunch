@@ -1,0 +1,76 @@
+post:
+  operationId: adminUser
+  tags:
+  - Administration
+  summary: Administer a local account
+  description: 'Requires enable admin api, a valid portal token, and an admin role. Stored profile-session
+    state is not required for these routes. Disabled admin endpoints and wrong methods fall through to
+    HTTP 400 (private export has its own 404/405 contract). Invalid tokens fail with 401; absent token/non-admin
+    role fail with 403. Browser mutation requests must satisfy same-origin checks. JSON decoding is bounded
+    to 1 MiB; an oversized first JSON value returns 413.
+
+
+    The operation field selects CRUD/password/role/policy actions. username and email are required together.
+    Add/reset returns a generated password. Application failures may be HTTP 200 with status=failure.
+    Unknown operation names return 400; backend failures are generally status=failure with HTTP 200; info
+    lookup failures use HTTP 500. Unknown realms return JSON null with HTTP 200. Unlike the profile replacement
+    operation, admin overwrite_auth_challenges requires a nonempty array.
+
+
+    The admin decoder consumes one JSON value and ignores unknown fields/trailing data; it does not independently
+    enforce Content-Type. Send one application/json object. A second value or padding after a completed
+    first value is not guaranteed to trigger the 1 MiB limit. Malformed first values fail with 400. Profile
+    requests use a different decoder and reject trailing non-whitespace data.
+
+
+    Ordinary local selectors are case-insensitive and are not trimmed; both must identify the same account.
+    Enable instead requires the exact stored username/email spelling and a disabled record. Disable removes
+    lookup indexes while retaining the account in user listings; info and ordinary mutations cannot find
+    that disabled account until it is enabled or the database is reloaded. Creation syntax is distinct
+    from registration. A provided user.password is ignored by add/reset_password: save the generated response
+    password. Role mutation is not atomic on failure; retrieve info after an error to verify current state.
+    Successful security changes advance credential_version; existing stateless access JWTs are not themselves
+    rewritten.'
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: Admin operation result.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/AdminUserResult.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '400':
+      $ref: ../components/responses/PortalError.yaml
+    '401':
+      $ref: ../components/responses/PortalError.yaml
+    '403':
+      $ref: ../components/responses/PortalError.yaml
+    '413':
+      $ref: ../components/responses/PortalError.yaml
+    '500':
+      $ref: ../components/responses/PortalError.yaml
+  x-source-files:
+  - pkg/authn/handle_api_crud_user.go
+  - pkg/authn/respond_api.go
+  - pkg/authn/api_origin.go
+  - pkg/authn/handle_api_admin.go
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/AdminUserRequest.yaml
+    x-maxDecodedBytes: 1048576
+    description: Send one JSON object. The first decoded value is read through a 1048576-byte limit; trailing
+      data is not fully consumed or validated.
+  parameters:
+  - $ref: ../components/parameters/APIOrigin.yaml
+  - $ref: ../components/parameters/APIFetchSite.yaml

@@ -1,0 +1,48 @@
+type: object
+additionalProperties: true
+properties:
+  id:
+    type: string
+    description: Persistent backend account identifier; local stores use a UUID.
+  username:
+    type: string
+    description: Canonical account login handle.
+  title:
+    type: string
+    description: Optional account title.
+  name:
+    type: string
+    description: Formatted display name.
+  email:
+    type: string
+    description: Primary account email address.
+  avatar:
+    type: string
+    description: Backend-provided avatar path or location.
+  disabled:
+    type: boolean
+    description: True when account authentication has been disabled.
+  revision:
+    type: integer
+    description: Account revision counter; zero can be omitted.
+  created:
+    type: string
+    description: Account creation time. RFC 3339 date-time, with fractional seconds when present. An unset
+      Go time serializes as 0001-01-01T00:00:00Z, not null.
+    format: date-time
+  last_modified:
+    type: string
+    description: Last account metadata change. RFC 3339 date-time, with fractional seconds when present.
+      An unset Go time serializes as 0001-01-01T00:00:00Z, not null.
+    format: date-time
+  roles:
+    type: array
+    items:
+      type: string
+      description: Stored role name, including any organization prefix.
+    description: Added by the local admin user list; omitted by profile metadata. These are stored roles,
+      before portal transforms.
+description: Account metadata projection. name and email are display strings; this projection excludes
+  stored credential records.
+x-source-files:
+- pkg/identity/user.go

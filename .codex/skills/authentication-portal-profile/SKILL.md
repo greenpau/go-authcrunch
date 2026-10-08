@@ -56,7 +56,7 @@ normalization. Profile bodies require application/json and remain bounded at
 1 MiB; text/plain JSON must not become a browser simple-request mutation path.
 Refresh endpoints retain their stricter feature-owned origin/transport checks.
 
-Credential or role mutation invalidates the login evidence. A cached access
+Password, MFA and role mutations that advance the credential generation invalidate the login evidence. A cached access
 JWT may still have time remaining, but it cannot authorize another profile
 operation after its underlying evidence is revoked. Require a fresh login;
 do not silently update cached credential versions after enrollment or deletion.
@@ -96,5 +96,13 @@ make test TEST_DIR='./pkg/identity ./pkg/ids/local ./pkg/authn' TEST='Profile|Id
 A current local identity can read and change its own profile even when token
 claims have been transformed. A transformed claim naming another account,
 cross-origin submission, or revoked identity cannot change that account's
-credentials. A successful credential mutation requires fresh authentication
-before another self-service operation.
+credentials. A successful generation-changing mutation requires fresh authentication
+before another self-service operation. API-key enrollment/deletion currently
+retain the generation; see the credential contracts below.
+
+## Credential wire contracts
+
+Read [credential records and diagnostics](references/credential-contracts.md)
+when changing API-key/TOTP enrollment, diagnostics, returned verifier records or
+credential-generation behavior. Use [openapi-generation](../openapi-generation/SKILL.md)
+to update their YAML contracts and native HTTP/schema tests together.

@@ -1,0 +1,5 @@
+oneOf:
+- $ref: OIDCCodeExchange.yaml
+- $ref: OIDCRefreshExchange.yaml
+discriminator:
+  propertyName: grant_type

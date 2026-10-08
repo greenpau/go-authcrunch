@@ -1,0 +1,33 @@
+type: object
+description: Plaintext inner message before encryption. Never submit this JSON directly to /api/system.
+properties:
+  kind:
+    type: string
+    description: Password authentication request.
+    const: basic_auth_request
+  realm:
+    type: string
+    description: Configured identity realm.
+    minLength: 1
+  address:
+    type: string
+    description: Nonempty caller-supplied source address copied into the identity addr claim; the message
+      validator does not require a parsed IP address.
+    minLength: 1
+  username:
+    type: string
+    description: Required login handle.
+    minLength: 1
+  password:
+    type: string
+    description: Required plaintext password, protected by the outer encrypted envelope.
+    minLength: 1
+    writeOnly: true
+required:
+- kind
+- realm
+- address
+- username
+- password
+x-source-files:
+- pkg/system/basic_auth_message.go

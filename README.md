@@ -134,3 +134,7 @@ compatibility when revisiting a newer revision.
 | Identity stores | [`go-authcrunch-ids-consul`](https://github.com/greenpau/go-authcrunch-ids-consul) — Consul KV | [Scaffold](https://github.com/greenpau/go-authcrunch-ids-consul/tree/0e5fc8d9669559ef0770280491c042dffde02908) |
 | Identity stores | [`go-authcrunch-ids-dynamodb`](https://github.com/greenpau/go-authcrunch-ids-dynamodb) — Amazon DynamoDB | [Scaffold](https://github.com/greenpau/go-authcrunch-ids-dynamodb/tree/c274052b44f9588df267670333876843520b28df) |
 | Credentials | [`go-authcrunch-creds-aws-ssm-parameter-store`](https://github.com/greenpau/go-authcrunch-creds-aws-ssm-parameter-store) — AWS SSM Parameter Store | [Scaffold](https://github.com/greenpau/go-authcrunch-creds-aws-ssm-parameter-store/tree/5e6d455275419921c2fe9695bae4ff9110de7d8f) |
+
+The HTTP API reference is maintained as YAML under `assets/openapi/content/`.
+Run `make openapi` to generate its ignored JSON bundle, or `make serve-openapi`
+to browse it at `http://127.0.0.1:8080`. Its version follows `VERSION`.

@@ -1,0 +1,15 @@
+type: string
+minLength: 2
+pattern: ^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-]{2}[AEIMQUYcgkosw048]|[A-Za-z0-9_-][AQgw])?$
+not:
+  pattern: ^A[A-P]|[\r\n]
+description: Positive unsigned integer in minimal big-endian bytes, encoded as canonical unpadded base64url.
+  No leading zero octet, sign byte, padding, whitespace or redundant final bits. RSA n/e are numbers encoded
+  this way, not decimal strings. Decode before comparing integer values; a textual pattern alone cannot
+  establish key validity.
+examples:
+- AQAB
+x-source-files:
+- pkg/kms/jwks.go
+- pkg/kms/jwks_private_keys.go
+- pkg/oidc/keys.go

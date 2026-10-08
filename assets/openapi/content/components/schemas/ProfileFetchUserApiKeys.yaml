@@ -1,0 +1,15 @@
+type: object
+required:
+- kind
+properties:
+  kind:
+    type: string
+    const: fetch_user_api_keys
+    description: Profile action discriminator; selects this payload and response behavior.
+description: Return enabled owned API-key records in entries, or an empty array. Disabled records are
+  filtered out; the expired flag alone does not exclude a record. Returned payload values are confidential
+  bcrypt verifiers, not raw keys.
+additionalProperties: true
+x-source-files:
+- pkg/authn/api_fetch_user_api_keys.go
+- pkg/identity/database.go

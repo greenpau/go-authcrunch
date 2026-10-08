@@ -1,0 +1,30 @@
+type: object
+required:
+- kind
+- id
+- content
+properties:
+  kind:
+    type: string
+    const: test_user_api_key
+    description: Profile action discriminator; selects this payload and response behavior.
+  id:
+    type: string
+    description: Exact owned API-key record ID from fetch_user_api_keys; matched without whitespace trimming.
+      Missing, foreign or disabled records return HTTP 500.
+  content:
+    type: string
+    description: Raw candidate passed directly to bcrypt comparison without trimming or the login route’s
+      64–72-byte bound. With a 72-byte enrolled key, bytes after the first 72 do not affect this diagnostic
+      comparison. This behavior does not make an overlong candidate valid for login. No key is created
+      or rotated.
+    writeOnly: true
+description: 'Compare against an owned stored API-key verifier. Success returns HTTP 200 with entry: OK.
+  A mismatch returns HTTP 500 with a message and no entry, not a success:false diagnostic object. The
+  check excludes disabled records but does not independently reject the expired flag; login does.'
+additionalProperties: true
+x-source-files:
+- pkg/authn/api_test_user_api_key.go
+- pkg/identity/api_key.go
+- pkg/identity/database.go
+- pkg/identity/user.go

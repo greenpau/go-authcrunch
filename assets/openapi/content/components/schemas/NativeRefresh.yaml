@@ -1,0 +1,55 @@
+type: object
+required:
+- authenticated
+- session_id
+- access_expires_at
+- refresh_expires_at
+- session_expires_at
+- access_token
+- access_token_name
+- refresh_token
+- refresh_token_name
+properties:
+  authenticated:
+    type: boolean
+    const: true
+    description: Successful authentication/rotation indicator; always true on this response.
+  session_id:
+    $ref: PortalSessionID.yaml
+  access_expires_at:
+    $ref: UnixTime.yaml
+    description: Access-token expiry deadline. Whole seconds since 1970-01-01T00:00:00Z (UTC), excluding
+      leap seconds; a Unix timestamp, not milliseconds or an ISO date string.
+  refresh_expires_at:
+    $ref: UnixTime.yaml
+    description: Current refresh idle-expiry deadline; successful rotation advances it, capped by the
+      absolute session deadline. Whole seconds since 1970-01-01T00:00:00Z (UTC), excluding leap seconds;
+      a Unix timestamp, not milliseconds or an ISO date string.
+  session_expires_at:
+    $ref: UnixTime.yaml
+    description: Absolute session-expiry deadline fixed at login; rotation cannot extend it. Whole seconds
+      since 1970-01-01T00:00:00Z (UTC), excluding leap seconds; a Unix timestamp, not milliseconds or
+      an ISO date string.
+  access_token:
+    type: string
+    description: Signed portal access credential. Use the configured bearer/cookie transport; its lifetime
+      and claims follow portal crypto and transform configuration. Keep secret.
+    minLength: 1
+  access_token_name:
+    type: string
+    description: Configured access-token cookie name, including any configured prefix; do not hard-code
+      a default name.
+    minLength: 1
+  refresh_token:
+    $ref: PortalRefreshToken.yaml
+  refresh_token_name:
+    type: string
+    description: Configured refresh-cookie name, including any prefix. Native body transport receives
+      no Set-Cookie header.
+    minLength: 1
+additionalProperties: false
+description: Opted-in native response; no Set-Cookie. Serialize rotations. A replay revokes the token
+  family.
+x-source-files:
+- pkg/authn/handle_api_refresh_token.go
+- pkg/authn/token_refresh/manager.go

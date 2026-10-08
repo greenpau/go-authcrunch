@@ -1,0 +1,14 @@
+type: object
+description: Claim-name map for one disclosure location. All entries are parsed before unsupported names
+  are ignored. Registered client scopes determine which profile/email/address/phone names may be requested;
+  sub, acr, auth_time and amr are recognized independently.
+properties:
+  sub:
+    $ref: OIDCIdentityClaimRequirement.yaml
+  acr:
+    $ref: OIDCIdentityClaimRequirement.yaml
+additionalProperties:
+  $ref: OIDCClaimRequirement.yaml
+x-source-files:
+- pkg/oidc/claims.go
+- pkg/oidc/request_object.go

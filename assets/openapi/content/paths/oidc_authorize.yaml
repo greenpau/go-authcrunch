@@ -1,0 +1,279 @@
+get:
+  operationId: oidcAuthorizeGet
+  tags:
+  - OpenID Connect
+  summary: Request an OIDC code with query parameters
+  description: 'Requires an enabled portal OIDC provider and the exact configured issuer origin/mount.
+    OIDC access/refresh credentials and signing keys are separate from portal JWTs and portal refresh
+    tokens. All responses are no-store.
+
+
+    Authorization Code flow only. Invalid/unregistered redirect URIs fail locally, never redirect. Login
+    and consent are browser interactions; prompt=none reports login_required/consent_required through
+    a validated callback. Errors after redirect validation may be delivered in a redirect or form_post
+    page. JSON/native portal login, Basic and API-key login do not establish OP browser authentication
+    evidence.
+
+
+    Send client_id, response_type=code and scope including openid in the outer request, including when
+    using a Request Object. A Request Object can supply redirect_uri; otherwise it is required in the
+    outer request. Query and form bodies each have a 16384-byte limit. POST accepts Content-Type parameters
+    and merges query with body; any repeated parameter, including an unknown one or a query/body collision,
+    fails. Unknown single parameters are ignored. Only one interactive authorization is pending per browser;
+    a new one replaces the previous transaction. Pending requests expire after ten minutes.'
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/OAuthError.yaml
+    '405':
+      $ref: ../components/responses/OAuthError.yaml
+    '503':
+      $ref: ../components/responses/OAuthError.yaml
+  x-source-files:
+  - pkg/oidc/authorization.go
+  - pkg/oidc/request_object.go
+  parameters:
+  - name: client_id
+    in: query
+    description: Exact registered client identifier; required in the outer request even with a Request
+      Object. Registration limits it to 256 bytes and rejects surrounding whitespace or CR/LF/tab.
+    required: true
+    schema:
+      type: string
+      description: Exact registered client identifier; required in the outer request even with a Request
+        Object. Registration limits it to 256 bytes and rejects surrounding whitespace or CR/LF/tab.
+      minLength: 1
+      maxLength: 256
+  - name: redirect_uri
+    in: query
+    description: Exactly registered callback URI; HTTPS normally required, with HTTP permitted for registered
+      native IP-loopback callbacks. Native loopback matching may vary only the port. Maximum 2048 bytes;
+      userinfo, fragments, backslashes and whitespace are rejected. Required unless supplied by a valid
+      Request Object.
+    required: false
+    schema:
+      type: string
+      format: uri
+      description: Exactly registered callback URI; HTTPS normally required, with HTTP permitted for registered
+        native IP-loopback callbacks. Native loopback matching may vary only the port. Maximum 2048 bytes;
+        userinfo, fragments, backslashes and whitespace are rejected. Required unless supplied by a valid
+        Request Object.
+      maxLength: 2048
+  - name: response_type
+    in: query
+    description: Authorization Code response; implicit and hybrid response types are unsupported.
+    required: true
+    schema:
+      type: string
+      const: code
+      description: Authorization Code response; implicit and hybrid response types are unsupported.
+  - name: scope
+    in: query
+    description: Whitespace-separated requested scopes; must contain openid. Unknown/unregistered scopes
+      are filtered out and repeated scopes are deduplicated. offline_access survives only with prompt
+      containing consent. With a Request Object, outer scope must still include openid.
+    required: true
+    schema:
+      type: string
+      examples:
+      - openid profile email
+      description: Whitespace-separated requested scopes; must contain openid. Unknown/unregistered scopes
+        are filtered out and repeated scopes are deduplicated. offline_access survives only with prompt
+        containing consent. With a Request Object, outer scope must still include openid.
+      minLength: 1
+  - name: state
+    in: query
+    description: Opaque client correlation state, echoed in the callback.
+    required: false
+    schema:
+      type: string
+      description: Opaque client correlation state, echoed in the callback.
+  - name: nonce
+    in: query
+    description: Client nonce bound into the ID token.
+    required: false
+    schema:
+      type: string
+      description: Client nonce bound into the ID token.
+  - name: code_challenge
+    in: query
+    description: 'S256 PKCE challenge: canonical unpadded base64url SHA-256 digest of the verifier (43
+      characters). Required by public clients and registrations requiring PKCE; supply method S256 with
+      a nonempty challenge.'
+    required: false
+    schema:
+      type: string
+      description: 'S256 PKCE challenge: canonical unpadded base64url SHA-256 digest of the verifier (43
+        characters). Required by public clients and registrations requiring PKCE; supply method S256 with
+        a nonempty challenge.'
+      pattern: ^(?:[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048])?$
+      maxLength: 43
+  - name: code_challenge_method
+    in: query
+    description: S256 is the only supported nonempty PKCE method. A method without a challenge fails;
+      a challenge with a missing/different method fails.
+    required: false
+    schema:
+      type: string
+      enum:
+      - ''
+      - S256
+      description: S256 is the only supported nonempty PKCE method. A method without a challenge fails;
+        a challenge with a missing/different method fails.
+  - name: response_mode
+    in: query
+    description: query redirects with parameters; form_post returns an auto-submitting HTML form. Omitted/empty
+      selects query.
+    required: false
+    schema:
+      type: string
+      enum:
+      - ''
+      - query
+      - form_post
+      default: query
+      description: query redirects with parameters; form_post returns an auto-submitting HTML form. Omitted/empty
+        selects query.
+  - name: prompt
+    in: query
+    description: Whitespace-separated none, login, consent or select_account. none must be the sole value.
+      login and select_account force fresh login; consent requests explicit approval (needed for offline_access).
+      Empty behaves like omission.
+    required: false
+    schema:
+      type: string
+      description: Whitespace-separated none, login, consent or select_account. none must be the sole
+        value. login and select_account force fresh login; consent requests explicit approval (needed
+        for offline_access). Empty behaves like omission.
+      pattern: "^[\\t\\n\\v\\f\\r \N   - \L\P  　]*(?:none|(?:login|consent|select_account)(?:[\\t\\n\\\
+        v\\f\\r \N   - \L\P  　]+(?:login|consent|select_account))*)?[\\t\\n\\v\\f\\r \N   - \L\P  　]*$"
+  - name: max_age
+    in: query
+    description: Maximum authentication age in seconds, not a timestamp. Zero forces fresh authentication.
+      The form/query parser accepts only decimal digits within signed int64 range; negative, fractional
+      or signed values fail.
+    required: false
+    schema:
+      type: integer
+      minimum: 0
+      description: Maximum authentication age in seconds, not a timestamp. Zero forces fresh authentication.
+        The form/query parser accepts only decimal digits within signed int64 range; negative, fractional
+        or signed values fail.
+      format: int64
+      maximum: 9223372036854775807
+  - name: claims
+    in: query
+    description: JSON-encoded object with optional userinfo and id_token claim maps. Each claim is null
+      or an object with boolean essential and either non-null value or a nonempty values array (never
+      both). sub/acr values must be nonempty strings. Duplicate members fail. Unknown claims are ignored
+      and disclosure is limited by registered scopes.
+    required: false
+    schema:
+      type: string
+      description: JSON-encoded object with optional userinfo and id_token claim maps. Each claim is null
+        or an object with boolean essential and either non-null value or a nonempty values array (never
+        both). sub/acr values must be nonempty strings. Duplicate members fail. Unknown claims are ignored
+        and disclosure is limited by registered scopes.
+      contentMediaType: application/json
+      examples:
+      - '{"id_token":{"auth_time":{"essential":true}}}'
+      contentSchema:
+        $ref: ../components/schemas/OIDCClaimsRequest.yaml
+  - name: acr_values
+    in: query
+    description: Whitespace-separated preferred authentication-context identifiers. The provider compares
+      these with configured contexts and verified login methods; a requested string does not establish
+      assurance.
+    required: false
+    schema:
+      type: string
+      description: Whitespace-separated preferred authentication-context identifiers. The provider compares
+        these with configured contexts and verified login methods; a requested string does not establish
+        assurance.
+  - name: id_token_hint
+    in: query
+    description: Previously issued ID-token JWT from this provider, verified against its signing keys,
+      issuer and matching client audience. Its subject constrains the requested account; the hint is not
+      a login credential.
+    required: false
+    schema:
+      type: string
+      description: Previously issued ID-token JWT from this provider, verified against its signing keys,
+        issuer and matching client audience. Its subject constrains the requested account; the hint is
+        not a login credential.
+  - name: request
+    in: query
+    description: Compact Request Object JWT using the registered none/RS256 policy; at most 16384 bytes.
+      RS256 requires iss=client_id and aud containing the issuer. Present exp must be in the future; nbf/iat
+      cannot be in the future; all are nonnegative NumericDate numbers. Nested request/request_uri, duplicate
+      JSON members, unsupported JOSE headers, encryption and remote request_uri are rejected. Valid object
+      parameters override outer values, but client_id/response_type must match. The decoded structures
+      are OIDCRequestObjectHeader and OIDCRequestObjectPayload. exp/nbf/iat accept fractional Unix seconds.
+      jti is ignored and supplies no replay protection. A Request Object never authenticates the user.
+    required: false
+    schema:
+      type: string
+      description: Compact Request Object JWT using the registered none/RS256 policy; at most 16384 bytes.
+        RS256 requires iss=client_id and aud containing the issuer. Present exp must be in the future;
+        nbf/iat cannot be in the future; all are nonnegative NumericDate numbers. Nested request/request_uri,
+        duplicate JSON members, unsupported JOSE headers, encryption and remote request_uri are rejected.
+        Valid object parameters override outer values, but client_id/response_type must match. The decoded
+        structures are OIDCRequestObjectHeader and OIDCRequestObjectPayload. exp/nbf/iat accept fractional
+        Unix seconds. jti is ignored and supplies no replay protection. A Request Object never authenticates
+        the user.
+      maxLength: 16384
+      pattern: ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$
+      x-maxBytes: 16384
+post:
+  operationId: oidcAuthorizePost
+  tags:
+  - OpenID Connect
+  summary: Request an OIDC code with form parameters
+  description: 'Requires an enabled portal OIDC provider and the exact configured issuer origin/mount.
+    OIDC access/refresh credentials and signing keys are separate from portal JWTs and portal refresh
+    tokens. All responses are no-store.
+
+
+    Authorization Code flow only. Invalid/unregistered redirect URIs fail locally, never redirect. Login
+    and consent are browser interactions; prompt=none reports login_required/consent_required through
+    a validated callback. Errors after redirect validation may be delivered in a redirect or form_post
+    page. JSON/native portal login, Basic and API-key login do not establish OP browser authentication
+    evidence.
+
+
+    Send client_id, response_type=code and scope including openid in the outer request, including when
+    using a Request Object. A Request Object can supply redirect_uri; otherwise it is required in the
+    outer request. Query and form bodies each have a 16384-byte limit. POST accepts Content-Type parameters
+    and merges query with body; any repeated parameter, including an unknown one or a query/body collision,
+    fails. Unknown single parameters are ignored. Only one interactive authorization is pending per browser;
+    a new one replaces the previous transaction. Pending requests expire after ten minutes.'
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/OAuthError.yaml
+    '405':
+      $ref: ../components/responses/OAuthError.yaml
+    '503':
+      $ref: ../components/responses/OAuthError.yaml
+  x-source-files:
+  - pkg/oidc/authorization.go
+  - pkg/oidc/request_object.go
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          $ref: ../components/schemas/OIDCAuthorizationRequest.yaml
+    x-maxBytes: 16384

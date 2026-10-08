@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenAPI Generation"
+  short_description: "Maintain YAML API contracts and the Scalar reference"
+  default_prompt: "Use $openapi-generation to review HTTP contract changes, update the YAML specification, and validate the generated reference."

@@ -1,0 +1,33 @@
+type: object
+description: Decrypted successful /api/system response. This endpoint issues authenticated=true after
+  successful credential and policy checks; failures use a non-200 JSON error outside the encrypted envelope.
+properties:
+  id:
+    type: string
+    description: AuthCrunch request correlation ID.
+  kind:
+    type: string
+    description: Response discriminator.
+    const: auth_response
+  authenticated:
+    type: boolean
+    description: Authentication completed successfully.
+    const: true
+  user_data:
+    $ref: Claims.yaml
+    description: Current identity claims after transforms; no access token is issued by this endpoint.
+      addr comes from the encrypted request, iss from the request URL. Password authentication sets amr=[pwd];
+      API-key authentication does not establish password evidence.
+  timestamp:
+    type: string
+    description: UTC response creation time in RFC 3339 with optional fractional seconds.
+    format: date-time
+required:
+- id
+- kind
+- authenticated
+- user_data
+- timestamp
+x-source-files:
+- pkg/authn/handle_api_system.go
+- pkg/system/auth_response_message.go

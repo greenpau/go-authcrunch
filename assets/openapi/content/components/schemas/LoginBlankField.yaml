@@ -1,0 +1,8 @@
+type:
+- string
+- 'null'
+pattern: "^[\\t\\n\\v\\f\\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]*$"
+description: Unused login field that becomes empty after Go Unicode whitespace trimming. Omission, null,
+  an empty string or whitespace-only text is accepted. The byte-order mark U+FEFF is not trimmed.
+x-source-files:
+- pkg/apiauth/auth_request.go

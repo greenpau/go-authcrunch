@@ -1,0 +1,37 @@
+type: object
+description: 'Stored personal name. Empty strings and false flags are omitted. Local creation trims the
+  display name: exactly two comma-separated parts mean Last, First; otherwise exactly two space-separated
+  parts mean First Last. Other nonempty forms become an alias stored in last. A whitespace-only admin
+  name passes admission but creates no name record. Formatted names use Last, First; middle/preferred
+  do not participate in that projection.'
+properties:
+  first:
+    type: string
+    description: First name component.
+  last:
+    type: string
+    description: Last name component.
+  middle:
+    type: string
+    description: Middle name component.
+  preferred:
+    type: string
+    description: Preferred name component.
+  nickname:
+    type: boolean
+    description: Whether this name is marked nickname.
+  confirmed:
+    type: boolean
+    description: Whether this name is marked confirmed.
+  primary:
+    type: boolean
+    description: Whether this name is marked primary.
+  legal:
+    type: boolean
+    description: Whether this name is marked legal.
+  alias:
+    type: boolean
+    description: Whether this name is marked alias.
+x-source-files:
+- pkg/identity/name.go
+- pkg/identity/user.go

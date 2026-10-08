@@ -1,0 +1,87 @@
+post:
+  operationId: oidcRevoke
+  tags:
+  - OpenID Connect
+  summary: Revoke an OIDC grant
+  description: 'Requires an enabled portal OIDC provider and the exact configured issuer origin/mount.
+    OIDC access/refresh credentials and signing keys are separate from portal JWTs and portal refresh
+    tokens. All responses are no-store.
+
+
+    Client-authenticated form endpoint; no query parameters. Revoking an access or refresh token revokes
+    its grant. Unknown tokens and tokens belonging to another client return the same empty HTTP 200. Authentication
+    methods match the token endpoint.
+
+
+    A missing/empty token returns invalid_request before client authentication. Unknown parameters are
+    ignored, but duplicate fields fail; MIME parameters are accepted and even a bare ? query is forbidden.
+    The hint is ignored. A retired access token no longer identifies its rotated grant; a spent refresh
+    token remains revocable while its family is retained. Revocation does not log out the OP browser or
+    revoke other independently authorized grants. This endpoint does not provide CORS preflight support.'
+  security:
+  - OIDCClientBasic: []
+  - {}
+  responses:
+    '200':
+      description: Revoked, unknown, or not owned by this client; empty body.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+    '400':
+      $ref: ../components/responses/OIDCInvalidRequest.yaml
+    '401':
+      description: Client authentication failed.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            additionalProperties: false
+            properties:
+              error:
+                type: string
+                const: invalid_client
+                description: Protocol failure code; no error_description or token fields are emitted.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        WWW-Authenticate:
+          description: Authentication challenge emitted for this failure.
+          schema:
+            type: string
+            const: Basic realm="oidc"
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+    '405':
+      $ref: ../components/responses/OIDCPostOnly.yaml
+    '503':
+      $ref: ../components/responses/OIDCUnavailable.yaml
+  x-source-files:
+  - pkg/oidc/token.go
+  - pkg/oidc/http.go
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          $ref: ../components/schemas/OIDCRevocationRequest.yaml
+    x-maxBytes: 16384

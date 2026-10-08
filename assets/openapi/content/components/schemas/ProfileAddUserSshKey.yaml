@@ -1,0 +1,63 @@
+type: object
+required:
+- kind
+- content
+- title
+- description
+properties:
+  kind:
+    type: string
+    const: add_user_ssh_key
+    description: Profile action discriminator; selects this payload and response behavior.
+  content:
+    type: string
+    description: 'Legacy RSA public material: ssh-rsa followed by a literal space and a standard-Base64
+      SSH key blob, optionally an inline comment; or RSA PUBLIC KEY PEM whose DER is PKCS#1. Generic PUBLIC
+      KEY/SPKI PEM, authorized_keys options, non-RSA SSH keys and private keys fail. An inline SSH comment
+      overrides the upload title. Add trims surrounding Unicode whitespace before validation.'
+    minLength: 1
+  title:
+    type: string
+    description: Key display title. Nonempty ASCII letters/digits/underscore, @, dot, whitespace or parentheses.
+      An inline authorized-key comment takes precedence over this title.
+    pattern: ^[A-Za-z0-9_@.\t\n\f\r ()]+$
+    minLength: 1
+  description:
+    type: string
+    description: Required field; may be empty. Otherwise 3–255 ASCII letters/digits, underscore, whitespace,
+      hyphen, comma or dot. The handler does not trim this value.
+    pattern: ^(?:[A-Za-z0-9_\t\n\f\r , .\-]{3,255})?$
+    maxLength: 255
+  labels:
+    type: array
+    items:
+      type: string
+    description: Optional arbitrary string labels stored with this credential. Omission means no labels;
+      null and non-string members fail.
+  tags:
+    type: array
+    items:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Tag name; an arbitrary string.
+        value:
+          type: string
+          description: Tag value; an arbitrary string.
+      required:
+      - key
+      - value
+    description: Optional credential tags. Each object must contain string key and value; empty strings
+      are allowed. Omission means no tags; null fails.
+description: 'Legacy RSA public keys: ssh-rsa or RSA PUBLIC KEY PEM. Save the key; entry is Created. Duplicate
+  uploads fail with 400. The same RSA key uploaded in PKCS#1 and SSH formats is still a duplicate because
+  its MD5 fingerprint matches.'
+additionalProperties: true
+x-source-files:
+- pkg/authn/api_add_user_ssh_key.go
+- pkg/authn/handle_api_profile.go
+- pkg/tagging/tag.go
+- pkg/identity/public_key.go
+- pkg/authn/api_test_user_ssh_key.go
+- pkg/identity/user.go

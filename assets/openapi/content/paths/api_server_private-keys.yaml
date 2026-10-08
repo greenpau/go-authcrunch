@@ -1,0 +1,125 @@
+get:
+  operationId: exportSigningKeys
+  tags:
+  - Administration
+  summary: Export private portal signing keys
+  description: 'Requires BOTH enable admin api and enable admin api private key export plus administrator
+    authorization. Both flags default off. Disabled export returns 404; enabled export without admin authorization
+    returns 403. An invalid access token returns 401 before flag checks. Every format returns a JSON keys
+    array pairing public_key with private_key. Default is PKCS#8 PEM; format=json is a legacy alias for
+    PKCS#8. jwk requires encoding=json; pkcs8/pkcs1/sec1 accept pem or der. Incompatible key types fail
+    the entire export. Never log or cache the result. Public discovery does not require export. Selection
+    matches public portal JWKS: a first non-system HMAC signer makes export unavailable even if later
+    asymmetric keys exist. Verification-only/system keys are excluded. Only format/encoding cardinality
+    and query decoding are checked; other query keys are ignored. Values are case-sensitive and not trimmed.
+    PKCS#1 is RSA-only; SEC1 is EC-only; Ed25519 uses PKCS#8 or JWK. No passphrase encryption is applied
+    to exported material.'
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: Sensitive private signing material.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PrivateKeyExport.yaml
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+    '400':
+      description: Portal error. The HTTP status is authoritative; the error property is a boolean, unlike
+        OAuth errors.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+    '401':
+      $ref: ../components/responses/PortalError.yaml
+    '403':
+      description: Portal error. The HTTP status is authoritative; the error property is a boolean, unlike
+        OAuth errors.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+    '404':
+      description: Portal error. The HTTP status is authoritative; the error property is a boolean, unlike
+        OAuth errors.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+    '405':
+      description: Portal error. The HTTP status is authoritative; the error property is a boolean, unlike
+        OAuth errors.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Allow:
+          schema:
+            type: string
+            const: GET
+    '500':
+      description: Portal error. The HTTP status is authoritative; the error property is a boolean, unlike
+        OAuth errors.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+  x-source-files:
+  - pkg/authn/handle_api_private_keys.go
+  - pkg/kms/jwks_private_keys.go
+  parameters:
+  - name: format
+    in: query
+    description: Omission selects pkcs8. Explicit empty or repeated parameters fail.
+    required: false
+    schema:
+      type: string
+      enum:
+      - pkcs8
+      - pkcs1
+      - sec1
+      - jwk
+      - json
+  - name: encoding
+    in: query
+    description: Omission selects pem, or json for JWK. Explicit empty/repeated values fail; values are
+      case-sensitive and not trimmed. json encoding is only valid with format=jwk; format=json means PKCS#8,
+      not a JWK object.
+    required: false
+    schema:
+      type: string
+      enum:
+      - pem
+      - der
+      - json

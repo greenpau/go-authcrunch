@@ -1,0 +1,9 @@
+type: string
+description: 'Opaque portal refresh-session identifier: 32 random bytes encoded as 64 lowercase hexadecimal
+  characters. Stable across rotations; use for session coordination, never as an authentication credential.'
+minLength: 64
+maxLength: 64
+pattern: ^[0-9a-f]{64}$
+x-source-files:
+- pkg/authn/token_refresh/token.go
+- pkg/authn/token_refresh/manager.go

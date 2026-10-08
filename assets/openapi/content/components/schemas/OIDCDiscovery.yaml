@@ -1,0 +1,197 @@
+type: object
+required:
+- issuer
+- authorization_endpoint
+- token_endpoint
+- userinfo_endpoint
+- jwks_uri
+- revocation_endpoint
+- response_types_supported
+- response_modes_supported
+- grant_types_supported
+- subject_types_supported
+- id_token_signing_alg_values_supported
+- token_endpoint_auth_methods_supported
+- revocation_endpoint_auth_methods_supported
+- scopes_supported
+- claims_supported
+- code_challenge_methods_supported
+- request_object_signing_alg_values_supported
+- claims_parameter_supported
+- request_parameter_supported
+- request_uri_parameter_supported
+- authorization_response_iss_parameter_supported
+properties:
+  issuer:
+    type: string
+    format: uri
+    description: Exact configured HTTPS issuer identifier, including the portal mount; verify it against
+      token iss.
+  authorization_endpoint:
+    type: string
+    format: uri
+    description: Browser Authorization Code endpoint.
+  token_endpoint:
+    type: string
+    format: uri
+    description: Form-encoded code exchange and refresh endpoint.
+  userinfo_endpoint:
+    type: string
+    format: uri
+    description: Current identity endpoint authenticated with an opaque OIDC access token.
+  jwks_uri:
+    type: string
+    format: uri
+    description: Public verification keys for this provider’s dedicated ID-token signer.
+  revocation_endpoint:
+    type: string
+    format: uri
+    description: Client-authenticated endpoint revoking an OIDC access/refresh grant.
+  response_types_supported:
+    type: array
+    items:
+      type: string
+    description: Authorization Code response only.
+    const:
+    - code
+  response_modes_supported:
+    type: array
+    items:
+      type: string
+    description: Supported callback delivery modes.
+    const:
+    - query
+    - form_post
+  grant_types_supported:
+    type: array
+    items:
+      type: string
+    description: Supported token grants.
+    const:
+    - authorization_code
+    - refresh_token
+  subject_types_supported:
+    type: array
+    items:
+      type: string
+    description: Public subject identifiers; pairwise subjects are unsupported.
+    const:
+    - public
+  id_token_signing_alg_values_supported:
+    type: array
+    items:
+      type: string
+    description: ID-token signing algorithm.
+    const:
+    - RS256
+  token_endpoint_auth_methods_supported:
+    type: array
+    items:
+      type: string
+    description: Supported client authentication methods; each client must use its registered method.
+    const:
+    - client_secret_basic
+    - client_secret_post
+    - none
+  revocation_endpoint_auth_methods_supported:
+    type: array
+    items:
+      type: string
+    description: Registered client authentication methods accepted by revocation.
+    const:
+    - client_secret_basic
+    - client_secret_post
+    - none
+  scopes_supported:
+    type: array
+    items:
+      type: string
+    description: Supported scopes; each registration can allow a subset.
+    const:
+    - openid
+    - profile
+    - email
+    - address
+    - phone
+    - offline_access
+  claims_supported:
+    type: array
+    items:
+      type: string
+      enum:
+      - iss
+      - sub
+      - aud
+      - exp
+      - iat
+      - auth_time
+      - nonce
+      - amr
+      - acr
+      - at_hash
+      - name
+      - given_name
+      - family_name
+      - middle_name
+      - nickname
+      - preferred_username
+      - profile
+      - picture
+      - website
+      - gender
+      - birthdate
+      - zoneinfo
+      - locale
+      - updated_at
+      - email
+      - email_verified
+      - address
+      - phone_number
+      - phone_number_verified
+    description: Recognized standard identity and authentication claims; actual disclosure depends on
+      scopes, consent, the claims request and current identity.
+    uniqueItems: true
+  code_challenge_methods_supported:
+    type: array
+    items:
+      type: string
+    description: PKCE challenge method; plain is unsupported.
+    const:
+    - S256
+  request_object_signing_alg_values_supported:
+    type: array
+    items:
+      type: string
+    description: Request Object algorithms allowed by registration policy.
+    const:
+    - none
+    - RS256
+  acr_values_supported:
+    type: array
+    items:
+      type: string
+    description: Configured authentication-context identifiers; omitted when no contexts are configured.
+  claims_parameter_supported:
+    type: boolean
+    description: JSON claims requests are supported.
+    const: true
+  request_parameter_supported:
+    type: boolean
+    description: Inline Request Object JWTs are supported.
+    const: true
+  request_uri_parameter_supported:
+    type: boolean
+    description: Remote Request Object retrieval is unsupported.
+    const: false
+  authorization_response_iss_parameter_supported:
+    type: boolean
+    description: Authorization responses include the provider issuer parameter.
+    const: true
+additionalProperties: true
+description: Metadata generated from the configured issuer, clients and authentication contexts. Supported
+  scopes/algorithms describe provider capability, not permission for every client. ACR values are configured
+  identifiers, not proof that a user has satisfied them. Endpoint URLs use the exact configured issuer
+  plus their fixed suffixes.
+x-source-files:
+- pkg/oidc/http.go
+- pkg/oidc/claims.go

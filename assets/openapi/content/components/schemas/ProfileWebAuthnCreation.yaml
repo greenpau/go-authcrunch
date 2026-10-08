@@ -1,0 +1,48 @@
+type: object
+description: entry for fetch_user_u2f_reg_params. Application options must be converted to the browser
+  WebAuthn types by the portal client. Issuing another challenge for this binding replaces its previous
+  enrollment.
+properties:
+  challenge:
+    type: string
+    description: Cryptographically random 32-byte challenge encoded as 43 canonical unpadded base64url
+      characters. Enrollment expires five minutes after creation; retain the originating browser session.
+    pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+    minLength: 43
+    maxLength: 43
+  rp_name:
+    type: string
+    description: Relying-party display name.
+    const: AuthCrunch
+  user_id:
+    type: string
+    description: Current portal session JTI used as the enrollment user handle, not the immutable database
+      user ID.
+  user_name:
+    type: string
+    description: Email presentation claim used for enrollment display.
+  user_display_name:
+    type: string
+    description: Display name claim, falling back to the subject.
+  user_verification:
+    type: string
+    description: Browser user-verification preference.
+    const: discouraged
+  attestation:
+    type: string
+    description: Browser attestation preference. The selected server validates registration bindings and
+      requires a later signed assertion, but does not verify an authenticator attestation certificate
+      chain or attestation statement.
+    const: direct
+required:
+- challenge
+- rp_name
+- user_id
+- user_name
+- user_display_name
+- user_verification
+- attestation
+x-source-files:
+- pkg/authn/api_fetch_user_uni_sec_factor_reg_params.go
+- pkg/authn/webauthn_enrollment.go
+- pkg/identity/webauthn_registration.go

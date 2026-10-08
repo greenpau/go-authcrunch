@@ -1,0 +1,28 @@
+type: object
+required:
+- kind
+- content
+properties:
+  kind:
+    type: string
+    const: test_user_gpg_key
+    description: Profile action discriminator; selects this payload and response behavior.
+  content:
+    type: string
+    description: ASCII-armored PGP PUBLIC KEY BLOCK with exact five-hyphen BEGIN/END delimiters after
+      surrounding Unicode whitespace is trimmed. The first armor block must yield exactly one decoded
+      entity with a signing-capable primary key and at least one self-signed identity. Accepted primary
+      algorithms are signing-capable RSA (IDs 1/3), DSA (17) or ECDSA (19). Encryption-only RSA and ECDH
+      primaries fail in the entity reader; EdDSA/Ed25519 fails the application algorithm check. Multiple
+      successfully decoded entities fail, but the reader can skip unsupported or malformed entities.
+      Later appended armor blocks are not inspected for metadata. Private-key armor labels and binary
+      input fail; a public armor label does not enforce public-only packets. Secret-key packets under
+      that label can be accepted and retained. Submit exported public material only. Identity self-signatures
+      establish key/identity binding, not trust in a person or authority to sign portal tokens.
+    minLength: 1
+description: An armored OpenPGP public entity; private/binary armor is rejected. Validate the candidate
+  key and return the result in entry.
+additionalProperties: true
+x-source-files:
+- pkg/identity/public_key.go
+- pkg/authn/api_test_user_gpg_key.go

@@ -1,0 +1,39 @@
+get:
+  operationId: ssoMetadata
+  tags:
+  - External Authentication
+  summary: Read portal SAML SSO metadata
+  description: Requires a valid token AND its stored portal session, plus a configured SSO application
+    provider. Returns XML metadata from that provider. The current handler does not add a separate admin-role
+    check. Missing login/session redirects to login; unknown provider fails rendering. This route is distinct
+    from external SAML login.
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: SAML metadata XML.
+      content:
+        application/xml:
+          schema:
+            type: string
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_http_apps_sso.go
+  parameters:
+  - name: provider
+    in: path
+    description: Configured SSO provider name.
+    required: true
+    schema:
+      type: string
+      minLength: 1

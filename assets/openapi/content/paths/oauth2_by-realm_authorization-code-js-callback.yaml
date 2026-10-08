@@ -1,0 +1,37 @@
+get:
+  operationId: externalOAuthJSCallback
+  tags:
+  - External Authentication
+  summary: Bridge an upstream OAuth URL fragment
+  description: Optional browser JavaScript bridge for providers configured to return a URL fragment. It
+    converts the fragment into a callback query. URL fragments are not sent to the server. Keep browser
+    HTML negotiation; provider configuration controls availability. The bridge itself performs no token/state
+    validation and can render even for an unknown realm. Without a fragment it preserves the query while
+    replacing the callback suffix; with a fragment it replaces the query with the fragment. Validation
+    occurs at the resulting ordinary callback. This route is not a JSON token endpoint.
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '401':
+      $ref: ../components/responses/HTML.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+    '502':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_external_login.go
+  parameters:
+  - name: realm
+    in: path
+    description: Configured enabled realm.
+    required: true
+    schema:
+      type: string
+      minLength: 1

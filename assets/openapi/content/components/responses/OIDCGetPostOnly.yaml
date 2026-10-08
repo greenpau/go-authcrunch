@@ -1,0 +1,32 @@
+description: Method is not allowed.
+content:
+  application/json:
+    schema:
+      type: object
+      required:
+      - error
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+          enum:
+          - invalid_request
+          description: Protocol failure code; no error_description or token fields are emitted.
+headers:
+  Cache-Control:
+    $ref: ../headers/NoStore.yaml
+  Pragma:
+    $ref: ../headers/NoCache.yaml
+  X-Content-Type-Options:
+    $ref: ../headers/NoSniff.yaml
+  Referrer-Policy:
+    $ref: ../headers/OIDCNoReferrer.yaml
+  X-Frame-Options:
+    $ref: ../headers/FrameDeny.yaml
+  Allow:
+    schema:
+      type: string
+      const: GET, POST
+    description: Methods accepted by this endpoint, distinct from generic CORS advertisement.
+  Content-Security-Policy:
+    $ref: ../headers/OIDCResponseCSP.yaml

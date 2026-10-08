@@ -9,7 +9,8 @@
         "**/.tmp/**": true,
         "**/bin/**": true,
         "**/dist/**": true,
-        "**/.doc/**": true
+        "**/.doc/**": true,
+        "**/assets/openapi/generated/**": true
     },
     "search.exclude": {
         "**/.coverage/**": true,
@@ -17,6 +18,10 @@
         "**/.tmp/**": true,
         "**/bin/**": true,
         "**/dist/**": true,
-        "**/.doc/**": true
+        "**/.doc/**": true,
+        "**/assets/openapi/generated/**": true
+    },
+    "files.exclude": {
+        "**/assets/openapi/generated/**": true
     }
 }

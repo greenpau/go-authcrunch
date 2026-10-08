@@ -1,0 +1,99 @@
+type: object
+required:
+- kind
+- period
+- digits
+- title
+- description
+- secret
+properties:
+  kind:
+    type: string
+    const: add_user_app_multi_factor_authenticator
+    description: Profile action discriminator; selects this payload and response behavior.
+  period:
+    type: number
+    description: TOTP time-step duration in seconds. The profile parser recognizes 15, but the storage
+      constructor rejects it; supported saved periods are 30, 60 and 90. Send a whole number. The selected
+      JSON handler truncates a fractional number toward zero before checking the allowed integer values;
+      numeric strings are rejected.
+    examples:
+    - 30
+    anyOf:
+    - minimum: 30
+      exclusiveMaximum: 31
+    - minimum: 60
+      exclusiveMaximum: 61
+    - minimum: 90
+      exclusiveMaximum: 91
+  digits:
+    type: number
+    description: Number of decimal digits in a TOTP code. Send passcodes as strings so leading zeros survive.
+      Send a whole number. The selected JSON handler truncates a fractional number toward zero before
+      checking the allowed integer values; numeric strings are rejected.
+    examples:
+    - 4
+    anyOf:
+    - minimum: 4
+      exclusiveMaximum: 5
+    - minimum: 6
+      exclusiveMaximum: 7
+    - minimum: 8
+      exclusiveMaximum: 9
+  title:
+    type: string
+    description: Authenticator display title; 3–50 ASCII letters/digits, without whitespace or punctuation.
+    pattern: ^[A-Za-z0-9]{3,50}$
+    minLength: 3
+    maxLength: 50
+  description:
+    type: string
+    description: Required field; may be empty. Otherwise 3–255 ASCII letters/digits, underscore, whitespace,
+      hyphen, comma or dot. The handler does not trim this value.
+    pattern: ^(?:[A-Za-z0-9_\t\n\f\r , .\-]{3,255})?$
+    maxLength: 255
+  secret:
+    type: string
+    writeOnly: true
+    description: 'Raw TOTP HMAC secret: 10–200 ASCII letters/digits, used as literal bytes by the server.
+      The enrollment helper Base32-encodes these bytes into the otpauth URI; do not Base32-decode this
+      API field.'
+    pattern: ^[A-Za-z0-9]{10,200}$
+    minLength: 10
+    maxLength: 200
+  labels:
+    type: array
+    items:
+      type: string
+    description: Optional arbitrary string labels stored with this credential. Omission means no labels;
+      null and non-string members fail.
+  tags:
+    type: array
+    items:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Tag name; an arbitrary string.
+        value:
+          type: string
+          description: Tag value; an arbitrary string.
+      required:
+      - key
+      - value
+    description: Optional credential tags. Each object must contain string key and value; empty strings
+      are allowed. Omission means no tags; null fails.
+description: Save a TOTP authenticator using SHA-1; entry is Created. No passcode is required or verified
+  during this save action, so success is not proof that the client possesses or correctly configured the
+  secret. Unknown fields such as algorithm or passcode do not change this behavior. An identical raw secret
+  or exact display title already stored on this account causes HTTP 400, including disabled records; the
+  check is case-sensitive. A successful enrollment changes the account credential generation; establish
+  fresh login evidence before further profile mutations.
+additionalProperties: true
+x-source-files:
+- pkg/authn/api_add_user_app_multi_factor_authenticator.go
+- pkg/authn/handle_api_profile.go
+- pkg/tagging/tag.go
+- pkg/identity/mfa_token.go
+- pkg/identity/user.go
+- pkg/identity/database.go

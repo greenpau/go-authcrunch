@@ -1,0 +1,11 @@
+type: object
+required:
+- kind
+properties:
+  kind:
+    type: string
+    const: fetch_user_gpg_keys
+    description: Profile action discriminator; selects this payload and response behavior.
+description: An armored OpenPGP public entity; private/binary armor is rejected. Return owned keys in
+  entries.
+additionalProperties: true

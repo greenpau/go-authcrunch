@@ -1,0 +1,47 @@
+type: object
+required:
+- id
+- auth_data_encoded
+- client_data_encoded
+- signature_encoded
+description: Portal assertion JSON before outer standard Base64 encoding. Raw browser response fields
+  must be mapped to these snake_case encoded fields. The verifier derives signed data from the encoded
+  bytes, not caller-supplied parsed auth_data/client_data objects.
+properties:
+  id:
+    type: string
+    description: Exact stored credential ID selected from server options; other spellings of equivalent
+      bytes are not normalized for assertion lookup.
+    minLength: 1
+  type:
+    type: string
+    description: Client credential type, normally public-key. The selected assertion verifier does not
+      validate this outer presentation field.
+  auth_data_encoded:
+    type: string
+    description: 'Standard padded Base64 of the original authenticatorData bytes: RP-ID hash, flags and
+      unsigned big-endian signature counter, plus optional extension data. At least 37 decoded bytes are
+      required. RP hash and user-presence flag are checked.'
+    minLength: 1
+    contentEncoding: base64
+    contentMediaType: application/octet-stream
+  client_data_encoded:
+    type: string
+    description: Standard padded Base64 of the original UTF-8 clientDataJSON bytes. The decoded structure
+      is WebAuthnAssertionClientData.
+    minLength: 1
+    contentEncoding: base64
+    contentMediaType: application/json
+    contentSchema:
+      $ref: WebAuthnAssertionClientData.yaml
+  signature_encoded:
+    type: string
+    description: Standard padded Base64 of the authenticator signature over authenticatorData concatenated
+      with SHA-256(clientDataJSON). ES256 uses ASN.1 DER ECDSA; RS256 uses RSA PKCS#1 v1.5.
+    minLength: 1
+    contentEncoding: base64
+    contentMediaType: application/octet-stream
+additionalProperties: true
+x-source-files:
+- pkg/identity/webauthn.go
+- pkg/identity/mfa_token.go

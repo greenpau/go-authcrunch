@@ -93,6 +93,39 @@ class TestGuardTests(unittest.TestCase):
         self.assertEqual(args[args.index('-p') + 1], '2')
         self.assertEqual(args[args.index('-parallel') + 1], '4')
 
+    def test_e2e_openapi_target_uses_guarded_reports_and_stops_on_failure(self):
+        self.tool('import json, os, sys\nfrom pathlib import Path\n'
+                  'args = sys.argv[1:]\n'
+                  'destination = args[args.index("--output-dir") + 1]\n'
+                  'with Path("observed.jsonl").open("a") as out:\n'
+                  '    out.write(json.dumps({"args": args, "memory": os.environ["GOMEMLIMIT"]}) + "\\n")\n'
+                  'sys.exit(7 if destination.endswith(os.environ["FAIL_PHASE"]) else 0)\n')
+        node = self.root / 'node'
+        node.write_text(f'#!{sys.executable}\nfrom pathlib import Path\n'
+                        'Path("bootstrap-ran").touch()\n')
+        node.chmod(0o755)
+        for phase, expected_runs in [('openapi-tools', 1), ('openapi-contracts', 2), ('none', 2)]:
+            with self.subTest(phase=phase):
+                self.env['FAIL_PHASE'] = phase
+                observed = self.root / 'observed.jsonl'
+                observed.unlink(missing_ok=True)
+                result = self.make('openapi-test')
+                self.assertEqual(result.returncode == 0, phase == 'none', result.stdout + result.stderr)
+                runs = [json.loads(line) for line in observed.read_text().splitlines()]
+                self.assertEqual(len(runs), expected_runs)
+                for run, suffix in zip(runs, ['openapi-tools', 'openapi-contracts']):
+                    self.assertEqual(run['args'][:3], ['tool', 'tested', 'run'])
+                    self.assertEqual(run['memory'], '512MiB')
+                    destination = run['args'][run['args'].index('--output-dir') + 1]
+                    self.assertEqual(destination, 'reports with spaces/' + suffix)
+                    evidence = json.loads((self.root / destination / 'resource-usage.json').read_text())
+                    self.assertEqual(evidence['status'], 'failed' if suffix == phase else 'passed')
+                if expected_runs == 2:
+                    args = runs[1]['args']
+                    self.assertEqual(args[args.index('-run') + 1], '^TestE2EOpenAPIContract')
+                    self.assertEqual(args[-2:], ['.', './pkg/authn'])
+                self.assertEqual((self.root / 'bootstrap-ran').exists(), phase == 'none')
+
     def test_e2e_memory_in_new_session_child_is_counted_and_killed(self):
         # Safe reproduction: a 64 MiB allocation exceeds a 48 MiB tree budget.
         worker = self.root / 'worker.py'

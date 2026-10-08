@@ -1,0 +1,37 @@
+type: object
+required:
+- kind
+- id
+- passcode
+properties:
+  kind:
+    type: string
+    const: test_user_app_token_passcode
+    description: Profile action discriminator; selects this payload and response behavior.
+  id:
+    type: string
+    description: Opaque identifier returned by the corresponding owned-key/authenticator listing. Lookup
+      is bound to the logged-in local account; another user’s identifier cannot select their record.
+  passcode:
+    type: string
+    writeOnly: true
+    description: 'Decimal TOTP code as a string, including leading zeros. The handler allows 4–8 digits;
+      successful verification also requires the configured digit count and an accepted time step. The
+      diagnostic check uses the current and two preceding time steps; it does not consume a login code.
+      The HTTP field itself is not trimmed: surrounding whitespace fails the digit regex before the underlying
+      verifier can normalize it.'
+    pattern: ^[0-9]{4,8}$
+    minLength: 4
+    maxLength: 8
+    examples:
+    - '012345'
+description: Stateless passcode diagnostic against an owned stored authenticator. A well-formed but incorrect
+  code returns HTTP 200 with entry.success=false; a correct code returns entry.success=true. Malformed
+  passcodes return 400; missing, foreign or disabled record IDs return 500. Neither result consumes or
+  advances the login replay counter. The handler performs no explicit factor-type check, so a non-TOTP
+  record normally produces success=false rather than a type-validation error.
+additionalProperties: true
+x-source-files:
+- pkg/authn/api_test_user_app_token_passcode.go
+- pkg/identity/mfa_token.go
+- pkg/identity/database.go

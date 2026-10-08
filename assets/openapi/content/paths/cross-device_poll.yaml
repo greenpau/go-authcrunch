@@ -1,0 +1,191 @@
+post:
+  operationId: crossDevicePoll
+  tags:
+  - Cross-Device Sign-In
+  summary: Poll and redeem cross-device sign-in
+  description: 'Requires explicitly enabled cross-device login and HTTPS. This browser-bound transfer
+    is not the OAuth Device Authorization Grant. The QR/activation link contains only the code; the requester
+    retains its secret. POSTs require the exact same-origin Origin and form encoding, at most 4096 bytes,
+    without repeated body fields. Fresh login on the approving browser and a separate approve decision
+    are required. All responses are no-store.
+
+
+    Pending returns 200 pending. Polling too quickly returns 429 slow_down with Retry-After: 2. Approved
+    transfers are consumed once, issue browser cookies (never JSON bearer credentials), and return the
+    portal redirect. Session revocation/expiry before redemption fails. Content-Type parameters such as
+    charset=utf-8 are accepted. Form fields are read from the body, without trimming; query fields cannot
+    supply code, secret or csrf. Repeated body fields fail, including unrecognized fields.'
+  security: []
+  responses:
+    '200':
+      description: Transfer result.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/CrossDevicePending.yaml
+            - $ref: ../components/schemas/CrossDeviceApproved.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '400':
+      description: Malformed form encoding, missing/malformed Content-Type, or repeated body fields.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '401':
+      description: Approval could not be redeemed because authentication evidence is no longer valid.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '403':
+      description: HTTPS origin, browser fetch context, or required approving-browser binding/CSRF check
+        failed.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '404':
+      $ref: ../components/responses/PlainError.yaml
+    '405':
+      description: Method not supported at this exact endpoint; see Allow.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+        Allow:
+          schema:
+            type: string
+            const: POST
+          description: Methods accepted at this endpoint.
+    '410':
+      description: Unknown, expired, denied, cancelled or already-consumed transfer, incorrect requester
+        secret, or missing/stale approval evidence.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '413':
+      description: URL-encoded form body exceeds 4096 bytes.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '415':
+      description: Content-Type is not application/x-www-form-urlencoded.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '429':
+      description: Polling before the two-second interval elapsed. Wait for Retry-After.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceSlowDown.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+        Retry-After:
+          description: Delay in seconds before another poll.
+          schema:
+            type: string
+            const: '2'
+    '503':
+      description: Session storage or issuance is temporarily unavailable. A consumed approval cannot
+        be retried to mint credentials.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+  x-source-files:
+  - pkg/authn/cross_device_http.go
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          required:
+          - code
+          - secret
+          properties:
+            code:
+              type: string
+              minLength: 26
+              maxLength: 26
+              pattern: ^[A-Z2-7]{26}$
+              description: Activation code from start; bound to this origin and portal mount.
+            secret:
+              type: string
+              writeOnly: true
+              description: Requester-only capability returned by start; must match this pending transfer.
+              minLength: 26
+              maxLength: 26
+              pattern: ^[A-Z2-7]{26}$
+    x-maxBytes: 4096
+  parameters:
+  - name: Origin
+    in: header
+    description: Exact HTTPS portal origin.
+    required: true
+    schema:
+      type: string
+      description: Exact HTTPS portal origin. Compare scheme, host and port exactly; a path or trailing
+        slash is not part of an origin.

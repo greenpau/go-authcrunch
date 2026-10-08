@@ -1,0 +1,10 @@
+description: operation=info returns the full local account record; mutations return their status envelope.
+  An unmatched realm returns JSON null.
+oneOf:
+- $ref: AdminUserRecord.yaml
+- $ref: AdminUserMutation.yaml
+- type: 'null'
+  description: No identity store matched the requested realm.
+x-source-files:
+- pkg/authn/handle_api_crud_user.go
+- pkg/ids/local/authenticator.go

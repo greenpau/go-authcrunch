@@ -1,0 +1,56 @@
+type: object
+required:
+- realm
+- operation
+- user
+properties:
+  realm:
+    type: string
+    description: Exact enabled identity-store realm. Unknown realms currently return JSON null; they do
+      not create a new store.
+    minLength: 1
+  operation:
+    type: string
+    const: overwrite_auth_challenges
+    description: Administrative account action selecting this payload.
+  user:
+    type: object
+    required:
+    - username
+    - email
+    - challenges
+    properties:
+      username:
+        type: string
+        description: Existing local account username. Lookup is case-insensitive but does not trim whitespace,
+          and rejects fewer than two UTF-8 bytes. Must select the same account as email.
+        minLength: 1
+      email:
+        type: string
+        description: Existing local account email selector. Case-insensitive lookup without whitespace
+          trimming; fewer than six UTF-8 bytes fail even if the address passed creation syntax. Any indexed
+          address may select the account, but username and email must resolve to the same account.
+        minLength: 1
+      challenges:
+        type: array
+        items:
+          type: string
+          minLength: 1
+          pattern: ^[^\r\n]+$
+          description: 'Encoded rule body without auth challenges prefix/braces: an ordered method sequence,
+            or alternatives separated by or; optionally append if <method> [and <method> ...] not available.
+            Methods are password, totp, u2f, mfa and (where supported) email. CR/LF, empty/malformed tokens,
+            duplicate canonical rules and mixed sequence/alternative syntax fail.'
+        minItems: 1
+        description: Nonempty ordered rule list parsed by the authentication-challenge grammar. This admin
+          operation cannot restore defaults using []; the profile replacement operation can.
+        uniqueItems: true
+        examples:
+        - - password totp
+          - password if totp not available
+    description: Account selector and operation inputs. username and email must identify the same local
+      account for existing-account actions.
+x-source-files:
+- pkg/authn/handle_api_crud_user.go
+- pkg/ids/local/store.go
+- pkg/identity/database.go

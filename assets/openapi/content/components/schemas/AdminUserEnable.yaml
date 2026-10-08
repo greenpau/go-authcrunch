@@ -1,0 +1,39 @@
+type: object
+required:
+- realm
+- operation
+- user
+properties:
+  realm:
+    type: string
+    description: Exact enabled identity-store realm. Unknown realms currently return JSON null; they do
+      not create a new store.
+    minLength: 1
+  operation:
+    type: string
+    const: enable
+    description: Administrative account action selecting this payload.
+  user:
+    type: object
+    required:
+    - username
+    - email
+    properties:
+      username:
+        type: string
+        description: Exact stored username of a disabled local account. Unlike ordinary account lookup,
+          enable scans disabled records with case-sensitive comparison and no whitespace trimming; provide
+          the original stored spelling.
+        minLength: 1
+      email:
+        type: string
+        description: Exact stored email of that disabled account. Case-sensitive comparison and no whitespace
+          trimming; at least one stored address must match. An already enabled account or mismatched spelling
+          returns status=failure.
+        minLength: 1
+    description: Disabled local account selector. Enable is the case-sensitive exception to ordinary case-insensitive
+      lookup.
+x-source-files:
+- pkg/authn/handle_api_crud_user.go
+- pkg/ids/local/store.go
+- pkg/identity/database.go

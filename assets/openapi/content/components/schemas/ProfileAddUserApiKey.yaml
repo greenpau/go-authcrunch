@@ -1,0 +1,64 @@
+type: object
+required:
+- kind
+- content
+- title
+- description
+properties:
+  kind:
+    type: string
+    const: add_user_api_key
+    description: Profile action discriminator; selects this payload and response behavior.
+  content:
+    type: string
+    description: Raw API key to save. Surrounding Unicode whitespace is trimmed, then 64–72 ASCII letters/digits
+      are required. Stored as a bcrypt hash; retain the original key securely. The first 24 characters
+      form the database-wide lookup prefix; choosing a different suffix does not avoid a prefix collision.
+    pattern: "^[\\t\\n\\v\\f\\r \N   - \L\P  　]*[A-Za-z0-9]{64,72}[\\t\\n\\v\\f\\r \N   - \L\P  　]*$"
+    writeOnly: true
+  title:
+    type: string
+    description: Key display title. Nonempty ASCII letters/digits/underscore, @, dot, whitespace or parentheses.
+    pattern: ^[A-Za-z0-9_@.\t\n\f\r ()]+$
+    minLength: 1
+  description:
+    type: string
+    description: Required field; may be empty. Otherwise 3–255 ASCII letters/digits, underscore, whitespace,
+      hyphen, comma or dot. The handler does not trim this value.
+    pattern: ^(?:[A-Za-z0-9_\t\n\f\r , .\-]{3,255})?$
+    maxLength: 255
+  labels:
+    type: array
+    items:
+      type: string
+    description: Optional arbitrary string labels stored with this credential. Omission means no labels;
+      null and non-string members fail.
+  tags:
+    type: array
+    items:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Tag name; an arbitrary string.
+        value:
+          type: string
+          description: Tag value; an arbitrary string.
+      required:
+      - key
+      - value
+    description: Optional credential tags. Each object must contain string key and value; empty strings
+      are allowed. Omission means no tags; null fails.
+description: Save a raw API key; entry is Created. The first 24 characters must be unique across all API
+  keys in the local database, including other accounts. In the selected runtime, a colliding prefix enters
+  an unbounded hash/retry loop while holding the database lock; it does not reliably return a duplicate-key
+  400. This includes resubmitting the same key. Use independently generated keys and do not retry an uncertain
+  upload blindly.
+additionalProperties: true
+x-source-files:
+- pkg/authn/api_add_user_api_key.go
+- pkg/authn/handle_api_profile.go
+- pkg/tagging/tag.go
+- pkg/identity/database.go
+- pkg/identity/user.go
+- pkg/identity/api_key.go

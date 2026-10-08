@@ -1,0 +1,10 @@
+name: Origin
+in: header
+required: false
+description: Optional for native/headerless API clients. When present on POST, exactly one nonempty value
+  must equal the public scheme://host:port, without a path or trailing slash. Duplicate, empty and foreign
+  origins fail with 403 before token/role/body checks, even with bearer authorization. This is distinct
+  from the refresh API, which requires Origin for cookie transport.
+schema:
+  type: string
+  minLength: 1

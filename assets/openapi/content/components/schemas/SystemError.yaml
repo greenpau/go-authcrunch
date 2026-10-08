@@ -1,0 +1,14 @@
+type: object
+required:
+- error
+- timestamp
+properties:
+  error:
+    type: string
+    description: System transport error detail before a valid encrypted response could be produced.
+  timestamp:
+    type: string
+    format: date-time
+    description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
+      This is a date-time string, not Unix seconds.
+    readOnly: true

@@ -1,0 +1,26 @@
+type: object
+description: HTTP-POST binding from the IdP. Both fields must occur exactly once in the body and be nonempty;
+  query parameters cannot substitute for them. Unknown form fields are ignored. Preserve the original
+  signed XML bytes and RelayState. The provider consumes valid browser-bound state before Base64 decoding/signature
+  validation; after such a failure start a new login.
+required:
+- SAMLResponse
+- RelayState
+properties:
+  SAMLResponse:
+    type: string
+    description: Standard padded Base64 of the signed SAML XML response. The decoder permits CR/LF within
+      Base64 but does not trim arbitrary whitespace. XML signature, request correlation, destination,
+      issuer, audience and time conditions must pass the configured service-provider validation. Required
+      attribute names end in identity/claims/emailaddress and identity/claims/displayname; NameID alone
+      is insufficient.
+    minLength: 1
+    contentEncoding: base64
+    contentMediaType: application/xml
+  RelayState:
+    $ref: SAMLRelayState.yaml
+additionalProperties: true
+x-source-files:
+- pkg/idp/saml/authenticate.go
+- pkg/idp/saml/state.go
+- pkg/idp/saml/provider.go

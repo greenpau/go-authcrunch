@@ -1,0 +1,10 @@
+type:
+- string
+- 'null'
+enum:
+- ''
+- null
+description: Unused login field. Omit it, use an empty string, or use null. A nonempty value selects or
+  conflicts with another login mode; whitespace is significant for this field.
+x-source-files:
+- pkg/apiauth/auth_request.go

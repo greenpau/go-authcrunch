@@ -1,0 +1,67 @@
+get:
+  operationId: directOAuthCallback
+  tags:
+  - External Authentication
+  summary: Complete direct OAuth login
+  description: Exact callback reserved by the authorization gatekeeper. The reference layout places it at {portalBasePath}/oauth2/authorization-code-callback.
+    Configure the policy's full oauth base path accordingly (default reference layout /auth/oauth2), and
+    route these exact callback/logout paths through the gatekeeper before any catch-all portal route.
+    The policy does not infer its base path from the portal. Requires state, exactly one of code/error,
+    and its browser login cookie; duplicate/empty protocol parameters and token-bearing callback parameters
+    are rejected. Query is limited to 16384 bytes. Successful login sets the policy session cookie and
+    redirects to the original allowed resource; it never calls the protected upstream for the callback.
+  security: []
+  responses:
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/PlainError.yaml
+    '401':
+      $ref: ../components/responses/PlainError.yaml
+    '403':
+      $ref: ../components/responses/PlainError.yaml
+    '404':
+      $ref: ../components/responses/PlainError.yaml
+    '405':
+      $ref: ../components/responses/PlainError.yaml
+    '503':
+      $ref: ../components/responses/PlainError.yaml
+  x-source-files:
+  - pkg/authz/oauth.go
+  - pkg/authz/oauth_config.go
+  parameters:
+  - name: state
+    in: query
+    description: Login-bound provider state.
+    required: true
+    schema:
+      type: string
+      minLength: 1
+  - name: code
+    in: query
+    description: Authorization code; exclusive with error.
+    required: false
+    schema:
+      type: string
+      minLength: 1
+  - name: error
+    in: query
+    description: Provider error; exclusive with code.
+    required: false
+    schema:
+      type: string
+      minLength: 1
+  - name: error_description
+    in: query
+    description: Provider detail.
+    required: false
+    schema:
+      type: string
+      minLength: 1
+  - name: iss
+    in: query
+    description: Provider issuer.
+    required: false
+    schema:
+      type: string
+      minLength: 1

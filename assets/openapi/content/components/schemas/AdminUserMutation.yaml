@@ -1,0 +1,53 @@
+type: object
+properties:
+  status:
+    type: string
+    enum:
+    - success
+    - failure
+    description: 'Backend action result. Inspect this even for HTTP 200. failure is not a rollback guarantee:
+      local role replacement/addition can change memory before a later role fails. Read account info to
+      establish the resulting state.'
+  error:
+    type: string
+    description: Backend error detail when the action failed; present independently of the HTTP status.
+  timestamp:
+    type: string
+    format: date-time
+    description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
+      This is a date-time string, not Unix seconds.
+    readOnly: true
+  password:
+    type: string
+    description: Generated password from successful account creation/reset; shown only to the admin. Plaintext
+      generated credential, not a stored hash. The local store generates it using configured password
+      length/composition policy; the normal default is eight alphanumeric ASCII characters. A request
+      user.password is ignored. Save the returned value securely; info exposes only verifier records.
+  roles:
+    type: array
+    items:
+      type: string
+      description: Stored role string.
+    description: Complete resulting role list after add_roles or overwrite_roles.
+  auth_challenge_rules:
+    type: array
+    items:
+      type: string
+      description: Canonical rule body.
+    description: Complete resulting rule list after overwrite_auth_challenges.
+additionalProperties: true
+description: Mutation result. HTTP 200 can contain status=failure; inspect status before using a generated
+  password. Failed mutations do not guarantee unchanged state. Operations are not an atomic multi-action
+  transaction.
+required:
+- status
+- timestamp
+if:
+  properties:
+    status:
+      const: failure
+  required:
+  - status
+then:
+  required:
+  - error

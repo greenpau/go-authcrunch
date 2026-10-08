@@ -1,0 +1,32 @@
+type: object
+description: 'entry for credential diagnostics. HTTP 200 does not guarantee success: TOTP candidate/stored-passcode
+  checks return success=false for a well-formed but incorrect code. This operation does not log in the
+  caller.'
+properties:
+  success:
+    type: boolean
+    description: Whether the diagnostic check succeeded.
+  fingerprint:
+    type: string
+    description: 'Parser-specific public-key fingerprint on successful SSH/GPG parsing. SSH is unpadded
+      standard Base64 SHA-256, prefixed with SHA256: for authorized-key input and unprefixed for PKCS#1.
+      OpenPGP is a full lowercase-hex fingerprint (40 or 64 characters), not its shorter key ID.'
+    pattern: ^(?:(?:SHA256:)?[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]|[0-9a-f]{40}|[0-9a-f]{64})$
+  fingerprint_md5:
+    type: string
+    description: 'Optional legacy MD5 public-key fingerprint. SSH only: 16 lowercase hexadecimal octets
+      separated by colons; absent for OpenPGP.'
+    pattern: ^[0-9a-f]{2}(?::[0-9a-f]{2}){15}$
+  comment:
+    type: string
+    description: Optional comment extracted from a parsed public key.
+required:
+- success
+x-source-files:
+- pkg/authn/api_test_user_app_token_passcode.go
+- pkg/authn/api_test_user_ssh_key.go
+- pkg/authn/api_test_user_gpg_key.go
+- pkg/authn/api_test_user_webauthn_token.go
+- pkg/identity/public_key.go
+examples:
+- success: false

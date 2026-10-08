@@ -1,0 +1,166 @@
+type: object
+required:
+- kty
+- use
+- alg
+properties:
+  kty:
+    type: string
+    enum:
+    - RSA
+    - EC
+    - OKP
+    description: Public key family selecting the required JWK parameters.
+  use:
+    type: string
+    enum:
+    - sig
+    description: Signing/verification use; always sig.
+  alg:
+    type: string
+    description: JOSE signing algorithm advertised by this signer. Match it with the token algorithm and
+      your validation policy.
+  kid:
+    type: string
+    description: Signer key identifier, present only when its JWT includes kid. Portal configuration IDs
+      empty or 0 omit it. OIDC always uses its separately derived SHA-256 public-key thumbprint; see OIDCJWKS.
+    minLength: 1
+  n:
+    $ref: JWKUnsignedInteger.yaml
+    description: RSA modulus.
+  e:
+    $ref: JWKUnsignedInteger.yaml
+    description: RSA public exponent; the common value 65537 is AQAB.
+  crv:
+    type: string
+    description: Named curve for EC/OKP keys. EC uses P-256/P-384/P-521; OKP uses Ed25519.
+  x:
+    type: string
+    description: EC x coordinate or Ed25519 public-key bytes in canonical unpadded base64url. EC retains
+      leading zero octets to exactly 32/48/66 bytes for P-256/P-384/P-521; Ed25519 uses exactly 32 bytes.
+      Canonical output lengths are 43/64/88 characters respectively.
+    pattern: ^[A-Za-z0-9_-]+$
+  y:
+    type: string
+    description: EC y coordinate in canonical unpadded base64url. Same fixed width and canonical final
+      bits as x; do not strip leading zero octets as for RSA integers. Absent for RSA/Ed25519.
+    pattern: ^[A-Za-z0-9_-]+$
+additionalProperties: false
+description: Public signing material only. RSA uses n/e; EC uses crv/x/y; Ed25519 uses kty=OKP, crv=Ed25519,
+  x. No private d. EC coordinates retain leading zero octets to 32/48/66 bytes for P-256/P-384/P-521;
+  Ed25519 public keys use 32 bytes. Canonical output lengths are 43/64/88 characters. The matching algorithms
+  are ES256/ES384/ES512 for EC, RS256/RS384/RS512 for RSA, and EdDSA or Ed25519 for OKP.
+oneOf:
+- properties:
+    kty:
+      const: RSA
+    alg:
+      enum:
+      - RS256
+      - RS384
+      - RS512
+    crv:
+      not: {}
+      description: Not emitted for RSA signing keys.
+    x:
+      not: {}
+      description: Not emitted for RSA signing keys.
+    y:
+      not: {}
+      description: Not emitted for RSA signing keys.
+  required:
+  - n
+  - e
+  title: RSA signing key
+- properties:
+    kty:
+      const: EC
+    crv:
+      enum:
+      - P-256
+      - P-384
+      - P-521
+    n:
+      not: {}
+      description: Not emitted for elliptic-curve signing keys.
+    e:
+      not: {}
+      description: Not emitted for elliptic-curve signing keys.
+  required:
+  - crv
+  - x
+  - y
+  oneOf:
+  - properties:
+      x:
+        minLength: 43
+        maxLength: 43
+        pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+      y:
+        minLength: 43
+        maxLength: 43
+        pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+      crv:
+        const: P-256
+      alg:
+        const: ES256
+    title: P-256 (ES256)
+  - properties:
+      x:
+        minLength: 64
+        maxLength: 64
+        pattern: ^[A-Za-z0-9_-]{64}$
+      y:
+        minLength: 64
+        maxLength: 64
+        pattern: ^[A-Za-z0-9_-]{64}$
+      crv:
+        const: P-384
+      alg:
+        const: ES384
+    title: P-384 (ES384)
+  - properties:
+      x:
+        minLength: 88
+        maxLength: 88
+        pattern: ^A[A-Za-f][A-Za-z0-9_-]{86}$
+      y:
+        minLength: 88
+        maxLength: 88
+        pattern: ^A[A-Za-f][A-Za-z0-9_-]{86}$
+      crv:
+        const: P-521
+      alg:
+        const: ES512
+    title: P-521 (ES512)
+  title: EC signing key
+- properties:
+    kty:
+      const: OKP
+    crv:
+      const: Ed25519
+    alg:
+      enum:
+      - EdDSA
+      - Ed25519
+    x:
+      minLength: 43
+      maxLength: 43
+      pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+    n:
+      not: {}
+      description: Not emitted for Ed25519 signing keys.
+    e:
+      not: {}
+      description: Not emitted for Ed25519 signing keys.
+    y:
+      not: {}
+      description: Not emitted for Ed25519 signing keys.
+  required:
+  - crv
+  - x
+  title: Ed25519 signing key
+x-source-files:
+- pkg/kms/jwks.go
+- pkg/kms/methods.go
+- pkg/kms/crypto_key.go

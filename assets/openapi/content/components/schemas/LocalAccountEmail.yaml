@@ -1,0 +1,14 @@
+type: string
+pattern: ^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$
+description: Local account creation email syntax, not ownership verification. ASCII local part and domain
+  labels; each domain label is 1–63 characters and cannot begin/end with a hyphen. A single-label domain
+  and consecutive local-part dots are accepted. No DNS/MX lookup, domain allowlist, or overall 254-character
+  ceiling is applied here. Surrounding whitespace and Unicode domain names fail; provide an ASCII domain.
+  Case is preserved in the record and folded for uniqueness/lookup. Registration has separate validation.
+examples:
+- alice@example.test
+x-source-files:
+- pkg/identity/email.go
+- pkg/identity/database.go
+not:
+  pattern: '[\r\n]'

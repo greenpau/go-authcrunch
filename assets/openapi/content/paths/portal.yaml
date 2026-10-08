@@ -1,0 +1,31 @@
+get:
+  operationId: portalPage
+  tags:
+  - Authentication Portal
+  summary: Open the signed-in portal
+  description: Keep Accept as text/html. The dashboard requires a valid access token AND its stored portal
+    session. A valid token without that session clears its access cookie and redirects to login. Without
+    a valid token, a present refresh cookie selects the browser continuation page when refresh is enabled;
+    otherwise login is selected. Continuation only runs at the configured HTTPS origin/mount and can fail
+    with HTML 403. With a stored session, a trusted redirect cookie (default AUTHP_REDIRECT_URL) is consumed
+    and produces 303 to the configured trusted destination; untrusted redirect cookies are deleted and
+    the dashboard is rendered.
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  - {}
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '403':
+      $ref: ../components/responses/HTML.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_http_portal.go
+  - pkg/authn/handle_http_session.go
+  - pkg/authn/inject_redirect_url.go

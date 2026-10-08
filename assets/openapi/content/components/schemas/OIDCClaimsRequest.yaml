@@ -1,0 +1,25 @@
+type: object
+description: Decoded claims parameter. Query/form transport carries this object as a JSON string; a Request
+  Object embeds it as a JSON object. Duplicate members are rejected in the top-level object, each claim
+  map and each requirement. Unrecognized top-level locations are ignored. An empty transport string means
+  no requested claims.
+properties:
+  userinfo:
+    $ref: OIDCClaimsMap.yaml
+    description: Claims requested from UserInfo; regular granted scopes also contribute fields.
+  id_token:
+    $ref: OIDCClaimsMap.yaml
+    description: Additional ID-token claims; authentication/protocol claims are generated from verified
+      server state.
+additionalProperties: true
+examples:
+- id_token:
+    auth_time:
+      essential: true
+    acr:
+      essential: true
+      values:
+      - urn:example:password
+x-source-files:
+- pkg/oidc/claims.go
+- pkg/oidc/request_object.go

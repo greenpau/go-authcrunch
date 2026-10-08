@@ -1,0 +1,173 @@
+get:
+  operationId: loginPage
+  tags:
+  - Authentication Portal
+  summary: Open the login page
+  description: Browser entry point. Keep Accept as text/html. fresh=1 forces a new login; a refresh cookie
+    can otherwise open the session continuation page.
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+  x-source-files:
+  - pkg/authn/handle_http_login.go
+  parameters:
+  - name: fresh
+    in: query
+    description: Force fresh login.
+    required: false
+    schema:
+      type: string
+      enum:
+      - '1'
+  - name: redirect_url
+    in: query
+    description: Only configured trusted destinations are accepted.
+    required: false
+    schema:
+      type: string
+post:
+  operationId: login
+  tags:
+  - Authentication Portal
+  summary: Authenticate with a challenge or API key
+  description: 'Start or continue JSON authentication. Send Accept: application/json (or format=json)
+    and Content-Type: application/json. The first request contains username and realm; post each returned
+    challenge with the latest sandbox secret. Access-only success returns a bearer token but does not
+    establish the stored browser session required by profile operations.
+
+
+    Refresh requires an enabled participating local realm. The default browser transport delivers credentials
+    in HttpOnly cookies. Native clients explicitly send refresh_transport: body at EVERY checkpoint, require
+    body transport enabled, and send no Cookie, Origin or Sec-Fetch headers. API-key login is access-only.
+    An invalid pre-existing access token can fail authorization before login. Responses disable caching.
+    Browser form login is also available at this path and returns redirects/HTML instead of the JSON challenge
+    protocol. Sandbox creation/policy errors can render HTML even when JSON was requested. Check response
+    Content-Type before decoding. MFA selection uses a TOTP code directly or the literal webauthn, followed
+    by its signed assertion; see LoginWebAuthnOptions.
+
+
+    JSON routing is selected by the exact Accept value application/json or format=json. Once selected,
+    this login decoder does not enforce Content-Type; clients should still send application/json. Unknown
+    fields fail, but case aliases and repeated fields follow Go string decoding. Null optional strings
+    retain their zero/default value; empty unused fields are allowed. The 1024-byte bound applies to the
+    decoder reader, not a promise that all trailing body bytes are read. A second JSON value or trailing
+    garbage after a complete first object is not examined. Refresh transport checks still apply independently.'
+  security: []
+  responses:
+    '200':
+      description: Next checkpoint or authenticated result.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/LoginResult.yaml
+        text/html:
+          schema:
+            type: string
+            description: Browser form validation errors can render a page with HTTP 200.
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      description: JSON protocol/admission error, or HTML from sandbox creation/policy failure. Inspect
+        Content-Type before parsing the body.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+        text/html:
+          schema:
+            type: string
+    '401':
+      $ref: ../components/responses/PortalError.yaml
+    '403':
+      description: Portal denial, enabled OP origin rejection, or cross-device browser origin rejection.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/PortalError.yaml
+            - $ref: ../components/schemas/OAuthError.yaml
+        text/plain:
+          schema:
+            type: string
+    '429':
+      $ref: ../components/responses/PortalError.yaml
+    '500':
+      description: JSON protocol/admission error, or HTML from sandbox creation/policy failure. Inspect
+        Content-Type before parsing the body.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+        text/html:
+          schema:
+            type: string
+        text/plain:
+          schema:
+            type: string
+    '503':
+      $ref: ../components/responses/PortalError.yaml
+  x-source-files:
+  - pkg/authn/handle_json_login.go
+  - pkg/apiauth/auth_request.go
+  - pkg/authn/handle_json_api_key_login.go
+  - pkg/authn/respond_http.go
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/LoginRequest.yaml
+        examples:
+          start:
+            value:
+              username: alice
+              realm: local
+          native:
+            value:
+              username: alice
+              realm: local
+              refresh_transport: body
+          password:
+            value:
+              username: alice
+              realm: local
+              sandbox_id: returned-id
+              sandbox_secret: latest-returned-secret
+              challenge_kind: password
+              challenge_response: example-password
+        x-maxDecodedBytes: 1024
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          required:
+          - username
+          - realm
+          properties:
+            username:
+              type: string
+              description: Login handle/email for the selected identity store.
+              minLength: 1
+            realm:
+              type: string
+              description: Login realm selecting the enabled identity store.
+              minLength: 1
+  parameters:
+  - name: format
+    in: query
+    description: Use json to select the JSON protocol.
+    required: false
+    schema:
+      type: string
+      enum:
+      - json

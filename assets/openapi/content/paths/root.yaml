@@ -1,0 +1,12 @@
+get:
+  operationId: portalRoot
+  tags:
+  - Authentication Portal
+  summary: Enter the authentication portal
+  description: The mounted portal root redirects to its login page.
+  security: []
+  responses:
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+  x-source-files:
+  - pkg/authn/respond_http.go

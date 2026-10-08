@@ -1,0 +1,25 @@
+type: object
+required:
+- type
+description: Decoded clientDataJSON bytes signed by the authenticator. Preserve the original encoded bytes
+  when submitting an assertion; reserializing parsed JSON changes the signature input.
+properties:
+  type:
+    type: string
+    description: Assertion ceremony type.
+    const: webauthn.get
+  challenge:
+    type: string
+    description: Exact server-issued login or enrollment proof challenge. Login/enrollment compare this
+      to stored state; the profile diagnostic does not.
+  origin:
+    type: string
+    description: Browser origin that signed this assertion. Login/enrollment require an exact match to
+      the trusted portal origin; the profile diagnostic does not.
+  crossOrigin:
+    type: boolean
+    const: false
+    description: Must be false when present. Omission decodes as false.
+x-source-files:
+- pkg/identity/webauthn.go
+- pkg/identity/mfa_token.go

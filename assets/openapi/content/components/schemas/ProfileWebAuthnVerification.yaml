@@ -1,0 +1,76 @@
+type: object
+description: entry for fetch_user_u2f_ver_params. Proves possession of the candidate registration before
+  saving. Sign this new proof challenge; continue to submit the original creation challenge in webauthn_challenge
+  for the enrollment lookup.
+properties:
+  challenge:
+    type: string
+    description: Cryptographically random 32-byte challenge encoded as 43 canonical unpadded base64url
+      characters. Enrollment expires five minutes after creation; retain the originating browser session.
+    pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+    minLength: 43
+    maxLength: 43
+  rp_name:
+    type: string
+    description: Relying-party display name.
+    const: AuthCrunch
+  timeout:
+    type: integer
+    description: Browser ceremony timeout in milliseconds (60 seconds), distinct from the five-minute
+      server enrollment lifetime.
+    const: 60000
+  user_verification:
+    type: string
+    description: Browser verification preference.
+    const: discouraged
+  ext_uvm:
+    type: boolean
+    description: User verification methods extension request.
+    const: false
+  ext_loc:
+    type: boolean
+    description: Location extension request.
+    const: false
+  ext_tx_auth_simple:
+    type: string
+    description: User-visible transaction confirmation prompt.
+  credentials:
+    type: array
+    items:
+      type: object
+      description: Candidate credential allowed for the possession check.
+      properties:
+        id:
+          type: string
+          description: Browser credential identifier encoded by the registration client; distinct from
+            the stored MFA record ID.
+        type:
+          type: string
+          description: WebAuthn credential type.
+          const: public-key
+        transports:
+          type: array
+          items:
+            type: string
+            description: Authenticator transport.
+          description: Transport hints from registration; an omitted original list can yield one empty
+            string.
+      required:
+      - id
+      - type
+      - transports
+    description: The single candidate registration credential.
+    minItems: 1
+    maxItems: 1
+required:
+- challenge
+- rp_name
+- timeout
+- user_verification
+- ext_uvm
+- ext_loc
+- ext_tx_auth_simple
+- credentials
+x-source-files:
+- pkg/authn/api_fetch_user_uni_sec_factor_ver_params.go
+- pkg/authn/webauthn_enrollment.go

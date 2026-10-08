@@ -1,0 +1,21 @@
+type: object
+description: Approval was consumed and browser credentials were issued. Navigate to next with the requesting
+  browser cookie jar. Retrying this proof cannot issue another session.
+required:
+- status
+- next
+properties:
+  status:
+    type: string
+    description: Approval was consumed and browser credentials were issued. Navigate to next with the
+      requesting browser cookie jar. Retrying this proof cannot issue another session.
+    const: approved
+  next:
+    type: string
+    description: Redirect target selected by portal grantAccess, which can be a path or an absolute configured/trusted
+      URL. It is returned in JSON; the poll response is not an HTTP redirect.
+    format: uri-reference
+additionalProperties: false
+x-source-files:
+- pkg/authn/cross_device_http.go
+- pkg/authn/cross_device_store.go

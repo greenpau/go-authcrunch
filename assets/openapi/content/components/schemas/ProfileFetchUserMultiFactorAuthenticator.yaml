@@ -1,0 +1,15 @@
+type: object
+required:
+- kind
+- id
+properties:
+  kind:
+    type: string
+    const: fetch_user_multi_factor_authenticator
+    description: Profile action discriminator; selects this payload and response behavior.
+  id:
+    type: string
+    description: Opaque identifier returned by the corresponding owned-key/authenticator listing. Lookup
+      is bound to the logged-in local account; another user’s identifier cannot select their record.
+description: Return the selected authenticator in entry.
+additionalProperties: true

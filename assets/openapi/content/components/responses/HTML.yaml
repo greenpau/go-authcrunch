@@ -1,0 +1,5 @@
+description: Browser page. Use the embedded forms and retain cookies.
+content:
+  text/html:
+    schema:
+      type: string

@@ -1,0 +1,238 @@
+post:
+  operationId: oidcToken
+  tags:
+  - OpenID Connect
+  summary: Exchange a code or refresh credential
+  description: 'Requires an enabled portal OIDC provider and the exact configured issuer origin/mount.
+    OIDC access/refresh credentials and signing keys are separate from portal JWTs and portal refresh
+    tokens. All responses are no-store.
+
+
+    Form encoding only, no query. Maximum body 16384 bytes; duplicate parameters fail. Authenticate with
+    the registered client_secret_basic, client_secret_post, or none method. The empty security alternative
+    represents credentials in the form or an explicitly registered public client, not arbitrary unauthenticated
+    access. S256 is required for public clients. Codes are one-use. Refresh rotation/replay is independent
+    of portal refresh; serialize rotation and do not retry ambiguous delivery.
+
+
+    MIME parameters such as charset=utf-8 are accepted. A bare trailing ? is forbidden just like a nonempty
+    query. Unknown form fields are ignored, but duplicates of any field fail. Client authentication precedes
+    grant validation. Codes last 60 seconds. Failed client/redirect/PKCE binding does not spend a fresh
+    code; replay by its owning client revokes the grant before rechecking redirect/PKCE. Refresh invalid_scope
+    does not spend the current credential, but a spent-token replay is handled first and revokes the family.
+    Refresh replaces the old access credential immediately and never extends the original family/session
+    deadline. Separate authorization grants remain independent.'
+  security:
+  - OIDCClientBasic: []
+  - {}
+  responses:
+    '200':
+      description: OIDC tokens.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/OIDCTokens.yaml
+          examples:
+            authorizationCode:
+              summary: Authorization Code response with synthetic credentials
+              value:
+                access_token: KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio
+                token_type: Bearer
+                expires_in: 300
+                id_token: example.id.token
+                scope: openid profile
+            narrowedRefresh:
+              summary: Refresh narrowed to profile; no ID token because openid was removed
+              value:
+                access_token: KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio
+                token_type: Bearer
+                expires_in: 300
+                refresh_token: KysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKys
+                scope: profile
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+    '400':
+      description: 'invalid_request: malformed form, forbidden query (including a bare ?), duplicates,
+        or missing grant fields. unsupported_grant_type: authenticated request with an unsupported grant.
+        invalid_grant: expired/unknown/replayed or misbound credential, verifier mismatch or stale identity.
+        invalid_scope: empty, duplicate, ungranted or widening refresh scope.'
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            additionalProperties: false
+            properties:
+              error:
+                type: string
+                enum:
+                - invalid_request
+                - unsupported_grant_type
+                - invalid_grant
+                - invalid_scope
+                description: Protocol failure code; no error_description or token fields are emitted.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+    '401':
+      description: Client authentication failed.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            additionalProperties: false
+            properties:
+              error:
+                type: string
+                const: invalid_client
+                description: Protocol failure code; no error_description or token fields are emitted.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        WWW-Authenticate:
+          description: Authentication challenge emitted for this failure.
+          schema:
+            type: string
+            const: Basic realm="oidc"
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+    '405':
+      $ref: ../components/responses/OIDCPostOnly.yaml
+    '503':
+      $ref: ../components/responses/OIDCUnavailable.yaml
+  x-source-files:
+  - pkg/oidc/token.go
+  - pkg/oidc/refresh.go
+  - pkg/oidc/http.go
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          $ref: ../components/schemas/OIDCTokenRequest.yaml
+    x-maxBytes: 16384
+options:
+  operationId: oidcPreflightOidctoken
+  tags:
+  - OpenID Connect
+  summary: Check CORS for OIDC token exchange
+  description: 'Requires an enabled portal OIDC provider and the exact configured issuer origin/mount.
+    OIDC access/refresh credentials and signing keys are separate from portal JWTs and portal refresh
+    tokens. All responses are no-store.
+
+
+    With Origin, discovery/JWKS/UserInfo allow a requesting origin; token access allows only an exact
+    scheme://host origin from a registered redirect URI of a public client (token_endpoint_auth_method=none).
+    This includes a configured HTTP native-loopback origin. The origin comparison retains the registered
+    port; the native redirect exception for dynamically chosen ports does not broaden CORS. No credentialed
+    CORS. Only Authorization and Content-Type request headers are accepted. Requested methods GET/POST
+    are accepted, with token restricted to POST. Without Origin, normal method rejection applies. Allowed
+    request headers are Authorization and Content-Type (case-insensitive, comma-separated). The response
+    advertises GET, POST even though each endpoint retains its own allowed methods. No Access-Control-Allow-Credentials
+    header is emitted.
+
+
+    The CORS helper reads the first Origin/method/header-list values. It rejects disallowed preflights
+    with 403; for an ordinary token POST from a disallowed Origin, it omits Access-Control-Allow-Origin
+    but still processes the request. CORS controls browser readability and is not an authentication/origin
+    rejection for ordinary token requests. Discovery/JWKS/UserInfo echo the nonempty Origin without parsing
+    it, including the literal null. Allowed preflight methods are case-sensitive.'
+  security: []
+  responses:
+    '204':
+      description: Allowed preflight.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        Access-Control-Allow-Origin:
+          schema:
+            type: string
+        Access-Control-Allow-Methods:
+          schema:
+            type: string
+            const: GET, POST
+        Access-Control-Allow-Headers:
+          schema:
+            type: string
+            const: Authorization, Content-Type
+        Vary:
+          description: Caches must vary on the request origin, requested method and requested headers.
+            May be emitted as multiple header lines.
+          schema:
+            type: string
+            description: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+        Pragma:
+          $ref: ../components/headers/NoCache.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+        X-Frame-Options:
+          $ref: ../components/headers/FrameDeny.yaml
+        Content-Security-Policy:
+          $ref: ../components/headers/OIDCResponseCSP.yaml
+    '400':
+      $ref: ../components/responses/OIDCInvalidRequest.yaml
+    '403':
+      $ref: ../components/responses/OIDCCORSForbidden.yaml
+    '405':
+      $ref: ../components/responses/OIDCPostOnly.yaml
+    '503':
+      $ref: ../components/responses/OIDCUnavailable.yaml
+  x-source-files:
+  - pkg/oidc/http.go
+  parameters:
+  - name: Origin
+    in: header
+    description: Requesting origin.
+    required: true
+    schema:
+      type: string
+      description: Requesting origin. Compare scheme, host and port exactly; a path or trailing slash
+        is not part of an origin.
+  - name: Access-Control-Request-Method
+    in: header
+    description: Requested method.
+    required: true
+    schema:
+      type: string
+      enum:
+      - POST
+  - name: Access-Control-Request-Headers
+    in: header
+    description: Comma-separated requested headers.
+    required: false
+    schema:
+      type: string

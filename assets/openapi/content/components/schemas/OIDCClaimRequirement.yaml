@@ -1,0 +1,31 @@
+description: 'One requested claim. null requests its normal value; an object adds preferences. Unknown
+  object members are ignored. essential is advisory for most claims: the selected provider enforces subject
+  selection and essential id_token acr matching, not universal essential-claim availability or value equality.'
+oneOf:
+- type: 'null'
+- type: object
+  properties:
+    essential:
+      type: boolean
+      description: Whether the client marks this claim essential. Omitted behaves as false; only the documented
+        subject/ACR checks are enforced.
+      default: false
+    value:
+      description: Single preferred non-null JSON value; mutually exclusive with values. Except for sub/acr,
+        its type is not constrained and equality is not generally enforced.
+      not:
+        type: 'null'
+    values:
+      type: array
+      description: Nonempty alternatives, mutually exclusive with value. General claims permit any JSON
+        items, including null; sub/acr require nonempty strings.
+      minItems: 1
+      items: {}
+  not:
+    required:
+    - value
+    - values
+  additionalProperties: true
+x-source-files:
+- pkg/oidc/claims.go
+- pkg/oidc/request_object.go

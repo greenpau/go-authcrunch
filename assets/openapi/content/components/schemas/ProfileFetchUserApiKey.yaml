@@ -1,0 +1,21 @@
+type: object
+required:
+- kind
+- id
+properties:
+  kind:
+    type: string
+    const: fetch_user_api_key
+    description: Profile action discriminator; selects this payload and response behavior.
+  id:
+    type: string
+    description: Exact owned API-key record ID returned by fetch_user_api_keys; normally 40 ASCII letters/digits.
+      It is neither the 24-character lookup prefix nor the raw secret. No whitespace trimming or cross-account
+      lookup is performed.
+description: Return the owned API-key record in entry, including its confidential bcrypt verifier. Lookup
+  filters api usage and disabled records; a missing, foreign or disabled ID returns HTTP 500 without an
+  entry. An expired-but-enabled record can still be fetched.
+additionalProperties: true
+x-source-files:
+- pkg/identity/database.go
+- pkg/identity/user.go

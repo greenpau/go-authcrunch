@@ -1,0 +1,54 @@
+type: object
+description: >-
+  Decoded claims of the provider's RS256 ID-token JWT. Decoding alone does not validate
+  the signature or protocol bindings. Verify with the dedicated OP JWKS, expected
+  issuer/client audience, expiry and requested nonce. These claims are separate from
+  portal access-token claims. Additional consented identity fields use the same typed
+  attributes as UserInfo; profile scope alone does not automatically put them in an ID token.
+required: [iss, sub, aud, iat, exp, auth_time, amr, at_hash]
+properties:
+  iss:
+    type: string
+    format: uri
+    description: Exact configured HTTPS OP issuer, including its mount path.
+  sub:
+    type: string
+    description: Stable issuer-local subject derived from immutable account identity; not the mutable username or email.
+    minLength: 1
+  aud:
+    type: string
+    description: Exact registered client identifier. This provider issues a single string audience.
+    minLength: 1
+  iat:
+    $ref: UnixTime.yaml
+    description: ID-token issuance time in whole Unix seconds; advances on refresh issuance.
+  exp:
+    $ref: UnixTime.yaml
+    description: ID-token expiry in whole Unix seconds, bounded by configured lifetime, OP session and refresh-family deadlines.
+  auth_time:
+    $ref: UnixTime.yaml
+    description: Original end-user authentication time in whole Unix seconds; retained across token refresh.
+  amr:
+    type: array
+    items:
+      type: string
+    description: Verified methods completed at authentication; not merely enrolled factors.
+  at_hash:
+    type: string
+    pattern: '^[A-Za-z0-9_-]{21}[AQgw]$'
+    minLength: 22
+    maxLength: 22
+    description: >-
+      Unpadded base64url of the leftmost 16 bytes of SHA-256 of the ASCII access token
+      (22 characters with canonical final bits). Binds this ID token to the accompanying access token.
+  nonce:
+    type: string
+    description: Nonempty nonce supplied in the original authorization request; echoed on initial and refresh ID tokens.
+  acr:
+    type: string
+    description: Configured authentication context satisfied by verified methods; omitted when none applies.
+additionalProperties: true
+x-source-files:
+  - pkg/oidc/refresh.go
+  - pkg/oidc/claims.go
+  - pkg/oidc/provider.go

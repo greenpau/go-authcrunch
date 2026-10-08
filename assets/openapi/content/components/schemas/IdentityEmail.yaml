@@ -1,0 +1,18 @@
+type: object
+description: Stored email identity. The original address case is preserved and domain is the suffix after
+  @. confirmed is an ownership flag; creating an account does not confirm email ownership. Empty fields
+  and confirmed=false are omitted.
+properties:
+  address:
+    type: string
+    description: Stored address; account creation applies LocalAccountEmail. Imported backend records
+      can differ.
+  domain:
+    type: string
+    description: Domain extracted from the address.
+  confirmed:
+    type: boolean
+    description: Whether email ownership is confirmed.
+x-source-files:
+- pkg/identity/email.go
+- pkg/identity/user.go

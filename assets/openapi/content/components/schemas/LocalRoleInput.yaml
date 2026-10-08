@@ -1,0 +1,13 @@
+type: string
+pattern: "[^\\t\\n\\v\\f\\r \N   - \L\P  　]"
+description: 'Local role input must contain a character remaining after Unicode whitespace trimming. Case
+  is preserved; no role-name alphabet or length limit is enforced. The first / separates organization
+  from name; later slashes remain in the name. Empty components are accepted: /reader becomes reader,
+  team/ retains its trailing slash, and / becomes an empty rendered role. Duplicate normalized organization/name
+  pairs are ignored, preserving the first occurrence. These stored roles precede portal transforms.'
+examples:
+- authp/user
+- ' team/reader '
+x-source-files:
+- pkg/identity/role.go
+- pkg/identity/user.go

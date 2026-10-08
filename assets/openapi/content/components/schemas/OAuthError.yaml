@@ -1,0 +1,7 @@
+type: object
+required:
+- error
+properties:
+  error:
+    type: string
+    description: OAuth/OIDC protocol error code.

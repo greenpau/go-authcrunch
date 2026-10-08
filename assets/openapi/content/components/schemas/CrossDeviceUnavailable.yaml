@@ -1,0 +1,17 @@
+type: object
+description: No usable transfer is returned. Read HTTP status for malformed input, origin/CSRF failure,
+  expiry, consumed/denied proof, admission limit or service failure. These causes intentionally share
+  a body.
+required:
+- status
+properties:
+  status:
+    type: string
+    description: No usable transfer is returned. Read HTTP status for malformed input, origin/CSRF failure,
+      expiry, consumed/denied proof, admission limit or service failure. These causes intentionally share
+      a body.
+    const: unavailable
+additionalProperties: false
+x-source-files:
+- pkg/authn/cross_device_http.go
+- pkg/authn/cross_device_store.go

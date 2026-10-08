@@ -1,0 +1,24 @@
+type: object
+required:
+- count
+- users
+- timestamp
+properties:
+  count:
+    type: integer
+    minimum: 0
+    description: Number of entries returned in this response.
+  users:
+    type: array
+    items:
+      $ref: UserMetadata.yaml
+    description: Backend account metadata. Optional fields depend on the selected store; this list does
+      not contain login tokens.
+  timestamp:
+    type: string
+    format: date-time
+    description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
+      This is a date-time string, not Unix seconds.
+    readOnly: true
+description: Backend user metadata. Local results contain identity/account metadata, not login tokens.
+  An unknown realm currently produces an empty users array.

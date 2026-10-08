@@ -5,6 +5,8 @@ description: Apply AuthCrunch coding contracts when creating, modifying, or revi
 
 # Coding Directives
 
+Use [openapi-generation](../openapi-generation/SKILL.md) to evaluate and update the YAML HTTP contract after handler, wire-model, validator or configuration changes.
+
 ## Overview
 
 Apply these directives when editing or reviewing go-authcrunch code. Prefer

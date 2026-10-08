@@ -1,0 +1,20 @@
+type: object
+required:
+- error
+- message
+- timestamp
+properties:
+  error:
+    type: boolean
+    description: Portal error indicator, true for this error envelope.
+    const: true
+  message:
+    type: string
+    description: Human-readable error detail; clients should use the HTTP status and flow state, not parse
+      this text as a stable code.
+  timestamp:
+    type: string
+    format: date-time
+    description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
+      This is a date-time string, not Unix seconds.
+    readOnly: true

@@ -1,0 +1,90 @@
+type: object
+description: Decoded authorization Request Object payload, not a token establishing user identity. RS256
+  requires iss and aud; with none they are optional but checked when present. Parameters override the
+  outer request after validation, while outer client_id, response_type=code and scope including openid
+  remain required. Unknown extensions are ignored and cannot introduce login claims. Nested request/request_uri
+  are forbidden.
+properties:
+  client_id:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/client_id
+  redirect_uri:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/redirect_uri
+  response_type:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/response_type
+  scope:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/scope
+  state:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/state
+  nonce:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/nonce
+  code_challenge:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/code_challenge
+  code_challenge_method:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/code_challenge_method
+  response_mode:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/response_mode
+  prompt:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/prompt
+  max_age:
+    allOf:
+    - $ref: OIDCAuthorizationRequest.yaml#/properties/max_age
+    description: Nonnegative JSON integer literal in seconds. Unlike the query/form string, this field
+      is numeric JSON; decimal points, exponent notation and quoted digits are rejected by the lexical
+      integer parser even when they would represent a whole number.
+  acr_values:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/acr_values
+  id_token_hint:
+    $ref: OIDCAuthorizationRequest.yaml#/properties/id_token_hint
+  claims:
+    $ref: OIDCClaimsRequest.yaml
+  iss:
+    type: string
+    description: Must exactly equal the outer registered client_id. Required for RS256; optional for none.
+    minLength: 1
+  aud:
+    description: Must be the configured issuer string or an array containing that exact string. Required
+      for RS256; optional for none. No URI normalization is applied.
+    oneOf:
+    - type: string
+      minLength: 1
+    - type: array
+      minItems: 1
+      items:
+        type:
+        - string
+        - 'null'
+        description: String audience entry. The selected Go decoder also accepts null entries as empty
+          strings; at least one other entry must still exactly match the issuer.
+  exp:
+    type: number
+    description: 'Expiration NumericDate: seconds since 1970-01-01T00:00:00Z, with fractional seconds
+      accepted. If present, it must be strictly later than the current server time. Unlike portal access-token
+      UnixTime fields this input need not be an integer.'
+    minimum: 0
+  nbf:
+    type: number
+    description: Not-before NumericDate in Unix seconds, including fractions. If present, it must not
+      be later than the current server time; no clock-skew allowance is applied.
+    minimum: 0
+  iat:
+    type: number
+    description: Issued-at NumericDate in Unix seconds, including fractions. If present, it must not be
+      later than the current server time. This does not supply the user authentication time.
+    minimum: 0
+  jti:
+    description: Ignored Request Object identifier. The selected provider neither validates its JSON type
+      nor provides a replay cache keyed by it. Authorization request cookies/codes retain their independent
+      one-use rules.
+  request:
+    description: Nested Request Objects and remote request references are forbidden. Presence is rejected
+      even when empty or null.
+    not: {}
+  request_uri:
+    description: Nested Request Objects and remote request references are forbidden. Presence is rejected
+      even when empty or null.
+    not: {}
+additionalProperties: true
+x-source-files:
+- pkg/oidc/request_object.go
+- pkg/oidc/request_keys.go
+- pkg/oidc/authorization.go

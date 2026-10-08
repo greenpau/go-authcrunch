@@ -1,0 +1,119 @@
+type: object
+description: Full local backend account record for admin operation=info. Unlike the user list/profile
+  metadata projection, it can contain password hashes, API-key hashes and MFA secrets. Optional fields
+  reflect stored data; no wrapper timestamp or status is added to this result.
+properties:
+  id:
+    type: string
+    description: Persistent backend account identifier; local stores use a UUID.
+  username:
+    type: string
+    description: Canonical account login handle.
+  title:
+    type: string
+    description: Optional account title.
+  disabled:
+    type: boolean
+    description: True when account authentication has been disabled.
+  created:
+    type: string
+    description: Account creation time. RFC 3339 date-time, with fractional seconds when present. An unset
+      Go time serializes as 0001-01-01T00:00:00Z, not null.
+    format: date-time
+  last_modified:
+    type: string
+    description: Last account metadata change. RFC 3339 date-time, with fractional seconds when present.
+      An unset Go time serializes as 0001-01-01T00:00:00Z, not null.
+    format: date-time
+  revision:
+    type: integer
+    description: Account revision counter; zero can be omitted.
+  human:
+    type: boolean
+    description: Whether the account is marked as a human identity.
+  credential_version:
+    type: integer
+    description: Monotonic account credential generation used to invalidate authentication evidence after
+      security changes. Legacy zero is omitted; not a timestamp. Password resets, role/rule changes, enable
+      and disable increment this generation. It is separate from the ordinary account revision counter.
+    minimum: 0
+  name:
+    $ref: IdentityName.yaml
+  names:
+    type: array
+    items:
+      $ref: IdentityName.yaml
+    description: Additional stored names.
+  email_address:
+    $ref: IdentityEmail.yaml
+  email_addresses:
+    type: array
+    items:
+      $ref: IdentityEmail.yaml
+    description: Additional stored email identities.
+  profile:
+    $ref: IdentityProfile.yaml
+  passwords:
+    type: array
+    items:
+      $ref: IdentityPasswordRecord.yaml
+    description: Password history, including disabled verifier records.
+  api_keys:
+    type: array
+    items:
+      $ref: ProfileAPIKeyRecord.yaml
+    description: Stored API-key records, including disabled keys.
+  public_keys:
+    type: array
+    items:
+      $ref: ProfilePublicKeyRecord.yaml
+    description: Stored SSH/GPG public keys.
+  mfa_tokens:
+    type: array
+    items:
+      $ref: ProfileAuthenticatorRecord.yaml
+    description: Stored factor records, including secret material.
+  roles:
+    type: array
+    items:
+      $ref: IdentityRole.yaml
+    description: Stored role objects; token roles are rendered strings and may be transformed.
+  auth_challenge_rules:
+    type: array
+    items:
+      type: string
+      description: Canonical rule body.
+    description: Stored login policy statements; omission means backend defaults.
+  mfa_failed_attempts:
+    type: integer
+    description: Stored failed MFA attempt count.
+    minimum: 0
+  lockout:
+    type: object
+    description: Temporary account lockout state.
+    properties:
+      enabled:
+        type: boolean
+        description: Whether a lockout was set; actual availability also depends on its end time.
+      start_time:
+        type: string
+        description: Lockout start. RFC 3339 date-time, with fractional seconds when present. An unset
+          Go time serializes as 0001-01-01T00:00:00Z, not null.
+        format: date-time
+      end_time:
+        type: string
+        description: Lockout deadline. RFC 3339 date-time, with fractional seconds when present. An unset
+          Go time serializes as 0001-01-01T00:00:00Z, not null.
+        format: date-time
+required:
+- id
+additionalProperties: true
+x-source-files:
+- pkg/authn/handle_api_crud_user.go
+- pkg/ids/local/authenticator.go
+- pkg/identity/user.go
+- pkg/identity/name.go
+- pkg/identity/email.go
+- pkg/identity/profile.go
+- pkg/identity/role.go
+- pkg/identity/lockout.go

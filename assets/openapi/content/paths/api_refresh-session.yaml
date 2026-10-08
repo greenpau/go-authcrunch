@@ -1,0 +1,114 @@
+post:
+  operationId: inspectPortalRefresh
+  tags:
+  - Authentication Portal
+  summary: Read browser refresh session binding
+  description: 'Browser-only lookup of the current refresh-family session ID. Requires enabled refresh,
+    the exact configured HTTPS origin and portal mount, one refresh cookie, the JSON body {}, one Origin
+    header equal to the public origin, and one X-Authcrunch-Refresh: 1 header. It does not rotate credentials
+    and must not be used to recover an uncertain rotation. Native body transport returns 403. X-Authcrunch-Refresh-Session
+    and query strings are not accepted. Optional Sec-Fetch-Site must be same-origin, Sec-Fetch-Mode must
+    be cors or same-origin, and Sec-Fetch-Dest must be the literal empty (or each header may have an empty
+    value). Duplicate refresh cookies fail with 400; transport checks run before token validity checks.
+    Responses are no-store.'
+  security:
+  - RefreshCookie: []
+  responses:
+    '200':
+      description: Operation completed.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/SessionResult.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '400':
+      $ref: ../components/responses/PortalError.yaml
+    '401':
+      $ref: ../components/responses/PortalError.yaml
+    '403':
+      $ref: ../components/responses/PortalError.yaml
+    '404':
+      $ref: ../components/responses/PortalError.yaml
+    '405':
+      description: POST is required.
+      headers:
+        Allow:
+          schema:
+            type: string
+            const: POST
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+    '415':
+      $ref: ../components/responses/PortalError.yaml
+    '503':
+      $ref: ../components/responses/PortalError.yaml
+  x-source-files:
+  - pkg/authn/handle_api_refresh_token.go
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties: {}
+          additionalProperties: false
+        examples:
+          browser:
+            value: {}
+    x-maxBytes: 1024
+  parameters:
+  - name: Origin
+    in: header
+    description: Exactly one header matching the configured HTTPS public origin, with no path or trailing
+      slash.
+    required: true
+    schema:
+      type: string
+      description: Exactly one header matching the configured HTTPS public origin, with no path or trailing
+        slash.
+  - name: X-Authcrunch-Refresh
+    in: header
+    description: Required for cookie transport.
+    required: true
+    schema:
+      type: string
+      enum:
+      - '1'
+  - name: Sec-Fetch-Site
+    in: header
+    required: false
+    description: Optional browser fetch metadata with the shown values; must be absent for native body
+      transport.
+    schema:
+      type: string
+      enum:
+      - ''
+      - same-origin
+  - name: Sec-Fetch-Mode
+    in: header
+    required: false
+    description: Optional browser fetch metadata with the shown values; must be absent for native body
+      transport.
+    schema:
+      type: string
+      enum:
+      - ''
+      - cors
+      - same-origin
+  - name: Sec-Fetch-Dest
+    in: header
+    required: false
+    description: Optional browser fetch metadata with the shown values; must be absent for native body
+      transport.
+    schema:
+      type: string
+      enum:
+      - ''
+      - empty

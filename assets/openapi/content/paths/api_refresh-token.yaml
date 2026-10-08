@@ -1,0 +1,149 @@
+get:
+  operationId: refreshNavigation
+  tags:
+  - Authentication Portal
+  summary: Recover a browser session
+  description: 'Only a top-level browser navigation with Sec-Fetch-Mode: navigate and Sec-Fetch-Dest:
+    document, exact path and no query redirects to login?fresh=1. Other GET requests return 405 when refresh
+    is enabled, or 404 when disabled. This endpoint never rotates credentials on GET.'
+  security: []
+  responses:
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '404':
+      $ref: ../components/responses/PortalError.yaml
+    '405':
+      $ref: ../components/responses/PortalError.yaml
+  x-source-files:
+  - pkg/authn/handle_api_refresh_token.go
+post:
+  operationId: rotatePortalRefresh
+  tags:
+  - Authentication Portal
+  summary: Rotate a portal refresh token
+  description: 'Authenticates the refresh credential independently of access-token validity. Requires
+    enabled refresh and the exact configured HTTPS origin and portal mount. Browser requests send the
+    refresh cookie, {}, Origin equal to the public origin, and X-Authcrunch-Refresh: 1. Native requests
+    send refresh_token in JSON, require body transport enabled, and omit Cookie, Origin and Sec-Fetch
+    headers. Mixing credentials fails. No query string is accepted. All responses are no-store.
+
+
+    Rotation replaces the refresh credential and access jti while retaining session binding and absolute
+    expiry. Replay revokes the family. Never automatically retry an ambiguous rotation. Capacity/storage
+    failure is 503. The optional browser session precondition prevents rotation against a different session.
+    For cookie transport, optional Sec-Fetch-Site must be same-origin, Sec-Fetch-Mode must be cors or
+    same-origin, and Sec-Fetch-Dest must be the literal empty (or each header may have an empty value). Native transport
+    rejects these headers even with empty values. Duplicate refresh cookies fail with 400. Transport checks
+    run before token validity checks.'
+  security:
+  - RefreshCookie: []
+  - {}
+  responses:
+    '200':
+      description: Operation completed.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/RefreshResult.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+        Set-Cookie:
+          description: Cookie transport delivers or deletes configured browser cookies in separate Set-Cookie
+            header lines. Never comma-join them. Native body transport emits no Set-Cookie header. Refresh
+            cookies are Secure, HttpOnly, SameSite=Lax, host-only and scoped to the configured portal
+            mount.
+          schema:
+            type: string
+    '400':
+      $ref: ../components/responses/PortalError.yaml
+    '401':
+      $ref: ../components/responses/PortalError.yaml
+    '403':
+      $ref: ../components/responses/PortalError.yaml
+    '404':
+      $ref: ../components/responses/PortalError.yaml
+    '405':
+      description: POST is required.
+      headers:
+        Allow:
+          schema:
+            type: string
+            const: POST
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+    '415':
+      $ref: ../components/responses/PortalError.yaml
+    '503':
+      $ref: ../components/responses/PortalError.yaml
+  x-source-files:
+  - pkg/authn/handle_api_refresh_token.go
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/RefreshRequest.yaml
+        examples:
+          browser:
+            value: {}
+    x-maxBytes: 1024
+  parameters:
+  - name: Origin
+    in: header
+    description: Required exact public origin for cookie transport; absent for native.
+    required: false
+    schema:
+      type: string
+      description: Required exact public origin for cookie transport; absent for native. Compare scheme,
+        host and port exactly; a path or trailing slash is not part of an origin.
+  - name: X-Authcrunch-Refresh
+    in: header
+    description: Required for cookie transport.
+    required: false
+    schema:
+      type: string
+      enum:
+      - '1'
+  - name: X-Authcrunch-Refresh-Session
+    in: header
+    description: Optional browser rotation precondition; must be a single nonempty session ID.
+    required: false
+    schema:
+      $ref: ../components/schemas/PortalSessionID.yaml
+  - name: Sec-Fetch-Site
+    in: header
+    required: false
+    description: Optional browser fetch metadata with the shown values; must be absent for native body
+      transport.
+    schema:
+      type: string
+      enum:
+      - ''
+      - same-origin
+  - name: Sec-Fetch-Mode
+    in: header
+    required: false
+    description: Optional browser fetch metadata with the shown values; must be absent for native body
+      transport.
+    schema:
+      type: string
+      enum:
+      - ''
+      - cors
+      - same-origin
+  - name: Sec-Fetch-Dest
+    in: header
+    required: false
+    description: Optional browser fetch metadata with the shown values; must be absent for native body
+      transport.
+    schema:
+      type: string
+      enum:
+      - ''
+      - empty

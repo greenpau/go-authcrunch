@@ -1,0 +1,90 @@
+description: Owned MFA record. Listing includes disabled records; single-record lookup excludes disabled
+  records. The current serializer includes secret and credential parameters, so these are confidential
+  responses.
+allOf:
+- $ref: CredentialLifecycle.yaml
+- type: object
+  description: Owned MFA record. Listing includes disabled records; single-record lookup excludes disabled
+    records. The current serializer includes secret and credential parameters, so these are confidential
+    responses.
+  properties:
+    id:
+      type: string
+      description: Owned credential record identifier. Newly created local records use 40 ASCII letters/digits;
+        retain the returned identifier for later lookup or deletion. This is not a bearer credential.
+    comment:
+      type: string
+      description: Display title/comment, from the upload title or the public-key parser.
+    description:
+      type: string
+      description: Optional user-supplied description, omitted when empty.
+    tags:
+      type: array
+      items:
+        $ref: CredentialTag.yaml
+      description: Optional stored tags; empty string fields can be omitted in responses.
+    labels:
+      type: array
+      items:
+        type: string
+        description: Stored label.
+      description: Optional string labels.
+    type:
+      type: string
+      description: Registered factor type, typically totp or u2f; legacy/backend records may differ.
+    algorithm:
+      type: string
+      description: TOTP HMAC algorithm, such as sha1, sha256 or sha512; absent for WebAuthn.
+    secret:
+      type: string
+      description: Raw TOTP HMAC secret, or the enrollment challenge retained for a WebAuthn record. This
+        response field is not redacted by the selected serializer.
+    period:
+      type: integer
+      description: TOTP time-step duration in seconds. Stored records may use constructor-supported values
+        beyond the profile enrollment menu.
+    digits:
+      type: integer
+      description: TOTP output width; passcodes must remain strings so leading zeros survive.
+    signature_counter:
+      type: integer
+      description: Last persisted WebAuthn signature counter, not a timestamp. Zero is omitted.
+      minimum: 0
+      maximum: 4294967295
+    last_totp_counter:
+      type: integer
+      description: Last atomically consumed TOTP time-step counter used to reject replay. It is a step
+        index, not Unix seconds; absent before a code has been consumed.
+      minimum: 0
+    parameters:
+      type: object
+      description: String-valued credential parameters, including WebAuthn key material and relying-party
+        hash.
+      properties: {}
+      additionalProperties:
+        type: string
+    flags:
+      type: object
+      description: WebAuthn authenticator-data flags such as UP and UV.
+      properties: {}
+      additionalProperties:
+        type: boolean
+    device:
+      type: object
+      description: Optional hardware metadata.
+      properties:
+        name:
+          type: string
+          description: Device name.
+        vendor:
+          type: string
+          description: Device vendor.
+        type:
+          type: string
+          description: Device category.
+  required:
+  - type
+x-source-files:
+- pkg/identity/mfa_token.go
+- pkg/identity/database.go
+- pkg/authn/api_fetch_user_multi_factor_authenticators.go

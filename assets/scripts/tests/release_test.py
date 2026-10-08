@@ -39,6 +39,9 @@ class ReleaseTests(unittest.TestCase):
                             'app.SetGitBranch(gitBranch, "")\n'
                             'app.SetGitCommit(gitCommit, "")\n}\n')
         (self.root / 'VERSION').write_text('1.1.41\n')
+        api = self.root / 'assets/openapi/content/openapi.yaml'
+        api.parent.mkdir(parents=True, exist_ok=True)
+        api.write_text('openapi: 3.1.1\ninfo:\n  title: Fixture\n  version: 1.1.41\n  description: Fixture API\n')
         (self.root / '.gitignore').write_text('.fixture/\n__pycache__/\n')
         (self.root / '.fixture').mkdir()
         (self.root / 'Makefile').write_text(
@@ -140,6 +143,7 @@ class ReleaseTests(unittest.TestCase):
     def assert_published_release(self, version):
         tag = f'v{version}'
         self.assertEqual((self.root / 'VERSION').read_text().strip(), version)
+        self.assertIn(f'  version: {version}\n', (self.root / 'assets/openapi/content/openapi.yaml').read_text())
         self.run_command('make', 'version-check')
         self.assertEqual(self.run_command('git', 'status', '--porcelain').stdout, '')
         head = self.run_command('git', 'rev-parse', 'HEAD').stdout.strip()
@@ -233,7 +237,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(self.run_command('git', '--git-dir', str(self.remote), 'tag').stdout, '')
         self.assertEqual(self.run_command('git', 'diff', '--cached', '--name-only').stdout, '')
         self.assertEqual(self.run_command('git', 'diff', '--name-only').stdout.splitlines(),
-                         ['VERSION', 'cmd/authdb/main.go', 'cmd/authdbctl/main.go', 'pkg/identity/database.go'])
+                         ['VERSION', 'assets/openapi/content/openapi.yaml', 'cmd/authdb/main.go', 'cmd/authdbctl/main.go', 'pkg/identity/database.go'])
         # A blind retry must not increment again or publish the failed candidate.
         self.assertNotEqual(self.release(ok=False).returncode, 0)
         self.assertEqual((self.root / 'VERSION').read_text().strip(), '1.1.42')

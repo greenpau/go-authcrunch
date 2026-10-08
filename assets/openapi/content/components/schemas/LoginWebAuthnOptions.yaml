@@ -1,0 +1,72 @@
+type: object
+description: 'Decoded JSON after removing the literal mfa:u2f: prefix from next_challenge and decoding
+  standard padded Base64. This is the portal client format, not a browser PublicKeyCredentialRequestOptions
+  object. Answer the next checkpoint with challenge_kind=u2f and the Base64-encoded WebAuthnAssertion.
+  Preserve the newest sandbox_secret.'
+required:
+- challenge
+- rp_name
+- timeout
+- user_verification
+- ext_uvm
+- ext_loc
+- tx_auth_simple
+- credentials
+properties:
+  challenge:
+    type: string
+    description: 'Server login challenge: 64 random ASCII letters/digits. Preserve the exact string in
+      signed client data; it differs from the 43-character base64url enrollment challenge.'
+    pattern: ^[A-Za-z0-9]{64}$
+    minLength: 64
+    maxLength: 64
+  rp_name:
+    type: string
+    description: Portal display label; it is not the hostname used to validate the relying-party hash.
+    const: AUTHP
+  timeout:
+    type: integer
+    const: 60000
+    description: Browser request timeout in milliseconds. This does not extend the server sandbox lifetime.
+  user_verification:
+    type: string
+    description: Browser preference; successful user-presence proof does not imply a biometric/PIN verification.
+    const: discouraged
+  ext_uvm:
+    type: boolean
+    const: false
+    description: User-verification-method extension request flag.
+  ext_loc:
+    type: boolean
+    const: false
+    description: Location extension request flag.
+  tx_auth_simple:
+    type: string
+    description: Prompt shown by the portal client.
+  credentials:
+    type: array
+    minItems: 1
+    description: Enabled owned WebAuthn credentials eligible for this checkpoint.
+    items:
+      type: object
+      required:
+      - id
+      - type
+      - transports
+      properties:
+        id:
+          type: string
+          description: Stored browser credential ID. Pass it back unchanged; it is not the internal MFA
+            record ID.
+        type:
+          type: string
+          description: Stored credential type, normally public-key.
+        transports:
+          type: string
+          description: Stored comma-separated transports string, possibly empty. The client converts it
+            to a list; unlike enrollment verification options this field is not an array.
+      additionalProperties: false
+additionalProperties: false
+x-source-files:
+- pkg/authn/handle_json_login.go
+- pkg/util/random.go

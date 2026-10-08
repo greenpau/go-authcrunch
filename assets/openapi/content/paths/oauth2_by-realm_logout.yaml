@@ -1,0 +1,40 @@
+get:
+  operationId: externalOAuthLogout
+  tags:
+  - External Authentication
+  summary: Sign out of upstream OAuth
+  description: Delete provider/portal cookies and follow the configured provider logout or local login
+    destination. Only configured trusted redirect_uri values are honored. Keep browser HTML negotiation;
+    provider configuration controls availability.
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '401':
+      $ref: ../components/responses/HTML.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+    '502':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_external_http_logout.go
+  parameters:
+  - name: realm
+    in: path
+    description: Configured enabled realm.
+    required: true
+    schema:
+      type: string
+      minLength: 1
+  - name: redirect_uri
+    in: query
+    description: Trusted logout destination.
+    required: false
+    schema:
+      type: string

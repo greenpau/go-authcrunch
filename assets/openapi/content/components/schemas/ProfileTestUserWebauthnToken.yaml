@@ -1,0 +1,36 @@
+type: object
+required:
+- kind
+- id
+- webauthn_challenge
+- webauthn_request
+properties:
+  kind:
+    type: string
+    const: test_user_webauthn_token
+    description: Profile action discriminator; selects this payload and response behavior.
+  id:
+    type: string
+    description: Opaque identifier returned by the corresponding owned-key/authenticator listing. Lookup
+      is bound to the logged-in local account; another user’s identifier cannot select their record.
+  webauthn_challenge:
+    type: string
+    description: Required string retained for request compatibility; the diagnostic handler does not compare
+      it with the signed challenge. Use the server-managed enrollment or login ceremony for authentication
+      proof.
+  webauthn_request:
+    type: string
+    description: Standard Base64 of portal-client JSON assertion. Checks the owned credential ID, signature,
+      RP hash, webauthn.get type, crossOrigin=false and user-presence bit. The diagnostic result does
+      not certify a fresh origin/challenge-bound login.
+    contentEncoding: base64
+    contentMediaType: application/json
+    contentSchema:
+      $ref: WebAuthnAssertion.yaml
+description: 'Diagnostic signature check for an owned WebAuthn token. This does not establish login or
+  enrollment proof: this handler does not bind webauthn_challenge or compare the signed origin, and does
+  not persist or enforce a signature-counter advance.'
+additionalProperties: true
+x-source-files:
+- pkg/authn/api_test_user_webauthn_token.go
+- pkg/identity/mfa_token.go

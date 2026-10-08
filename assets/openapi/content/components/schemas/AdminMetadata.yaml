@@ -1,0 +1,25 @@
+type: object
+required:
+- timestamp
+properties:
+  name:
+    type: string
+    description: Linked identity-library package name.
+  version:
+    type: string
+    description: Linked identity-library version at runtime.
+  branch:
+    type: string
+    description: Source branch when embedded at library build time; may be absent.
+  commit:
+    type: string
+    description: Source commit when embedded at library build time; may be absent.
+  timestamp:
+    type: string
+    format: date-time
+    description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
+      This is a date-time string, not Unix seconds.
+    readOnly: true
+additionalProperties: true
+description: AuthCrunch identity library version/build metadata. It describes the linked identity library.
+  The handler currently writes JSON bytes with a text/plain Content-Type.

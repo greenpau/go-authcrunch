@@ -1,0 +1,136 @@
+type: object
+required:
+- timestamp
+properties:
+  path:
+    type: string
+    description: Server-side database location exposed by the selected store; this is not a client URL.
+  version:
+    type: string
+    description: Identity database format/library version, independent from API reference VERSION.
+  revision:
+    type: integer
+    description: Database revision counter, not a timestamp.
+    minimum: 0
+  last_modified:
+    type: string
+    format: date-time
+    description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
+      This is a date-time string, not Unix seconds.
+  loaded_at:
+    type: string
+    format: date-time
+    description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
+      This is a date-time string, not Unix seconds.
+  user_count:
+    type: integer
+    description: Number of stored accounts reported by this backend.
+    minimum: 0
+  in_memory:
+    type: boolean
+    description: Whether this store is backed only by memory.
+  policy:
+    type: object
+    additionalProperties: true
+    description: Backend-reported user/password policy. Local enforcement includes byte-length limits
+      and hash-algorithm limits; reported flags alone do not prove a corresponding check is implemented.
+      Other stores may supply different keys.
+    properties:
+      user:
+        type: object
+        description: Local user policy metadata; other identity-store implementations can differ.
+        additionalProperties: true
+        properties:
+          min_length:
+            type: integer
+            description: Minimum username length in UTF-8 bytes used by local account creation.
+            examples:
+            - 3
+          max_length:
+            type: integer
+            description: Maximum username length in UTF-8 bytes used by local account creation.
+            examples:
+            - 50
+          allow_uppercase:
+            type: boolean
+            description: Reported username-policy flag used in generated UI patterns; the database length
+              check alone does not enforce letter case.
+            examples:
+            - false
+          allow_non_alpha_numeric:
+            type: boolean
+            description: Reported username-policy flag used in generated UI patterns; the database length
+              check alone does not enforce the alphabet.
+            examples:
+            - false
+      password:
+        type: object
+        description: Local password policy metadata; other identity-store implementations can differ.
+        additionalProperties: true
+        properties:
+          min_length:
+            type: integer
+            description: Minimum normalized plaintext password length in UTF-8 bytes.
+            examples:
+            - 8
+          max_length:
+            type: integer
+            description: Maximum normalized plaintext password length in UTF-8 bytes; the hash algorithm
+              may impose a lower ceiling.
+            examples:
+            - 128
+          keep_versions:
+            type: integer
+            description: Configured password history retention count; replacement disables older enabled
+              records.
+            examples:
+            - 10
+          require_uppercase:
+            type: boolean
+            description: Reported composition setting used in policy summaries, generated form patterns
+              and password generation; it is not an independent database composition validator.
+            examples:
+            - false
+          require_lowercase:
+            type: boolean
+            description: Reported composition setting used in policy summaries and generated form patterns;
+              it is not an independent database composition validator.
+            examples:
+            - false
+          require_number:
+            type: boolean
+            description: Reported composition setting used in policy summaries, generated form patterns
+              and password generation; it is not an independent database composition validator.
+            examples:
+            - false
+          require_non_alpha_numeric:
+            type: boolean
+            description: Reported composition setting used in policy summaries, generated form patterns
+              and password generation; it is not an independent database composition validator.
+            examples:
+            - false
+          block_reuse:
+            type: boolean
+            description: Reported policy flag; the selected self-service change-password implementation
+              does not enforce this flag.
+            examples:
+            - false
+          block_password_change:
+            type: boolean
+            description: Reported policy flag; the selected self-service change-password implementation
+              does not enforce this flag.
+            examples:
+            - false
+  timestamp:
+    type: string
+    format: date-time
+    description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
+      This is a date-time string, not Unix seconds.
+    readOnly: true
+additionalProperties: true
+description: Backend metadata, including database location, modification time, and configured password/user
+  policy where supplied. Keys vary by identity-store implementation.
+x-source-files:
+- pkg/authn/handle_api_realm_info.go
+- pkg/identity/database.go
+- pkg/identity/user.go

@@ -1,0 +1,13 @@
+type: string
+minLength: 59
+maxLength: 60
+pattern: ^\$2[abxy]?\$(?:0[4-9]|[12][0-9]|3[01])\$[./A-Za-z0-9]{21}[.Oeu][./A-Za-z0-9]{30}[.CGKOSWaeimquy26]$
+description: 'Encoded bcrypt verifier, not plaintext or the bcrypt:<cost>: import envelope. The version
+  marker is $2$, $2a$, $2b$, $2x$ or $2y$; newly generated values use $2a$. The two decimal cost digits
+  are the logarithmic work factor (4–31 for supported imports); new configured generation requires 8–31
+  and defaults to 10. The 22-character salt encodes 16 bytes and the 31-character checksum encodes 23
+  bytes using canonical unpadded bcrypt Base64 (./A–Z a–z 0–9), not standard Base64. Treat the complete
+  verifier as confidential.'
+x-source-files:
+- pkg/identity/password.go
+- pkg/identity/password_hash_config.go

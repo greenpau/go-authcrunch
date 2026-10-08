@@ -1,0 +1,72 @@
+type: object
+required:
+- username
+- realm
+- sandbox_id
+- sandbox_secret
+- challenge_kind
+- challenge_response
+properties:
+  username:
+    type: string
+    description: Login handle or email interpreted by the selected store. Leading/trailing whitespace
+      is trimmed; the result must be nonempty. Registration-only username rules do not apply to LDAP/provider
+      identities.
+    minLength: 1
+    examples:
+    - alice
+    pattern: "[^\\t\\n\\v\\f\\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]"
+  realm:
+    type: string
+    description: Enabled identity-store realm. Leading/trailing whitespace is trimmed; the result must
+      be nonempty and select a configured store.
+    minLength: 1
+    examples:
+    - local
+    pattern: "[^\\t\\n\\v\\f\\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]"
+  sandbox_id:
+    type: string
+    description: Temporary sandbox identifier returned by the current login; trimmed before lookup. Must
+      match that login, realm and current secret.
+    minLength: 1
+    pattern: "[^\\t\\n\\v\\f\\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]"
+  sandbox_secret:
+    type: string
+    writeOnly: true
+    description: Latest server-issued sandbox secret. It rotates between checkpoints; do not trim, cache
+      an older value, or substitute a final access token.
+    minLength: 1
+  challenge_kind:
+    type: string
+    description: 'Exact current checkpoint label: password, totp, mfa or u2f. It is case-sensitive and
+      not trimmed. A returned mfa:u2f:... challenge requires u2f here.'
+    minLength: 1
+  challenge_response:
+    type: string
+    writeOnly: true
+    description: Trimmed, nonempty checkpoint response. password takes plaintext; totp takes a digit string
+      preserving leading zeros. For mfa, submit a TOTP code directly or webauthn to request assertion
+      options; the literal totp is not a method selector. u2f accepts webauthn to request options, then
+      standard Base64 of WebAuthnAssertion JSON. Login verifies the stored challenge, trusted origin,
+      signature and counter/replay policy.
+    minLength: 1
+    pattern: "[^\\t\\n\\v\\f\\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]"
+  refresh_transport:
+    type:
+    - string
+    - 'null'
+    enum:
+    - ''
+    - cookie
+    - body
+    - null
+    default: cookie
+    description: cookie (also selected for an omitted or empty value) uses the browser transport; body
+      requires native transport enabled and must be repeated at every checkpoint. Body clients omit Cookie,
+      Origin and Sec-Fetch headers. JSON null has the same default as omission.
+  api_key:
+    $ref: LoginEmptyField.yaml
+additionalProperties: false
+x-source-files:
+- pkg/apiauth/auth_request.go
+- pkg/authn/handle_json_login.go

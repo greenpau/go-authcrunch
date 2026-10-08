@@ -21,7 +21,9 @@ the `authdbctl` management CLI in `cmd/authdbctl`,
 embedded portal/profile UI assets under `pkg/authn/ui`, shared identity and user
 data models under `pkg/identity`, user registration under `pkg/registry`,
 messaging providers under `pkg/messaging`, i18n helpers under `pkg/translate`,
-and test fixtures under `testdata`.
+and test fixtures under `testdata`. Canonical HTTP API YAML and the Scalar
+reference live in `assets/openapi/`; `cmd/openapi` and `internal/openapi` own
+validation, generated JSON and the local reference server.
 
 ## Scripts and Automation
 
@@ -29,6 +31,9 @@ Use [scripts-and-automation](.codex/skills/scripts-and-automation/SKILL.md) to
 choose, run, or document Makefile targets, repository scripts, build/test/report
 workflows, generated artifacts, dependency automation, or release/version
 procedures.
+
+HTTP-facing changes must evaluate the YAML contract in the same change; the
+scripts router delegates this workflow to `openapi-generation`.
 
 `make test` uses pinned `tested`; `make ci-check` is the complete quality gate.
 `make release`, `make minor-release`, `make fast-release`, and

@@ -1,0 +1,25 @@
+type: object
+description: entry for fetch_user_info.
+properties:
+  metadata:
+    $ref: UserMetadata.yaml
+  roles:
+    type: array
+    items:
+      type: string
+      description: Effective role name.
+    description: Effective roles from the presented portal token; these can differ from stored account
+      roles after transforms.
+  token:
+    type: string
+    description: Pretty-printed JSON string of the stored session claims, not a compact signed JWT. Includes
+      authenticated=true and optional expires_at_utc, issued_at_utc and not_before_utc display strings
+      in Go UnixDate layout (Mon Jan _2 15:04:05 MST 2006). Those display strings are not RFC 3339; numeric
+      exp/iat/nbf remain Unix seconds.
+    contentMediaType: application/json
+required:
+- metadata
+- roles
+- token
+x-source-files:
+- pkg/authn/api_fetch_user_info.go

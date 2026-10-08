@@ -1,0 +1,5 @@
+oneOf:
+- $ref: LoginCheckpoint.yaml
+- $ref: AccessLogin.yaml
+- $ref: BrowserRefresh.yaml
+- $ref: NativeRefresh.yaml

@@ -1,0 +1,11 @@
+type: object
+required:
+- keys
+properties:
+  keys:
+    type: array
+    items:
+      $ref: PublicJWK.yaml
+    description: Public verification keys from eligible configured signers. Select by kid and algorithm;
+      no symmetric secret or private-key parameter is included.
+additionalProperties: false

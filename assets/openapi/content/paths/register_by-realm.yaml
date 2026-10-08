@@ -1,0 +1,70 @@
+get:
+  operationId: registerRealmGet
+  tags:
+  - Registration
+  summary: Open a realm registration form
+  description: Requires an enabled configured user registry. Registration is browser HTML, not JSON. Authenticated
+    users redirect to the portal. Input validation, domain/MX checks, verification code and terms depend
+    on registration configuration. Validation failures commonly render HTTP 200 with a page message. Submission
+    and confirmation do not themselves guarantee account activation.
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '503':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_register.go
+  parameters:
+  - name: realm
+    in: path
+    description: Configured enabled realm.
+    required: true
+    schema:
+      type: string
+      minLength: 1
+post:
+  operationId: registerRealmPost
+  tags:
+  - Registration
+  summary: Submit a realm registration request
+  description: Requires an enabled configured user registry. Registration is browser HTML, not JSON. Authenticated
+    users redirect to the portal. Input validation, domain/MX checks, verification code and terms depend
+    on registration configuration. Validation failures commonly render HTTP 200 with a page message. Submission
+    and confirmation do not themselves guarantee account activation. Submission requires Content-Length
+    from 15 through 1000 bytes and the exact Content-Type application/x-www-form-urlencoded (a charset
+    parameter fails this handler). Missing/chunked length fails the same check. Admission errors render
+    HTML with HTTP 200. Recognized fields use the first merged form value; body values take precedence
+    over query values. Unknown fields are ignored.
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '503':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_register.go
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          $ref: ../components/schemas/RegistrationRequest.yaml
+    x-minBytes: 15
+    x-maxBytes: 1000
+  parameters:
+  - name: realm
+    in: path
+    description: Configured enabled realm.
+    required: true
+    schema:
+      type: string
+      minLength: 1

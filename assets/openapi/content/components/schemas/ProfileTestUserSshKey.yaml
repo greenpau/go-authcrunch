@@ -1,0 +1,23 @@
+type: object
+required:
+- kind
+- content
+properties:
+  kind:
+    type: string
+    const: test_user_ssh_key
+    description: Profile action discriminator; selects this payload and response behavior.
+  content:
+    type: string
+    description: 'Legacy RSA public material: ssh-rsa followed by a literal space and a standard-Base64
+      SSH key blob, optionally an inline comment; or RSA PUBLIC KEY PEM whose DER is PKCS#1. Generic PUBLIC
+      KEY/SPKI PEM, authorized_keys options, non-RSA SSH keys and private keys fail. An inline SSH comment
+      overrides the upload title. This test operation does not trim before its anchored prefix check:
+      leading whitespace fails, although add accepts it. Trailing whitespace can be accepted by the parser.'
+    minLength: 1
+description: 'Legacy RSA public keys: ssh-rsa or RSA PUBLIC KEY PEM. Validate the candidate key and return
+  the result in entry.'
+additionalProperties: true
+x-source-files:
+- pkg/identity/public_key.go
+- pkg/authn/api_test_user_ssh_key.go

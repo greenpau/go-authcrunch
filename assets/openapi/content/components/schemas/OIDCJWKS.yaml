@@ -1,0 +1,36 @@
+type: object
+required:
+- keys
+additionalProperties: false
+description: Dedicated OIDC ID-token verification keys. Every configured key is a 2048–8192-bit RSA key
+  with alg=RS256 and a deterministic kid; the first configured key signs new tokens and all configured
+  keys are published for verification. This is separate from portal access-token discovery and its optional
+  configuration-derived kid.
+properties:
+  keys:
+    type: array
+    minItems: 1
+    items:
+      allOf:
+      - $ref: PublicJWK.yaml
+      - type: object
+        required:
+        - kid
+        properties:
+          kty:
+            const: RSA
+          alg:
+            const: RS256
+          kid:
+            type: string
+            pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+            minLength: 43
+            maxLength: 43
+            description: Canonical unpadded base64url of SHA-256 over canonical public JWK JSON containing
+              e, kty and n only, in that key order. This thumbprint is independent of filenames.
+          n:
+            minLength: 342
+            maxLength: 1366
+x-source-files:
+- pkg/oidc/keys.go
+- pkg/oidc/config.go

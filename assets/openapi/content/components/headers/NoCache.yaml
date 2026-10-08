@@ -1,0 +1,4 @@
+description: Legacy cache-control companion to no-store.
+schema:
+  type: string
+  const: no-cache

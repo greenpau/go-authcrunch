@@ -1,0 +1,20 @@
+type: object
+required:
+- kind
+- id
+properties:
+  kind:
+    type: string
+    const: fetch_user_gpg_key
+    description: Profile action discriminator; selects this payload and response behavior.
+  id:
+    type: string
+    description: Exact OpenPGP public-key ID from fetch_user_gpg_keys; the primary 64-bit key ID in
+      lowercase hexadecimal without zero padding. Lookup belongs to the logged-in local account and
+      does not trim this string or accept the full fingerprint as an alias.
+description: Return the owned OpenPGP public-key record in entry. Fetch enforces gpg usage and excludes
+  disabled records. Missing, wrong-category or foreign IDs return HTTP 500 without an entry.
+additionalProperties: true
+x-source-files:
+- pkg/identity/database.go
+- pkg/identity/user.go

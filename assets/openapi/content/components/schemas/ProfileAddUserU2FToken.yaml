@@ -1,0 +1,66 @@
+type: object
+required:
+- kind
+- webauthn_register
+- webauthn_challenge
+- title
+- description
+properties:
+  kind:
+    type: string
+    const: add_user_u2f_token
+    description: Profile action discriminator; selects this payload and response behavior.
+  webauthn_register:
+    type: string
+    description: Base64-encoded JSON registration result from the browser. The server validates key type,
+      origin, relying party, challenge, and session-bound enrollment proof.
+  webauthn_challenge:
+    type: string
+    description: Original creation challenge from fetch_user_u2f_reg_params, retained through all four
+      enrollment stages. This is not the later assertion/proof challenge from fetch_user_u2f_ver_params.
+      Bound to account, credential/backend version, browser session and origin; expires after five minutes.
+    pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+    minLength: 43
+    maxLength: 43
+  title:
+    type: string
+    description: Authenticator display title; 3–50 ASCII letters/digits, without whitespace or punctuation.
+    pattern: ^[A-Za-z0-9]{3,50}$
+    minLength: 3
+    maxLength: 50
+  description:
+    type: string
+    description: Required field; may be empty. Otherwise 3–255 ASCII letters/digits, underscore, whitespace,
+      hyphen, comma or dot. The handler does not trim this value.
+    pattern: ^(?:[A-Za-z0-9_\t\n\f\r , .\-]{3,255})?$
+    maxLength: 255
+  labels:
+    type: array
+    items:
+      type: string
+    description: Optional arbitrary string labels stored with this credential. Omission means no labels;
+      null and non-string members fail.
+  tags:
+    type: array
+    items:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Tag name; an arbitrary string.
+        value:
+          type: string
+          description: Tag value; an arbitrary string.
+      required:
+      - key
+      - value
+    description: Optional credential tags. Each object must contain string key and value; empty strings
+      are allowed. Omission means no tags; null fails.
+description: Commit the verified WebAuthn registration; entry is Created.
+additionalProperties: true
+x-source-files:
+- pkg/authn/api_add_user_u2f_token.go
+- pkg/authn/handle_api_profile.go
+- pkg/tagging/tag.go
+- pkg/authn/webauthn_enrollment.go
+- pkg/identity/webauthn_registration.go

@@ -1,0 +1,30 @@
+type: object
+required:
+- kind
+- challenges
+properties:
+  kind:
+    type: string
+    const: overwrite_user_auth_challenges
+    description: Profile action discriminator; selects this payload and response behavior.
+  challenges:
+    type: array
+    items:
+      type: string
+      description: 'Encoded rule body without auth challenges prefix/braces: an ordered method sequence,
+        or alternatives separated by or; optionally append if <method> [and <method> ...] not available.
+        Methods are password, totp, u2f, mfa and (where supported) email. CR/LF, empty/malformed tokens,
+        duplicate canonical rules and mixed sequence/alternative syntax fail. This self-service operation
+        rejects email in both methods and conditions.'
+      minLength: 1
+      pattern: ^[^\r\n]+$
+    description: Ordered authentication-rule statements; the entire array replaces the previous policy.
+      Empty [] restores defaults. Every rule is parsed and the resulting flow must be supported by registered
+      credentials and portal transforms. Email challenges are unsupported in this self-service API.
+    uniqueItems: true
+    examples:
+    - - password totp
+      - password if totp not available
+description: Replace the entire rule list atomically. [] restores defaults. Unsupported email challenges
+  and unfulfillable flows fail. Success returns reauthentication_required=true.
+additionalProperties: true

@@ -1,0 +1,4 @@
+description: Do not store credentials or protocol responses.
+schema:
+  type: string
+  const: no-store

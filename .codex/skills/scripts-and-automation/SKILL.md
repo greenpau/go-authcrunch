@@ -5,6 +5,8 @@ description: Maintain go-authcrunch Make targets, pinned Go tools, build/test or
 
 # Scripts and Automation
 
+Use [openapi-generation](../openapi-generation/SKILL.md) to maintain `make openapi`, `make serve-openapi`, source-review checks and Scalar tooling.
+
 The root Makefile is the public automation surface. Helper scripts live under
 `assets/scripts/`. Apply `testing-and-ci` for test selection and report evidence.
 Use [release-and-versioning](../release-and-versioning/SKILL.md) to maintain the
@@ -33,15 +35,19 @@ boundary for these workflows.
 | `make test TEST_DIR='./pkg/authn/...' TEST='TestPortalRefresh'` | Same lifecycle with selected packages/test pattern |
 | `make qtest QUICK_TEST_DIR='./pkg/authn/token_refresh/...'` | Token engine and public parser lifecycle under `.coverage/quick`; default scope is `./pkg/system` |
 | `make run-reports` | Rebuild presentations from the existing tested evidence bundle |
+| `make openapi` / `make serve-openapi` | Validate/bundle YAML or serve the Scalar reference at loopback port 8080 |
+| `make openapi-check` / `make openapi-test` | Check source/freshness or run unit/native HTTP/CLI/bootstrap contracts |
+| `make openapi-artifact` | Export standalone JSON/YAML specifications for the separate CI artifact |
+| `make openapi-browser-test` | Qualify the real pinned Scalar viewer in Chrome |
 | `make test-ui` | Node spec-reported login and refresh client tests (`*_client_test.cjs`) |
 | `make test-automation` | Verbose Python automation/version/release fixture tests |
 | `make test-codeql` | Real CodeQL fixture scan verifying accepted diagnostic logging exceptions and retained alerts; requires CodeQL CLI |
 | `make brand-assets` / `make brand-assets-check` | Regenerate SVG branding and shared colors from the palette, or check drift without writes |
 | `make generate-acl` | Regenerate the four ACL condition/rule source and test files from the local Python generator |
 | `make ci-check` | Complete sequential quality gates and full Go tests |
-| `make ci-quality` | Version, brand assets, automation, lint, UI tests, and both executable builds |
+| `make ci-quality` | Version, OpenAPI/source review/bootstrap, brand assets, automation, lint, UI tests, and both executable builds |
 | `make ci-test-shard CI_SHARD=portal-core` | Run one of eight portal-test or package shards; see parallel CI validation |
-| `make version-check` / `make version-sync` | Check or explicitly synchronize version-bearing Go defaults |
+| `make version-check` / `make version-sync` | Check or explicitly synchronize Go metadata and OpenAPI YAML with VERSION |
 | `make artifact-id` | Validate and print the versioned artifact identity |
 | `make docs` | Generate ignored `.doc/index.txt` from `go doc -all` |
 
@@ -87,6 +93,8 @@ during quiet work before the child finishes. Output fixtures verify recovery
 after rate-limited bursts, visible throttling notices, and continued heartbeats.
 Linux proc-read fixtures distinguish normal process exits from accounting
 failures and verify child results and cleanup through Make on either host.
+The OpenAPI target fixture verifies both Go phases use guarded tested reports,
+preserve output paths containing spaces, and stop before later phases on failure.
 `assets/scripts/tests/tested_test.py` exercises pinned tested and real Go tests:
 live log forwarding before a test can finish, default forwarding, a recursive
 quick-run override, and a short environment deadline that remains a failed run

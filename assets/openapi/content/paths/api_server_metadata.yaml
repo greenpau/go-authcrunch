@@ -1,0 +1,34 @@
+get:
+  operationId: adminMetadata
+  tags:
+  - Administration
+  summary: Read server metadata
+  description: Requires enable admin api, a valid portal token, and an admin role. Stored profile-session
+    state is not required for these routes. Disabled admin endpoints and wrong methods fall through to
+    HTTP 400 (private export has its own 404/405 contract). Invalid tokens fail with 401; absent token/non-admin
+    role fail with 403. Browser mutation requests must satisfy same-origin checks. JSON decoding is bounded
+    to 1 MiB; excessive bodies return 413.
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: JSON-encoded metadata (currently served as text/plain).
+      content:
+        text/plain:
+          schema:
+            $ref: ../components/schemas/AdminMetadata.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '400':
+      $ref: ../components/responses/PortalError.yaml
+    '401':
+      $ref: ../components/responses/PortalError.yaml
+    '403':
+      $ref: ../components/responses/PortalError.yaml
+  x-source-files:
+  - pkg/authn/handle_api_metadata.go

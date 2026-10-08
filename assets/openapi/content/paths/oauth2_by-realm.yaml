@@ -1,0 +1,71 @@
+get:
+  operationId: externalOAuthLogin
+  tags:
+  - External Authentication
+  summary: Start upstream OAuth login
+  description: Start a configured upstream OAuth/OIDC login. The browser follows the provider redirect
+    and returns with state and its binding cookie. Keep browser HTML negotiation; provider configuration
+    controls availability. The portal binds a UUID state to its initiating session cookie and callback
+    for five minutes; only one callback can claim that state. PKCE/nonce behavior follows provider configuration.
+    Presence of state, code, error or access_token switches the provider into callback processing even
+    on this login URL. Missing/unknown providers produce HTML 400; upstream validation failures produce
+    HTML 401.
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '401':
+      $ref: ../components/responses/HTML.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+    '502':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_external_login.go
+  - pkg/idp/oauth/authenticate_setup.go
+  - pkg/idp/oauth/authenticate.go
+  - pkg/util/validate/login_hint.go
+  - pkg/util/validate/additional_scopes.go
+  - pkg/idp/oauth/state.go
+  parameters:
+  - name: realm
+    in: path
+    description: Configured enabled realm.
+    required: true
+    schema:
+      type: string
+      minLength: 1
+  - name: login_hint
+    in: query
+    required: false
+    description: Optional upstream login hint forwarded by the portal provider. It is not an authentication
+      credential. When hints arrive via an authorization policy, that policy separately requires opt-in and
+      validates configured email, phone or alphanumeric syntax before forwarding; a direct portal request
+      does not apply that gatekeeper validator.
+    schema:
+      type: string
+  - name: additional_scopes
+    in: query
+    required: false
+    description: Extra upstream scopes appended by the portal provider, split on literal spaces. Provider
+      consent still applies. An authorize policy separately requires opt-in and validates ASCII word characters,
+      ASCII whitespace and | before forwarding; that policy validator does not constrain a direct portal
+      request.
+    schema:
+      type: string
+  - name: prompt
+    in: query
+    required: false
+    description: Google-specific hint. Whitespace is normalized; supported values are none, consent, select_account,
+      consent select_account, or select_account consent. Unsupported values are ignored. Other drivers
+      do not forward this request hint.
+    schema:
+      type: string
+      examples:
+      - select_account

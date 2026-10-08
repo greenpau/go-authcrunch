@@ -1,0 +1,165 @@
+post:
+  operationId: profileOperation
+  tags:
+  - Profile
+  summary: Manage the signed-in local profile
+  description: 'Requires profile API enabled (normally enabled), a current stored local browser login
+    session, and an authorized portal user/admin role. A bearer JWT from ordinary access-only JSON login
+    alone is insufficient: missing stored JTI sessions return 401. Foreign identity fields and transformed
+    subject/email claims do not change the profile owner.
+
+
+    The kind discriminator selects the operation. All operations are POST here. Maximum body is 1 MiB;
+    malformed or oversized JSON is 400, unsupported media is 415, non-local sessions are 501. Missing/foreign
+    key lookup can be 500. Policy preview conflict is 409. Successful mutations can invalidate refresh,
+    OIDC and profile evidence. Read status and reauthentication_required; recover with a fresh login,
+    not a refresh retry. Earlier origin/role/access-token rejections use the PortalError shape.
+
+
+    Content-Type application/json accepts MIME parameters such as charset=utf-8. The entire body must
+    be one JSON value with only trailing whitespace; a second value is rejected. Unknown fields are ignored
+    and repeated object names take the last decoded value. Origin and Sec-Fetch-Site use the optional
+    API guard documented below, not refresh admission rules.'
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: Operation-specific profile result.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/ProfileResult.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '400':
+      description: Profile rejection, or an earlier portal authentication/origin error.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/ProfileResult.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '401':
+      description: Profile rejection, or an earlier portal authentication/origin error.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/ProfileResult.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '403':
+      description: Profile rejection, or an earlier portal authentication/origin error.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/ProfileResult.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '409':
+      description: Profile rejection, or an earlier portal authentication/origin error.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/ProfileResult.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '415':
+      description: Profile rejection, or an earlier portal authentication/origin error.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/ProfileResult.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '500':
+      description: Profile rejection, or an earlier portal authentication/origin error.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/ProfileResult.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '501':
+      description: Profile rejection, or an earlier portal authentication/origin error.
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: ../components/schemas/ProfileResult.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+  x-source-files:
+  - pkg/authn/handle_api_profile.go
+  - pkg/authn/profile_auth_challenges.go
+  - pkg/authn/respond_api.go
+  - pkg/authn/api_origin.go
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/ProfileRequest.yaml
+        examples:
+          identity:
+            value:
+              kind: fetch_user_info
+          keys:
+            value:
+              kind: fetch_user_ssh_keys
+          policy:
+            value:
+              kind: fetch_user_auth_challenges
+          restoreDefaultPolicy:
+            value:
+              kind: overwrite_user_auth_challenges
+              challenges: []
+    x-maxBytes: 1048576
+  parameters:
+  - $ref: ../components/parameters/APIOrigin.yaml
+  - $ref: ../components/parameters/APIFetchSite.yaml

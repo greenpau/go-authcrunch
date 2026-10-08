@@ -1,0 +1,4 @@
+description: Disable response media-type sniffing.
+schema:
+  type: string
+  const: nosniff

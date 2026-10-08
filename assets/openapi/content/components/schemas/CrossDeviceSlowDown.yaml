@@ -1,0 +1,15 @@
+type: object
+description: Polling is too frequent. Wait for Retry-After before polling again; this response does not
+  disclose approval state.
+required:
+- status
+properties:
+  status:
+    type: string
+    description: Polling is too frequent. Wait for Retry-After before polling again; this response does
+      not disclose approval state.
+    const: slow_down
+additionalProperties: false
+x-source-files:
+- pkg/authn/cross_device_http.go
+- pkg/authn/cross_device_store.go

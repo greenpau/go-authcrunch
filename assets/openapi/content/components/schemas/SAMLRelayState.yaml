@@ -1,0 +1,9 @@
+type: string
+description: 'Portal-generated one-use SAML transaction identifier: canonical unpadded base64url of 32
+  random bytes. Bound to the initiating browser cookie, ACS URL and AuthnRequest ID for five minutes.
+  This is not a redirect URL or an OAuth state value.'
+pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+minLength: 43
+maxLength: 43
+x-source-files:
+- pkg/idp/saml/state.go

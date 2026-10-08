@@ -1,0 +1,76 @@
+get:
+  operationId: basicLogin
+  tags:
+  - Authentication Portal
+  summary: Authenticate using HTTP Basic
+  description: 'Browser-oriented Basic login for an enabled identity store. Missing credentials return
+    a Basic challenge; malformed credentials return 400. Direct authentication must satisfy the account
+    challenge policy; Basic cannot complete an MFA checkpoint. Does not create OIDC browser login evidence.
+    Send Accept: text/html to retain this route, rather than JSON negotiation.
+
+
+    Encode the raw username:password bytes using standard Base64; unlike OAuth client Basic, these values
+    are not form-percent-decoded or whitespace-trimmed. The first colon separates the username, so later
+    colons belong to the password. The selected legacy parser recognizes Basic/basic prefixes, not arbitrary
+    mixed case, and reads only the first Authorization header value. Within that value, comma-separated
+    Basic and Realm= segments are supported; later recognized segments replace earlier ones. A Realm=
+    segment overrides the path realm and its value is not unquoted. Use one conventional Basic segment
+    and the configured path realm. A challenge is emitted only when no recognized Basic credentials exist,
+    not for a wrong password. A decoded empty username or password currently reaches a handler error
+    and returns an empty text/plain HTTP 500 response from the portal.'
+  security:
+  - BasicLogin: []
+  responses:
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      description: Malformed request.
+      content:
+        text/plain:
+          schema:
+            type: string
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+    '401':
+      description: Missing or rejected Basic credentials.
+      content:
+        text/plain:
+          schema:
+            type: string
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+      headers:
+        WWW-Authenticate:
+          description: 'Only when no recognized Basic credentials were found: Basic realm="<path realm>".
+            Invalid passwords or account policy failures use JSON errors without a new challenge.'
+          schema:
+            type: string
+    '403':
+      $ref: ../components/responses/PortalError.yaml
+    '500':
+      description: Internal authentication failure. Empty decoded username/password produces an empty
+        text/plain body; portal-generated errors use JSON.
+      content:
+        text/plain:
+          schema:
+            type: string
+            const: ''
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+    '429':
+      $ref: ../components/responses/PortalError.yaml
+  x-source-files:
+  - pkg/authn/handle_basic_login.go
+  - pkg/authn/handle_authenticate_basic_auth_request.go
+  - pkg/authn/handle_http_login.go
+  parameters:
+  - name: realm
+    in: path
+    description: Configured enabled realm.
+    required: true
+    schema:
+      type: string
+      minLength: 1

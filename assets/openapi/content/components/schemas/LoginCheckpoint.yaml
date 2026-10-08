@@ -1,0 +1,31 @@
+type: object
+required:
+- sandbox_id
+- sandbox_secret
+- next_challenge
+properties:
+  sandbox_id:
+    type: string
+    description: Opaque temporary login identifier. Reuse it unchanged in subsequent checkpoints; it is
+      not a final session or bearer token.
+    minLength: 36
+    pattern: ^[A-Za-z0-9]{36,47}$
+    maxLength: 47
+  sandbox_secret:
+    type: string
+    description: Current opaque login secret. Replace the previous value after every checkpoint and keep
+      it private.
+    minLength: 36
+    pattern: ^[A-Za-z0-9]{36,47}$
+    maxLength: 47
+  next_challenge:
+    type: string
+    description: 'Server-selected next action. Simple labels include password, totp, mfa and u2f. An assertion
+      request is the literal mfa:u2f: prefix followed by standard padded Base64 of LoginWebAuthnOptions
+      JSON. Do not send that full value as challenge_kind: use u2f for its signed assertion.'
+    minLength: 1
+additionalProperties: false
+x-source-files:
+- pkg/authn/sandbox_user.go
+- pkg/authn/handle_json_login.go
+- pkg/util/random.go

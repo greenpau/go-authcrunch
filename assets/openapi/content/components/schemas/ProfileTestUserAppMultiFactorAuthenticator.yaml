@@ -1,0 +1,64 @@
+type: object
+required:
+- kind
+- period
+- digits
+- secret
+- passcode
+properties:
+  kind:
+    type: string
+    const: test_user_app_multi_factor_authenticator
+    description: Profile action discriminator; selects this payload and response behavior.
+  period:
+    type: number
+    description: TOTP time-step duration in seconds. This helper accepts 15, but saving a new authenticator
+      requires 30, 60 or 90. Send a whole number. The selected JSON handler truncates a fractional number
+      toward zero before checking the allowed integer values; numeric strings are rejected.
+    examples:
+    - 15
+    anyOf:
+    - minimum: 15
+      exclusiveMaximum: 16
+    - minimum: 30
+      exclusiveMaximum: 31
+    - minimum: 60
+      exclusiveMaximum: 61
+    - minimum: 90
+      exclusiveMaximum: 91
+  digits:
+    type: number
+    description: Number of decimal digits in a TOTP code. Send passcodes as strings so leading zeros survive.
+      Send a whole number. The selected JSON handler truncates a fractional number toward zero before
+      checking the allowed integer values; numeric strings are rejected.
+    examples:
+    - 4
+    anyOf:
+    - minimum: 4
+      exclusiveMaximum: 5
+    - minimum: 6
+      exclusiveMaximum: 7
+    - minimum: 8
+      exclusiveMaximum: 9
+  secret:
+    type: string
+    writeOnly: true
+    description: 'Raw TOTP HMAC secret: 10–200 ASCII letters/digits, used as literal bytes by the server.
+      The enrollment helper Base32-encodes these bytes into the otpauth URI; do not Base32-decode this
+      API field.'
+    pattern: ^[A-Za-z0-9]{10,200}$
+    minLength: 10
+    maxLength: 200
+  passcode:
+    type: string
+    writeOnly: true
+    description: Decimal TOTP code as a string, including leading zeros. The handler allows 4–8 digits;
+      successful verification also requires the configured digit count and an accepted time step. The
+      diagnostic check uses the current and two preceding time steps; it does not consume a login code.
+    pattern: ^[0-9]{4,8}$
+    minLength: 4
+    maxLength: 8
+    examples:
+    - '012345'
+description: Test a candidate TOTP authenticator before saving it.
+additionalProperties: true

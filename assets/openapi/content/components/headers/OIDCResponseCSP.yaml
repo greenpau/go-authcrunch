@@ -1,0 +1,5 @@
+description: Policy for these non-interactive OIDC endpoint responses; browser authorization pages use
+  their own policy.
+schema:
+  type: string
+  const: default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'

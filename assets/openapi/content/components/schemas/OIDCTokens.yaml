@@ -1,0 +1,46 @@
+type: object
+required:
+- access_token
+- token_type
+- expires_in
+- scope
+properties:
+  access_token:
+    $ref: OIDCOpaqueToken.yaml
+    description: Bearer access credential for UserInfo, replaced by refresh rotation. Rotation immediately
+      invalidates the previous access token; tokens from independently authorized grants remain separate.
+  token_type:
+    type: string
+    const: Bearer
+    description: Authorization scheme for the OIDC access token; always Bearer.
+  expires_in:
+    type: integer
+    description: Access-token lifetime remaining at issuance, in seconds. Bounded by configured token
+      lifetime, the OP session deadline and any refresh-family deadline. The normal token lifetime is
+      300 seconds, configurable up to 3600; the actual returned duration can be shorter near a session/family
+      deadline.
+    format: int64
+    minimum: 1
+    examples:
+    - 300
+  id_token:
+    type: string
+    contentMediaType: application/jwt
+    description: RS256-signed compact JWT for the relying party. Includes iss, sub, aud, exp/iat/auth_time
+      in Unix seconds, verified amr and at_hash; nonce/acr and consented claims are conditional. Verify
+      signature, issuer, audience, time and nonce. A refresh grant narrowed to omit openid omits this
+      field. See OIDCIDTokenClaims for the decoded payload, including at_hash encoding and audience shape.
+    minLength: 1
+  scope:
+    type: string
+    description: Granted scopes joined with spaces. Inspect this value; it may be narrower than the requested
+      scopes.
+    examples:
+    - openid profile email
+  refresh_token:
+    $ref: OIDCOpaqueToken.yaml
+    description: One-use rotating refresh credential. Initially issued only when offline_access was granted
+      through explicit consent. Once the family exists, every successful refresh returns a replacement
+      even after scope narrowing removes offline_access. Rotation does not extend the original absolute
+      family/session deadline; retaining a prior credential for retry triggers replay revocation.
+additionalProperties: false

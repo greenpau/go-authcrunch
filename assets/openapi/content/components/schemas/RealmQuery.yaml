@@ -1,0 +1,7 @@
+type: object
+properties:
+  query:
+    type: string
+    default: all
+    description: all selects every enabled identity store; otherwise a realm substring. Omission selects
+      all through an empty substring.

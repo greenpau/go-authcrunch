@@ -1,0 +1,112 @@
+get:
+  operationId: browserSandboxGet
+  tags:
+  - Authentication Portal
+  summary: Open the current browser login challenge
+  description: Browser challenge page selected by the server after form login. Retain the sandbox cookie
+    and submit only the fields supplied by the current rendered checkpoint. Fields differ for password,
+    TOTP and WebAuthn. JSON/native clients use POST /login instead. This is temporary authentication state,
+    not a final access-token session.
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '401':
+      $ref: ../components/responses/HTML.yaml
+    '403':
+      $ref: ../components/responses/HTML.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_http_sandbox.go
+  parameters:
+  - name: sandbox_id
+    in: path
+    description: Server-selected sandbox identifier.
+    required: true
+    schema:
+      type: string
+post:
+  operationId: browserSandboxPost
+  tags:
+  - Authentication Portal
+  summary: Submit a browser login challenge response
+  description: Browser challenge page selected by the server after form login. Retain the sandbox cookie
+    and submit only the fields supplied by the current rendered checkpoint. Fields differ for password,
+    TOTP and WebAuthn. JSON/native clients use POST /login instead. This is temporary authentication state,
+    not a final access-token session.
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '401':
+      $ref: ../components/responses/HTML.yaml
+    '403':
+      $ref: ../components/responses/HTML.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+  x-source-files:
+  - pkg/authn/handle_http_sandbox.go
+  - pkg/authn/password_form_validator.go
+  - pkg/authn/mfa_form_validator.go
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          additionalProperties:
+            type: string
+            description: Checkpoint form value.
+          description: Form fields depend on the current browser checkpoint. Use only the server-rendered
+            form for that checkpoint and retain its sandbox cookie. Fields below explain common existing
+            checkpoints; enrollment pages may supply further string fields.
+          properties:
+            secret:
+              type: string
+              writeOnly: true
+              description: 'Password checkpoint: required nonempty plaintext password. Unlike the JSON
+                challenge/profile handlers, the browser password form does not trim it. Enrollment pages
+                can use this same field for a raw TOTP secret; follow the rendered checkpoint.'
+            passcode:
+              type: string
+              writeOnly: true
+              description: 'TOTP checkpoint: surrounding whitespace is trimmed, then 4–8 decimal digits
+                are required. Verification also checks the selected authenticator digit count and time
+                window. Preserve leading zeros.'
+            token_id:
+              type: string
+              description: Optional owned authenticator identifier on TOTP/WebAuthn checkpoints; trimmed
+                before lookup.
+            webauthn_request:
+              type: string
+              writeOnly: true
+              description: 'WebAuthn checkpoint: required nonempty, trimmed base64-encoded JSON assertion.
+                Signature, origin, relying party, challenge, counter and credential ownership are checked.'
+            webauthn_register:
+              type: string
+              description: 'Enrollment checkpoint only: browser registration result. Retain the matching
+                challenge and server-held enrollment session.'
+            webauthn_challenge:
+              type: string
+              description: 'Enrollment checkpoint only: exact server-provided challenge/context, required
+                with the registration result.'
+  parameters:
+  - name: sandbox_id
+    in: path
+    description: Server-selected sandbox identifier.
+    required: true
+    schema:
+      type: string

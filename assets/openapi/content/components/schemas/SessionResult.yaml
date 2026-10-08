@@ -1,0 +1,7 @@
+type: object
+required:
+- session_id
+properties:
+  session_id:
+    $ref: PortalSessionID.yaml
+additionalProperties: false

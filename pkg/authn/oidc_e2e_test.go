@@ -242,6 +242,7 @@ func (f *oidcE2EFixture) request(t *testing.T, method, target string, form url.V
 	if err != nil {
 		t.Fatal("OIDC response read failed")
 	}
+	openAPIJourneyResponse(t, f.issuer, r.URL, r.Method, response.StatusCode, response.Header, body)
 	return oidcE2EResponse{status: response.StatusCode, header: response.Header, body: body}
 }
 
@@ -1009,6 +1010,7 @@ func (f *oidcE2EFixture) jsonRequest(t *testing.T, target string, data any, toke
 	if err != nil {
 		t.Fatal("JSON response failed")
 	}
+	openAPIJourneyResponse(t, f.issuer, r.URL, r.Method, response.StatusCode, response.Header, body)
 	return oidcE2EResponse{status: response.StatusCode, header: response.Header, body: body}
 }
 

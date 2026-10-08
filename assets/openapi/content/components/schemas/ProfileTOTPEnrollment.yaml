@@ -1,0 +1,25 @@
+type: object
+description: entry for fetch_user_app_multi_factor_authenticator_code. These are enrollment URI strings,
+  not image bytes.
+properties:
+  uri:
+    type: string
+    description: otpauth://totp/ URI. secret is the unpadded Base32 encoding of the submitted raw secret;
+      issuer is AuthCrunch@ plus the requested issuer. Query parameters include digits and period in seconds.
+    format: uri
+    pattern: ^otpauth://totp/
+  uri_encoded:
+    type: string
+    description: Standard padded Base64 of the UTF-8 otpauth URI; decode to the same value as uri. This
+      is not a PNG or a data URI.
+    contentEncoding: base64
+    contentMediaType: text/plain
+required:
+- uri
+- uri_encoded
+x-source-files:
+- pkg/authn/api_fetch_user_app_multi_factor_authenticator_code.go
+- pkg/identity/qr/qr.go
+examples:
+- uri: otpauth://totp/alice?secret=MFRGGZDFMZTWQ2LK&issuer=AuthCrunch%40example.test&digits=6&period=30
+  uri_encoded: b3RwYXV0aDovL3RvdHAvYWxpY2U/c2VjcmV0PU1GUkdHWkRGTVpUV1EyTEsmaXNzdWVyPUF1dGhDcnVuY2glNDBleGFtcGxlLnRlc3QmZGlnaXRzPTYmcGVyaW9kPTMw

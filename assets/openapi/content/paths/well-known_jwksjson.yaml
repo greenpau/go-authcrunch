@@ -1,0 +1,106 @@
+get:
+  operationId: portalJWKSGet
+  tags:
+  - Discovery
+  summary: Read public portal signing keys
+  description: 'Public access-token signing keys, independent of admin/export flags. The first eligible
+    non-system signer decides availability: HMAC first returns 404 even if asymmetric signers follow.
+    Verification-only and system keys are excluded. Invalid credentials do not block discovery. HEAD has
+    the same headers and Content-Length as GET with no body. This is distinct from OIDC /oidc/jwks.'
+  security: []
+  responses:
+    '200':
+      description: Public key set.
+      content:
+        application/jwk-set+json:
+          schema:
+            $ref: ../components/schemas/JWKS.yaml
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Content-Length:
+          schema:
+            type: integer
+            minimum: 1
+          description: Exact byte length of the GET JSON key set, also sent on successful HEAD. This differs
+            from OIDC JWKS HEAD.
+    '404':
+      description: No eligible public signing key; empty body.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+    '405':
+      description: Method not allowed; empty body.
+      headers:
+        Allow:
+          schema:
+            type: string
+            const: GET, HEAD
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+    '500':
+      description: Key export failed; empty body.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+  x-source-files:
+  - pkg/authn/handle_http_jwks.go
+head:
+  operationId: portalJWKSHead
+  tags:
+  - Discovery
+  summary: Read public portal signing keys (headers only)
+  description: 'Public access-token signing keys, independent of admin/export flags. The first eligible
+    non-system signer decides availability: HMAC first returns 404 even if asymmetric signers follow.
+    Verification-only and system keys are excluded. Invalid credentials do not block discovery. HEAD has
+    the same headers and Content-Length as GET with no body. This is distinct from OIDC /oidc/jwks.'
+  security: []
+  responses:
+    '200':
+      description: Headers only.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Content-Length:
+          schema:
+            type: integer
+            minimum: 1
+          description: Exact byte length of the GET JSON key set, also sent on successful HEAD. This differs
+            from OIDC JWKS HEAD.
+    '404':
+      description: No eligible public signing key; empty body.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+    '405':
+      description: Method not allowed; empty body.
+      headers:
+        Allow:
+          schema:
+            type: string
+            const: GET, HEAD
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+    '500':
+      description: Key export failed; empty body.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+  x-source-files:
+  - pkg/authn/handle_http_jwks.go

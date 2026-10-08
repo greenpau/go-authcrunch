@@ -1,0 +1,103 @@
+get:
+  operationId: crossDeviceActivate
+  tags:
+  - Cross-Device Sign-In
+  summary: Open the cross-device approval link
+  description: 'Requires explicitly enabled cross-device login and HTTPS. This browser-bound transfer
+    is not the OAuth Device Authorization Grant. The QR/activation link contains only the code; the requester
+    retains its secret. POSTs require the exact same-origin Origin and form encoding, at most 4096 bytes,
+    without repeated body fields. Fresh login on the approving browser and a separate approve decision
+    are required. All responses are no-store.
+
+
+    Sets the approving-browser binding cookie and displays the account-confirmation journey. Opening the
+    link alone never grants access.'
+  security: []
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '400':
+      description: The code query parameter is missing, repeated, or not exactly 26 bytes.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '403':
+      description: HTTPS origin, browser fetch context, or required approving-browser binding/CSRF check
+        failed.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '404':
+      $ref: ../components/responses/PlainError.yaml
+    '405':
+      description: Method not supported at this exact endpoint; see Allow.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+        Allow:
+          schema:
+            type: string
+            const: GET
+          description: Methods accepted at this endpoint.
+    '410':
+      description: Unknown, expired, denied, cancelled or already-consumed transfer, incorrect requester
+        secret, or missing/stale approval evidence.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/CrossDeviceUnavailable.yaml
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+    '500':
+      description: HTML template rendering failed; text/plain is the fallback if the error template also
+        fails.
+      content:
+        text/html:
+          schema:
+            type: string
+        text/plain:
+          schema:
+            type: string
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+          description: Do not store credentials or protocol responses.
+  x-source-files:
+  - pkg/authn/cross_device_http.go
+  parameters:
+  - name: code
+    in: query
+    description: Single 26-character activation code.
+    required: true
+    schema:
+      type: string
+      minLength: 26
+      maxLength: 26
+      pattern: ^[A-Z2-7]{26}$

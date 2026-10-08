@@ -1,0 +1,124 @@
+description: Owned public-key metadata, separate from portal signing keys. SSH records use 40-character
+  random IDs; OpenPGP IDs are the primary 64-bit key ID in lowercase hexadecimal without zero padding,
+  not random IDs. Only enabled records are returned by these profile fetch/list operations. Fingerprints
+  and payload encodings depend on the admitted input format.
+x-source-files:
+- pkg/identity/public_key.go
+- pkg/authn/api_fetch_user_ssh_keys.go
+- pkg/authn/api_fetch_user_gpg_keys.go
+- pkg/identity/database.go
+type: object
+properties:
+  created_at:
+    $ref: CredentialLifecycle.yaml#/properties/created_at
+  expired_at:
+    $ref: CredentialLifecycle.yaml#/properties/expired_at
+  disabled_at:
+    $ref: CredentialLifecycle.yaml#/properties/disabled_at
+  expired:
+    $ref: CredentialLifecycle.yaml#/properties/expired
+  disabled:
+    $ref: CredentialLifecycle.yaml#/properties/disabled
+  id:
+    type: string
+    description: Owned public-key identifier. SSH uses 40 ASCII letters/digits; OpenPGP uses 1–16 lowercase
+      hexadecimal characters without zero padding. Retain the exact returned spelling for fetch/delete;
+      these selectors are not trimmed.
+  comment:
+    type: string
+    description: Display comment. An inline SSH comment overrides the upload title. OpenPGP preserves
+      a supplied title; otherwise it derives text from one primary identity, algorithm and key creation
+      time.
+  description:
+    type: string
+    description: Stored description, omitted when empty. OpenPGP can append generated identity/algorithm/creation
+      metadata, so the returned value can exceed the upload description limit of 255 characters.
+  tags:
+    type: array
+    items:
+      $ref: CredentialTag.yaml
+    description: Optional stored tags; empty string fields can be omitted in responses.
+  labels:
+    type: array
+    items:
+      type: string
+      description: Stored label.
+    description: Optional string labels.
+  usage:
+    type: string
+    description: Public-key category.
+    enum:
+    - ssh
+    - gpg
+  type:
+    type: string
+    description: Parser-reported key algorithm, such as ssh-rsa, rsa, dsa or ecdsa. This is not
+      the usage category.
+  payload:
+    type: string
+    description: RSA PEM uploads retain their trimmed PKCS#1 payload. An ssh-rsa upload is converted to
+      SubjectPublicKeyInfo DER but labeled RSA PUBLIC KEY in PEM; that historical output does not round-trip
+      through the PKCS#1-only upload parser. Use the returned openssh field to reconstruct an authorized-key
+      line. OpenPGP retains the trimmed submitted armor, including appended blocks and any secret-key
+      packets mislabeled as public armor; the parser does not sanitize those packets.
+  openssh:
+    type: string
+    description: Standard-Base64 SSH key blob, without the ssh-rsa prefix. PKCS#1 input can leave a trailing
+      newline here; trim it and prepend ssh-rsa plus one space to reconstruct an authorized-key line.
+      Absent for OpenPGP.
+  fingerprint:
+    type: string
+    description: 'Parser fingerprint. SSH input uses SHA256: plus Base64; RSA PEM uses the same digest
+      without that prefix; PGP uses lowercase hexadecimal. Preserve the representation.'
+  fingerprint_md5:
+    type: string
+    description: Legacy colon-separated MD5 public-key fingerprint when provided; a display identifier,
+      not a signature.
+    pattern: ^[0-9a-f]{2}(?::[0-9a-f]{2}){15}$
+    minLength: 47
+    maxLength: 47
+required:
+- usage
+oneOf:
+- title: SSH RSA record
+  type: object
+  properties:
+    usage:
+      const: ssh
+    type:
+      const: ssh-rsa
+    id:
+      type: string
+      pattern: ^[A-Za-z0-9]{40}$
+      description: Random 40-character ASCII letter/digit identifier for this stored SSH record.
+    fingerprint:
+      type: string
+      pattern: ^(?:SHA256:)?[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]$
+      description: 'SHA-256 of the SSH public-key wire blob in unpadded standard Base64, not base64url.
+        ssh-rsa input retains the SHA256: prefix; PKCS#1 PEM input omits it.'
+- title: OpenPGP record
+  type: object
+  properties:
+    usage:
+      const: gpg
+    type:
+      enum:
+      - rsa
+      - dsa
+      - ecdsa
+    id:
+      type: string
+      pattern: ^(?:0|[1-9a-f][0-9a-f]{0,15})$
+      description: Primary OpenPGP 64-bit key ID rendered as lowercase hexadecimal without zero padding;
+        not a full fingerprint.
+    fingerprint:
+      type: string
+      pattern: ^(?:[0-9a-f]{40}|[0-9a-f]{64})$
+      description: 'Full primary-key fingerprint in lowercase hexadecimal: 40 characters for v4 keys or
+        64 for newer fingerprints. This is longer than the key ID.'
+    fingerprint_md5:
+      not: {}
+      description: Not emitted for parsed OpenPGP records.
+    openssh:
+      not: {}
+      description: Not emitted for parsed OpenPGP records.
