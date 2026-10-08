@@ -17,9 +17,11 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -292,8 +294,9 @@ func TestE2EMakeOpenAPI(t *testing.T) {
 	if err := os.WriteFile(source, valid, 0644); err != nil {
 		t.Fatal(err)
 	}
-	// A real HTTP server, launched through make, serves the generated result.
-	cmd := exec.CommandContext(ctx, "make", "serve-openapi", "OPENAPI_ADDR=127.0.0.1:0")
+	// Force the directory announcements emitted by recursive Make in CI, even
+	// when a local caller disables them. They precede the CLI's ready message.
+	cmd := exec.CommandContext(ctx, "make", "--print-directory", "serve-openapi", "OPENAPI_ADDR=127.0.0.1:0")
 	cmd.Dir = dir
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM) }
@@ -308,30 +311,23 @@ func TestE2EMakeOpenAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { cancel(); _ = cmd.Wait() })
-	// The CLI prints one ready line only after successful generation and bind.
-	ready := make(chan string, 1)
+	// Wait for the CLI's ready line after successful generation and bind;
+	// Make and other startup diagnostics can precede it.
+	type startupResult struct {
+		address string
+		err     error
+	}
+	ready := make(chan startupResult, 1)
 	go func() {
-		var line strings.Builder
-		one := make([]byte, 1)
-		for {
-			if _, err := stdout.Read(one); err != nil {
-				ready <- ""
-				return
-			}
-			if one[0] == '\n' {
-				ready <- line.String()
-				return
-			}
-			line.WriteByte(one[0])
-		}
+		address, err := readOpenAPIReadyAddress(stdout)
+		ready <- startupResult{address: address, err: err}
 	}()
 	select {
-	case line := <-ready:
-		start := strings.Index(line, "http://")
-		if start < 0 {
-			t.Fatalf("no server address in %q", line)
+	case result := <-ready:
+		if result.err != nil {
+			t.Fatal(result.err)
 		}
-		address := strings.Fields(line[start:])[0]
+		address := result.address
 		client := &http.Client{Timeout: 5 * time.Second}
 		// Reject aliases introduced after generation, including a parent
 		// directory alias whose final file is regular and remains inside root.
@@ -370,4 +366,24 @@ func TestE2EMakeOpenAPI(t *testing.T) {
 	case <-ctx.Done():
 		t.Fatal("documentation server did not start")
 	}
+}
+
+func readOpenAPIReadyAddress(output io.Reader) (string, error) {
+	const prefix = "OpenAPI reference: "
+	scanner := bufio.NewScanner(output)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, prefix) {
+			continue
+		}
+		fields := strings.Fields(strings.TrimPrefix(line, prefix))
+		if len(fields) == 0 || !strings.HasPrefix(fields[0], "http://") {
+			return "", fmt.Errorf("invalid documentation server ready message: %q", line)
+		}
+		return fields[0], nil
+	}
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("read documentation server output: %w", err)
+	}
+	return "", fmt.Errorf("documentation server exited before reporting its address")
 }

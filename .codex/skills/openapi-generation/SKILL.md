@@ -241,6 +241,10 @@ use the `TestE2EOpenAPIContract` prefix, including the scoped native-journey hoo
 The Make-launched process-group fixture lives in `cmd/openapi/e2e_unix_test.go`
 and runs on POSIX hosts; portable CLI unit tests remain in `main_test.go` so
 Windows test builds do not import Unix-only process APIs.
+Read server readiness from the `OpenAPI reference:` message, not the first
+stdout line: recursive Make can announce directories before the server binds.
+The E2E fixture forces `--print-directory` to exercise this on local and CI
+runs. Keep startup waits bounded and propagate premature EOF/read failures.
 Existing independent feature journeys retain their deeper state/security checks.
 Sampling is not exhaustive branch coverage or official OP certification.
 Official conformance remains separate and opt-in.
