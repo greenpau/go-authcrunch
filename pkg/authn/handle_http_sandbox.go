@@ -343,6 +343,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 							zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
 							zap.String("checkpoint_name", checkpoint.Name),
 							zap.String("checkpoint_type", checkpoint.Type),
+							zap.String("username", rr.User.Username),
 						)
 						return m, fmt.Errorf("password authentication failed. Please retry")
 					}
@@ -477,6 +478,17 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				checkpoint.FailedAttempts++
 				rr.Authentication = usr.LoginEvidence
 				backend.Request(operator.IncrementMfaFailedAttempts, rr)
+				p.logger.Warn(
+					"totp passcode authentication failed",
+					zap.String("session_id", rr.Upstream.SessionID),
+					zap.String("request_id", rr.ID),
+					zap.Int("checkpoint_id", checkpoint.ID),
+					zap.String("src_ip", addrutil.GetSourceAddress(r)),
+					zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+					zap.String("checkpoint_name", checkpoint.Name),
+					zap.String("checkpoint_type", checkpoint.Type),
+					zap.String("username", rr.User.Username),
+				)
 				return m, fmt.Errorf("invalid MFA token passcode")
 			case uniConfigured && (action == "mfa-u2f-auth" || action == ""):
 				m["title"] = "Hardware Token"
@@ -502,6 +514,17 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 						checkpoint.FailedAttempts++
 						rr.Authentication = usr.LoginEvidence
 						backend.Request(operator.IncrementMfaFailedAttempts, rr)
+						p.logger.Warn(
+							"u2f authentication failed",
+							zap.String("session_id", rr.Upstream.SessionID),
+							zap.String("request_id", rr.ID),
+							zap.Int("checkpoint_id", checkpoint.ID),
+							zap.String("src_ip", addrutil.GetSourceAddress(r)),
+							zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
+							zap.String("checkpoint_name", checkpoint.Name),
+							zap.String("checkpoint_type", checkpoint.Type),
+							zap.String("username", rr.User.Username),
+						)
 						return m, fmt.Errorf("Token verification failed. Please retry")
 					}
 					rr.Authentication = usr.LoginEvidence
