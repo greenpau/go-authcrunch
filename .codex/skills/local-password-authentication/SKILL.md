@@ -206,7 +206,7 @@ exact-millisecond unit assertions and global mutable comparison hooks.
 For focused diagnostics and the repository report lifecycle:
 
 ```sh
-go test -mod=readonly -race -count=1 ./pkg/identity -run 'Test(PasswordVerifier|DatabasePasswordVerification|DatabaseAuthentication|NewPassword)'
+make test TEST_DIR='./pkg/identity' TEST='Test(PasswordVerifier|DatabasePasswordVerification|DatabaseAuthentication|NewPassword)' COVERAGE_DIR='.coverage/password-verification'
 make test TEST_DIR='./pkg/identity/... ./pkg/ids/local ./pkg/authn ./pkg/authclient ./cmd/authdbctl'
 ```
 

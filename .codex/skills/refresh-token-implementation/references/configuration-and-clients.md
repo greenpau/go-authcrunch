@@ -346,7 +346,8 @@ by the runtime-state integration and its restart/replay tests.
 ```sh
 make test
 make test-ui
-go test ./pkg/authn/token_refresh -run '^$' -fuzz FuzzRefreshToken -fuzztime 5s
+COVERAGE_DIR=.coverage/refresh-fuzz python3 assets/scripts/test_guard.py run \
+  go test ./pkg/authn/token_refresh -run '^$' -fuzz FuzzRefreshToken -fuzztime 5s
 ```
 
 Tests cover real local/KMS issuance through browser and native login, MFA and

@@ -118,8 +118,10 @@ they do not require portal internals.
 
 ```sh
 make test TEST_DIR='./pkg/authz/... ./pkg/acl' COVERAGE_DIR='.coverage/authz-path-review'
-go test ./pkg/authz/internal/uri -run '^$' -fuzz '^FuzzRequestPaths$' -fuzztime=30s -parallel=4
-go test ./pkg/acl -run '^$' -fuzz '^FuzzMatchPathBasedACL$' -fuzztime=30s -parallel=4
+COVERAGE_DIR=.coverage/authorization-uri-fuzz python3 assets/scripts/test_guard.py run \
+  go test ./pkg/authz/internal/uri -run '^$' -fuzz '^FuzzRequestPaths$' -fuzztime=30s -parallel=4
+COVERAGE_DIR=.coverage/authorization-acl-fuzz python3 assets/scripts/test_guard.py run \
+  go test ./pkg/acl -run '^$' -fuzz '^FuzzMatchPathBasedACL$' -fuzztime=30s -parallel=4
 ```
 
 Encoded slash, literal/encoded backslash and invalid UTF-8 requests are rejected

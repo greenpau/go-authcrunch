@@ -305,7 +305,7 @@ The hunt is complete only when all of the following are true:
       crypto, concurrency) were searched or explicitly scoped out with a reason
 - [ ] At least one adversarial test or concrete source-backed counterexample
       exists for every primary claim
-- [ ] `go test -race ./...` was run, or the exact blocker is documented
+- [ ] `make test` ran the guarded race-enabled suite, or the exact blocker is documented
 - [ ] `govulncheck ./...` and `staticcheck ./...` were run or scoped out
 - [ ] Every finding includes impact, preconditions, remediation, validation
       performed, and residual risk

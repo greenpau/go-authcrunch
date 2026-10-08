@@ -61,8 +61,10 @@ consume codes.
 ```sh
 make test TEST_DIR='./ ./pkg/oidc ./pkg/authn ./internal/tag' TEST='OIDC|Provider|TestTagCompliance|TestStructTagCompliance' COVERAGE_DIR=.coverage/oidc
 make test TEST_DIR='./pkg/oidc/parser' COVERAGE_DIR=.coverage/oidc-parser
-go test -mod=readonly -race ./pkg/oidc -run '^$' -fuzz '^FuzzOIDCAuthorizationParameters$' -fuzztime=10000x -parallel=2
-go test -mod=readonly -race ./pkg/oidc -run '^$' -fuzz '^FuzzOIDCRequestObjects$' -fuzztime=10000x -parallel=2
+COVERAGE_DIR=.coverage/oidc-authorization-fuzz python3 assets/scripts/test_guard.py run \
+  go test -mod=readonly -race ./pkg/oidc -run '^$' -fuzz '^FuzzOIDCAuthorizationParameters$' -fuzztime=10000x -parallel=2
+COVERAGE_DIR=.coverage/oidc-request-fuzz python3 assets/scripts/test_guard.py run \
+  go test -mod=readonly -race ./pkg/oidc -run '^$' -fuzz '^FuzzOIDCRequestObjects$' -fuzztime=10000x -parallel=2
 make ci-check
 ```
 

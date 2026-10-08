@@ -57,8 +57,10 @@ certification. Factor verification and enrollment belong to
 ```sh
 make test TEST_DIR='./pkg/authchal/... ./pkg/authn/transformer/... ./pkg/user ./pkg/acl ./pkg/identity ./pkg/ids/local ./pkg/ids/ldap ./pkg/authn ./internal/tag' COVERAGE_DIR='.coverage/authentication-challenges'
 make ci-check
-go test ./pkg/authchal/parser -run '^$' -fuzz '^FuzzAuthenticationChallengeDirectives$' -fuzztime=10000x -parallel=2
-go test ./pkg/authn/transformer/parser -run '^$' -fuzz '^FuzzUserTransformerAuthenticationChallenges$' -fuzztime=10000x -parallel=2
+COVERAGE_DIR=.coverage/authentication-challenges-fuzz python3 assets/scripts/test_guard.py run \
+  go test ./pkg/authchal/parser -run '^$' -fuzz '^FuzzAuthenticationChallengeDirectives$' -fuzztime=10000x -parallel=2
+COVERAGE_DIR=.coverage/authentication-transforms-fuzz python3 assets/scripts/test_guard.py run \
+  go test ./pkg/authn/transformer/parser -run '^$' -fuzz '^FuzzUserTransformerAuthenticationChallenges$' -fuzztime=10000x -parallel=2
 ```
 
 Embedding-server directive wiring belongs to the consumer repository. Publish

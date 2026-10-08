@@ -429,8 +429,8 @@ separately from test/report artifacts.
 Run the focused package test first, then a broader command:
 
 ```bash
-go test ./pkg/<package> -run <TestName>
-go test ./...
+make test TEST_DIR='./pkg/<package>' TEST='<TestName>'
+make test
 ```
 
 Use `make test` for the repository coverage lifecycle after a narrow diagnostic

@@ -45,8 +45,9 @@ Inherited `TEST` and `TEST_DIR` filters cannot narrow shard selection.
 All shards run on separate Ubuntu VMs; never emulate this by starting several
 test processes in one local checkout or bypassing its resource lock.
 
-`make ci-quality` runs version, brand-asset, automation, lint, Node client, and
-executable-build gates on another runner. `make ci-check` remains the complete,
+`make ci-quality` runs version, OpenAPI generation/source checks and Scalar
+bootstrap tests, brand-asset, automation, lint, Node client, and executable-build
+gates on another runner. `make ci-check` remains the complete,
 serial local gate: `ci-quality` then full Go tests. The stable Actions job name
 `Tests and coverage` waits for selection, quality, and the entire Go matrix.
 Only explicit `none` selection permits skipped work. Failed, cancelled, or

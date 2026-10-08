@@ -22,7 +22,6 @@
     * [Password Reset](#password-reset)
     * [Update Roles](#update-roles)
     * [Update Authentication Challenges](#update-authentication-challenges)
-* [Backlog](#backlog)
 
 <!-- end-markdown-toc -->
 
@@ -133,9 +132,16 @@ totp_code_length: 6
 realm: "local"
 ```
 
-If you do not provide TOTP configuration, you will be prompted for it.
+If the portal requests TOTP and no `totp_secret` is configured, the CLI prompts
+for the current code from your authenticator app. Password-only login does not
+prompt for TOTP. U2F/WebAuthn authentication is not supported by the CLI.
 
 ## Commands
+
+Successful management commands print the server's JSON response unless an
+output format is selected. A server-reported `status: failure` makes the command
+exit nonzero with `management operation failed`; the CLI does not print the
+failure response body or retry that operation.
 
 ### Server Metadata
 
@@ -247,13 +253,13 @@ Alternatively:
 
 ```text
 $ authdbctl --format table list users --realm local
-┌──────────┬─────────────┬────────────────────────────────┬────────────────────────┐
-│ USERNAME │    NAME     │             EMAIL              │         ROLES          │
-├──────────┼─────────────┼────────────────────────────────┼────────────────────────┤
-│ webadmin │ Webmaster   │ webadmin@localhost.localdomain │ authp/admin;authp/user │
-│ jsmith   │ Smith, John │ jsmith@localhost.localdomain   │ authp/user;dash        │
-│ mstone   │ Stone, Mia  │ mstone@localhost.localdomain   │ authp/user;dash        │
-└──────────┴─────────────┴────────────────────────────────┴────────────────────────┘
+┌──────────┬─────────────┬───────────────────────────────┬───────────────────────┬──────────┐
+│ USERNAME │    NAME     │             EMAIL             │         ROLES         │ DISABLED │
+├──────────┼─────────────┼───────────────────────────────┼───────────────────────┼──────────┤
+│ webadmin │ Webmaster   │ webadmin@localhost.localdomain │ authp/admin;authp/user │ false    │
+│ jsmith   │ Smith, John │ jsmith@localhost.localdomain   │ authp/user;dash        │ false    │
+│ mstone   │ Stone, Mia  │ mstone@localhost.localdomain   │ authp/user;dash        │ false    │
+└──────────┴─────────────┴───────────────────────────────┴───────────────────────┴──────────┘
 ```
 
 ### Reload Database
@@ -274,19 +280,10 @@ Expected response follows:
 }
 ```
 
-The the reload fails, the expected response follows:
-
-```json
-{
-  "status": "failure",
-  "timestamp": "2026-03-04T00:48:37.023904Z"
-}
-```
-
-Additionally, you will see the following log. Here, I broke `users.json` by malforming JSON structure.
+If the server reports a reload failure, the command exits nonzero with:
 
 ```text
-2026/03/04 00:48:37.023 WARN    security        failed to reaload database      {"session_id": "CK4Zqwxp9KsH4pP9hgylwcee6E6hJAp21TmdN", "request_id": "c3b08c7b-5c92-43e5-8b88-58ea31b66a9a", "api_endpoint": "server/reload", "error": "failed initializing database at \"assets/config/users.json\": invalid character ':' after top-level value"}
+failed fetching database info: management operation failed
 ```
 
 ### Database Info
@@ -377,13 +374,14 @@ value quoted when placing it in configuration.
 
 ### Generating API Key
 
-The following command generates hashed API key
+The following command generates a random API key and its bcrypt hash without
+prompting for a password:
 
 ```bash
 authdbctl generate api key
 ```
 
-The output follows. Entered `12345678` when prompted "Enter Password".
+Example output follows. Each run generates a new secret and hash.
 
 ```text
 $ authdbctl generate api key
@@ -503,10 +501,10 @@ The following command deletes a user from local database on the server:
 authdbctl --debug delete user --username jsmith --email jsmith@localhost.localdomain --realm local
 ```
 
-If it fails, you will the following message:
+If the server reports a deletion failure, the command exits nonzero with:
 
 ```text
-{"error":"failed deleting user \"jsmith\": user not found","status":"failure","timestamp":"2026-03-06T16:18:14.481666Z"}
+failed deleting "jsmith" user to "local" realm: management operation failed
 ```
 
 Successful response follows:
@@ -525,10 +523,10 @@ The following command disables a user in local database on the server. The user 
 authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --disable
 ```
 
-If it fails, you will the following message:
+If the server reports an update failure, the command exits nonzero with:
 
 ```text
-{"error":"failed updating user \"foo\": user not found","status":"failure","timestamp":"2026-03-06T18:33:51.541007Z"}
+failed updating "jsmith" user to "local" realm: management operation failed
 ```
 
 Successful response follows:
@@ -566,10 +564,10 @@ The following command resets a user's password in local database on the server.
 authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --reset-password
 ```
 
-If it fails, you will the following message:
+If the server reports a password-reset failure, the command exits nonzero with:
 
 ```text
-{"error":"failed updating user \"jsmith\": user not found","status":"failure","timestamp":"2026-03-06T19:04:41.138024Z"}
+failed updating "jsmith" user to "local" realm: management operation failed
 ```
 
 A successfuly response will contain database-regenerated password:
@@ -586,10 +584,10 @@ The following command updates user's roles in local database on the server.
 authdbctl --debug update user --username jsmith --email jsmith@localhost.localdomain --realm local --overwrite-roles "authp/user","dash","foo"
 ```
 
-If it fails, you will the following message:
+If the server reports a role-update failure, the command exits nonzero with:
 
 ```text
-2026/03/06 14:05:45 failed updating "jsmith" user to "local" realm: server responded with 501 after 3 attempts
+failed updating "jsmith" user to "local" realm: management operation failed
 ```
 
 A successfuly response follows:
@@ -618,8 +616,3 @@ A successfuly response follows:
 ```json
 {"auth_challenge_rules":["u2f","password"],"status":"success","timestamp":"2026-03-06T19:44:25.213519Z"}
 ```
-
-## Backlog
-
-* [ ] auth with app authenticator
-* [ ] auth with U2F token

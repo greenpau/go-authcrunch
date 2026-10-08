@@ -6,7 +6,8 @@ Run the focused report lifecycle, then the complete repository gate:
 make test TEST_DIR='./pkg/kms ./pkg/authn' TEST='JWKS|AdminFetchPrivateKeys' COVERAGE_DIR=.coverage/jwks
 make test TEST_DIR='./pkg/authn/admin_api/parser ./pkg/authn ./internal/tag' TEST='AdminAPI|AdminFetchPrivateKeys|TestE2EPortalJWKSAuthorization|TagCompliance' COVERAGE_DIR=.coverage/admin-api
 make test TEST_DIR='./pkg/authn' TEST='^TestE2EPortalJWKS' COVERAGE_DIR=.coverage/jwks-e2e
-go test -mod=readonly -race ./pkg/kms -run '^$' -fuzz '^FuzzJWKSAdminTokenParsing$' -fuzztime=20s -parallel=4
+COVERAGE_DIR=.coverage/jwks-fuzz python3 assets/scripts/test_guard.py run \
+  go test -mod=readonly -race ./pkg/kms -run '^$' -fuzz '^FuzzJWKSAdminTokenParsing$' -fuzztime=20s -parallel=4
 make ci-check
 ```
 

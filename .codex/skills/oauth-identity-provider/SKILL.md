@@ -329,7 +329,8 @@ and absence of portal credentials after rejected identity tokens.
 make test TEST_DIR='./internal/jwtutil ./pkg/idp/... ./pkg/kms' COVERAGE_DIR='.coverage/oauth-core'
 make test TEST_DIR='./pkg/idp/... ./pkg/authn .' TEST='Test(NewOAuthIdentityProvider|OAuthIdentityProvider|ConfigOAuthIdentityProvider|E2EOAuth)|ExampleNewOAuthIdentityProvider' COVERAGE_DIR='.coverage/oauth-directives'
 make test TEST_DIR='./pkg/authn' TEST='^TestE2EOAuth' COVERAGE_DIR='.coverage/oauth-e2e'
-go test -mod=readonly -race ./pkg/idp/oauth -run '^$' -fuzz '^FuzzOAuthJwks$' -fuzztime=10000x -parallel=2
+COVERAGE_DIR=.coverage/oauth-jwks-fuzz python3 assets/scripts/test_guard.py run \
+  go test -mod=readonly -race ./pkg/idp/oauth -run '^$' -fuzz '^FuzzOAuthJwks$' -fuzztime=10000x -parallel=2
 make ci-check
 ```
 

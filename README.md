@@ -39,7 +39,10 @@ remains the management client; Caddy is not required.
 
 ## Development
 
-Use Go 1.26 or newer (CI uses 1.26.8), Node 24, Python 3.9+, and Make.
+Use Go 1.26 or newer (CI uses 1.26.8), Node 24, Python 3.9+, Make, and
+Google Chrome on macOS or Linux. The Go suite includes browser E2E tests;
+set `AUTHCRUNCH_TEST_BROWSER` to the Chrome executable if it is not discovered
+on PATH or at the standard macOS installation path.
 
 ```sh
 make dep
@@ -56,8 +59,9 @@ for commit ranges and fallbacks. GitHub runs the full suite once across parallel
 test and package shards; see [parallel CI validation](.codex/skills/scripts-and-automation/references/ci-shards.md).
 
 `make test` runs race-enabled Go tests through pinned `tested` and writes the
-coverage/report bundle to `.coverage/index.html`. Use `make test-ui` for browser
-session tests and `make build` for `bin/authdb` and `bin/authdbctl`.
+coverage/report bundle to `.coverage/index.html`. Use `make test-ui` for Node
+simulations of the login and refresh clients; real browser journeys run in the
+Go suite. Use `make build` for `bin/authdb` and `bin/authdbctl`.
 Local tests run one package at a time with a memory/process watchdog on macOS and
 Linux. An exceeded budget stops the run and records the reason in
 `.coverage/resource-usage.json`. See the

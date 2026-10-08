@@ -141,7 +141,8 @@ terminal test rules.
 
 ```sh
 make test TEST_DIR='./pkg/identity/... ./pkg/ids/local ./pkg/authn ./cmd/authdbctl'
-go test -mod=readonly ./pkg/identity -run '^$' -fuzz '^FuzzParseArgon2$' -fuzztime 10s
+COVERAGE_DIR=.coverage/password-fuzz python3 assets/scripts/test_guard.py run \
+  go test -mod=readonly ./pkg/identity -run '^$' -fuzz '^FuzzParseArgon2$' -fuzztime 10s
 make ci-check
 ```
 

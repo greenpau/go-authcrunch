@@ -178,7 +178,6 @@ infallibility assumptions in code; revisit those assumptions if their types or
 dependencies change instead of adding synthetic failures for impossible states.
 
 ```sh
-go test -race ./pkg/authclient ./cmd/authdbctl
 make test TEST_DIR='./pkg/authclient' TEST='^TestE2E' COVERAGE_DIR='.coverage/authclient-e2e'
 make test TEST_DIR='./pkg/authclient' COVERAGE_DIR='.coverage/authclient' MINIMUM_COVERAGE=100
 make test TEST_DIR='./pkg/authclient/... ./cmd/authdbctl'

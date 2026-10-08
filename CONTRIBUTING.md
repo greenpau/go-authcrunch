@@ -32,9 +32,14 @@ The contribution to this project requires setting up a development
 environment. The following steps allow developers to test their
 code changes.
 
+Install the [development prerequisites](README.md#development) first.
+
 ```bash
 git clone git@github.com:greenpau/go-authcrunch.git
 cd go-authcrunch/
 make dep
-make ctest
+make test
 ```
+
+Use `make change-test` to select tests for local changes and `make ci-check`
+for the complete quality gate before submitting a pull request.

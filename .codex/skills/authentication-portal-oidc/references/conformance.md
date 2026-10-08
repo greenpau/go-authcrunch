@@ -199,7 +199,8 @@ AUTHCRUNCH_CONFORMANCE_JAVA="$JAVA_HOME/bin/java" \
 AUTHCRUNCH_CONFORMANCE_MONGOD="$PWD/tmp/oidc-conformance/.tools/bin/mongod" \
 AUTHCRUNCH_CONFORMANCE_PYTHON="$PWD/tmp/oidc-conformance/.venv/bin/python" \
 AUTHCRUNCH_CONFORMANCE_RESULTS="$PWD/tmp/oidc-conformance/run-1" \
-go test -mod=readonly . -run '^TestE2EServerOIDCFoundationPlans$' -count=1 -timeout=30m -v
+COVERAGE_DIR=.coverage/oidc-conformance python3 assets/scripts/test_guard.py run \
+  go test -mod=readonly . -run '^TestE2EServerOIDCFoundationPlans$' -count=1 -timeout=30m -v
 ```
 
 The directory is created with mode 0700; private configuration and logs use

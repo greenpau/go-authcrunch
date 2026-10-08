@@ -197,5 +197,5 @@ through the shared TLS portal fixture.
 precedence, disabled configuration, malformed names, and collisions with every
 other portal cookie role. `TestE2ETokenRefreshCookieLifecycle` uses a real cookie
 jar for default/custom names, legacy-path cleanup, rotation, and logout.
-Fuzz token grammar with
-`go test ./pkg/authn/token_refresh -run '^$' -fuzz FuzzRefreshToken -fuzztime 5s`.
+Fuzz token grammar with the guarded command in
+[refresh validation](references/configuration-and-clients.md#validation).
