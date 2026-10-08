@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-themes
-description: Build, customize, or update AuthCrunch authentication portal themes using Go HTML templates, CSS, and SVG branding. Use for responsive layouts, login QR controls, filesystem overrides, UI/static-asset configuration, and OIDC consent, continuation, and error-page styling. The embedded React profile application has a separate build.
+description: Build, customize, or update AuthCrunch authentication portal themes using Go HTML templates, CSS, and SVG branding. Use for responsive layouts, login QR controls, cross-device approval views, filesystem overrides, UI/static-asset configuration, and OIDC page styling. The embedded React profile application has a separate build.
 ---
 
 # Authentication Portal Themes
@@ -25,6 +25,11 @@ For phone-only work, use the [phone layout](references/basic-theme.md#phone-layo
 and verify the tablet/desktop boundary. For QR behavior, use the
 [login QR contract](references/template-contracts.md#qr-controls); styling must
 preserve the active login view, entered values, and keyboard focus.
+
+For cross-device request, continuation, approval, and terminal views, read the
+[cross-device presentation contract](references/cross-device.md). It defines
+the matching-code hierarchy, copy fallback, action layout, and Chrome captures;
+the ordinary login QR bookmark remains a separate view.
 
 - For colors, typography, spacing, logo, icon, banner, and background, prefer
   shared CSS variables and existing UI/static-asset settings. Keep the built-in

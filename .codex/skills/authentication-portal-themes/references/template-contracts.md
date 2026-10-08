@@ -63,7 +63,7 @@ frame policy as separate response values.
 | `apps_sso` | Numeric `.Data.role_count`, `.Data.roles` entries with `ProviderName`, `AccountID`, and `Name`, generated role links and empty state; this is the AWS SSO role-selection page |
 | `apps_mobile_access` | Instructional content and navigation; the current baseline does not itself render a mobile QR image |
 | `oidc` | All `.Data.oidc.Kind` branches: consent CSRF/decisions, form-post action/values/nonce/manual Continue, and local error message; see the [owning contract](../../authentication-portal-oidc/references/browser-pages.md#page-and-template-contract) |
-| `cross_device` | `.Data.view` request/activate/confirm/approve/deny branches, matching-code warnings, CSRF/decision form fields, and external cross-device client hooks; see the [feature contract](../../authentication-portal-cross-device/SKILL.md) |
+| `cross_device` | `.Data.view` request/activate/confirm/approve/deny branches, matching-code warnings, CSRF/decision form fields, and external cross-device client hooks; see the [presentation contract](cross-device.md) and [feature contract](../../authentication-portal-cross-device/SKILL.md) |
 | `session` | `.Message`, continuation/logout action, confirmation button, fresh-login link, external refresh client and data attributes |
 
 Handlers live in `pkg/authn/handle_http_login.go`,

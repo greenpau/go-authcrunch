@@ -115,6 +115,24 @@ body.basic-theme {
 .basic-theme .brand-actions { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
 .basic-theme .brand-actions a { color: var(--brand-primary); text-align: center; text-decoration: underline; }
 .basic-theme pre { max-width: 100%; overflow: auto; }
+/* Cross-device views share one rhythm and a prominent device-matching code. */
+.basic-theme .cross-device-flow { display: grid; gap: 24px; min-width: 0; }
+.basic-theme .cross-device-page [hidden], .basic-theme #cross-device-cancel[hidden] { display: none; }
+.basic-theme .cross-device-flow .brand-message { margin: 0; }
+.basic-theme #cross-device-qr { display: block; width: 256px; max-width: 100%; height: auto; margin: 0 auto; background: #fff; }
+.basic-theme .cross-device-code-panel { display: grid; gap: 8px; padding: 20px 12px; border: 1px solid var(--brand-border); border-radius: 12px; color: var(--brand-ink); background: var(--brand-soft); text-align: center; }
+.basic-theme .cross-device-hint { margin: 0; color: var(--brand-muted); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.basic-theme .cross-device-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 30px; font-weight: 700; line-height: 1.3; letter-spacing: .08em; white-space: nowrap; }
+.basic-theme .cross-device-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.basic-theme .cross-device-actions > button { flex: 1 1 120px; min-width: 0; }
+.basic-theme .cross-device-actions > button:disabled { opacity: .6; }
+.basic-theme .cross-device-account { color: var(--brand-ink); }
+.basic-theme .cross-device-status { text-align: center; }
+/* Keep the empty live region exposed without reserving a blank feedback row. */
+.basic-theme #cross-device-copy-status:not(:empty), .basic-theme .cross-device-manual { margin-top: 24px; }
+.basic-theme .cross-device-manual label { display: block; margin-bottom: 12px; color: var(--brand-muted); }
+.basic-theme .cross-device-manual textarea { display: block; width: 100%; min-height: 96px; padding: 12px; border: 1px solid var(--brand-control-border); border-radius: 8px; color: var(--brand-ink); background: var(--brand-surface); overflow-wrap: anywhere; font-size: 16px; }
+.basic-theme .cross-device-page .brand-actions a { align-self: center; display: inline-flex; align-items: center; min-height: 44px; }
 /* Phones use the page itself as the surface; tablet and desktop keep the card. */
 @media (max-width: 639px) {
   body.basic-theme { min-height: 100svh; -webkit-text-size-adjust: 100%; }

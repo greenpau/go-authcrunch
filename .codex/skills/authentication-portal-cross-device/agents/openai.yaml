@@ -1,4 +1,4 @@
 interface:
   display_name: "Cross-Device Portal Login"
   short_description: "Maintain approved cross-device portal sign-in"
-  default_prompt: "Use $authentication-portal-cross-device to maintain AuthCrunch cross-device login and its security and browser tests."
+  default_prompt: "Use $authentication-portal-cross-device to maintain AuthCrunch cross-device login, approval and recovery views, and its security and browser tests."

@@ -27,11 +27,24 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	cookieparser "github.com/greenpau/go-authcrunch/pkg/authn/cookie/parser"
+	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 )
 
 func TestE2ECrossDeviceBrowser(t *testing.T) {
+	for _, theme := range []string{"basic", "legacy"} {
+		t.Run(theme, func(t *testing.T) {
+			testCrossDeviceBrowser(t, theme)
+		})
+	}
+}
+
+func testCrossDeviceBrowser(t *testing.T, theme string) {
+	t.Helper()
 	f, _, _ := newLoginIdentityConfiguredE2E(t, true, true, false, "", func(config *authn.PortalConfig) {
 		crossDeviceConfig(t, config)
+		if theme == "legacy" {
+			config.UI = &ui.Parameters{Templates: map[string]string{"cross_device": "ui/testdata/cross_device_legacy.template"}}
+		}
 		// Also exercise visibility when the only local realm hides other links.
 		config.IdentityStores = []string{"local"}
 		cookies, err := cookieparser.NewCookieConfigFromDirectives([]string{"cookie cross-device session id name __Secure-DEVICE"})
@@ -57,7 +70,7 @@ func TestE2ECrossDeviceBrowser(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer stop()
-	params, err := json.Marshal(map[string]string{"origin": f.server.URL, "base": "/auth"})
+	params, err := json.Marshal(map[string]string{"origin": f.server.URL, "base": "/auth", "theme": theme})
 	if err != nil {
 		t.Fatal(err)
 	}

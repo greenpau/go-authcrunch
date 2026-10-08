@@ -1,9 +1,14 @@
+{{- $title := .PageTitle -}}
+{{- if eq .Data.view "activate" }}{{ $title = "Sign in to continue" }}
+{{- else if eq .Data.view "confirm" }}{{ $title = "Approve sign in" }}
+{{- else if eq .Data.view "approve" }}{{ $title = "Sign-in approved" }}
+{{- else if eq .Data.view "deny" }}{{ $title = "Sign-in denied" }}{{ end -}}
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
+    <title>{{ .MetaTitle }} - {{ $title }}</title>
     <meta name="description" content="{{ .MetaDescription }}">
     <meta name="author" content="{{ .MetaAuthor }}">
     <link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.svg" }}" type="image/svg+xml">
@@ -15,45 +20,68 @@
   <body class="basic-theme">
     <div class="app-page">
       <div class="app-content">
-        <main class="app-container" aria-labelledby="cross-device-title">
+        <main class="app-container cross-device-page" aria-labelledby="cross-device-title">
           <div class="brand-banner" aria-hidden="true"></div>
           <header class="brand-heading">
             {{ if .LogoURL }}<img class="logo-img" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}">{{ end }}
-            <h1 id="cross-device-title">{{ .PageTitle }}</h1>
+            <h1 id="cross-device-title" tabindex="-1">{{ $title }}</h1>
           </header>
+          <div class="cross-device-flow">
           {{ if eq .Data.view "request" }}
-          <p class="brand-message" id="cross-device-status" role="status">Preparing your sign-in link…</p>
-          <div id="cross-device-details" hidden>
+          <div class="cross-device-flow" id="cross-device-details" hidden>
+            <p class="brand-message">Scan this QR code with a device you trust. Keep this page open while you sign in.</p>
             <img id="cross-device-qr" alt="Scan to sign in on another device" width="256" height="256">
-            <p class="brand-message">Scan this code, or copy the link to a device you trust. Keep this page open.</p>
-            <label for="cross-device-link">Sign-in link</label>
-            <input id="cross-device-link" readonly aria-label="Sign-in link">
-            <button class="app-btn-sec" id="cross-device-copy" type="button">Copy link</button>
-            <p class="brand-message">Check that both devices show <strong id="cross-device-code"></strong>.</p>
+            <div class="cross-device-code-panel">
+              <p class="cross-device-hint">Match this code on both devices</p>
+              <strong class="cross-device-code" id="cross-device-code"></strong>
+            </div>
           </div>
-          <button class="app-btn-sec" id="cross-device-cancel" type="button">Cancel</button>
+          <p class="brand-message cross-device-status" id="cross-device-status" role="status">Preparing your sign-in link…</p>
+          <div id="cross-device-controls">
+            <div class="cross-device-actions">
+              <button class="app-btn-sec" id="cross-device-copy" type="button" disabled>Copy link</button>
+              <button class="app-btn-sec" id="cross-device-cancel" type="button">Cancel</button>
+            </div>
+            <p class="cross-device-hint" id="cross-device-copy-status" role="status"></p>
+            <div class="cross-device-manual" id="cross-device-link-fallback" hidden>
+              <label for="cross-device-link">Sign-in link</label>
+              <textarea id="cross-device-link" rows="3" readonly spellcheck="false" aria-describedby="cross-device-copy-status"></textarea>
+            </div>
+          </div>
+          <div id="cross-device-recovery" hidden>
+            <a class="app-btn-pri" href="{{ pathjoin .ActionEndpoint "/cross-device" }}">Start again</a>
+          </div>
           <noscript><p>JavaScript is required on the device requesting sign-in.</p></noscript>
           {{ else if eq .Data.view "activate" }}
           <p class="brand-message">A device is asking to sign in. Continue only if you started this request on a device you control.</p>
-          <p class="brand-message">Check the code on that device: <strong id="cross-device-code">{{ .Data.display }}</strong></p>
-          <form method="post" action="{{ pathjoin .ActionEndpoint "/cross-device/begin" }}">
+          <div class="cross-device-code-panel">
+            <p class="cross-device-hint">Match this code on both devices</p>
+            <strong class="cross-device-code" id="cross-device-code">{{ .Data.display }}</strong>
+          </div>
+          <p class="brand-message">You'll sign in first, then choose whether to approve the other device.</p>
+          <form class="cross-device-actions" method="post" action="{{ pathjoin .ActionEndpoint "/cross-device/begin" }}">
             <input type="hidden" name="code" value="{{ .Data.code }}">
             <input type="hidden" name="csrf" value="{{ .Data.csrf }}">
-            <button class="app-btn-pri" type="submit">Sign in to continue</button>
+            <button class="app-btn-pri" type="submit">Continue</button>
           </form>
           {{ else if eq .Data.view "confirm" }}
-          <p class="brand-message">Allow the other device to sign in as <strong>{{ .Data.account }}</strong>?</p>
-          <p class="brand-message">Approve only if its code is <strong id="cross-device-code">{{ .Data.display }}</strong> and you control that device. Never approve a code sent to you by someone else.</p>
-          <form method="post" action="{{ pathjoin .ActionEndpoint "/cross-device/confirm" }}">
+          <p class="brand-message">Allow the other device to sign in as <strong class="cross-device-account">{{ .Data.account }}</strong>?</p>
+          <div class="cross-device-code-panel">
+            <p class="cross-device-hint">Match this code on both devices</p>
+            <strong class="cross-device-code" id="cross-device-code">{{ .Data.display }}</strong>
+          </div>
+          <p class="brand-message">Approve only if the codes match and you control that device. Never approve a request sent by someone else.</p>
+          <form class="cross-device-actions" method="post" action="{{ pathjoin .ActionEndpoint "/cross-device/confirm" }}">
             <input type="hidden" name="csrf" value="{{ .Data.csrf }}">
-            <button class="app-btn-pri" name="decision" value="approve" type="submit">Approve sign-in</button>
+            <button class="app-btn-pri" name="decision" value="approve" type="submit">Approve</button>
             <button class="app-btn-sec" name="decision" value="deny" type="submit">Deny</button>
           </form>
           {{ else if eq .Data.view "approve" }}
-          <p class="brand-message" role="status">Sign-in approved. You can return to the other device.</p>
+          <p class="brand-message" role="status">Return to the other device to finish signing in. You can close this page.</p>
           {{ else }}
-          <p class="brand-message" role="status">Sign-in denied. The other device has not been signed in.</p>
+          <p class="brand-message" role="status">This request was denied. The other device has not been signed in. You can close this page.</p>
           {{ end }}
+          </div>
           <div class="brand-actions"><a href="{{ pathjoin .ActionEndpoint "/login" }}">Back to sign in</a></div>
         </main>
       </div>

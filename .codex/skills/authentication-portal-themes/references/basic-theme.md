@@ -13,8 +13,9 @@ Jump to [component proportions](#component-proportions-and-interaction-states),
 
 ## Implementation and stylesheet order
 
-All ten built-in aliases use `body.basic-theme`: login, sandbox, portal,
-register, generic, whoami, apps_sso, apps_mobile_access, session, and oidc.
+All eleven built-in aliases use `body.basic-theme`: login, sandbox, portal,
+register, generic, whoami, apps_sso, apps_mobile_access, session, cross_device,
+and oidc.
 Each loads its original view CSS, then `assets/css/basic.css`, then optional
 `assets/css/custom.css`. Sandbox's conditional MFA/password styles come before
 both branding stylesheets. The shared stylesheet is handwritten source; changing

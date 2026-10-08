@@ -25,6 +25,13 @@ Filesystem login overrides must add the opt-in action themselves; the built-in
 new template remains available unless overridden. The old `/qrcode/login.png`
 bookmark still encodes ordinary portal navigation and is a separate feature.
 
+The [cross-device presentation contract](../authentication-portal-themes/references/cross-device.md)
+owns step-specific headings, prominent matching codes, copy fallback, action
+layout, recovery labels, and optional Chrome screenshot capture. Built-in requester
+terminal states hide inactive controls and offer a fresh request; clipboard
+feedback remains separate from lifecycle status. Neither presentation changes
+nor recovery controls weaken explicit approval or revive a stopped interaction.
+
 ## Browser and HTTP contract
 
 All routes are relative to the portal mount; nested and root mounts work. Match
@@ -170,6 +177,12 @@ navigation and history recovery. Disable the newer AbortSignal static helpers in
 that browser fixture to exercise compatibility through real fetches and forms;
 this is not physical TV/VR certification. Node client tests complement it with
 expiry, request/body deadlines, and late-start/poll/clipboard cancellation races.
+The browser journey also checks approval/denial and recovery presentation across
+phone/tablet/desktop widths, real clipboard success/denial, and keyboard focus.
+Set `AUTHCRUNCH_CROSS_DEVICE_SCREENSHOT_DIR` to an ignored review directory to
+retain the captures described in the presentation contract.
+Keep the legacy filesystem-theme journey: presentation wrappers must remain
+optional for the original polling, copying, cancellation, and redemption hooks.
 
 ```sh
 make test TEST_DIR='./pkg/authn ./pkg/authn/cookie/... ./pkg/authn/cross_device/parser ./pkg/authn/token_refresh' TEST='CrossDevice|ExampleNewCrossDevice|ValidateSession|ExtractBasePathCookieMount|PersistentRefreshReplayAndRevocation' COVERAGE_DIR=.coverage/cross-device

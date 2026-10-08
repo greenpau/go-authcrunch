@@ -1,4 +1,4 @@
 interface:
   display_name: "Authentication Portal Themes"
   short_description: "Build custom AuthCrunch portal templates and branding"
-  default_prompt: "Use $authentication-portal-themes to update AuthCrunch portal styling, including enabled OIDC views, with working templates, branding, configuration, and browser validation."
+  default_prompt: "Use $authentication-portal-themes to update AuthCrunch portal styling, including cross-device and enabled OIDC views, with working templates, branding, configuration, and browser validation."
