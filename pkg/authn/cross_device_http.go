@@ -238,7 +238,7 @@ func (p *Portal) handleCrossDevice(ctx context.Context, w http.ResponseWriter, r
 func (p *Portal) renderCrossDevice(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, view string, data map[string]any) error {
 	args := p.ui.GetArgs()
 	args.BaseURL(rr.Upstream.BasePath)
-	args.PageTitle = "Sign in on another device"
+	args.PageTitle = args.Translate("cross_device_title")
 	args.Data["view"] = view
 	maps.Copy(args.Data, data)
 	content, err := p.ui.Render("cross_device", args)

@@ -273,3 +273,22 @@ test("blocked storage fails closed", async () => {
   await assert.rejects(client.refresh(), /storage disabled/);
   assert.equal(env.calls, 0);
 });
+
+test('localized session recovery handles both owned and browser-generated failures', async () => {
+  for (const storageFailure of [false, true]) {
+    const env = environment();
+    const message = { textContent: '' };
+    const messages = { session_browser_unsupported: 'متصفح غير مدعوم', session_sign_in_again: 'يرجى تسجيل الدخول مجدداً' };
+    const document = {
+      currentScript: { dataset: { base: '/auth', action: 'continue', i18n: JSON.stringify(messages) } },
+      getElementById: id => id === 'session-message' ? message : null,
+    };
+    const overrides = storageFailure
+      ? { localStorage: { getItem() { throw new Error('Browser-specific English error'); } } }
+      : { navigator: {} };
+    env.tab({ document, ...overrides });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(message.textContent, storageFailure ? messages.session_sign_in_again : messages.session_browser_unsupported);
+    assert.equal(env.calls, 0);
+  }
+});

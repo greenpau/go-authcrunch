@@ -130,3 +130,12 @@ and synthetic fixture accounts. Expiry advances the client clock after admission
 and waits for the real poll timer. Inspect the full PNGs as well as geometry:
 overflow checks alone cannot establish balanced spacing or readable hierarchy.
 Keep review screenshots under ignored `tmp/`, outside tracked assets.
+
+## Localization
+
+Titles, security instructions, actions and dynamic copy/poll/terminal feedback
+use the shared catalog and portal language. The external script receives its
+selected messages in `data-i18n`, with English fallbacks for older overrides.
+Keep code/URL display LTR inside RTL pages and preserve machine decision values.
+Follow [internationalization](internationalization.md) for language ownership,
+escaping and multilingual browser/screenshot validation.

@@ -19,7 +19,7 @@ function environment(view) {
   function element(id, classes = []) {
     const names = new Set(classes);
     const node = {
-      id, children: [], attributes: {}, value: "",
+      id, dataset: {}, children: [], attributes: {}, value: "",
       classList: { add: (name) => names.add(name), remove: (name) => names.delete(name), contains: (name) => names.has(name) },
       setAttribute(name, value) { this.attributes[name] = value; },
       appendChild(child) { this.children.push(child); },
@@ -105,4 +105,11 @@ test("Escape closes the QR view and is otherwise inert", () => {
   keydown({ key: "Escape" });
   assert.equal(elements.get("qr").classList.contains("hidden"), true);
   assert.equal(document.activeElement.id, "show-qrcode");
+});
+
+test("QR image uses the portal's localized accessible name", () => {
+  const { showQRCode, elements } = environment("single");
+  elements.get("qrcode").dataset.qrAlt = "رمز QR";
+  showQRCode("/auth/qrcode/login.png");
+  assert.equal(elements.get("qrcode").children[0].alt, "رمز QR");
 });

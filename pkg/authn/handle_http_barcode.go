@@ -42,7 +42,7 @@ func (p *Portal) handleHTTPProfileMfaBarcode(ctx context.Context, w http.Respons
 
 	qrCodeEncoded := strings.TrimPrefix(endpoint, "/mfa/")
 	qrCodeEncoded = strings.TrimSuffix(qrCodeEncoded, ".png")
-	codeURI, err := base64.StdEncoding.DecodeString(qrCodeEncoded)
+	codeURI, err := decodeBarcodeURI(qrCodeEncoded)
 	if err != nil {
 		return p.handleHTTPRenderPlainText(ctx, w, http.StatusBadRequest)
 	}
@@ -58,7 +58,7 @@ func (p *Portal) handleHTTPProfileMfaBarcode(ctx context.Context, w http.Respons
 func (p *Portal) handleHTTPSandboxMfaBarcode(ctx context.Context, w http.ResponseWriter, _ *http.Request, endpoint string) error {
 	qrCodeEncoded := strings.TrimPrefix(endpoint, "/mfa/barcode/")
 	qrCodeEncoded = strings.TrimSuffix(qrCodeEncoded, ".png")
-	codeURI, err := base64.StdEncoding.DecodeString(qrCodeEncoded)
+	codeURI, err := decodeBarcodeURI(qrCodeEncoded)
 	if err != nil {
 		return p.handleHTTPRenderPlainText(ctx, w, http.StatusBadRequest)
 	}
@@ -69,4 +69,13 @@ func (p *Portal) handleHTTPSandboxMfaBarcode(ctx context.Context, w http.Respons
 	w.Header().Set("Content-Type", "image/png")
 	w.Write(png)
 	return nil
+}
+
+// Browser-generated URLs use unpadded URL-safe Base64 so refresh origin checks
+// can require canonical paths. Retain standard Base64 for existing image URLs.
+func decodeBarcodeURI(encoded string) ([]byte, error) {
+	if decoded, err := base64.StdEncoding.DecodeString(encoded); err == nil {
+		return decoded, nil
+	}
+	return base64.RawURLEncoding.DecodeString(encoded)
 }

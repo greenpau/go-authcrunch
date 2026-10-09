@@ -61,10 +61,16 @@ never advance the original sandbox's evidence version to allow token issuance.
 
 Keep `mfa_add_app.js` and `sandbox_mfa_add_app.js` aligned when changing TOTP
 enrollment rendering. Encode each OTP label/query component independently and
-the QR payload as one URL path segment. Resolve the QR endpoint against the
-portal origin and require same-origin HTTP(S) before assigning the image URL.
-DOM text must remain data throughout link and image construction. Cover both
-scripts with the MFA DOM client tests and the real Chrome rendering fixture.
+the QR payload as unpadded URL-safe Base64 in one canonical URL path segment.
+Percent-encoding standard Base64 padding sets `URL.RawPath`, which refresh-enabled
+sandboxes reject. Keep those origin/path checks strict; barcode handlers accept
+both legacy standard Base64 and the canonical URL-safe form. Resolve the QR
+endpoint against the portal origin and require same-origin HTTP(S) before assigning the image URL.
+DOM text must remain data throughout link and image construction. Preserve the
+existing image's localized alt text when replacing it. Cover both scripts with
+the MFA DOM client tests and the real Chrome rendering fixture. Require a real
+refresh-enabled enrollment journey to load the regenerated PNG; a valid-looking
+`src` attribute alone does not prove the image endpoint accepts it.
 
 WebAuthn enrollment state is local to the portal: 5-minute expiry, 4096-entry
 bound, single use, discarded on Close/restart. Bind it to realm, canonical account,

@@ -5,6 +5,8 @@
  */
 (() => {
   "use strict";
+  const messages = JSON.parse(document.currentScript.dataset.i18n || "{}");
+  const t = (id, fallback) => messages[id] || fallback;
   const script = document.currentScript;
   const base = script.dataset.base.replace(/\/$/, "");
   const key = "authcrunch-session:" + base;
@@ -17,12 +19,12 @@
   const read = () => JSON.parse(localStorage.getItem(key) || "null");
   const write = (state) => localStorage.setItem(key, JSON.stringify(state));
   const supported = () => {
-    if (!navigator.locks) throw new Error("This browser requires signing in again to continue.");
+    if (!navigator.locks) throw new Error(t("session_browser_unsupported", "This browser requires signing in again to continue."));
     localStorage.getItem(key);
   };
   const uncertain = (state) => state && (state.pending || state.blocked);
   const hasSession = (state) => state && typeof state.session_id === "string" && state.session_id.length > 0;
-  const signIn = () => new Error("Please sign in again to continue your session.");
+  const signIn = () => new Error(t("session_sign_in_again", "Please sign in again to continue your session."));
   const schedule = (state) => {
     clearTimeout(timer);
     if (hasSession(state) && !uncertain(state) && Number.isFinite(state.access_expires_at) && action === "refresh") {
@@ -32,7 +34,8 @@
   const showError = (err) => {
     clearTimeout(timer);
     const message = document.getElementById("session-message");
-    if (message) message.textContent = err.message;
+    if (message) message.textContent = Object.values(messages).includes(err.message) || !script.dataset.i18n
+      ? err.message : t("session_sign_in_again", "Please sign in again to continue your session.");
     window.dispatchEvent(new CustomEvent("authcrunch:reauthenticate", { detail: { login } }));
   };
   const post = (operation, sessionID) => {
@@ -96,20 +99,20 @@
         // can change cookies while this request is in flight outside this lock.
         response = await post(operation, operation === "refresh_token" ? state.session_id : undefined);
       } catch (_) {
-        throw new Error("The session response was interrupted. Please sign in again.");
+        throw new Error(t("session_interrupted", "The session response was interrupted. Please sign in again."));
       }
       if (!response.ok) {
         write({ ...state, blocked: true });
-        throw new Error(operation === "logout" ? "Sign out failed. Please try signing out again." : "Please sign in again to continue your session.");
+        throw new Error(operation === "logout" ? t("session_logout_failed", "Sign out failed. Please try signing out again.") : t("session_sign_in_again", "Please sign in again to continue your session."));
       }
       const result = await response.json();
       if (operation === "logout") {
-        if (result.logged_out !== true) throw new Error("Sign out was not confirmed. Please try signing out again.");
+        if (result.logged_out !== true) throw new Error(t("session_logout_unconfirmed", "Sign out was not confirmed. Please try signing out again."));
         write({ session_id: state && state.session_id, blocked: true });
         clearTimeout(timer);
       } else {
         if (result.session_id !== state.session_id || !Number.isFinite(result.access_expires_at) || !Number.isFinite(result.session_expires_at)) {
-          throw new Error("The session response was incomplete. Please sign in again.");
+          throw new Error(t("session_incomplete", "The session response was incomplete. Please sign in again."));
         }
         const next = { session_id: result.session_id, access_expires_at: result.access_expires_at, session_expires_at: result.session_expires_at };
         write(next);

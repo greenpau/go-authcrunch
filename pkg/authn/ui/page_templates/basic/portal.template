@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="{{ .LanguageCode }}" dir="{{ .Direction }}" class="h-full">
   <head>
     <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
@@ -59,7 +59,7 @@
     </div>
     <!-- JavaScript -->
     {{ if .Data.refresh_enabled }}
-    <script src="{{ pathjoin .ActionEndpoint "/assets/js/refresh.js" }}" data-base="{{ .ActionEndpoint }}" data-session="{{ .Data.refresh_session }}" data-expires="{{ .Data.refresh_expires }}"></script>
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/refresh.js" }}" data-i18n="{{ .Messages "session_browser_unsupported" "session_incomplete" "session_interrupted" "session_logout_failed" "session_logout_unconfirmed" "session_sign_in_again" }}" data-base="{{ .ActionEndpoint }}" data-session="{{ .Data.refresh_session }}" data-expires="{{ .Data.refresh_expires }}"></script>
     {{ end }}
     <script src="{{ pathjoin .ActionEndpoint "/assets/js/portal.js" }}"></script>
     {{ if eq .Data.ui_options.custom_js_required "yes" }}

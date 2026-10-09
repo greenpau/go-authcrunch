@@ -27,12 +27,18 @@ import (
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 )
 
 // Options supplies application integration settings to NewProvider.
 // Cookie names default to the portal cookie factory's AUTHP names. The host must
 // keep them distinct from its other cookies, including at overlapping mounts.
 type Options struct {
+	// Language inherits the embedding UI's language for browser presentation.
+	// It is a runtime integration option, not provider/client configuration.
+	// Empty or unsupported language identifiers use English.
+	Language translate.LangID `json:"-" xml:"-" yaml:"-"`
+
 	// RenderPage optionally integrates the host's templates. It runs without
 	// provider locks, may be called concurrently, and must return complete,
 	// escaped HTML or an error. Nil uses the standalone embedded template.
@@ -107,6 +113,7 @@ func NewProvider(config *Config, verifier IdentityVerifier, options Options) (*P
 	if o.keys, err = loadSigningKeys(o.config.SigningKeyFiles, options.ExcludedSigningKeys); err != nil {
 		return nil, err
 	}
+	o.language = translate.NormalizeLanguage(string(options.Language))
 	o.renderPage = options.RenderPage
 	if o.renderPage == nil {
 		if o.renderPage, err = newPageRenderer(); err != nil {

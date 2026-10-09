@@ -26,6 +26,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 )
 
 // Page contains a snapshot for an OIDC browser view. Kind is consent, form_post,
@@ -33,6 +35,7 @@ import (
 // fields and decision values. None of these fields supply authentication proof.
 // Nonce authorizes the form-post script and the standalone stylesheet only.
 type Page struct {
+	Language       translate.LangID `json:"-" xml:"-" yaml:"-"`
 	Kind           string           `json:"-" xml:"-" yaml:"-"`
 	Title          string           `json:"-" xml:"-" yaml:"-"`
 	Message        string           `json:"-" xml:"-" yaml:"-"`
@@ -72,22 +75,22 @@ func newPageRenderer() (func(context.Context, Page) ([]byte, error), error) {
 }
 
 func (o *Provider) consentPage(w *oidcHTTPResponse, _ *http.Request, request *oidcAuthorization) {
-	page := Page{Kind: "consent", Title: "Authorize application", ClientName: o.clients[request.clientID].ClientName,
+	page := Page{Kind: "consent", Title: o.translate("oidc_consent_title"), ClientName: o.clients[request.clientID].ClientName,
 		Username: o.sessions[request.session].username, Action: o.config.Issuer + "/oidc/continue", CSRF: request.consent}
 	for _, scope := range request.scopes {
 		switch scope {
 		case "openid":
-			page.Permissions = append(page.Permissions, PagePermission{"Account identifier", "Recognize your account when you sign in."})
+			page.Permissions = append(page.Permissions, PagePermission{o.translate("oidc_account_identifier"), o.translate("oidc_account_description")})
 		case "profile":
-			page.Permissions = append(page.Permissions, PagePermission{"Profile information", "Access your name, username, and other profile details you have provided."})
+			page.Permissions = append(page.Permissions, PagePermission{o.translate("oidc_profile_title"), o.translate("oidc_profile_description")})
 		case "email":
-			page.Permissions = append(page.Permissions, PagePermission{"Email address", "Access your email address and its verification status."})
+			page.Permissions = append(page.Permissions, PagePermission{o.translate("oidc_email_title"), o.translate("oidc_email_description")})
 		case "address":
-			page.Permissions = append(page.Permissions, PagePermission{"Postal address", "Access the postal address you have provided."})
+			page.Permissions = append(page.Permissions, PagePermission{o.translate("oidc_address_title"), o.translate("oidc_address_description")})
 		case "phone":
-			page.Permissions = append(page.Permissions, PagePermission{"Phone number", "Access your phone number and its verification status."})
+			page.Permissions = append(page.Permissions, PagePermission{o.translate("oidc_phone_title"), o.translate("oidc_phone_description")})
 		case "offline_access":
-			page.Permissions = append(page.Permissions, PagePermission{"Continued access", "Keep accessing this information until your session expires or access is revoked, even when you are away."})
+			page.Permissions = append(page.Permissions, PagePermission{o.translate("oidc_offline_title"), o.translate("oidc_offline_description")})
 		}
 	}
 	for location, claims := range request.claims {
@@ -100,7 +103,7 @@ func (o *Provider) consentPage(w *oidcHTTPResponse, _ *http.Request, request *oi
 			if location == "userinfo" && covered {
 				continue
 			}
-			label := oidcClaimLabel(name)
+			label := localizedOIDCClaimLabel(name, o.language)
 			if location == "userinfo" {
 				page.UserInfoClaims = append(page.UserInfoClaims, label)
 			}
@@ -119,20 +122,46 @@ func (o *Provider) consentPage(w *oidcHTTPResponse, _ *http.Request, request *oi
 }
 
 func oidcClaimLabel(name string) string {
+	return localizedOIDCClaimLabel(name, translate.English)
+}
+
+func localizedOIDCClaimLabel(name string, lang translate.LangID) string {
 	labels := map[string]string{
-		"sub": "Account identifier", "name": "Full name", "given_name": "Given name",
-		"family_name": "Family name", "middle_name": "Middle name", "nickname": "Nickname",
-		"preferred_username": "Username", "profile": "Profile page", "picture": "Profile picture",
-		"website": "Website", "gender": "Gender", "birthdate": "Birth date", "zoneinfo": "Time zone",
-		"locale": "Language", "updated_at": "Profile update time", "email": "Email address",
-		"email_verified": "Email verification status", "address": "Postal address",
-		"phone_number": "Phone number", "phone_number_verified": "Phone verification status",
-		"acr": "Sign-in assurance", "amr": "Sign-in methods", "auth_time": "Sign-in time",
+		"sub": "oidc_account_identifier", "name": "oidc_claim_name", "given_name": "oidc_claim_given_name",
+		"family_name": "oidc_claim_family_name", "middle_name": "oidc_claim_middle_name", "nickname": "oidc_claim_nickname",
+		"preferred_username": "username_label", "profile": "oidc_claim_profile", "picture": "oidc_claim_picture",
+		"website": "oidc_claim_website", "gender": "oidc_claim_gender", "birthdate": "oidc_claim_birthdate", "zoneinfo": "oidc_claim_zoneinfo",
+		"locale": "oidc_claim_locale", "updated_at": "oidc_claim_updated_at", "email": "oidc_email_title",
+		"email_verified": "oidc_claim_email_verified", "address": "oidc_address_title",
+		"phone_number": "oidc_phone_title", "phone_number_verified": "oidc_claim_phone_verified",
+		"acr": "oidc_claim_acr", "amr": "oidc_claim_amr", "auth_time": "oidc_claim_auth_time",
 	}
-	if label := labels[name]; label != "" {
-		return label
+	if id := labels[name]; id != "" {
+		return translate.Translate(id, translate.NormalizeLanguage(string(lang)), nil)
 	}
 	return name
+}
+
+// Translate returns a plain-text browser message using the page language.
+func (page Page) Translate(id string) string {
+	return translate.Translate(id, translate.NormalizeLanguage(string(page.Language)), nil)
+}
+
+// LanguageCode returns the normalized browser page language.
+func (page Page) LanguageCode() string {
+	return string(translate.NormalizeLanguage(string(page.Language)))
+}
+
+// Direction returns the browser page's reading direction.
+func (page Page) Direction() string {
+	if page.LanguageCode() == "ar" || page.LanguageCode() == "he" {
+		return "rtl"
+	}
+	return "ltr"
+}
+
+func (o *Provider) translate(id string) string {
+	return translate.Translate(id, translate.NormalizeLanguage(string(o.language)), nil)
 }
 
 // Rendering runs after handlers release provider and identity locks. Templates
@@ -141,15 +170,16 @@ func (o *Provider) sendResponse(w http.ResponseWriter, r *http.Request, response
 	if browserEndpoint {
 		response.header.Add("Vary", "Accept")
 		if response.errorCode != "" && oidcAcceptsHTML(r) {
-			page := Page{Kind: "error", Title: "Unable to continue", Message: "This sign-in request is invalid or has expired. Return to the application and start signing in again."}
+			page := Page{Kind: "error", Title: o.translate("oidc_error_title"), Message: o.translate("oidc_invalid_request")}
 			if response.status == http.StatusServiceUnavailable {
-				page.Message = "Sign-in is temporarily unavailable. Return to the application and try again shortly."
+				page.Message = o.translate("oidc_unavailable")
 			}
 			response.page = &page
 		}
 	}
 	if page := response.page; page != nil {
 		page.BasePath, page.Nonce = o.mount, oidcRandom()
+		page.Language = o.language
 		policy := "default-src 'none'; style-src 'self' 'nonce-" + page.Nonce + "'; img-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 		if page.Kind == "consent" {
 			// no-referrer serializes a native form POST's Origin as null.

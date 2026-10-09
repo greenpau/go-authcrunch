@@ -109,18 +109,33 @@ func (p *Portal) handleHTTPError(ctx context.Context, w http.ResponseWriter, r *
 	p.disableClientCache(w)
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
-	resp.PageTitle = http.StatusText(code)
+	titleID := "request_failed_title"
 
 	switch code {
+	case http.StatusBadRequest:
+		titleID = "bad_request_title"
+	case http.StatusUnauthorized:
+		titleID = "unauthorized_title"
 	case http.StatusForbidden:
-		resp.PageTitle = translate.Translate("access_denied_message", p.ui.Language, nil)
+		titleID = "access_denied_message"
 		resp.Data["message"] = translate.Translate("contact_support_instruction", p.ui.Language, nil)
 	case http.StatusNotFound:
-		resp.PageTitle = translate.Translate("page_not_found_message", p.ui.Language, nil)
+		titleID = "page_not_found_message"
 		resp.Data["message"] = translate.Translate("page_not_found_detail", p.ui.Language, nil)
-	default:
-		resp.PageTitle = http.StatusText(code)
+	case http.StatusMethodNotAllowed:
+		titleID = "method_not_allowed_title"
+	case http.StatusTooManyRequests:
+		titleID = "too_many_requests_title"
+	case http.StatusInternalServerError:
+		titleID = "internal_server_error_message"
+	case http.StatusNotImplemented:
+		titleID = "not_implemented_title"
+	case http.StatusBadGateway:
+		titleID = "bad_gateway_title"
+	case http.StatusServiceUnavailable:
+		titleID = "service_unavailable_title"
 	}
+	resp.PageTitle = resp.Translate(titleID)
 
 	resp.Data["authenticated"] = rr.Response.Authenticated
 

@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
@@ -27,7 +27,7 @@ import (
 )
 
 // Themes stores UI themes.
-var Themes = map[string]interface{}{
+var Themes = map[string]any{
 	"basic": true,
 }
 
@@ -76,25 +76,26 @@ type UserRealm struct {
 // Args is a collection of page attributes
 // that needs to be passed to Render method.
 type Args struct {
-	PageTitle               string                 `json:"page_title,omitempty" xml:"page_title,omitempty" yaml:"page_title,omitempty"`
-	LogoURL                 string                 `json:"logo_url,omitempty" xml:"logo_url,omitempty" yaml:"logo_url,omitempty"`
-	LogoDescription         string                 `json:"logo_description,omitempty" xml:"logo_description,omitempty" yaml:"logo_description,omitempty"`
-	MetaTitle               string                 `json:"meta_title,omitempty" xml:"meta_title,omitempty" yaml:"meta_title,omitempty"`
-	MetaDescription         string                 `json:"meta_description,omitempty" xml:"meta_description,omitempty" yaml:"meta_description,omitempty"`
-	MetaAuthor              string                 `json:"meta_author,omitempty" xml:"meta_author,omitempty" yaml:"meta_author,omitempty"`
-	ActionEndpoint          string                 `json:"action_endpoint,omitempty" xml:"action_endpoint,omitempty" yaml:"action_endpoint,omitempty"`
-	Message                 string                 `json:"message,omitempty" xml:"message,omitempty" yaml:"message,omitempty"`
-	MessageType             string                 `json:"message_type,omitempty" xml:"message_type,omitempty" yaml:"message_type,omitempty"`
-	PublicLinks             []*Link                `json:"public_links,omitempty" xml:"public_links,omitempty" yaml:"public_links,omitempty"`
-	PrivateLinks            []*Link                `json:"private_links,omitempty" xml:"private_links,omitempty" yaml:"private_links,omitempty"`
-	Realms                  []*UserRealm           `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
-	Authenticated           bool                   `json:"authenticated,omitempty" xml:"authenticated,omitempty" yaml:"authenticated,omitempty"`
-	Data                    map[string]interface{} `json:"data,omitempty" xml:"data,omitempty" yaml:"data,omitempty"`
-	RegistrationEnabled     bool                   `json:"registration_enabled,omitempty" xml:"registration_enabled,omitempty" yaml:"registration_enabled,omitempty"`
-	PasswordRecoveryEnabled bool                   `json:"password_recovery_enabled,omitempty" xml:"password_recovery_enabled,omitempty" yaml:"password_recovery_enabled,omitempty"`
-	MfaEnabled              bool                   `json:"mfa_enabled,omitempty" xml:"mfa_enabled,omitempty" yaml:"mfa_enabled,omitempty"`
-	CustomCSSEnabled        bool                   `json:"custom_css_enabled,omitempty" xml:"custom_css_enabled,omitempty" yaml:"custom_css_enabled,omitempty"`
-	CustomJsEnabled         bool                   `json:"custom_js_enabled,omitempty" xml:"custom_js_enabled,omitempty" yaml:"custom_js_enabled,omitempty"`
+	Language                translate.LangID `json:"language,omitempty" xml:"language,omitempty" yaml:"language,omitempty"`
+	PageTitle               string           `json:"page_title,omitempty" xml:"page_title,omitempty" yaml:"page_title,omitempty"`
+	LogoURL                 string           `json:"logo_url,omitempty" xml:"logo_url,omitempty" yaml:"logo_url,omitempty"`
+	LogoDescription         string           `json:"logo_description,omitempty" xml:"logo_description,omitempty" yaml:"logo_description,omitempty"`
+	MetaTitle               string           `json:"meta_title,omitempty" xml:"meta_title,omitempty" yaml:"meta_title,omitempty"`
+	MetaDescription         string           `json:"meta_description,omitempty" xml:"meta_description,omitempty" yaml:"meta_description,omitempty"`
+	MetaAuthor              string           `json:"meta_author,omitempty" xml:"meta_author,omitempty" yaml:"meta_author,omitempty"`
+	ActionEndpoint          string           `json:"action_endpoint,omitempty" xml:"action_endpoint,omitempty" yaml:"action_endpoint,omitempty"`
+	Message                 string           `json:"message,omitempty" xml:"message,omitempty" yaml:"message,omitempty"`
+	MessageType             string           `json:"message_type,omitempty" xml:"message_type,omitempty" yaml:"message_type,omitempty"`
+	PublicLinks             []*Link          `json:"public_links,omitempty" xml:"public_links,omitempty" yaml:"public_links,omitempty"`
+	PrivateLinks            []*Link          `json:"private_links,omitempty" xml:"private_links,omitempty" yaml:"private_links,omitempty"`
+	Realms                  []*UserRealm     `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
+	Authenticated           bool             `json:"authenticated,omitempty" xml:"authenticated,omitempty" yaml:"authenticated,omitempty"`
+	Data                    map[string]any   `json:"data,omitempty" xml:"data,omitempty" yaml:"data,omitempty"`
+	RegistrationEnabled     bool             `json:"registration_enabled,omitempty" xml:"registration_enabled,omitempty" yaml:"registration_enabled,omitempty"`
+	PasswordRecoveryEnabled bool             `json:"password_recovery_enabled,omitempty" xml:"password_recovery_enabled,omitempty" yaml:"password_recovery_enabled,omitempty"`
+	MfaEnabled              bool             `json:"mfa_enabled,omitempty" xml:"mfa_enabled,omitempty" yaml:"mfa_enabled,omitempty"`
+	CustomCSSEnabled        bool             `json:"custom_css_enabled,omitempty" xml:"custom_css_enabled,omitempty" yaml:"custom_css_enabled,omitempty"`
+	CustomJsEnabled         bool             `json:"custom_js_enabled,omitempty" xml:"custom_js_enabled,omitempty" yaml:"custom_js_enabled,omitempty"`
 }
 
 // NewFactory return an instance of a user interface factory.
@@ -137,7 +138,7 @@ func NewTemplate(s, tp string) (*Template, error) {
 			return nil, fmt.Errorf("the loading of template from remote URL is not supported yet")
 		}
 		// Assuming the template is a file system template
-		content, err := ioutil.ReadFile(tp)
+		content, err := os.ReadFile(tp)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load %s template from %s: %s", s, tp, err)
 		}
@@ -159,6 +160,7 @@ func NewTemplate(s, tp string) (*Template, error) {
 // adding arbitrary data etc.
 func (f *Factory) GetArgs() *Args {
 	args := &Args{
+		Language:                translate.NormalizeLanguage(string(f.Language)),
 		PageTitle:               f.Title,
 		LogoURL:                 f.LogoURL,
 		LogoDescription:         f.LogoDescription,
@@ -169,12 +171,12 @@ func (f *Factory) GetArgs() *Args {
 		PrivateLinks:            f.PrivateLinks,
 		Realms:                  f.Realms,
 		ActionEndpoint:          f.ActionEndpoint,
-		Data:                    make(map[string]interface{}),
+		Data:                    make(map[string]any),
 		RegistrationEnabled:     f.RegistrationEnabled,
 		PasswordRecoveryEnabled: f.PasswordRecoveryEnabled,
 		MfaEnabled:              f.MfaEnabled,
 	}
-	uiOptions := make(map[string]interface{})
+	uiOptions := make(map[string]any)
 	if f.CustomCSSPath != "" {
 		args.CustomCSSEnabled = true
 		uiOptions["custom_css_required"] = "yes"

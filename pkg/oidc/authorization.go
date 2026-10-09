@@ -336,7 +336,7 @@ func (o *Provider) authorizationResponse(w *oidcHTTPResponse, r *http.Request, r
 		values.Set("code", code)
 	}
 	if request.responseMode == "form_post" {
-		w.page = &Page{Kind: "form_post", Title: "Continue to application",
+		w.page = &Page{Kind: "form_post", Title: o.translate("oidc_continue_title"),
 			ClientName: client.ClientName, Action: redirectURI, Values: values}
 		return
 	}

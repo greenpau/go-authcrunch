@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ .LanguageCode }}" dir="{{ .Direction }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -23,13 +23,13 @@
           </header>
           <p class="brand-message" id="session-message">{{ .Message }}</p>
           <div class="brand-actions">
-            {{ if eq .Data.session_action "logout" }}<button class="app-btn-pri" id="session-logout" type="button">Sign out</button>{{ end }}
-            <a href="{{ pathjoin .ActionEndpoint "/login" }}?fresh=1">Sign in</a>
+            {{ if eq .Data.session_action "logout" }}<button class="app-btn-pri" id="session-logout" type="button">{{ .Translate "sign_out" }}</button>{{ end }}
+            <a href="{{ pathjoin .ActionEndpoint "/login" }}?fresh=1">{{ .Translate "sign_in" }}</a>
           </div>
-          <noscript><p class="brand-message">JavaScript is required to continue this session.</p></noscript>
+          <noscript><p class="brand-message">{{ .Translate "session_javascript_required" }}</p></noscript>
         </main>
       </div>
     </div>
-    <script src="{{ pathjoin .ActionEndpoint "/assets/js/refresh.js" }}" data-base="{{ .ActionEndpoint }}" data-action="{{ .Data.session_action }}" data-next="{{ .Data.session_next }}"></script>
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/refresh.js" }}" data-i18n="{{ .Messages "session_browser_unsupported" "session_incomplete" "session_interrupted" "session_logout_failed" "session_logout_unconfirmed" "session_sign_in_again" }}" data-base="{{ .ActionEndpoint }}" data-action="{{ .Data.session_action }}" data-next="{{ .Data.session_next }}"></script>
   </body>
 </html>

@@ -1,6 +1,8 @@
 /* Cross-device browser login. Capabilities stay in this page's memory. */
 (() => {
   'use strict';
+  const messages = JSON.parse(document.currentScript.dataset.i18n || "{}");
+  const t = (id, fallback) => messages[id] || fallback;
   const base = document.currentScript.dataset.base.replace(/\/$/, '') + '/';
   const status = document.getElementById('cross-device-status');
   const details = document.getElementById('cross-device-details');
@@ -70,7 +72,7 @@
   };
   const cancel = async () => {
     const pending = request;
-    stop('Sign-in cancelled', 'This sign-in request has been cancelled. Start again when you’re ready.', true, true);
+    stop(t("cross_device_cancelled_title", "Sign-in cancelled"), t("cross_device_cancelled", "This sign-in request has been cancelled. Start again when you’re ready."), true, true);
     controller.abort();
     if (pending) {
       try { await post('cancel', { code: pending.code, secret: pending.secret }, null, 5000); } catch (_) { /* The server also expires abandoned requests. */ }
@@ -78,7 +80,7 @@
   };
   cancelButton.addEventListener('click', cancel);
   window.addEventListener('pagehide', () => {
-    if (!stopped) stop('Sign-in request ended', 'This sign-in request ended when you left the page. Start again to get a new code.');
+    if (!stopped) stop(t("cross_device_ended_title", "Sign-in request ended"), t("cross_device_ended", "This sign-in request ended when you left the page. Start again to get a new code."));
     controller.abort();
   });
   copyButton.addEventListener('click', async () => {
@@ -88,7 +90,7 @@
     try {
       await navigator.clipboard.writeText(link.value);
       if (!stopped) {
-        copyStatus.textContent = 'Link copied. Open it on a device you trust.';
+        copyStatus.textContent = t("cross_device_copied", "Link copied. Open it on a device you trust.");
         copyStatus.hidden = false;
       }
     } catch (_) {
@@ -98,8 +100,8 @@
         // Only select the fallback while focus is still where copying began.
         const select = document.activeElement === active;
         copyStatus.textContent = select
-          ? 'Copy the selected link and open it on a device you trust.'
-          : 'Copy the sign-in link and open it on a device you trust.';
+          ? t("cross_device_copy_selected", "Copy the selected link and open it on a device you trust.")
+          : t("cross_device_copy_manual", "Copy the sign-in link and open it on a device you trust.");
         copyStatus.hidden = false;
         if (select) { link.focus(); link.select(); }
       }
@@ -107,19 +109,19 @@
   });
   const poll = async () => {
     if (stopped) return;
-    if (Date.now() >= expires) { stop('Sign-in link expired', 'This sign-in link expired. Start again to get a new code.'); return; }
+    if (Date.now() >= expires) { stop(t("cross_device_expired_title", "Sign-in link expired"), t("cross_device_expired", "This sign-in link expired. Start again to get a new code.")); return; }
     try {
       const response = await post('poll', { code: request.code, secret: request.secret });
       if (stopped) return;
       if (response.status === 'approved') {
-        stop('Sign-in approved', 'Sign-in approved. Continuing…', false);
+        stop(t("cross_device_approved_title", "Sign-in approved"), t("cross_device_continuing", "Sign-in approved. Continuing…"), false);
         window.location.assign(response.next);
         return;
       }
       if (response.status !== 'pending' && response.status !== 'slow_down') throw new Error('unavailable');
       timer = setTimeout(poll, 2000);
     } catch (_) {
-      if (!stopped) stop('Sign-in unavailable', 'This sign-in request is no longer available. Start again to get a new code.');
+      if (!stopped) stop(t("cross_device_unavailable_title", "Sign-in unavailable"), t("cross_device_unavailable", "This sign-in request is no longer available. Start again to get a new code."));
     }
   };
   (async () => {
@@ -136,10 +138,10 @@
       document.getElementById('cross-device-code').textContent = result.display_code;
       details.hidden = false;
       copyButton.disabled = false;
-      status.textContent = 'Waiting for approval. This link expires in five minutes.';
+      status.textContent = t("cross_device_waiting", "Waiting for approval. This link expires in five minutes.");
       timer = setTimeout(poll, 2000);
     } catch (_) {
-      if (!stopped) stop('Unable to start sign-in', 'Unable to start sign-in. Check your connection and try again.');
+      if (!stopped) stop(t("cross_device_start_failed_title", "Unable to start sign-in"), t("cross_device_start_failed", "Unable to start sign-in. Check your connection and try again."));
     }
   })();
 })();

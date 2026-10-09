@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-themes
-description: Build, customize, or update AuthCrunch authentication portal themes using Go HTML templates, CSS, and SVG branding. Use for responsive layouts, login QR controls, cross-device approval views, filesystem overrides, UI/static-asset configuration, and OIDC page styling. The embedded React profile application has a separate build.
+description: Build, customize, or update AuthCrunch authentication portal themes using Go HTML templates, CSS, and SVG branding. Use for responsive layouts, login QR controls, cross-device approval views, filesystem overrides, UI/static-asset configuration, internationalization, and OIDC page styling. The embedded React profile application has a separate build.
 ---
 
 # Authentication Portal Themes
@@ -45,6 +45,9 @@ the ordinary login QR bookmark remains a separate view.
 
 The React profile app under `pkg/authn/ui/profile` is a separate asset surface;
 portal template overrides do not rebuild or restyle it automatically.
+
+For language settings, translated templates/scripts, RTL layout and multilingual
+acceptance tests, read [internationalization](references/internationalization.md).
 
 ## Build the Theme
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="{{ .LanguageCode }}" dir="{{ .Direction }}" class="h-full">
   <head>
     <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
@@ -86,7 +86,7 @@
 
               <div id="user_actions" class="flex flex-wrap pt-6 justify-center gap-4 {{ if or (ne $authenticatorCount 1) (and (eq .Data.login_options.hide_links "yes") (not .Data.cross_device_enabled)) }}hidden{{ end -}}">
                 {{ if .Data.cross_device_enabled }}
-                <div id="cross-device-link"><a class="text-primary-600 text-lg" href="{{ pathjoin .ActionEndpoint "/cross-device" }}">Sign in on another device</a></div>
+                <div id="cross-device-link"><a class="text-primary-600 text-lg" href="{{ pathjoin .ActionEndpoint "/cross-device" }}">{{ .Translate "cross_device_title" }}</a></div>
                 {{ end }}
                 <div id="user_register_link" {{ if eq .Data.login_options.hide_register_link "yes" }}class="hidden"{{ end -}}>
                   <a class="text-primary-600" href="{{ pathjoin .ActionEndpoint "/register" .Data.login_options.default_realm }}">
@@ -142,17 +142,17 @@
                 </div>
               {{ end }}
               {{ if .Data.cross_device_enabled }}
-              <div {{ if ne .Data.login_options.form_required "yes" }}id="user_actions"{{ else }}id="cross-device-provider-link"{{ end }}><a class="text-primary-600 text-lg" href="{{ pathjoin .ActionEndpoint "/cross-device" }}">Sign in on another device</a></div>
+              <div {{ if ne .Data.login_options.form_required "yes" }}id="user_actions"{{ else }}id="cross-device-provider-link"{{ end }}><a class="text-primary-600 text-lg" href="{{ pathjoin .ActionEndpoint "/cross-device" }}">{{ .Translate "cross_device_title" }}</a></div>
               {{ end }}
             </div>
           {{ end }}
           <div id="qr" class="app-qr-view hidden">
-            <button id="qrcode" type="button" onclick="hideQRCode();" class="app-qr-image" aria-label="Close QR Code"></button>
-            <button id="close-qrcode" type="button" onclick="hideQRCode();" class="app-btn-sec app-qr-close">Close QR Code</button>
+            <button id="qrcode" data-qr-alt="{{ .Translate "qr_code_label" }}" type="button" onclick="hideQRCode();" class="app-qr-image" aria-label="{{ .Translate "close_qr_code" }}"></button>
+            <button id="close-qrcode" type="button" onclick="hideQRCode();" class="app-btn-sec app-qr-close">{{ .Translate "close_qr_code" }}</button>
           </div>
         </div>
         <div id="bookmarks" class="px-4 hidden sm:block">
-          <button id="show-qrcode" type="button" onclick="showQRCode('{{ $qrCodeLink }}');" class="app-qr-toggle bg-[#24292f] text-[#f6f8fa] shadow-xl rounded-b-lg" aria-label="Show QR Code" aria-controls="qr" aria-expanded="false">
+          <button id="show-qrcode" type="button" onclick="showQRCode('{{ $qrCodeLink }}');" class="app-qr-toggle bg-[#24292f] text-[#f6f8fa] shadow-xl rounded-b-lg" aria-label="{{ .Translate "show_qr_code" }}" aria-controls="qr" aria-expanded="false">
             <i class="las la-qrcode text-3xl" aria-hidden="true"></i>
           </button>
         </div>

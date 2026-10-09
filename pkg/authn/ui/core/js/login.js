@@ -22,7 +22,7 @@ function showQRCode(path) {
   document.getElementById('show-qrcode')?.setAttribute('aria-expanded', 'true');
   const img = document.createElement('img');
   img.src = path;
-  img.alt = 'Sign-in QR code';
+  img.alt = document.getElementById('qrcode').dataset.qrAlt || 'Sign-in QR code';
   document.getElementById('qrcode').replaceChildren(img);
   document.getElementById('qr').classList.remove('hidden');
   document.getElementById('close-qrcode')?.focus();

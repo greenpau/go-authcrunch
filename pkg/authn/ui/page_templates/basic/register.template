@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="{{ .LanguageCode }}" dir="{{ .Direction }}" class="h-full">
   <head>
     <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
@@ -163,7 +163,7 @@
               <div class="pb-4">
                 <label for="registration_code" class="app-inp-lbl">{{ .Data.i18n_passcode_label }}</label>
                 <div class="app-inp-box">
-                  <input id="registration_code" name="registration_code" type="text"
+                  <input dir="ltr" id="registration_code" name="registration_code" type="text"
                          class="font-['Montserrat'] app-inp-code-txt validate"
                          pattern="[A-Za-z0-9]{6,8}" maxlength="8"
                          title="{{ .Data.i18n_registration_code_length_hint }}"
@@ -175,7 +175,7 @@
 
               {{ if eq .Data.view "ackfail" }}
               <div class="app-txt-section">
-                <p>{{ .Data.i18n_general_error_unexpected }} {{ .Data.message }}.</p>
+                <p>{{ .Data.i18n_general_error_unexpected }} {{ .Data.message }}</p>
               </div>
               {{ end }}
 
@@ -188,10 +188,10 @@
               {{ end }}
 
               <div class="sm:col-span-2">
-                <div class="flex gap-4 justify-end">
+                <div class="app-registration-actions">
                   {{ if eq .Data.view "register" }}
                   <a href="{{ .ActionEndpoint }}">
-                    <button type="button" name="portal" class="app-btn-sec">
+                    <button aria-label="{{ .Translate "home_label" }}" type="button" name="portal" class="app-btn-sec">
                       <div><i class="las la-home"></i></div>
                       <div class="pl-1 pr-2"><span>{{ .Data.i18n_home_label }}</span></div>
                     </button>
@@ -208,7 +208,7 @@
 
                   {{ if and (ne .Data.view "register") (ne .Data.view "ack") }}
                   <a href="{{ .ActionEndpoint }}">
-                    <button type="button" name="portal" class="app-btn-sec">
+                    <button aria-label="{{ .Translate "home_label" }}" type="button" name="portal" class="app-btn-sec">
                       <div><i class="las la-home"></i></div>
                       <div class="pl-1 pr-2"><span>{{ .Data.i18n_home_label }}</span></div>
                     </button>
@@ -217,7 +217,7 @@
 
                   {{ if eq .Data.view "ack" }}
                   <a href="{{ .ActionEndpoint }}">
-                    <button type="button" name="portal" class="app-btn-sec">
+                    <button aria-label="{{ .Translate "home_label" }}" type="button" name="portal" class="app-btn-sec">
                       <div><i class="las la-home"></i></div>
                     </button>
                   </a>

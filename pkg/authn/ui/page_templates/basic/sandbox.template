@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="h-full">
+<html lang="{{ .LanguageCode }}" dir="{{ .Direction }}" class="h-full">
   <head>
     <title>{{ .MetaTitle }} - {{ .PageTitle }}</title>
     <!-- Required meta tags -->
@@ -50,9 +50,9 @@
               <i class="las la-mobile text-2xl text-primary-500"></i>
               <div class="ml-3">
                 {{ if eq .Data.view "mfa_mixed_register" }}
-                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-register" }}"><span>Authenticator App</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-register" }}">{{ .Translate "mfa_app_label" }}</a>
                 {{ else }}
-                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-auth" }}">Authenticator App</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-auth" }}">{{ .Translate "mfa_app_label" }}</a>
                 {{ end }}
               </div>
             </li>
@@ -60,9 +60,9 @@
               <i class="las la-microchip text-2xl text-primary-500"></i>
               <div class="ml-3">
                 {{ if eq .Data.view "mfa_mixed_register" }}
-                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-register" }}">Hardware Token</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-register" }}">{{ .Translate "mfa_hardware_label" }}</a>
                 {{ else }}
-                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-auth" }}">Hardware Token</a>
+                <a class="app-lst-lnk" href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-u2f-auth" }}">{{ .Translate "mfa_hardware_label" }}</a>
                 {{ end }}
               </div>
             </li>
@@ -75,7 +75,7 @@
                   autocomplete="off"
                   >
               <div>
-                <label for="secret" class="app-inp-lbl">Please provide your password</label>
+                <label for="secret" class="app-inp-lbl">{{ .Translate "provide_password" }}</label>
                 <div class="app-inp-box">
                   <div class="app-inp-prf-img">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -94,7 +94,7 @@
               <div class="flex gap-4 app-form-actions">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="app-btn-sec">
+                    <button type="button" class="app-btn-sec" aria-label="{{ .Translate "home_label" }}">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -104,7 +104,7 @@
                   </a>
                 </div>
                 <div class="flex-none">
-                  <button type="reset" name="reset" class="app-btn-sec">
+                  <button aria-label="{{ .Translate "clear_action" }}" type="reset" name="reset" class="app-btn-sec">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -121,7 +121,7 @@
                       </svg>
                     </div>
                     <div class="pl-2">
-                      <span>Authenticate</span>
+                      <span>{{ .Translate "authenticate_action" }}</span>
                     </div>
                   </button>
                 </div>
@@ -138,7 +138,7 @@
                   autocomplete="off"
                   >
               <div class="py-4">
-                <label for="email" class="app-inp-lbl">Email Address</label>
+                <label for="email" class="app-inp-lbl">{{ .Translate "email_address_label" }}</label>
                 <div class="app-inp-box">
                   <input id="email" name="email" type="text"
                          class="app-inp-txt"
@@ -152,7 +152,7 @@
               <div class="flex gap-4 app-form-actions">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="app-btn-sec">
+                    <button type="button" class="app-btn-sec" aria-label="{{ .Translate "home_label" }}">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -169,7 +169,7 @@
                       </svg>
                     </div>
                     <div class="pl-2">
-                      <span>Recover</span>
+                      <span>{{ .Translate "recover_action" }}</span>
                     </div>
                   </button>
                 </div>
@@ -186,12 +186,12 @@
                   autocomplete="off"
                   >
               <div class="py-4">
-                <label for="passcode" class="app-inp-lbl">Passcode</label>
+                <label for="passcode" class="app-inp-lbl">{{ .Translate "passcode_label" }}</label>
                 <div class="app-inp-box">
-                  <input id="passcode" name="passcode" type="text"
+                  <input dir="ltr" id="passcode" name="passcode" type="text"
                          class="font-['Montserrat'] app-inp-code-txt validate"
                          pattern="[0-9]{4,8}" maxlength="8"
-                         title="Authentication code should contain 4-8 characters and consists of 0-9 characters."
+                         title="{{ .Translate "mfa_code_hint" }}"
                          autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
                          required />
                 </div>
@@ -199,7 +199,7 @@
               <div class="flex gap-4 app-form-actions">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="app-btn-sec">
+                    <button type="button" class="app-btn-sec" aria-label="{{ .Translate "home_label" }}">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -209,7 +209,7 @@
                   </a>
                 </div>
                 <div class="flex-none">
-                  <button type="reset" name="reset" class="app-btn-sec">
+                  <button aria-label="{{ .Translate "clear_action" }}" type="reset" name="reset" class="app-btn-sec">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -225,7 +225,7 @@
                       </svg>
                     </div>
                     <div class="pl-2">
-                      <span>Verify</span>
+                      <span>{{ .Translate "verify_action" }}</span>
                     </div>
                   </button>
                 </div>
@@ -242,8 +242,7 @@
               <input id="webauthn_request" name="webauthn_request" type="hidden" value="" />
               <input id="sandbox_id" name="sandbox_id" type="hidden" value="{{ .Data.id }}" />
               <div class="app-txt-section">
-                <p>Insert your hardware token into a USB port. When prompted, touch,
-                or otherwise trigger the hardware token.</p>
+                <p>{{ .Translate "mfa_hardware_instruction" }}</p>
               </div>
             </form>
             <div id="mfa-u2f-auth-form-rst" class="pt-4 hidden">
@@ -253,7 +252,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   <div class="pl-2">
-                    <span>Try Again</span>
+                    <span>{{ .Translate "try_again_action" }}</span>
                   </div>
                 </button>
               </a>
@@ -268,14 +267,12 @@
                   >
               <div id="token-params">
                 <div class="app-txt-section">
-                  <p><b>Step 1</b>: If necessary, amend the label and comment associated with the authenticator.
-                    The label is what you would see in your authenticator app.
-                    The comment is what you would see in this portal.
+                  <p>{{ .Translate "mfa_setup_step_one" }}
                   </p>
                 </div>
 
                 <div>
-                  <label for="label" class="app-inp-lbl">Name</label>
+                  <label for="label" class="app-inp-lbl">{{ .Translate "name_label" }}</label>
                   <div class="app-inp-box">
                     <div class="app-inp-prf-img">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -285,14 +282,14 @@
                     <input id="label" name="label" type="text"
                            class="app-inp-txt validate"
                            value="{{ .Data.mfa_label }}" pattern="[A-Za-z0-9]{4,25}" maxlength="25"
-                           title="Name should contain 4-25 characters and consists of A-Z, a-z, 0-9 characters."
+                           title="{{ .Translate "mfa_name_hint" }}"
                            autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
                            required />
                   </div>
                 </div>
 
                 <div class="pt-4">
-                  <label for="comment" class="app-inp-lbl">Comment</label>
+                  <label for="comment" class="app-inp-lbl">{{ .Translate "comment_label" }}</label>
                   <div class="app-inp-box">
                     <div class="app-inp-prf-img">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -301,24 +298,20 @@
                     </div>
                     <input id="comment" name="comment" type="text"
                            class="app-inp-txt validate"
-                           value="{{ .Data.mfa_comment }}" pattern="[A-Za-z0-9 \-]{4,25}" maxlength="50"
-                           title="Comment should contain 4-50 characters and consists of A-Z, a-z, 0-9, space, and dash characters."
+                           value="{{ .Data.mfa_comment }}" pattern="[A-Za-z0-9 \-]{4,50}" maxlength="50"
+                           title="{{ .Translate "mfa_comment_hint" }}"
                            autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
                            required />
                   </div>
                 </div>
 
                 <div class="app-txt-section">
-                  <p><b>Step 1a</b> (<i>optional</i>): If necessary, click
-                    <a class="text-secondary-500 hover:text-primary-500" href="#advanced-setup-all" 
-                      onclick="toggleAdvancedSetupMode(); return false;">here</a>
-                    to customize default values.
-                  </p>
+                  <p><a class="text-secondary-500 hover:text-primary-500" href="#advanced-setup-all" onclick="toggleAdvancedSetupMode(); return false;">{{ .Translate "mfa_advanced_setup" }}</a></p>
                 </div>
 
                 <div id="advanced-setup-all" class="app-txt-section hidden">
                   <div class="pt-4">
-                    <label for="secret" class="app-inp-lbl">Token Secret</label>
+                    <label for="secret" class="app-inp-lbl">{{ .Translate "mfa_secret_label" }}</label>
                     <div class="app-inp-box">
                       <div class="app-inp-prf-img">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -328,63 +321,62 @@
                       <input id="secret" name="secret" type="text"
                              class="app-inp-txt validate"
                              value="{{ .Data.mfa_secret }}" pattern="[A-Za-z0-9]{10,100}" maxlength="100"
-                             title="Token secret should contain 10-200 characters and consists of A-Z and 0-9 characters only."
+                             title="{{ .Translate "mfa_secret_hint" }}"
                              autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
                              required />
                     </div>
                   </div>
                   <div class="app-inp-box">
-                    <select id="period" name="period" class="app-inp-sel">
-                      <option value="15" {{ if eq .Data.mfa_period "15" }} selected{{ end }}>15 Seconds Lifetime</option>
-                      <option value="30" {{ if eq .Data.mfa_period "30" }} selected{{ end }}>30 Seconds Lifetime</option>
-                      <option value="60" {{ if eq .Data.mfa_period "60" }} selected{{ end }}>60 Seconds Lifetime</option>
-                      <option value="90" {{ if eq .Data.mfa_period "90" }} selected{{ end }}>90 Seconds Lifetime</option>
+                    <select aria-label="{{ .Translate "mfa_lifetime_label" }}" id="period" name="period" class="app-inp-sel">
+                      <option value="15" {{ if eq .Data.mfa_period "15" }} selected{{ end }}>{{ .Translate "mfa_lifetime" 15 }}</option>
+                      <option value="30" {{ if eq .Data.mfa_period "30" }} selected{{ end }}>{{ .Translate "mfa_lifetime" 30 }}</option>
+                      <option value="60" {{ if eq .Data.mfa_period "60" }} selected{{ end }}>{{ .Translate "mfa_lifetime" 60 }}</option>
+                      <option value="90" {{ if eq .Data.mfa_period "90" }} selected{{ end }}>{{ .Translate "mfa_lifetime" 90 }}</option>
                     </select>
                   </div>
                   <div class="app-inp-box">
-                    <select id="digits" name="digits" class="app-inp-sel">
-                      <option value="4" {{ if eq .Data.mfa_digits "4" }} selected{{ end }}>4 Digit Code</option>
-                      <option value="6" {{ if eq .Data.mfa_digits "6" }} selected{{ end }}>6 Digit Code</option>
-                      <option value="8" {{ if eq .Data.mfa_digits "8" }} selected{{ end }}>8 Digit Code</option>
+                    <select aria-label="{{ .Translate "mfa_digits_label" }}" id="digits" name="digits" class="app-inp-sel">
+                      <option value="4" {{ if eq .Data.mfa_digits "4" }} selected{{ end }}>{{ .Translate "mfa_digits" 4 }}</option>
+                      <option value="6" {{ if eq .Data.mfa_digits "6" }} selected{{ end }}>{{ .Translate "mfa_digits" 6 }}</option>
+                      <option value="8" {{ if eq .Data.mfa_digits "8" }} selected{{ end }}>{{ .Translate "mfa_digits" 8 }}</option>
                     </select>
                   </div>
                 </div>
 
                 <div class="app-txt-section">
-                  <p><b>Step 2</b>: Open your MFA authenticator application, e.g. Microsoft/Google Authenticator, Authy, etc.,
-                    add new entry and click the "Get QR" link.
+                  <p>{{ .Translate "mfa_setup_step_two" }}
                   </p>
                   <div id="mfa-get-qr-code" class="text-center">
-                    <a class="text-secondary-500 hover:text-primary-500" href="#qr-code-mode" onclick="return getQRCode()">Get QR Code</a>
+                    <a class="text-secondary-500 hover:text-primary-500" href="#qr-code-mode" onclick="return getQRCode()">{{ .Translate "mfa_get_qr" }}</a>
                   </div>
                 </div>
               </div>
 
               <div id="mfa-qr-code" class="hidden">
                 <div id="mfa-qr-code-image" class="flex items-center justify-center">
-                  <img src="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-barcode" .Data.code_uri_encoded }}.png" alt="QR Code" />
+                  <img src="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-barcode" .Data.code_uri_encoded }}.png" alt="{{ .Translate "qr_code_label" }}" />
                 </div>
                 <div class="app-txt-section">
-                  <p>&raquo; Can't scan? Click or copy the link below.</p>
+                  <p>{{ .Translate "mfa_cannot_scan" }}</p>
                 </div>
                 <div id="mfa-no-camera-link" class="app-txt-section text-center">
-                  <a class="text-secondary-500 hover:text-primary-500" href="{{ .Data.code_uri }}">No Camera Link</a>
+                  <a class="text-secondary-500 hover:text-primary-500" href="{{ .Data.code_uri }}">{{ .Translate "mfa_no_camera" }}</a>
                 </div>
 
                 <div class="app-txt-section">
-                  <p><b>Step 3</b>: Enter the authentication code you see in the app and click "Add".</p>
+                  <p>{{ .Translate "mfa_setup_step_three" }}</p>
                 </div>
 
                 <input id="email" name="email" type="hidden" value="{{ .Data.mfa_email }}" />
                 <input id="type" name="type" type="hidden" value="{{ .Data.mfa_type }}" />
                 <input id="barcode_uri" name="barcode_uri" type="hidden" value="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "mfa-app-barcode" }}" />
                 <div class="py-4">
-                  <label for="passcode" class="app-inp-lbl">Passcode</label>
+                  <label for="passcode" class="app-inp-lbl">{{ .Translate "passcode_label" }}</label>
                   <div class="app-inp-box">
-                    <input id="passcode" name="passcode" type="text"
+                    <input dir="ltr" id="passcode" name="passcode" type="text"
                            class="font-['Montserrat'] app-inp-code-txt validate"
                            pattern="[0-9]{4,8}" maxlength="8"
-                           title="Authentication code should contain 4-8 characters and consists of 0-9 characters."
+                           title="{{ .Translate "mfa_code_hint" }}"
                            autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off"
                            required />
                   </div>
@@ -397,7 +389,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                       </svg>
                       <div class="pl-2">
-                        <span>Add</span>
+                        <span>{{ .Translate "add_action" }}</span>
                       </div>
                     </button>
                   </div>
@@ -414,14 +406,14 @@
                   autocomplete="off"
                   >
               <div class="space-y-6 text-lg leading-7 text-primary-600">
-                <p>Please insert your U2F (USB, NFC, or Bluetooth) Security Key, e.g. Yubikey.</p>
-                <p>Then, please click "Register" button below.</p>
+                <p>{{ .Translate "mfa_insert_key" }}</p>
+                <p>{{ .Translate "mfa_register_instruction" }}</p>
               </div>
               <input class="hidden" id="webauthn_register" name="webauthn_register" type="text" />
               <input class="hidden" id="webauthn_challenge" name="webauthn_challenge" type="text" value="{{ .Data.webauthn_challenge }}" />
 
               <div>
-                <label for="comment" class="app-inp-lbl">Name your token (optional)</label>
+                <label for="comment" class="app-inp-lbl">{{ .Translate "mfa_token_name" }}</label>
                 <div class="app-inp-box">
                   <div class="app-inp-prf-img">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -431,7 +423,7 @@
                   <input id="comment" name="comment" type="text"
                          class="app-inp-txt validate"
                          pattern="[A-Za-z0-9 \-]{4,25}" maxlength="25"
-                         title="A comment should contain 4-25 characters and consists of A-Z, a-z, 0-9, space, and dash characters."
+                         title="{{ .Translate "mfa_token_comment_hint" }}"
                          autocorrect="off" autocapitalize="off" spellcheck="false" autocomplete="off" />
                 </div>
               </div>
@@ -439,7 +431,7 @@
               <div class="flex gap-4 app-form-actions">
                 <div class="flex-none">
                   <a href="{{ pathjoin .ActionEndpoint "sandbox" .Data.id "terminate" }}">
-                    <button type="button" class="app-btn-sec">
+                    <button type="button" class="app-btn-sec" aria-label="{{ .Translate "home_label" }}">
                       <div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -449,7 +441,7 @@
                   </a>
                 </div>
                 <div class="flex-none">
-                  <button type="reset" name="reset" class="app-btn-sec">
+                  <button aria-label="{{ .Translate "clear_action" }}" type="reset" name="reset" class="app-btn-sec">
                     <div>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -467,7 +459,7 @@
                       </svg>
                     </div>
                     <div class="pl-2">
-                      <span>Register</span>
+                      <span>{{ .Translate "register_action" }}</span>
                     </div>
                   </button>
                 </div>
@@ -481,7 +473,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   <div class="pl-2">
-                    <span>Try Again</span>
+                    <span>{{ .Translate "try_again_action" }}</span>
                   </div>
                 </button>
               </a>
@@ -489,7 +481,7 @@
           </div>
           {{ else if eq .Data.view "terminate" }}
           <div class="app-txt-section">
-            <p>{{ .Data.error }}.</p>
+            <p>{{ .Data.error }}</p>
           </div>
           <div class="flex gap-4 app-form-actions">
             <div class="grow">
@@ -499,7 +491,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   <div class="pl-2">
-                    <span>Start Over</span>
+                    <span>{{ .Translate "start_again_action" }}</span>
                   </div>
                 </button>
               </a>
@@ -507,8 +499,8 @@
           </div>
           {{ else if eq .Data.view "error" }}
           <div class="app-txt-section">
-            <p>Your session failed to meet authorization requirements.</p>
-            <p>{{ .Data.error }}.</p>
+            <p>{{ .Translate "authorization_failed_message" }}</p>
+            <p>{{ .Data.error }}</p>
           </div>
           <div class="flex gap-4 app-form-actions">
             <div class="grow">
@@ -518,7 +510,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   <div class="pl-2">
-                    <span>Try Again</span>
+                    <span>{{ .Translate "try_again_action" }}</span>
                   </div>
                 </button>
               </a>
@@ -526,7 +518,7 @@
           </div>
           {{ else }}
           <div class="app-txt-section">
-            <p>The {{ .Data.view }} view is unsupported.</p>
+            <p>{{ .Translate "unsupported_view" }}</p>
           </div>
           {{ end }}
 
@@ -547,7 +539,7 @@
     {{ if or (eq .Data.view "mfa_u2f_register") (eq .Data.view "mfa_u2f_auth") }}
     <!-- U2F Authentication Scripts -->
     <script src="{{ pathjoin .ActionEndpoint "/assets/cbor/cbor.js" }}"></script>
-    <script src="{{ pathjoin .ActionEndpoint "/assets/js/sandbox_mfa_u2f.js" }}"></script>
+    <script src="{{ pathjoin .ActionEndpoint "/assets/js/sandbox_mfa_u2f.js" }}" data-i18n="{{ .Messages "mfa_browser_unsupported" "mfa_browser_failed" "mfa_browser_registration_failed" }}"></script>
     {{ end }}
 
     {{ if eq .Data.view "mfa_u2f_register" }}
@@ -608,7 +600,7 @@
     const toastButton = document.createElement('button');
     toastButton.type = 'button';
     toastButton.className = 'btn-flat toast-action';
-    toastButton.textContent = 'Close';
+    toastButton.textContent = {{ .Translate "close_action" }};
     toastButton.addEventListener('click', () => M.Toast.dismissAll());
     toastElement.el.appendChild(toastButton);
     const appContainer = document.querySelector('.app-card-container')

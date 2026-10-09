@@ -110,11 +110,13 @@ function updateQRCode() {
         (barcodeBaseURL.protocol !== 'http:' && barcodeBaseURL.protocol !== 'https:')) {
       return;
     }
+    // Keep the payload in one canonical path segment, without percent escapes.
+    const barcodeCode = encodeBase64(tokenURL).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     barcodeBaseURL.pathname = barcodeBaseURL.pathname.replace(/\/$/, '') + '/' +
-                              encodeURIComponent(encodeBase64(tokenURL)) + '.png';
+                              barcodeCode + '.png';
     let newImageNode = document.createElement("img");
     newImageNode.setAttribute("src", barcodeBaseURL.href);
-    newImageNode.setAttribute("alt", "QR Code");
+    newImageNode.setAttribute("alt", curImageNode.alt);
     imageDiv.insertBefore(newImageNode, curImageNode);
     imageDiv.removeChild(curImageNode);
   }

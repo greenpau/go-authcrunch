@@ -341,7 +341,7 @@
             "ja": "以下のQRコードをスキャンし、リンクにアクセスして、1回限りのパスワードレスログインを行ってください。",
             "zh": "扫描下方二维码并点击链接，进行一次性无密码登录。",
             "he": "סרוק את קוד ה-QR שלמטה ועקוב אחר הקישור כדי לבצע התחברות חד-פעמית ללא סיסמה.",
-            "ar": "امסח رمز QR أدناه واتبع الرابط لإجراء تسجيل دخول لمرة واحدة بدون كلمة مرور.",
+            "ar": "امسح رمز QR أدناه واتبع الرابط لإجراء تسجيل دخول لمرة واحدة بدون كلمة مرور.",
             "ru": "Отсканируйте QR-код ниже и перейдите по ссылке для одноразового беспарольного входа."
         }
     },
@@ -547,7 +547,7 @@
             "ja": "パスコード",
             "zh": "验证码",
             "he": "קוד גישה",
-            "ar": "رمز المرור",
+            "ar": "رمز المرور",
             "ru": "Код доступа"
         }
     },
@@ -561,7 +561,7 @@
             "ja": "パスワード",
             "zh": "密码",
             "he": "סיסמה",
-            "ar": "كلمة المرור",
+            "ar": "كلمة المرور",
             "ru": "Пароль"
         }
     },
@@ -714,8 +714,8 @@
             "fr": "Malheureusement, les choses ne se sont pas passées comme prévu.",
             "ja": "申し訳ありませんが、予期しないエラーが発生しました。",
             "zh": "很遗憾，操作未按预期进行。",
-            "he": "לצערו, דברים לא קרו כמצופה.",
-            "ar": "للأسف، لم تسر الأمور كما היה متوقعاً.",
+            "he": "לצערנו, הדברים לא התנהלו כמצופה.",
+            "ar": "للأسف، لم تسر الأمور كما كان متوقعًا.",
             "ru": "К сожалению, что-то пошло не так."
         }
     },
@@ -855,7 +855,7 @@
             "ja": "現時点では、管理者が登録を承認または否認した後、その決定に関するメールが送信されます。承認された場合は、すぐに資格情報を使用してログインできるようになります。",
             "zh": "此时，一旦管理员批准或拒绝您的注册，您将收到一封关于该决定的电子邮件。如果获得批准，您将可以立即使用您的凭据登录。",
             "he": "בשלב זה, ברגע שמנהל מערכת יאשר או ידחה את הרשמתך, תקבל אימייל לגבי ההחלטה. אם ההרשמה תאושר, תוכל להתחבר עם פרטי הגישה שלך באופן מיידי.",
-            "ar": "في هذه المرحلة، بمجرد موافقة المسؤول על تسجيلك أو رفضه، ستتلقى بريدًا إلكترونيًا بشأن هذا القرار. في حالة الموافقة، ستتمكن من تسجيل الدخول باستخدام بيانات الاعتماد الخاصة بك على الفور.",
+            "ar": "في هذه المرحلة، بمجرد موافقة المسؤول على تسجيلك أو رفضه، ستتلقى بريدًا إلكترونيًا بشأن هذا القرار. في حالة الموافقة، ستتمكن من تسجيل الدخول باستخدام بيانات الاعتماد الخاصة بك على الفور.",
             "ru": "На данном этапе, как только администратор одобрит или отклонит вашу регистрацию, вы получите электронное письмо с этим решением. В случае одобрения вы сможете сразу же войти в систему, используя свои учетные данные."
         }
     },
@@ -871,6 +871,2638 @@
             "he": "התעלם",
             "ar": "تجاهل",
             "ru": "Закрыть"
+        }
+    },
+    {
+        "id": "continue_action",
+        "description": "continue action.",
+        "other": {
+            "en": "Continue",
+            "de": "Weiter",
+            "fr": "Continuer",
+            "ja": "続行",
+            "zh": "继续",
+            "he": "המשך",
+            "ar": "متابعة",
+            "ru": "Продолжить"
+        }
+    },
+    {
+        "id": "approve_action",
+        "description": "approve action.",
+        "other": {
+            "en": "Approve",
+            "de": "Genehmigen",
+            "fr": "Approuver",
+            "ja": "承認",
+            "zh": "批准",
+            "he": "אישור",
+            "ar": "موافقة",
+            "ru": "Одобрить"
+        }
+    },
+    {
+        "id": "deny_action",
+        "description": "deny action.",
+        "other": {
+            "en": "Deny",
+            "de": "Ablehnen",
+            "fr": "Refuser",
+            "ja": "拒否",
+            "zh": "拒绝",
+            "he": "דחייה",
+            "ar": "رفض",
+            "ru": "Отклонить"
+        }
+    },
+    {
+        "id": "cancel_action",
+        "description": "cancel action.",
+        "other": {
+            "en": "Cancel",
+            "de": "Abbrechen",
+            "fr": "Annuler",
+            "ja": "キャンセル",
+            "zh": "取消",
+            "he": "ביטול",
+            "ar": "إلغاء",
+            "ru": "Отмена"
+        }
+    },
+    {
+        "id": "close_action",
+        "description": "close action.",
+        "other": {
+            "en": "Close",
+            "de": "Schließen",
+            "fr": "Fermer",
+            "ja": "閉じる",
+            "zh": "关闭",
+            "he": "סגירה",
+            "ar": "إغلاق",
+            "ru": "Закрыть"
+        }
+    },
+    {
+        "id": "start_again_action",
+        "description": "start again action.",
+        "other": {
+            "en": "Start again",
+            "de": "Neu beginnen",
+            "fr": "Recommencer",
+            "ja": "やり直す",
+            "zh": "重新开始",
+            "he": "התחלה מחדש",
+            "ar": "البدء من جديد",
+            "ru": "Начать заново"
+        }
+    },
+    {
+        "id": "try_again_action",
+        "description": "try again action.",
+        "other": {
+            "en": "Try Again",
+            "de": "Erneut versuchen",
+            "fr": "Réessayer",
+            "ja": "再試行",
+            "zh": "重试",
+            "he": "ניסיון נוסף",
+            "ar": "إعادة المحاولة",
+            "ru": "Повторить"
+        }
+    },
+    {
+        "id": "qr_code_label",
+        "description": "qr code label.",
+        "other": {
+            "en": "QR Code",
+            "de": "QR-Code",
+            "fr": "Code QR",
+            "ja": "QRコード",
+            "zh": "二维码",
+            "he": "קוד QR",
+            "ar": "رمز QR",
+            "ru": "QR-код"
+        }
+    },
+    {
+        "id": "show_qr_code",
+        "description": "show qr code.",
+        "other": {
+            "en": "Show QR Code",
+            "de": "QR-Code anzeigen",
+            "fr": "Afficher le code QR",
+            "ja": "QRコードを表示",
+            "zh": "显示二维码",
+            "he": "הצגת קוד QR",
+            "ar": "عرض رمز QR",
+            "ru": "Показать QR-код"
+        }
+    },
+    {
+        "id": "close_qr_code",
+        "description": "close qr code.",
+        "other": {
+            "en": "Close QR Code",
+            "de": "QR-Code schließen",
+            "fr": "Fermer le code QR",
+            "ja": "QRコードを閉じる",
+            "zh": "关闭二维码",
+            "he": "סגירת קוד QR",
+            "ar": "إغلاق رمز QR",
+            "ru": "Закрыть QR-код"
+        }
+    },
+    {
+        "id": "back_to_sign_in",
+        "description": "back to sign in.",
+        "other": {
+            "en": "Back to sign in",
+            "de": "Zurück zur Anmeldung",
+            "fr": "Retour à la connexion",
+            "ja": "サインインに戻る",
+            "zh": "返回登录",
+            "he": "חזרה לכניסה",
+            "ar": "العودة إلى تسجيل الدخول",
+            "ru": "Вернуться ко входу"
+        }
+    },
+    {
+        "id": "cross_device_title",
+        "description": "cross device title.",
+        "other": {
+            "en": "Sign in on another device",
+            "de": "Auf einem anderen Gerät anmelden",
+            "fr": "Se connecter sur un autre appareil",
+            "ja": "別のデバイスでサインイン",
+            "zh": "在其他设备上登录",
+            "he": "כניסה במכשיר אחר",
+            "ar": "تسجيل الدخول على جهاز آخر",
+            "ru": "Войти на другом устройстве"
+        }
+    },
+    {
+        "id": "cross_device_activate_title",
+        "description": "cross device activate title.",
+        "other": {
+            "en": "Sign in to continue",
+            "de": "Zum Fortfahren anmelden",
+            "fr": "Se connecter pour continuer",
+            "ja": "サインインして続行",
+            "zh": "登录以继续",
+            "he": "יש להיכנס כדי להמשיך",
+            "ar": "سجّل الدخول للمتابعة",
+            "ru": "Войдите, чтобы продолжить"
+        }
+    },
+    {
+        "id": "cross_device_confirm_title",
+        "description": "cross device confirm title.",
+        "other": {
+            "en": "Approve sign in",
+            "de": "Anmeldung genehmigen",
+            "fr": "Approuver la connexion",
+            "ja": "サインインを承認",
+            "zh": "批准登录",
+            "he": "אישור כניסה",
+            "ar": "الموافقة على تسجيل الدخول",
+            "ru": "Одобрить вход"
+        }
+    },
+    {
+        "id": "cross_device_approved_title",
+        "description": "cross device approved title.",
+        "other": {
+            "en": "Sign-in approved",
+            "de": "Anmeldung genehmigt",
+            "fr": "Connexion approuvée",
+            "ja": "サインインが承認されました",
+            "zh": "登录已批准",
+            "he": "הכניסה אושרה",
+            "ar": "تمت الموافقة على تسجيل الدخول",
+            "ru": "Вход одобрен"
+        }
+    },
+    {
+        "id": "cross_device_denied_title",
+        "description": "cross device denied title.",
+        "other": {
+            "en": "Sign-in denied",
+            "de": "Anmeldung abgelehnt",
+            "fr": "Connexion refusée",
+            "ja": "サインインが拒否されました",
+            "zh": "登录已拒绝",
+            "he": "הכניסה נדחתה",
+            "ar": "تم رفض تسجيل الدخول",
+            "ru": "Вход отклонён"
+        }
+    },
+    {
+        "id": "cross_device_scan_instruction",
+        "description": "cross device scan instruction.",
+        "other": {
+            "en": "Scan this QR code with a device you trust. Keep this page open while you sign in.",
+            "de": "Scannen Sie diesen QR-Code mit einem vertrauenswürdigen Gerät. Lassen Sie diese Seite während der Anmeldung geöffnet.",
+            "fr": "Scannez ce code QR avec un appareil de confiance. Gardez cette page ouverte pendant la connexion.",
+            "ja": "信頼できるデバイスでこのQRコードをスキャンしてください。サインイン中はこのページを開いたままにしてください。",
+            "zh": "请使用您信任的设备扫描此二维码。登录时请保持此页面打开。",
+            "he": "יש לסרוק את קוד ה-QR במכשיר מהימן. יש להשאיר דף זה פתוח במהלך הכניסה.",
+            "ar": "امسح رمز QR هذا بجهاز تثق به. أبقِ هذه الصفحة مفتوحة أثناء تسجيل الدخول.",
+            "ru": "Отсканируйте этот QR-код на доверенном устройстве. Не закрывайте эту страницу во время входа."
+        }
+    },
+    {
+        "id": "cross_device_qr_alt",
+        "description": "cross device qr alt.",
+        "other": {
+            "en": "Scan to sign in on another device",
+            "de": "Zum Anmelden auf einem anderen Gerät scannen",
+            "fr": "Scanner pour se connecter sur un autre appareil",
+            "ja": "スキャンして別のデバイスでサインイン",
+            "zh": "扫码以在其他设备上登录",
+            "he": "סריקה לכניסה במכשיר אחר",
+            "ar": "امسح لتسجيل الدخول على جهاز آخر",
+            "ru": "Сканируйте для входа на другом устройстве"
+        }
+    },
+    {
+        "id": "cross_device_match_code",
+        "description": "cross device match code.",
+        "other": {
+            "en": "Match this code on both devices",
+            "de": "Vergleichen Sie diesen Code auf beiden Geräten",
+            "fr": "Vérifiez que ce code est identique sur les deux appareils",
+            "ja": "両方のデバイスでこのコードが一致することを確認してください",
+            "zh": "确认两台设备上的此代码一致",
+            "he": "יש לוודא שהקוד זהה בשני המכשירים",
+            "ar": "تأكد من تطابق هذا الرمز على الجهازين",
+            "ru": "Сравните этот код на обоих устройствах"
+        }
+    },
+    {
+        "id": "cross_device_preparing",
+        "description": "cross device preparing.",
+        "other": {
+            "en": "Preparing your sign-in link…",
+            "de": "Anmeldelink wird vorbereitet…",
+            "fr": "Préparation du lien de connexion…",
+            "ja": "サインインリンクを準備しています…",
+            "zh": "正在准备登录链接…",
+            "he": "מכין את קישור הכניסה…",
+            "ar": "جارٍ إعداد رابط تسجيل الدخول…",
+            "ru": "Подготовка ссылки для входа…"
+        }
+    },
+    {
+        "id": "copy_link_action",
+        "description": "copy link action.",
+        "other": {
+            "en": "Copy link",
+            "de": "Link kopieren",
+            "fr": "Copier le lien",
+            "ja": "リンクをコピー",
+            "zh": "复制链接",
+            "he": "העתקת קישור",
+            "ar": "نسخ الرابط",
+            "ru": "Копировать ссылку"
+        }
+    },
+    {
+        "id": "sign_in_link_label",
+        "description": "sign in link label.",
+        "other": {
+            "en": "Sign-in link",
+            "de": "Anmeldelink",
+            "fr": "Lien de connexion",
+            "ja": "サインインリンク",
+            "zh": "登录链接",
+            "he": "קישור כניסה",
+            "ar": "رابط تسجيل الدخول",
+            "ru": "Ссылка для входа"
+        }
+    },
+    {
+        "id": "cross_device_javascript_required",
+        "description": "cross device javascript required.",
+        "other": {
+            "en": "JavaScript is required on the device requesting sign-in.",
+            "de": "Auf dem Gerät, das die Anmeldung anfordert, muss JavaScript aktiviert sein.",
+            "fr": "JavaScript est requis sur l’appareil qui demande la connexion.",
+            "ja": "サインインを要求するデバイスではJavaScriptが必要です。",
+            "zh": "请求登录的设备需要启用JavaScript。",
+            "he": "JavaScript נדרש במכשיר המבקש להיכנס.",
+            "ar": "يلزم تفعيل JavaScript على الجهاز الذي يطلب تسجيل الدخول.",
+            "ru": "На устройстве, запрашивающем вход, необходим JavaScript."
+        }
+    },
+    {
+        "id": "cross_device_activate_instruction",
+        "description": "cross device activate instruction.",
+        "other": {
+            "en": "A device is asking to sign in. Continue only if you started this request on a device you control.",
+            "de": "Ein Gerät fordert eine Anmeldung an. Fahren Sie nur fort, wenn Sie diese Anfrage auf einem Gerät unter Ihrer Kontrolle gestartet haben.",
+            "fr": "Un appareil demande à se connecter. Continuez uniquement si vous avez lancé cette demande sur un appareil que vous contrôlez.",
+            "ja": "デバイスがサインインを要求しています。ご自身が管理するデバイスで開始した要求の場合のみ続行してください。",
+            "zh": "有设备正在请求登录。仅当您在自己控制的设备上发起了此请求时，才继续操作。",
+            "he": "מכשיר מבקש להיכנס. יש להמשיך רק אם התחלת בקשה זו במכשיר שבשליטתך.",
+            "ar": "يطلب جهاز تسجيل الدخول. تابع فقط إذا بدأت هذا الطلب على جهاز تتحكم به.",
+            "ru": "Устройство запрашивает вход. Продолжайте, только если вы начали этот запрос на устройстве под вашим контролем."
+        }
+    },
+    {
+        "id": "cross_device_activate_next",
+        "description": "cross device activate next.",
+        "other": {
+            "en": "You'll sign in first, then choose whether to approve the other device.",
+            "de": "Melden Sie sich zuerst an. Danach entscheiden Sie, ob Sie das andere Gerät genehmigen.",
+            "fr": "Connectez-vous d’abord, puis choisissez d’autoriser ou non l’autre appareil.",
+            "ja": "まずサインインしてから、他のデバイスを承認するかどうかを選択します。",
+            "zh": "您将先登录，然后选择是否批准其他设备。",
+            "he": "תחילה יש להיכנס, ולאחר מכן לבחור אם לאשר את המכשיר האחר.",
+            "ar": "ستسجل الدخول أولاً، ثم تختار ما إذا كنت ستوافق على الجهاز الآخر.",
+            "ru": "Сначала войдите, затем решите, разрешить ли вход на другом устройстве."
+        }
+    },
+    {
+        "id": "cross_device_account_instruction",
+        "description": "cross device account instruction.",
+        "other": {
+            "en": "Allow the other device to sign in with this account?",
+            "de": "Darf sich das andere Gerät mit diesem Konto anmelden?",
+            "fr": "Autoriser l’autre appareil à se connecter avec ce compte ?",
+            "ja": "他のデバイスがこのアカウントでサインインすることを許可しますか？",
+            "zh": "允许其他设备使用此账户登录吗？",
+            "he": "האם לאפשר למכשיר האחר להיכנס לחשבון זה?",
+            "ar": "هل تسمح للجهاز الآخر بتسجيل الدخول بهذا الحساب؟",
+            "ru": "Разрешить другому устройству войти в этот аккаунт?"
+        }
+    },
+    {
+        "id": "cross_device_approve_instruction",
+        "description": "cross device approve instruction.",
+        "other": {
+            "en": "Approve only if the codes match and you control that device. Never approve a request sent by someone else.",
+            "de": "Genehmigen Sie nur, wenn die Codes übereinstimmen und Sie das Gerät kontrollieren. Genehmigen Sie niemals eine Anfrage von jemand anderem.",
+            "fr": "Approuvez uniquement si les codes correspondent et si vous contrôlez cet appareil. N’approuvez jamais une demande envoyée par quelqu’un d’autre.",
+            "ja": "コードが一致し、そのデバイスをご自身が管理している場合のみ承認してください。他人から送られた要求は決して承認しないでください。",
+            "zh": "仅当代码一致且您控制该设备时才批准。切勿批准其他人发送的请求。",
+            "he": "יש לאשר רק אם הקודים תואמים והמכשיר בשליטתך. לעולם אין לאשר בקשה שנשלחה על ידי אדם אחר.",
+            "ar": "وافق فقط إذا تطابقت الرموز وكنت تتحكم بهذا الجهاز. لا توافق أبداً على طلب أرسله شخص آخر.",
+            "ru": "Одобряйте запрос, только если коды совпадают и устройство под вашим контролем. Никогда не одобряйте запрос от другого человека."
+        }
+    },
+    {
+        "id": "cross_device_approved_instruction",
+        "description": "cross device approved instruction.",
+        "other": {
+            "en": "Return to the other device to finish signing in. You can close this page.",
+            "de": "Kehren Sie zum anderen Gerät zurück, um die Anmeldung abzuschließen. Sie können diese Seite schließen.",
+            "fr": "Retournez sur l’autre appareil pour terminer la connexion. Vous pouvez fermer cette page.",
+            "ja": "他のデバイスに戻ってサインインを完了してください。このページは閉じて構いません。",
+            "zh": "请返回其他设备完成登录。您可以关闭此页面。",
+            "he": "יש לחזור למכשיר האחר כדי להשלים את הכניסה. ניתן לסגור דף זה.",
+            "ar": "عُد إلى الجهاز الآخر لإكمال تسجيل الدخول. يمكنك إغلاق هذه الصفحة.",
+            "ru": "Вернитесь на другое устройство, чтобы завершить вход. Эту страницу можно закрыть."
+        }
+    },
+    {
+        "id": "cross_device_denied_instruction",
+        "description": "cross device denied instruction.",
+        "other": {
+            "en": "This request was denied. The other device has not been signed in. You can close this page.",
+            "de": "Diese Anfrage wurde abgelehnt. Das andere Gerät wurde nicht angemeldet. Sie können diese Seite schließen.",
+            "fr": "Cette demande a été refusée. L’autre appareil n’a pas été connecté. Vous pouvez fermer cette page.",
+            "ja": "この要求は拒否されました。他のデバイスはサインインしていません。このページは閉じて構いません。",
+            "zh": "此请求已被拒绝。其他设备尚未登录。您可以关闭此页面。",
+            "he": "הבקשה נדחתה. המכשיר האחר לא נכנס לחשבון. ניתן לסגור דף זה.",
+            "ar": "تم رفض هذا الطلب. لم يتم تسجيل دخول الجهاز الآخر. يمكنك إغلاق هذه الصفحة.",
+            "ru": "Запрос отклонён. Вход на другом устройстве не выполнен. Эту страницу можно закрыть."
+        }
+    },
+    {
+        "id": "cross_device_cancelled_title",
+        "description": "cross device cancelled title.",
+        "other": {
+            "en": "Sign-in cancelled",
+            "de": "Anmeldung abgebrochen",
+            "fr": "Connexion annulée",
+            "ja": "サインインがキャンセルされました",
+            "zh": "登录已取消",
+            "he": "הכניסה בוטלה",
+            "ar": "تم إلغاء تسجيل الدخول",
+            "ru": "Вход отменён"
+        }
+    },
+    {
+        "id": "cross_device_cancelled",
+        "description": "cross device cancelled.",
+        "other": {
+            "en": "This sign-in request has been cancelled. Start again when you’re ready.",
+            "de": "Diese Anmeldeanfrage wurde abgebrochen. Beginnen Sie erneut, wenn Sie bereit sind.",
+            "fr": "Cette demande de connexion a été annulée. Recommencez quand vous le souhaitez.",
+            "ja": "このサインイン要求はキャンセルされました。準備ができたらやり直してください。",
+            "zh": "此登录请求已取消。准备好后可重新开始。",
+            "he": "בקשת הכניסה בוטלה. ניתן להתחיל מחדש כשנוח לך.",
+            "ar": "تم إلغاء طلب تسجيل الدخول هذا. ابدأ من جديد عندما تكون مستعداً.",
+            "ru": "Этот запрос на вход отменён. Начните заново, когда будете готовы."
+        }
+    },
+    {
+        "id": "cross_device_ended_title",
+        "description": "cross device ended title.",
+        "other": {
+            "en": "Sign-in request ended",
+            "de": "Anmeldeanfrage beendet",
+            "fr": "Demande de connexion terminée",
+            "ja": "サインイン要求が終了しました",
+            "zh": "登录请求已结束",
+            "he": "בקשת הכניסה הסתיימה",
+            "ar": "انتهى طلب تسجيل الدخول",
+            "ru": "Запрос на вход завершён"
+        }
+    },
+    {
+        "id": "cross_device_ended",
+        "description": "cross device ended.",
+        "other": {
+            "en": "This sign-in request ended when you left the page. Start again to get a new code.",
+            "de": "Diese Anmeldeanfrage endete beim Verlassen der Seite. Beginnen Sie erneut, um einen neuen Code zu erhalten.",
+            "fr": "Cette demande s’est terminée lorsque vous avez quitté la page. Recommencez pour obtenir un nouveau code.",
+            "ja": "ページを離れたため、この要求は終了しました。新しいコードを取得するにはやり直してください。",
+            "zh": "您离开页面时，此登录请求已结束。请重新开始以获取新代码。",
+            "he": "הבקשה הסתיימה כשעזבת את הדף. יש להתחיל מחדש לקבלת קוד חדש.",
+            "ar": "انتهى هذا الطلب عند مغادرتك الصفحة. ابدأ من جديد للحصول على رمز جديد.",
+            "ru": "Запрос завершился, когда вы покинули страницу. Начните заново, чтобы получить новый код."
+        }
+    },
+    {
+        "id": "cross_device_copied",
+        "description": "cross device copied.",
+        "other": {
+            "en": "Link copied. Open it on a device you trust.",
+            "de": "Link kopiert. Öffnen Sie ihn auf einem vertrauenswürdigen Gerät.",
+            "fr": "Lien copié. Ouvrez-le sur un appareil de confiance.",
+            "ja": "リンクをコピーしました。信頼できるデバイスで開いてください。",
+            "zh": "链接已复制。请在您信任的设备上打开。",
+            "he": "הקישור הועתק. יש לפתוח אותו במכשיר מהימן.",
+            "ar": "تم نسخ الرابط. افتحه على جهاز تثق به.",
+            "ru": "Ссылка скопирована. Откройте её на доверенном устройстве."
+        }
+    },
+    {
+        "id": "cross_device_copy_selected",
+        "description": "cross device copy selected.",
+        "other": {
+            "en": "Copy the selected link and open it on a device you trust.",
+            "de": "Kopieren Sie den ausgewählten Link und öffnen Sie ihn auf einem vertrauenswürdigen Gerät.",
+            "fr": "Copiez le lien sélectionné et ouvrez-le sur un appareil de confiance.",
+            "ja": "選択されたリンクをコピーし、信頼できるデバイスで開いてください。",
+            "zh": "请复制选中的链接并在您信任的设备上打开。",
+            "he": "יש להעתיק את הקישור המסומן ולפתוח אותו במכשיר מהימן.",
+            "ar": "انسخ الرابط المحدد وافتحه على جهاز تثق به.",
+            "ru": "Скопируйте выделенную ссылку и откройте её на доверенном устройстве."
+        }
+    },
+    {
+        "id": "cross_device_copy_manual",
+        "description": "cross device copy manual.",
+        "other": {
+            "en": "Copy the sign-in link and open it on a device you trust.",
+            "de": "Kopieren Sie den Anmeldelink und öffnen Sie ihn auf einem vertrauenswürdigen Gerät.",
+            "fr": "Copiez le lien de connexion et ouvrez-le sur un appareil de confiance.",
+            "ja": "サインインリンクをコピーし、信頼できるデバイスで開いてください。",
+            "zh": "请复制登录链接并在您信任的设备上打开。",
+            "he": "יש להעתיק את קישור הכניסה ולפתוח אותו במכשיר מהימן.",
+            "ar": "انسخ رابط تسجيل الدخول وافتحه على جهاز تثق به.",
+            "ru": "Скопируйте ссылку для входа и откройте её на доверенном устройстве."
+        }
+    },
+    {
+        "id": "cross_device_expired_title",
+        "description": "cross device expired title.",
+        "other": {
+            "en": "Sign-in link expired",
+            "de": "Anmeldelink abgelaufen",
+            "fr": "Lien de connexion expiré",
+            "ja": "サインインリンクの期限が切れました",
+            "zh": "登录链接已过期",
+            "he": "תוקף קישור הכניסה פג",
+            "ar": "انتهت صلاحية رابط تسجيل الدخول",
+            "ru": "Ссылка для входа истекла"
+        }
+    },
+    {
+        "id": "cross_device_expired",
+        "description": "cross device expired.",
+        "other": {
+            "en": "This sign-in link expired. Start again to get a new code.",
+            "de": "Dieser Anmeldelink ist abgelaufen. Beginnen Sie erneut, um einen neuen Code zu erhalten.",
+            "fr": "Ce lien de connexion a expiré. Recommencez pour obtenir un nouveau code.",
+            "ja": "このリンクの期限が切れました。新しいコードを取得するにはやり直してください。",
+            "zh": "此登录链接已过期。请重新开始以获取新代码。",
+            "he": "תוקף הקישור פג. יש להתחיל מחדש לקבלת קוד חדש.",
+            "ar": "انتهت صلاحية هذا الرابط. ابدأ من جديد للحصول على رمز جديد.",
+            "ru": "Срок действия ссылки истёк. Начните заново, чтобы получить новый код."
+        }
+    },
+    {
+        "id": "cross_device_continuing",
+        "description": "cross device continuing.",
+        "other": {
+            "en": "Sign-in approved. Continuing…",
+            "de": "Anmeldung genehmigt. Weiterleitung…",
+            "fr": "Connexion approuvée. Redirection…",
+            "ja": "サインインが承認されました。続行しています…",
+            "zh": "登录已批准。正在继续…",
+            "he": "הכניסה אושרה. ממשיך…",
+            "ar": "تمت الموافقة على تسجيل الدخول. جارٍ المتابعة…",
+            "ru": "Вход одобрен. Продолжение…"
+        }
+    },
+    {
+        "id": "cross_device_unavailable_title",
+        "description": "cross device unavailable title.",
+        "other": {
+            "en": "Sign-in unavailable",
+            "de": "Anmeldung nicht verfügbar",
+            "fr": "Connexion indisponible",
+            "ja": "サインインを利用できません",
+            "zh": "登录不可用",
+            "he": "הכניסה אינה זמינה",
+            "ar": "تسجيل الدخول غير متاح",
+            "ru": "Вход недоступен"
+        }
+    },
+    {
+        "id": "cross_device_unavailable",
+        "description": "cross device unavailable.",
+        "other": {
+            "en": "This sign-in request is no longer available. Start again to get a new code.",
+            "de": "Diese Anmeldeanfrage ist nicht mehr verfügbar. Beginnen Sie erneut, um einen neuen Code zu erhalten.",
+            "fr": "Cette demande de connexion n’est plus disponible. Recommencez pour obtenir un nouveau code.",
+            "ja": "この要求は利用できなくなりました。新しいコードを取得するにはやり直してください。",
+            "zh": "此登录请求已不可用。请重新开始以获取新代码。",
+            "he": "בקשת הכניסה אינה זמינה עוד. יש להתחיל מחדש לקבלת קוד חדש.",
+            "ar": "لم يعد طلب تسجيل الدخول هذا متاحاً. ابدأ من جديد للحصول على رمز جديد.",
+            "ru": "Этот запрос на вход больше недоступен. Начните заново, чтобы получить новый код."
+        }
+    },
+    {
+        "id": "cross_device_waiting",
+        "description": "cross device waiting.",
+        "other": {
+            "en": "Waiting for approval. This link expires in five minutes.",
+            "de": "Warten auf Genehmigung. Dieser Link läuft in fünf Minuten ab.",
+            "fr": "En attente d’approbation. Ce lien expire dans cinq minutes.",
+            "ja": "承認を待っています。このリンクは5分後に期限切れになります。",
+            "zh": "正在等待批准。此链接将在五分钟后过期。",
+            "he": "ממתין לאישור. תוקף הקישור יפוג בעוד חמש דקות.",
+            "ar": "في انتظار الموافقة. تنتهي صلاحية هذا الرابط خلال خمس دقائق.",
+            "ru": "Ожидание одобрения. Ссылка истечёт через пять минут."
+        }
+    },
+    {
+        "id": "cross_device_start_failed_title",
+        "description": "cross device start failed title.",
+        "other": {
+            "en": "Unable to start sign-in",
+            "de": "Anmeldung kann nicht gestartet werden",
+            "fr": "Impossible de démarrer la connexion",
+            "ja": "サインインを開始できません",
+            "zh": "无法开始登录",
+            "he": "לא ניתן להתחיל בכניסה",
+            "ar": "تعذر بدء تسجيل الدخول",
+            "ru": "Не удалось начать вход"
+        }
+    },
+    {
+        "id": "cross_device_start_failed",
+        "description": "cross device start failed.",
+        "other": {
+            "en": "Unable to start sign-in. Check your connection and try again.",
+            "de": "Anmeldung kann nicht gestartet werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+            "fr": "Impossible de démarrer la connexion. Vérifiez votre connexion et réessayez.",
+            "ja": "サインインを開始できません。接続を確認して再試行してください。",
+            "zh": "无法开始登录。请检查连接后重试。",
+            "he": "לא ניתן להתחיל בכניסה. יש לבדוק את החיבור ולנסות שוב.",
+            "ar": "تعذر بدء تسجيل الدخول. تحقق من اتصالك وحاول مرة أخرى.",
+            "ru": "Не удалось начать вход. Проверьте подключение и повторите попытку."
+        }
+    },
+    {
+        "id": "session_continue_title",
+        "description": "session continue title.",
+        "other": {
+            "en": "Continue your session",
+            "de": "Sitzung fortsetzen",
+            "fr": "Poursuivre votre session",
+            "ja": "セッションを続行",
+            "zh": "继续会话",
+            "he": "המשך ההפעלה",
+            "ar": "متابعة جلستك",
+            "ru": "Продолжить сеанс"
+        }
+    },
+    {
+        "id": "session_checking",
+        "description": "session checking.",
+        "other": {
+            "en": "Checking your session…",
+            "de": "Sitzung wird überprüft…",
+            "fr": "Vérification de votre session…",
+            "ja": "セッションを確認しています…",
+            "zh": "正在检查会话…",
+            "he": "בודק את ההפעלה…",
+            "ar": "جارٍ التحقق من جلستك…",
+            "ru": "Проверка сеанса…"
+        }
+    },
+    {
+        "id": "session_logout_question",
+        "description": "session logout question.",
+        "other": {
+            "en": "Sign out of this browser session?",
+            "de": "Von dieser Browsersitzung abmelden?",
+            "fr": "Se déconnecter de cette session du navigateur ?",
+            "ja": "このブラウザセッションからサインアウトしますか？",
+            "zh": "退出此浏览器会话吗？",
+            "he": "האם לצאת מההפעלה בדפדפן זה?",
+            "ar": "هل تريد تسجيل الخروج من جلسة المتصفح هذه؟",
+            "ru": "Выйти из сеанса в этом браузере?"
+        }
+    },
+    {
+        "id": "session_javascript_required",
+        "description": "session javascript required.",
+        "other": {
+            "en": "JavaScript is required to continue this session.",
+            "de": "Zum Fortsetzen dieser Sitzung ist JavaScript erforderlich.",
+            "fr": "JavaScript est requis pour poursuivre cette session.",
+            "ja": "このセッションを続行するにはJavaScriptが必要です。",
+            "zh": "继续此会话需要启用JavaScript。",
+            "he": "JavaScript נדרש כדי להמשיך בהפעלה זו.",
+            "ar": "يلزم تفعيل JavaScript لمتابعة هذه الجلسة.",
+            "ru": "Для продолжения сеанса необходим JavaScript."
+        }
+    },
+    {
+        "id": "session_browser_unsupported",
+        "description": "session browser unsupported.",
+        "other": {
+            "en": "This browser requires signing in again to continue.",
+            "de": "In diesem Browser müssen Sie sich zum Fortfahren erneut anmelden.",
+            "fr": "Ce navigateur nécessite une nouvelle connexion pour continuer.",
+            "ja": "このブラウザで続行するには、再度サインインしてください。",
+            "zh": "此浏览器需要重新登录才能继续。",
+            "he": "בדפדפן זה יש להיכנס שוב כדי להמשיך.",
+            "ar": "يتطلب هذا المتصفح تسجيل الدخول مجدداً للمتابعة.",
+            "ru": "Для продолжения в этом браузере нужно войти снова."
+        }
+    },
+    {
+        "id": "session_sign_in_again",
+        "description": "session sign in again.",
+        "other": {
+            "en": "Please sign in again to continue your session.",
+            "de": "Bitte melden Sie sich erneut an, um Ihre Sitzung fortzusetzen.",
+            "fr": "Veuillez vous reconnecter pour poursuivre votre session.",
+            "ja": "セッションを続行するには、再度サインインしてください。",
+            "zh": "请重新登录以继续会话。",
+            "he": "יש להיכנס שוב כדי להמשיך בהפעלה.",
+            "ar": "يرجى تسجيل الدخول مجدداً لمتابعة جلستك.",
+            "ru": "Войдите снова, чтобы продолжить сеанс."
+        }
+    },
+    {
+        "id": "session_interrupted",
+        "description": "session interrupted.",
+        "other": {
+            "en": "The session response was interrupted. Please sign in again.",
+            "de": "Die Sitzungsantwort wurde unterbrochen. Bitte melden Sie sich erneut an.",
+            "fr": "La réponse de session a été interrompue. Veuillez vous reconnecter.",
+            "ja": "セッションの応答が中断されました。再度サインインしてください。",
+            "zh": "会话响应已中断。请重新登录。",
+            "he": "תגובת ההפעלה נקטעה. יש להיכנס שוב.",
+            "ar": "انقطعت استجابة الجلسة. يرجى تسجيل الدخول مجدداً.",
+            "ru": "Ответ сеанса был прерван. Войдите снова."
+        }
+    },
+    {
+        "id": "session_logout_failed",
+        "description": "session logout failed.",
+        "other": {
+            "en": "Sign out failed. Please try signing out again.",
+            "de": "Abmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+            "fr": "La déconnexion a échoué. Veuillez réessayer.",
+            "ja": "サインアウトに失敗しました。もう一度お試しください。",
+            "zh": "退出失败。请重试。",
+            "he": "היציאה נכשלה. יש לנסות לצאת שוב.",
+            "ar": "فشل تسجيل الخروج. يرجى المحاولة مرة أخرى.",
+            "ru": "Не удалось выйти. Попробуйте выйти снова."
+        }
+    },
+    {
+        "id": "session_logout_unconfirmed",
+        "description": "session logout unconfirmed.",
+        "other": {
+            "en": "Sign out was not confirmed. Please try signing out again.",
+            "de": "Abmeldung wurde nicht bestätigt. Bitte versuchen Sie es erneut.",
+            "fr": "La déconnexion n’a pas été confirmée. Veuillez réessayer.",
+            "ja": "サインアウトを確認できませんでした。もう一度お試しください。",
+            "zh": "未能确认退出。请重试。",
+            "he": "היציאה לא אושרה. יש לנסות לצאת שוב.",
+            "ar": "لم يتم تأكيد تسجيل الخروج. يرجى المحاولة مرة أخرى.",
+            "ru": "Выход не подтверждён. Попробуйте выйти снова."
+        }
+    },
+    {
+        "id": "session_incomplete",
+        "description": "session incomplete.",
+        "other": {
+            "en": "The session response was incomplete. Please sign in again.",
+            "de": "Die Sitzungsantwort war unvollständig. Bitte melden Sie sich erneut an.",
+            "fr": "La réponse de session était incomplète. Veuillez vous reconnecter.",
+            "ja": "セッションの応答が不完全でした。再度サインインしてください。",
+            "zh": "会话响应不完整。请重新登录。",
+            "he": "תגובת ההפעלה לא הייתה שלמה. יש להיכנס שוב.",
+            "ar": "كانت استجابة الجلسة غير مكتملة. يرجى تسجيل الدخول مجدداً.",
+            "ru": "Ответ сеанса был неполным. Войдите снова."
+        }
+    },
+    {
+        "id": "authenticate_action",
+        "description": "authenticate action.",
+        "other": {
+            "en": "Authenticate",
+            "de": "Authentifizieren",
+            "fr": "S’authentifier",
+            "ja": "認証",
+            "zh": "验证身份",
+            "he": "אימות",
+            "ar": "مصادقة",
+            "ru": "Подтвердить личность"
+        }
+    },
+    {
+        "id": "recover_action",
+        "description": "recover action.",
+        "other": {
+            "en": "Recover",
+            "de": "Wiederherstellen",
+            "fr": "Récupérer",
+            "ja": "復旧",
+            "zh": "恢复",
+            "he": "שחזור",
+            "ar": "استعادة",
+            "ru": "Восстановить"
+        }
+    },
+    {
+        "id": "verify_action",
+        "description": "verify action.",
+        "other": {
+            "en": "Verify",
+            "de": "Überprüfen",
+            "fr": "Vérifier",
+            "ja": "確認",
+            "zh": "验证",
+            "he": "בדיקה",
+            "ar": "تحقق",
+            "ru": "Проверить"
+        }
+    },
+    {
+        "id": "add_action",
+        "description": "add action.",
+        "other": {
+            "en": "Add",
+            "de": "Hinzufügen",
+            "fr": "Ajouter",
+            "ja": "追加",
+            "zh": "添加",
+            "he": "הוספה",
+            "ar": "إضافة",
+            "ru": "Добавить"
+        }
+    },
+    {
+        "id": "name_label",
+        "description": "name label.",
+        "other": {
+            "en": "Name",
+            "de": "Name",
+            "fr": "Nom",
+            "ja": "名前",
+            "zh": "名称",
+            "he": "שם",
+            "ar": "الاسم",
+            "ru": "Название"
+        }
+    },
+    {
+        "id": "comment_label",
+        "description": "comment label.",
+        "other": {
+            "en": "Comment",
+            "de": "Kommentar",
+            "fr": "Commentaire",
+            "ja": "コメント",
+            "zh": "备注",
+            "he": "הערה",
+            "ar": "تعليق",
+            "ru": "Комментарий"
+        }
+    },
+    {
+        "id": "provide_password",
+        "description": "provide password.",
+        "other": {
+            "en": "Please provide your password",
+            "de": "Bitte geben Sie Ihr Passwort ein",
+            "fr": "Veuillez saisir votre mot de passe",
+            "ja": "パスワードを入力してください",
+            "zh": "请输入您的密码",
+            "he": "יש להזין את הסיסמה שלך",
+            "ar": "يرجى إدخال كلمة المرور",
+            "ru": "Введите пароль"
+        }
+    },
+    {
+        "id": "email_address_label",
+        "description": "email address label.",
+        "other": {
+            "en": "Email Address",
+            "de": "E-Mail-Adresse",
+            "fr": "Adresse e-mail",
+            "ja": "メールアドレス",
+            "zh": "电子邮件地址",
+            "he": "כתובת דוא״ל",
+            "ar": "عنوان البريد الإلكتروني",
+            "ru": "Адрес электронной почты"
+        }
+    },
+    {
+        "id": "mfa_app_label",
+        "description": "mfa app label.",
+        "other": {
+            "en": "Authenticator App",
+            "de": "Authenticator-App",
+            "fr": "Application d’authentification",
+            "ja": "認証アプリ",
+            "zh": "身份验证器应用",
+            "he": "יישומון אימות",
+            "ar": "تطبيق المصادقة",
+            "ru": "Приложение-аутентификатор"
+        }
+    },
+    {
+        "id": "mfa_hardware_label",
+        "description": "mfa hardware label.",
+        "other": {
+            "en": "Hardware Token",
+            "de": "Hardware-Token",
+            "fr": "Clé de sécurité",
+            "ja": "ハードウェアトークン",
+            "zh": "硬件令牌",
+            "he": "אסימון חומרה",
+            "ar": "رمز أمان مادي",
+            "ru": "Аппаратный ключ"
+        }
+    },
+    {
+        "id": "mfa_code_hint",
+        "description": "mfa code hint.",
+        "other": {
+            "en": "Authentication code should contain 4-8 characters and consists of 0-9 characters.",
+            "de": "Der Authentifizierungscode muss aus 4–8 Ziffern (0–9) bestehen.",
+            "fr": "Le code d’authentification doit contenir 4 à 8 chiffres (0–9).",
+            "ja": "認証コードは0〜9の数字4〜8桁で入力してください。",
+            "zh": "验证码应包含4–8位数字（0–9）。",
+            "he": "קוד האימות חייב להכיל 4–8 ספרות (0–9).",
+            "ar": "يجب أن يتكون رمز المصادقة من 4–8 أرقام (0–9).",
+            "ru": "Код должен содержать 4–8 цифр (0–9)."
+        }
+    },
+    {
+        "id": "mfa_hardware_instruction",
+        "description": "mfa hardware instruction.",
+        "other": {
+            "en": "Insert your hardware token into a USB port. When prompted, touch, or otherwise trigger the hardware token.",
+            "de": "Stecken Sie Ihren Hardware-Token in einen USB-Anschluss. Berühren oder aktivieren Sie ihn, wenn Sie dazu aufgefordert werden.",
+            "fr": "Insérez votre clé de sécurité dans un port USB. Touchez-la ou activez-la lorsque vous y êtes invité.",
+            "ja": "ハードウェアトークンをUSBポートに挿入してください。指示に従ってトークンに触れるなどの操作をしてください。",
+            "zh": "将硬件令牌插入USB端口。收到提示时，请触摸或以其他方式激活令牌。",
+            "he": "יש לחבר את אסימון החומרה לשקע USB. כשמופיעה בקשה, יש לגעת באסימון או להפעילו.",
+            "ar": "أدخل رمز الأمان المادي في منفذ USB. عند المطالبة، المسه أو فعّله بالطريقة المناسبة.",
+            "ru": "Вставьте аппаратный ключ в USB-порт. При запросе коснитесь ключа или активируйте его другим способом."
+        }
+    },
+    {
+        "id": "mfa_setup_step_one",
+        "description": "mfa setup step one.",
+        "other": {
+            "en": "Step 1: If necessary, amend the label and comment associated with the authenticator. The label appears in your authenticator app; the comment appears in this portal.",
+            "de": "Schritt 1: Passen Sie bei Bedarf Name und Kommentar an. Der Name erscheint in der Authenticator-App, der Kommentar in diesem Portal.",
+            "fr": "Étape 1 : Modifiez si nécessaire le nom et le commentaire. Le nom apparaît dans l’application d’authentification, le commentaire dans ce portail.",
+            "ja": "手順1：必要に応じて名前とコメントを変更してください。名前は認証アプリに、コメントはこのポータルに表示されます。",
+            "zh": "步骤1：如有需要，请修改名称和备注。名称显示在身份验证器应用中，备注显示在此门户中。",
+            "he": "שלב 1: ניתן לשנות את השם וההערה. השם מופיע ביישומון האימות, וההערה בפורטל זה.",
+            "ar": "الخطوة 1: عدّل الاسم والتعليق عند الحاجة. يظهر الاسم في تطبيق المصادقة والتعليق في هذه البوابة.",
+            "ru": "Шаг 1: При необходимости измените название и комментарий. Название отображается в приложении-аутентификаторе, комментарий — на этом портале."
+        }
+    },
+    {
+        "id": "mfa_name_hint",
+        "description": "mfa name hint.",
+        "other": {
+            "en": "Name should contain 4-25 characters and consists of A-Z, a-z, 0-9 characters.",
+            "de": "Der Name muss aus 4–25 Zeichen bestehen: A–Z, a–z oder 0–9.",
+            "fr": "Le nom doit contenir 4 à 25 caractères : A–Z, a–z ou 0–9.",
+            "ja": "名前はA〜Z、a〜z、0〜9の4〜25文字で入力してください。",
+            "zh": "名称应为4–25个字符，仅限A–Z、a–z、0–9。",
+            "he": "השם חייב להכיל 4–25 תווים: A–Z, a–z או 0–9.",
+            "ar": "يجب أن يتكون الاسم من 4–25 محرفاً من A–Z أو a–z أو 0–9.",
+            "ru": "Название должно содержать 4–25 символов: A–Z, a–z или 0–9."
+        }
+    },
+    {
+        "id": "mfa_comment_hint",
+        "description": "mfa comment hint.",
+        "other": {
+            "en": "Comment should contain 4-50 characters and consists of A-Z, a-z, 0-9, space, and dash characters.",
+            "de": "Der Kommentar muss aus 4–50 Zeichen bestehen: A–Z, a–z, 0–9, Leerzeichen oder Bindestriche.",
+            "fr": "Le commentaire doit contenir 4 à 50 caractères : A–Z, a–z, 0–9, espaces ou tirets.",
+            "ja": "コメントはA〜Z、a〜z、0〜9、スペース、ハイフンの4〜50文字で入力してください。",
+            "zh": "备注应为4–50个字符，仅限A–Z、a–z、0–9、空格和连字符。",
+            "he": "ההערה חייבת להכיל 4–50 תווים: A–Z, a–z, 0–9, רווח או מקף.",
+            "ar": "يجب أن يتكون التعليق من 4–50 محرفاً من A–Z وa–z و0–9 والمسافات والشرطات.",
+            "ru": "Комментарий должен содержать 4–50 символов: A–Z, a–z, 0–9, пробелы и дефисы."
+        }
+    },
+    {
+        "id": "mfa_token_comment_hint",
+        "description": "mfa token comment hint.",
+        "other": {
+            "en": "A comment should contain 4-25 characters and consists of A-Z, a-z, 0-9, space, and dash characters.",
+            "de": "Ein Kommentar muss aus 4–25 Zeichen bestehen: A–Z, a–z, 0–9, Leerzeichen oder Bindestriche.",
+            "fr": "Le commentaire doit contenir 4 à 25 caractères : A–Z, a–z, 0–9, espaces ou tirets.",
+            "ja": "コメントはA〜Z、a〜z、0〜9、スペース、ハイフンの4〜25文字で入力してください。",
+            "zh": "备注应为4–25个字符，仅限A–Z、a–z、0–9、空格和连字符。",
+            "he": "ההערה חייבת להכיל 4–25 תווים: A–Z, a–z, 0–9, רווח או מקף.",
+            "ar": "يجب أن يتكون التعليق من 4–25 محرفاً من A–Z وa–z و0–9 والمسافات والشرطات.",
+            "ru": "Комментарий должен содержать 4–25 символов: A–Z, a–z, 0–9, пробелы и дефисы."
+        }
+    },
+    {
+        "id": "mfa_advanced_setup",
+        "description": "mfa advanced setup.",
+        "other": {
+            "en": "Customize default values (optional)",
+            "de": "Standardwerte anpassen (optional)",
+            "fr": "Personnaliser les valeurs par défaut (facultatif)",
+            "ja": "既定値を変更（任意）",
+            "zh": "自定义默认值（可选）",
+            "he": "התאמת ערכי ברירת המחדל (רשות)",
+            "ar": "تخصيص القيم الافتراضية (اختياري)",
+            "ru": "Настроить значения по умолчанию (необязательно)"
+        }
+    },
+    {
+        "id": "mfa_secret_label",
+        "description": "mfa secret label.",
+        "other": {
+            "en": "Token Secret",
+            "de": "Token-Geheimnis",
+            "fr": "Secret du jeton",
+            "ja": "トークンシークレット",
+            "zh": "令牌密钥",
+            "he": "סוד האסימון",
+            "ar": "سر الرمز",
+            "ru": "Секрет токена"
+        }
+    },
+    {
+        "id": "mfa_secret_hint",
+        "description": "mfa secret hint.",
+        "other": {
+            "en": "Token secret should contain 10-100 letters or digits (A-Z, a-z, 0-9).",
+            "de": "Das Token-Geheimnis muss aus 10–100 Buchstaben oder Ziffern bestehen (A–Z, a–z, 0–9).",
+            "fr": "Le secret doit contenir 10 à 100 lettres ou chiffres (A–Z, a–z, 0–9).",
+            "ja": "シークレットはA〜Z、a〜z、0〜9の10〜100文字で入力してください。",
+            "zh": "令牌密钥应包含10–100个字母或数字（A–Z、a–z、0–9）。",
+            "he": "סוד האסימון חייב להכיל 10–100 אותיות או ספרות (A–Z, a–z, 0–9).",
+            "ar": "يجب أن يتكون سر الرمز من 10–100 حرف أو رقم (A–Z وa–z و0–9).",
+            "ru": "Секрет должен содержать 10–100 букв или цифр (A–Z, a–z, 0–9)."
+        }
+    },
+    {
+        "id": "mfa_lifetime",
+        "description": "mfa lifetime.",
+        "other": {
+            "en": "Lifetime: {{.Value}} seconds",
+            "de": "Gültigkeit: {{.Value}} Sekunden",
+            "fr": "Durée de validité : {{.Value}} secondes",
+            "ja": "有効期間：{{.Value}}秒",
+            "zh": "有效期：{{.Value}}秒",
+            "he": "משך תוקף: {{.Value}} שניות",
+            "ar": "مدة الصلاحية: {{.Value}} ثانية",
+            "ru": "Срок действия: {{.Value}} секунд"
+        }
+    },
+    {
+        "id": "mfa_digits",
+        "description": "mfa digits.",
+        "other": {
+            "en": "Code length: {{.Value}} digits",
+            "de": "Codelänge: {{.Value}} Ziffern",
+            "fr": "Longueur du code : {{.Value}} chiffres",
+            "ja": "コードの長さ：{{.Value}}桁",
+            "zh": "代码长度：{{.Value}}位",
+            "he": "אורך הקוד: {{.Value}} ספרות",
+            "ar": "طول الرمز: {{.Value}} أرقام",
+            "ru": "Длина кода: {{.Value}} цифр"
+        }
+    },
+    {
+        "id": "mfa_lifetime_label",
+        "description": "mfa lifetime label.",
+        "other": {
+            "en": "Code lifetime",
+            "de": "Code-Gültigkeit",
+            "fr": "Durée de validité du code",
+            "ja": "コードの有効期間",
+            "zh": "代码有效期",
+            "he": "משך תוקף הקוד",
+            "ar": "مدة صلاحية الرمز",
+            "ru": "Срок действия кода"
+        }
+    },
+    {
+        "id": "mfa_digits_label",
+        "description": "mfa digits label.",
+        "other": {
+            "en": "Code length",
+            "de": "Codelänge",
+            "fr": "Longueur du code",
+            "ja": "コードの長さ",
+            "zh": "代码长度",
+            "he": "אורך הקוד",
+            "ar": "طول الرمز",
+            "ru": "Длина кода"
+        }
+    },
+    {
+        "id": "mfa_setup_step_two",
+        "description": "mfa setup step two.",
+        "other": {
+            "en": "Step 2: Open your authenticator app, add a new entry, and select Get QR Code.",
+            "de": "Schritt 2: Öffnen Sie Ihre Authenticator-App, fügen Sie einen Eintrag hinzu und wählen Sie „QR-Code abrufen“.",
+            "fr": "Étape 2 : Ouvrez votre application d’authentification, ajoutez une entrée et sélectionnez Obtenir le code QR.",
+            "ja": "手順2：認証アプリを開いて新しい項目を追加し、「QRコードを取得」を選択してください。",
+            "zh": "步骤2：打开身份验证器应用，添加新条目，然后选择“获取二维码”。",
+            "he": "שלב 2: יש לפתוח את יישומון האימות, להוסיף רשומה ולבחור בקבלת קוד QR.",
+            "ar": "الخطوة 2: افتح تطبيق المصادقة، وأضف إدخالاً جديداً، ثم اختر الحصول على رمز QR.",
+            "ru": "Шаг 2: Откройте приложение-аутентификатор, добавьте запись и выберите «Получить QR-код»."
+        }
+    },
+    {
+        "id": "mfa_get_qr",
+        "description": "mfa get qr.",
+        "other": {
+            "en": "Get QR Code",
+            "de": "QR-Code abrufen",
+            "fr": "Obtenir le code QR",
+            "ja": "QRコードを取得",
+            "zh": "获取二维码",
+            "he": "קבלת קוד QR",
+            "ar": "الحصول على رمز QR",
+            "ru": "Получить QR-код"
+        }
+    },
+    {
+        "id": "mfa_cannot_scan",
+        "description": "mfa cannot scan.",
+        "other": {
+            "en": "Can't scan? Click or copy the link below.",
+            "de": "Scannen nicht möglich? Öffnen oder kopieren Sie den Link unten.",
+            "fr": "Impossible de scanner ? Cliquez sur le lien ci-dessous ou copiez-le.",
+            "ja": "スキャンできませんか？下のリンクを開くかコピーしてください。",
+            "zh": "无法扫描？请点击或复制下方链接。",
+            "he": "אין אפשרות לסרוק? יש ללחוץ על הקישור למטה או להעתיק אותו.",
+            "ar": "لا يمكنك المسح؟ انقر على الرابط أدناه أو انسخه.",
+            "ru": "Не удаётся сканировать? Нажмите или скопируйте ссылку ниже."
+        }
+    },
+    {
+        "id": "mfa_no_camera",
+        "description": "mfa no camera.",
+        "other": {
+            "en": "No Camera Link",
+            "de": "Link ohne Kamera",
+            "fr": "Lien sans caméra",
+            "ja": "カメラを使わずに設定",
+            "zh": "无需摄像头的链接",
+            "he": "קישור ללא מצלמה",
+            "ar": "رابط بدون كاميرا",
+            "ru": "Ссылка без камеры"
+        }
+    },
+    {
+        "id": "mfa_setup_step_three",
+        "description": "mfa setup step three.",
+        "other": {
+            "en": "Step 3: Enter the authentication code you see in the app and select Add.",
+            "de": "Schritt 3: Geben Sie den Code aus der App ein und wählen Sie „Hinzufügen“.",
+            "fr": "Étape 3 : Saisissez le code affiché dans l’application et sélectionnez Ajouter.",
+            "ja": "手順3：アプリに表示される認証コードを入力し、「追加」を選択してください。",
+            "zh": "步骤3：输入应用中显示的验证码，然后选择“添加”。",
+            "he": "שלב 3: יש להזין את הקוד המופיע ביישומון ולבחור בהוספה.",
+            "ar": "الخطوة 3: أدخل رمز المصادقة الظاهر في التطبيق واختر إضافة.",
+            "ru": "Шаг 3: Введите код из приложения и выберите «Добавить»."
+        }
+    },
+    {
+        "id": "mfa_insert_key",
+        "description": "mfa insert key.",
+        "other": {
+            "en": "Please insert your U2F (USB, NFC, or Bluetooth) Security Key, e.g. Yubikey.",
+            "de": "Bitte verbinden Sie Ihren U2F-Sicherheitsschlüssel (USB, NFC oder Bluetooth), z. B. einen YubiKey.",
+            "fr": "Connectez votre clé de sécurité U2F (USB, NFC ou Bluetooth), par exemple une YubiKey.",
+            "ja": "U2Fセキュリティキー（USB、NFC、Bluetooth、例：YubiKey）を接続してください。",
+            "zh": "请连接U2F安全密钥（USB、NFC或蓝牙），例如YubiKey。",
+            "he": "יש לחבר מפתח אבטחה U2F (USB, NFC או Bluetooth), למשל YubiKey.",
+            "ar": "يرجى توصيل مفتاح أمان U2F ‏(USB أو NFC أو Bluetooth)، مثل YubiKey.",
+            "ru": "Подключите ключ безопасности U2F (USB, NFC или Bluetooth), например YubiKey."
+        }
+    },
+    {
+        "id": "mfa_register_instruction",
+        "description": "mfa register instruction.",
+        "other": {
+            "en": "Then, please click \"Register\" button below.",
+            "de": "Klicken Sie dann unten auf „Registrieren“.",
+            "fr": "Cliquez ensuite sur le bouton « S’inscrire » ci-dessous.",
+            "ja": "次に、下の「登録」ボタンを押してください。",
+            "zh": "然后点击下方的“注册”按钮。",
+            "he": "לאחר מכן יש ללחוץ על כפתור הרישום למטה.",
+            "ar": "ثم انقر على زر التسجيل أدناه.",
+            "ru": "Затем нажмите кнопку «Зарегистрировать» ниже."
+        }
+    },
+    {
+        "id": "mfa_token_name",
+        "description": "mfa token name.",
+        "other": {
+            "en": "Name your token (optional)",
+            "de": "Token benennen (optional)",
+            "fr": "Nom de votre clé (facultatif)",
+            "ja": "トークンの名前（任意）",
+            "zh": "为令牌命名（可选）",
+            "he": "שם האסימון (רשות)",
+            "ar": "اسم الرمز (اختياري)",
+            "ru": "Название ключа (необязательно)"
+        }
+    },
+    {
+        "id": "authorization_failed_message",
+        "description": "authorization failed message.",
+        "other": {
+            "en": "Your session failed to meet authorization requirements.",
+            "de": "Ihre Sitzung erfüllt die Autorisierungsanforderungen nicht.",
+            "fr": "Votre session ne satisfait pas aux exigences d’autorisation.",
+            "ja": "セッションが認可要件を満たしていません。",
+            "zh": "您的会话未满足授权要求。",
+            "he": "ההפעלה שלך לא עמדה בדרישות ההרשאה.",
+            "ar": "لم تستوفِ جلستك متطلبات التفويض.",
+            "ru": "Сеанс не соответствует требованиям авторизации."
+        }
+    },
+    {
+        "id": "unsupported_view",
+        "description": "unsupported view.",
+        "other": {
+            "en": "This view is unsupported.",
+            "de": "Diese Ansicht wird nicht unterstützt.",
+            "fr": "Cette vue n’est pas prise en charge.",
+            "ja": "この画面はサポートされていません。",
+            "zh": "不支持此视图。",
+            "he": "תצוגה זו אינה נתמכת.",
+            "ar": "هذا العرض غير مدعوم.",
+            "ru": "Этот вид страницы не поддерживается."
+        }
+    },
+    {
+        "id": "authentication_title",
+        "description": "authentication title.",
+        "other": {
+            "en": "Authentication",
+            "de": "Authentifizierung",
+            "fr": "Authentification",
+            "ja": "認証",
+            "zh": "身份验证",
+            "he": "אימות",
+            "ar": "المصادقة",
+            "ru": "Аутентификация"
+        }
+    },
+    {
+        "id": "authentication_failed_title",
+        "description": "authentication failed title.",
+        "other": {
+            "en": "Authentication Failed",
+            "de": "Authentifizierung fehlgeschlagen",
+            "fr": "Échec de l’authentification",
+            "ja": "認証に失敗しました",
+            "zh": "身份验证失败",
+            "he": "האימות נכשל",
+            "ar": "فشلت المصادقة",
+            "ru": "Ошибка аутентификации"
+        }
+    },
+    {
+        "id": "authorization_failed_title",
+        "description": "authorization failed title.",
+        "other": {
+            "en": "Authorization Failed",
+            "de": "Autorisierung fehlgeschlagen",
+            "fr": "Échec de l’autorisation",
+            "ja": "認可に失敗しました",
+            "zh": "授权失败",
+            "he": "ההרשאה נכשלה",
+            "ar": "فشل التفويض",
+            "ru": "Ошибка авторизации"
+        }
+    },
+    {
+        "id": "password_recovery_title",
+        "description": "password recovery title.",
+        "other": {
+            "en": "Password Recovery",
+            "de": "Passwortwiederherstellung",
+            "fr": "Récupération du mot de passe",
+            "ja": "パスワードの復旧",
+            "zh": "密码恢复",
+            "he": "שחזור סיסמה",
+            "ar": "استعادة كلمة المرور",
+            "ru": "Восстановление пароля"
+        }
+    },
+    {
+        "id": "password_recovery_failed_title",
+        "description": "password recovery failed title.",
+        "other": {
+            "en": "Password Recovery Failed",
+            "de": "Passwortwiederherstellung fehlgeschlagen",
+            "fr": "Échec de la récupération du mot de passe",
+            "ja": "パスワードの復旧に失敗しました",
+            "zh": "密码恢复失败",
+            "he": "שחזור הסיסמה נכשל",
+            "ar": "فشلت استعادة كلمة المرور",
+            "ru": "Не удалось восстановить пароль"
+        }
+    },
+    {
+        "id": "mfa_registration_title",
+        "description": "mfa registration title.",
+        "other": {
+            "en": "Token Registration",
+            "de": "Token-Registrierung",
+            "fr": "Enregistrement d’une clé",
+            "ja": "トークン登録",
+            "zh": "令牌注册",
+            "he": "רישום אסימון",
+            "ar": "تسجيل الرمز",
+            "ru": "Регистрация ключа"
+        }
+    },
+    {
+        "id": "mfa_selection_title",
+        "description": "mfa selection title.",
+        "other": {
+            "en": "Token Selection",
+            "de": "Token-Auswahl",
+            "fr": "Sélection d’une clé",
+            "ja": "トークンの選択",
+            "zh": "令牌选择",
+            "he": "בחירת אסימון",
+            "ar": "اختيار الرمز",
+            "ru": "Выбор ключа"
+        }
+    },
+    {
+        "id": "mfa_app_registration_title",
+        "description": "mfa app registration title.",
+        "other": {
+            "en": "Authenticator App Registration",
+            "de": "Authenticator-App registrieren",
+            "fr": "Enregistrement de l’application d’authentification",
+            "ja": "認証アプリの登録",
+            "zh": "身份验证器应用注册",
+            "he": "רישום יישומון אימות",
+            "ar": "تسجيل تطبيق المصادقة",
+            "ru": "Регистрация приложения-аутентификатора"
+        }
+    },
+    {
+        "id": "mfa_hardware_registration_title",
+        "description": "mfa hardware registration title.",
+        "other": {
+            "en": "Hardware Token Registration",
+            "de": "Hardware-Token registrieren",
+            "fr": "Enregistrement d’une clé de sécurité",
+            "ja": "ハードウェアトークン登録",
+            "zh": "硬件令牌注册",
+            "he": "רישום אסימון חומרה",
+            "ar": "تسجيل رمز الأمان المادي",
+            "ru": "Регистрация аппаратного ключа"
+        }
+    },
+    {
+        "id": "bad_request_title",
+        "description": "bad request title.",
+        "other": {
+            "en": "Bad Request",
+            "de": "Ungültige Anfrage",
+            "fr": "Requête incorrecte",
+            "ja": "不正なリクエスト",
+            "zh": "无效请求",
+            "he": "בקשה לא תקינה",
+            "ar": "طلب غير صالح",
+            "ru": "Некорректный запрос"
+        }
+    },
+    {
+        "id": "mfa_browser_unsupported",
+        "description": "mfa browser unsupported.",
+        "other": {
+            "en": "This browser does not support security keys. Try another browser.",
+            "de": "Dieser Browser unterstützt keine Sicherheitsschlüssel. Versuchen Sie einen anderen Browser.",
+            "fr": "Ce navigateur ne prend pas en charge les clés de sécurité. Essayez un autre navigateur.",
+            "ja": "このブラウザはセキュリティキーに対応していません。別のブラウザをお試しください。",
+            "zh": "此浏览器不支持安全密钥。请尝试其他浏览器。",
+            "he": "דפדפן זה אינו תומך במפתחות אבטחה. יש לנסות דפדפן אחר.",
+            "ar": "لا يدعم هذا المتصفح مفاتيح الأمان. جرّب متصفحاً آخر.",
+            "ru": "Этот браузер не поддерживает ключи безопасности. Попробуйте другой браузер."
+        }
+    },
+    {
+        "id": "mfa_browser_failed",
+        "description": "mfa browser failed.",
+        "other": {
+            "en": "Security key verification did not complete. Try again and follow your browser's instructions.",
+            "de": "Die Überprüfung des Sicherheitsschlüssels wurde nicht abgeschlossen. Versuchen Sie es erneut und folgen Sie den Anweisungen des Browsers.",
+            "fr": "La vérification de la clé de sécurité n’a pas abouti. Réessayez en suivant les instructions de votre navigateur.",
+            "ja": "セキュリティキーの確認が完了しませんでした。ブラウザの指示に従って再試行してください。",
+            "zh": "安全密钥验证未完成。请重试并按照浏览器的提示操作。",
+            "he": "אימות מפתח האבטחה לא הושלם. יש לנסות שוב ולפעול לפי הוראות הדפדפן.",
+            "ar": "لم يكتمل التحقق من مفتاح الأمان. حاول مجدداً واتبع تعليمات المتصفح.",
+            "ru": "Проверка ключа безопасности не завершена. Повторите попытку, следуя инструкциям браузера."
+        }
+    },
+    {
+        "id": "mfa_browser_registration_failed",
+        "description": "mfa browser registration failed.",
+        "other": {
+            "en": "Security key registration did not complete. Try again and follow your browser's instructions.",
+            "de": "Die Registrierung des Sicherheitsschlüssels wurde nicht abgeschlossen. Versuchen Sie es erneut und folgen Sie den Anweisungen des Browsers.",
+            "fr": "L’enregistrement de la clé de sécurité n’a pas abouti. Réessayez en suivant les instructions de votre navigateur.",
+            "ja": "セキュリティキーの登録が完了しませんでした。ブラウザの指示に従って再試行してください。",
+            "zh": "安全密钥注册未完成。请重试并按照浏览器的提示操作。",
+            "he": "רישום מפתח האבטחה לא הושלם. יש לנסות שוב ולפעול לפי הוראות הדפדפן.",
+            "ar": "لم يكتمل تسجيل مفتاح الأمان. حاول مجدداً واتبع تعليمات المتصفح.",
+            "ru": "Регистрация ключа безопасности не завершена. Повторите попытку, следуя инструкциям браузера."
+        }
+    },
+    {
+        "id": "oidc_consent_title",
+        "description": "oidc consent title.",
+        "other": {
+            "en": "Authorize application",
+            "de": "Anwendung autorisieren",
+            "fr": "Autoriser l’application",
+            "ja": "アプリケーションを認可",
+            "zh": "授权应用",
+            "he": "הרשאת יישום",
+            "ar": "تفويض التطبيق",
+            "ru": "Авторизация приложения"
+        }
+    },
+    {
+        "id": "oidc_continue_title",
+        "description": "oidc continue title.",
+        "other": {
+            "en": "Continue to application",
+            "de": "Zur Anwendung",
+            "fr": "Continuer vers l’application",
+            "ja": "アプリケーションへ続行",
+            "zh": "继续前往应用",
+            "he": "המשך ליישום",
+            "ar": "المتابعة إلى التطبيق",
+            "ru": "Перейти в приложение"
+        }
+    },
+    {
+        "id": "oidc_error_title",
+        "description": "oidc error title.",
+        "other": {
+            "en": "Unable to continue",
+            "de": "Fortfahren nicht möglich",
+            "fr": "Impossible de continuer",
+            "ja": "続行できません",
+            "zh": "无法继续",
+            "he": "לא ניתן להמשיך",
+            "ar": "تعذرت المتابعة",
+            "ru": "Невозможно продолжить"
+        }
+    },
+    {
+        "id": "oidc_invalid_request",
+        "description": "oidc invalid request.",
+        "other": {
+            "en": "This sign-in request is invalid or has expired. Return to the application and start signing in again.",
+            "de": "Diese Anmeldeanfrage ist ungültig oder abgelaufen. Kehren Sie zur Anwendung zurück und starten Sie die Anmeldung erneut.",
+            "fr": "Cette demande de connexion est invalide ou a expiré. Retournez dans l’application et reconnectez-vous.",
+            "ja": "このサインイン要求は無効か期限切れです。アプリケーションに戻ってサインインをやり直してください。",
+            "zh": "此登录请求无效或已过期。请返回应用重新登录。",
+            "he": "בקשת הכניסה אינה תקינה או שתוקפה פג. יש לחזור ליישום ולהתחיל בכניסה מחדש.",
+            "ar": "طلب تسجيل الدخول هذا غير صالح أو منتهي الصلاحية. عُد إلى التطبيق وابدأ تسجيل الدخول مجدداً.",
+            "ru": "Этот запрос на вход недействителен или истёк. Вернитесь в приложение и начните вход заново."
+        }
+    },
+    {
+        "id": "oidc_unavailable",
+        "description": "oidc unavailable.",
+        "other": {
+            "en": "Sign-in is temporarily unavailable. Return to the application and try again shortly.",
+            "de": "Die Anmeldung ist vorübergehend nicht verfügbar. Kehren Sie zur Anwendung zurück und versuchen Sie es gleich erneut.",
+            "fr": "La connexion est temporairement indisponible. Retournez dans l’application et réessayez dans un instant.",
+            "ja": "サインインは一時的に利用できません。アプリケーションに戻り、しばらくしてから再試行してください。",
+            "zh": "暂时无法登录。请返回应用并稍后重试。",
+            "he": "הכניסה אינה זמינה זמנית. יש לחזור ליישום ולנסות שוב בקרוב.",
+            "ar": "تسجيل الدخول غير متاح مؤقتاً. عُد إلى التطبيق وحاول مجدداً بعد قليل.",
+            "ru": "Вход временно недоступен. Вернитесь в приложение и повторите попытку чуть позже."
+        }
+    },
+    {
+        "id": "oidc_application_access",
+        "description": "oidc application access.",
+        "other": {
+            "en": "Application access",
+            "de": "Anwendungszugriff",
+            "fr": "Accès de l’application",
+            "ja": "アプリケーションのアクセス",
+            "zh": "应用访问权限",
+            "he": "גישת יישום",
+            "ar": "وصول التطبيق",
+            "ru": "Доступ приложения"
+        }
+    },
+    {
+        "id": "oidc_return_to_application",
+        "description": "oidc return to application.",
+        "other": {
+            "en": "Return to application",
+            "de": "Zurück zur Anwendung",
+            "fr": "Retour à l’application",
+            "ja": "アプリケーションに戻る",
+            "zh": "返回应用",
+            "he": "חזרה ליישום",
+            "ar": "العودة إلى التطبيق",
+            "ru": "Возврат в приложение"
+        }
+    },
+    {
+        "id": "oidc_sign_in_request",
+        "description": "oidc sign in request.",
+        "other": {
+            "en": "Sign-in request",
+            "de": "Anmeldeanfrage",
+            "fr": "Demande de connexion",
+            "ja": "サインイン要求",
+            "zh": "登录请求",
+            "he": "בקשת כניסה",
+            "ar": "طلب تسجيل الدخول",
+            "ru": "Запрос на вход"
+        }
+    },
+    {
+        "id": "oidc_client_request",
+        "description": "oidc client request.",
+        "other": {
+            "en": "This application would like to access your account.",
+            "de": "Diese Anwendung möchte auf Ihr Konto zugreifen.",
+            "fr": "Cette application souhaite accéder à votre compte.",
+            "ja": "このアプリケーションがアカウントへのアクセスを求めています。",
+            "zh": "此应用请求访问您的账户。",
+            "he": "יישום זה מבקש לגשת לחשבון שלך.",
+            "ar": "يريد هذا التطبيق الوصول إلى حسابك.",
+            "ru": "Это приложение запрашивает доступ к вашему аккаунту."
+        }
+    },
+    {
+        "id": "oidc_signed_in_as",
+        "description": "oidc signed in as.",
+        "other": {
+            "en": "Signed in as",
+            "de": "Angemeldet als",
+            "fr": "Connecté en tant que",
+            "ja": "サインイン中のアカウント",
+            "zh": "当前登录账户",
+            "he": "החשבון המחובר",
+            "ar": "تم تسجيل الدخول باسم",
+            "ru": "Вы вошли как"
+        }
+    },
+    {
+        "id": "oidc_continue_instruction",
+        "description": "oidc continue instruction.",
+        "other": {
+            "en": "Continue to this application to finish this request.",
+            "de": "Wechseln Sie zu dieser Anwendung, um die Anfrage abzuschließen.",
+            "fr": "Continuez vers cette application pour terminer cette demande.",
+            "ja": "要求を完了するには、このアプリケーションへ進んでください。",
+            "zh": "请继续前往此应用以完成此请求。",
+            "he": "יש להמשיך ליישום זה כדי להשלים את הבקשה.",
+            "ar": "تابع إلى هذا التطبيق لإكمال هذا الطلب.",
+            "ru": "Перейдите в это приложение, чтобы завершить запрос."
+        }
+    },
+    {
+        "id": "oidc_review_access",
+        "description": "oidc review access.",
+        "other": {
+            "en": "Review requested access",
+            "de": "Angeforderten Zugriff prüfen",
+            "fr": "Vérifier les accès demandés",
+            "ja": "要求されたアクセスを確認",
+            "zh": "查看请求的访问权限",
+            "he": "בדיקת הגישה המבוקשת",
+            "ar": "مراجعة الوصول المطلوب",
+            "ru": "Проверка запрошенного доступа"
+        }
+    },
+    {
+        "id": "oidc_additional_information",
+        "description": "oidc additional information.",
+        "other": {
+            "en": "Additional information",
+            "de": "Zusätzliche Informationen",
+            "fr": "Informations supplémentaires",
+            "ja": "追加情報",
+            "zh": "其他信息",
+            "he": "מידע נוסף",
+            "ar": "معلومات إضافية",
+            "ru": "Дополнительная информация"
+        }
+    },
+    {
+        "id": "oidc_additional_access",
+        "description": "oidc additional access.",
+        "other": {
+            "en": "The application can also access:",
+            "de": "Die Anwendung kann außerdem zugreifen auf:",
+            "fr": "L’application peut également accéder à :",
+            "ja": "アプリケーションは次の情報にもアクセスできます：",
+            "zh": "该应用还可以访问：",
+            "he": "היישום יוכל לגשת גם אל:",
+            "ar": "يمكن للتطبيق أيضاً الوصول إلى:",
+            "ru": "Приложение также получит доступ к:"
+        }
+    },
+    {
+        "id": "oidc_sign_in_information",
+        "description": "oidc sign in information.",
+        "other": {
+            "en": "Included when you sign in",
+            "de": "Bei der Anmeldung enthalten",
+            "fr": "Inclus lors de la connexion",
+            "ja": "サインイン時に含まれる情報",
+            "zh": "登录时包含的信息",
+            "he": "נכלל בעת הכניסה",
+            "ar": "مضمّن عند تسجيل الدخول",
+            "ru": "Передаётся при входе"
+        }
+    },
+    {
+        "id": "oidc_direct_information",
+        "description": "oidc direct information.",
+        "other": {
+            "en": "These details will be sent directly to the application:",
+            "de": "Diese Angaben werden direkt an die Anwendung gesendet:",
+            "fr": "Ces informations seront envoyées directement à l’application :",
+            "ja": "次の情報がアプリケーションに直接送信されます：",
+            "zh": "以下信息将直接发送给该应用：",
+            "he": "פרטים אלה יישלחו ישירות ליישום:",
+            "ar": "ستُرسل هذه التفاصيل مباشرةً إلى التطبيق:",
+            "ru": "Эти данные будут отправлены непосредственно в приложение:"
+        }
+    },
+    {
+        "id": "oidc_trust_notice",
+        "description": "oidc trust notice.",
+        "other": {
+            "en": "Only continue if you trust this application.",
+            "de": "Fahren Sie nur fort, wenn Sie dieser Anwendung vertrauen.",
+            "fr": "Continuez uniquement si vous faites confiance à cette application.",
+            "ja": "このアプリケーションを信頼できる場合のみ続行してください。",
+            "zh": "仅当您信任此应用时才继续。",
+            "he": "יש להמשיך רק אם היישום מהימן בעיניך.",
+            "ar": "تابع فقط إذا كنت تثق بهذا التطبيق.",
+            "ru": "Продолжайте, только если доверяете этому приложению."
+        }
+    },
+    {
+        "id": "oidc_allow_access",
+        "description": "oidc allow access.",
+        "other": {
+            "en": "Allow access",
+            "de": "Zugriff erlauben",
+            "fr": "Autoriser l’accès",
+            "ja": "アクセスを許可",
+            "zh": "允许访问",
+            "he": "אישור גישה",
+            "ar": "السماح بالوصول",
+            "ru": "Разрешить доступ"
+        }
+    },
+    {
+        "id": "oidc_deny_notice",
+        "description": "oidc deny notice.",
+        "other": {
+            "en": "Choosing Deny returns you to the application without granting access.",
+            "de": "Bei „Ablehnen“ kehren Sie ohne Zugriffsgewährung zur Anwendung zurück.",
+            "fr": "En choisissant Refuser, vous retournez dans l’application sans accorder l’accès.",
+            "ja": "「拒否」を選択すると、アクセスを許可せずにアプリケーションに戻ります。",
+            "zh": "选择“拒绝”将返回应用而不授予访问权限。",
+            "he": "בחירה בדחייה מחזירה ליישום ללא מתן גישה.",
+            "ar": "يؤدي اختيار رفض إلى إعادتك إلى التطبيق دون منح الوصول.",
+            "ru": "При выборе «Отклонить» вы вернётесь в приложение без предоставления доступа."
+        }
+    },
+    {
+        "id": "oidc_manual_continue",
+        "description": "oidc manual continue.",
+        "other": {
+            "en": "If you are not redirected automatically, select Continue.",
+            "de": "Wenn Sie nicht automatisch weitergeleitet werden, wählen Sie „Weiter“.",
+            "fr": "Si la redirection n’est pas automatique, sélectionnez Continuer.",
+            "ja": "自動的にリダイレクトされない場合は、「続行」を選択してください。",
+            "zh": "如果未自动跳转，请选择“继续”。",
+            "he": "אם אין הפניה אוטומטית, יש לבחור בהמשך.",
+            "ar": "إذا لم تتم إعادة توجيهك تلقائياً، فاختر متابعة.",
+            "ru": "Если перенаправление не произошло автоматически, выберите «Продолжить»."
+        }
+    },
+    {
+        "id": "oidc_noscript",
+        "description": "oidc noscript.",
+        "other": {
+            "en": "Automatic redirection is unavailable. You can continue using the button above.",
+            "de": "Automatische Weiterleitung ist nicht verfügbar. Fahren Sie über die Schaltfläche oben fort.",
+            "fr": "La redirection automatique est indisponible. Utilisez le bouton ci-dessus pour continuer.",
+            "ja": "自動リダイレクトを利用できません。上のボタンで続行できます。",
+            "zh": "无法自动跳转。您可以使用上方按钮继续。",
+            "he": "הפניה אוטומטית אינה זמינה. ניתן להמשיך באמצעות הכפתור למעלה.",
+            "ar": "إعادة التوجيه التلقائية غير متاحة. يمكنك المتابعة باستخدام الزر أعلاه.",
+            "ru": "Автоматическое перенаправление недоступно. Продолжите с помощью кнопки выше."
+        }
+    },
+    {
+        "id": "oidc_account_identifier",
+        "description": "oidc account identifier.",
+        "other": {
+            "en": "Account identifier",
+            "de": "Kontokennung",
+            "fr": "Identifiant du compte",
+            "ja": "アカウント識別子",
+            "zh": "账户标识符",
+            "he": "מזהה חשבון",
+            "ar": "معرّف الحساب",
+            "ru": "Идентификатор аккаунта"
+        }
+    },
+    {
+        "id": "oidc_account_description",
+        "description": "oidc account description.",
+        "other": {
+            "en": "Recognize your account when you sign in.",
+            "de": "Ihr Konto bei der Anmeldung erkennen.",
+            "fr": "Reconnaître votre compte lors de la connexion.",
+            "ja": "サインイン時にアカウントを識別します。",
+            "zh": "在登录时识别您的账户。",
+            "he": "זיהוי החשבון שלך בעת הכניסה.",
+            "ar": "التعرف على حسابك عند تسجيل الدخول.",
+            "ru": "Распознавать ваш аккаунт при входе."
+        }
+    },
+    {
+        "id": "oidc_profile_title",
+        "description": "oidc profile title.",
+        "other": {
+            "en": "Profile information",
+            "de": "Profilinformationen",
+            "fr": "Informations du profil",
+            "ja": "プロフィール情報",
+            "zh": "个人资料",
+            "he": "פרטי פרופיל",
+            "ar": "معلومات الملف الشخصي",
+            "ru": "Данные профиля"
+        }
+    },
+    {
+        "id": "oidc_profile_description",
+        "description": "oidc profile description.",
+        "other": {
+            "en": "Access your name, username, and other profile details you have provided.",
+            "de": "Auf Ihren Namen, Benutzernamen und weitere angegebene Profildaten zugreifen.",
+            "fr": "Accéder à votre nom, nom d’utilisateur et aux autres informations de profil fournies.",
+            "ja": "名前、ユーザー名、その他提供したプロフィール情報にアクセスします。",
+            "zh": "访问您的姓名、用户名及您提供的其他个人资料。",
+            "he": "גישה לשם, לשם המשתמש ולפרטי פרופיל נוספים שסיפקת.",
+            "ar": "الوصول إلى اسمك واسم المستخدم وتفاصيل الملف الشخصي الأخرى التي قدمتها.",
+            "ru": "Получать ваше имя, имя пользователя и другие предоставленные данные профиля."
+        }
+    },
+    {
+        "id": "oidc_email_title",
+        "description": "oidc email title.",
+        "other": {
+            "en": "Email address",
+            "de": "E-Mail-Adresse",
+            "fr": "Adresse e-mail",
+            "ja": "メールアドレス",
+            "zh": "电子邮件地址",
+            "he": "כתובת דוא״ל",
+            "ar": "عنوان البريد الإلكتروني",
+            "ru": "Адрес электронной почты"
+        }
+    },
+    {
+        "id": "oidc_email_description",
+        "description": "oidc email description.",
+        "other": {
+            "en": "Access your email address and its verification status.",
+            "de": "Auf Ihre E-Mail-Adresse und deren Bestätigungsstatus zugreifen.",
+            "fr": "Accéder à votre adresse e-mail et à son état de vérification.",
+            "ja": "メールアドレスとその確認状態にアクセスします。",
+            "zh": "访问您的电子邮件地址及其验证状态。",
+            "he": "גישה לכתובת הדוא״ל ולמצב האימות שלה.",
+            "ar": "الوصول إلى عنوان بريدك الإلكتروني وحالة التحقق منه.",
+            "ru": "Получать ваш адрес электронной почты и статус его подтверждения."
+        }
+    },
+    {
+        "id": "oidc_address_title",
+        "description": "oidc address title.",
+        "other": {
+            "en": "Postal address",
+            "de": "Postanschrift",
+            "fr": "Adresse postale",
+            "ja": "住所",
+            "zh": "邮寄地址",
+            "he": "כתובת למשלוח דואר",
+            "ar": "العنوان البريدي",
+            "ru": "Почтовый адрес"
+        }
+    },
+    {
+        "id": "oidc_address_description",
+        "description": "oidc address description.",
+        "other": {
+            "en": "Access the postal address you have provided.",
+            "de": "Auf Ihre angegebene Postanschrift zugreifen.",
+            "fr": "Accéder à l’adresse postale que vous avez fournie.",
+            "ja": "提供した住所にアクセスします。",
+            "zh": "访问您提供的邮寄地址。",
+            "he": "גישה לכתובת הדואר שסיפקת.",
+            "ar": "الوصول إلى العنوان البريدي الذي قدمته.",
+            "ru": "Получать предоставленный вами почтовый адрес."
+        }
+    },
+    {
+        "id": "oidc_phone_title",
+        "description": "oidc phone title.",
+        "other": {
+            "en": "Phone number",
+            "de": "Telefonnummer",
+            "fr": "Numéro de téléphone",
+            "ja": "電話番号",
+            "zh": "电话号码",
+            "he": "מספר טלפון",
+            "ar": "رقم الهاتف",
+            "ru": "Номер телефона"
+        }
+    },
+    {
+        "id": "oidc_phone_description",
+        "description": "oidc phone description.",
+        "other": {
+            "en": "Access your phone number and its verification status.",
+            "de": "Auf Ihre Telefonnummer und deren Bestätigungsstatus zugreifen.",
+            "fr": "Accéder à votre numéro de téléphone et à son état de vérification.",
+            "ja": "電話番号とその確認状態にアクセスします。",
+            "zh": "访问您的电话号码及其验证状态。",
+            "he": "גישה למספר הטלפון ולמצב האימות שלו.",
+            "ar": "الوصول إلى رقم هاتفك وحالة التحقق منه.",
+            "ru": "Получать ваш номер телефона и статус его подтверждения."
+        }
+    },
+    {
+        "id": "oidc_offline_title",
+        "description": "oidc offline title.",
+        "other": {
+            "en": "Continued access",
+            "de": "Dauerhafter Zugriff",
+            "fr": "Accès prolongé",
+            "ja": "継続的なアクセス",
+            "zh": "持续访问",
+            "he": "גישה מתמשכת",
+            "ar": "وصول مستمر",
+            "ru": "Постоянный доступ"
+        }
+    },
+    {
+        "id": "oidc_offline_description",
+        "description": "oidc offline description.",
+        "other": {
+            "en": "Keep accessing this information until your session expires or access is revoked, even when you are away.",
+            "de": "Auch in Ihrer Abwesenheit auf diese Informationen zugreifen, bis Ihre Sitzung abläuft oder der Zugriff widerrufen wird.",
+            "fr": "Continuer à accéder à ces informations jusqu’à l’expiration de la session ou la révocation de l’accès, même en votre absence.",
+            "ja": "不在時も、セッションの有効期限が切れるかアクセスが取り消されるまで、この情報にアクセスし続けます。",
+            "zh": "即使您不在，也可持续访问此信息，直到会话过期或访问权限被撤销。",
+            "he": "גישה למידע גם כשאינך פעיל, עד שתוקף ההפעלה יפוג או שהגישה תבוטל.",
+            "ar": "الاستمرار في الوصول إلى هذه المعلومات حتى انتهاء جلستك أو إلغاء الوصول، حتى أثناء غيابك.",
+            "ru": "Сохранять доступ к этим данным до окончания сеанса или отзыва доступа, даже в ваше отсутствие."
+        }
+    },
+    {
+        "id": "oidc_claim_name",
+        "description": "oidc claim name.",
+        "other": {
+            "en": "Full name",
+            "de": "Vollständiger Name",
+            "fr": "Nom complet",
+            "ja": "氏名",
+            "zh": "姓名",
+            "he": "שם מלא",
+            "ar": "الاسم الكامل",
+            "ru": "Полное имя"
+        }
+    },
+    {
+        "id": "oidc_claim_given_name",
+        "description": "oidc claim given name.",
+        "other": {
+            "en": "Given name",
+            "de": "Vorname",
+            "fr": "Prénom",
+            "ja": "名",
+            "zh": "名字",
+            "he": "שם פרטי",
+            "ar": "الاسم الأول",
+            "ru": "Имя"
+        }
+    },
+    {
+        "id": "oidc_claim_family_name",
+        "description": "oidc claim family name.",
+        "other": {
+            "en": "Family name",
+            "de": "Nachname",
+            "fr": "Nom de famille",
+            "ja": "姓",
+            "zh": "姓氏",
+            "he": "שם משפחה",
+            "ar": "اسم العائلة",
+            "ru": "Фамилия"
+        }
+    },
+    {
+        "id": "oidc_claim_middle_name",
+        "description": "oidc claim middle name.",
+        "other": {
+            "en": "Middle name",
+            "de": "Zweiter Vorname",
+            "fr": "Deuxième prénom",
+            "ja": "ミドルネーム",
+            "zh": "中间名",
+            "he": "שם אמצעי",
+            "ar": "الاسم الأوسط",
+            "ru": "Второе имя"
+        }
+    },
+    {
+        "id": "oidc_claim_nickname",
+        "description": "oidc claim nickname.",
+        "other": {
+            "en": "Nickname",
+            "de": "Spitzname",
+            "fr": "Pseudonyme",
+            "ja": "ニックネーム",
+            "zh": "昵称",
+            "he": "כינוי",
+            "ar": "اللقب",
+            "ru": "Псевдоним"
+        }
+    },
+    {
+        "id": "oidc_claim_profile",
+        "description": "oidc claim profile.",
+        "other": {
+            "en": "Profile page",
+            "de": "Profilseite",
+            "fr": "Page de profil",
+            "ja": "プロフィールページ",
+            "zh": "个人资料页面",
+            "he": "דף פרופיל",
+            "ar": "صفحة الملف الشخصي",
+            "ru": "Страница профиля"
+        }
+    },
+    {
+        "id": "oidc_claim_picture",
+        "description": "oidc claim picture.",
+        "other": {
+            "en": "Profile picture",
+            "de": "Profilbild",
+            "fr": "Photo de profil",
+            "ja": "プロフィール画像",
+            "zh": "头像",
+            "he": "תמונת פרופיל",
+            "ar": "صورة الملف الشخصي",
+            "ru": "Фото профиля"
+        }
+    },
+    {
+        "id": "oidc_claim_website",
+        "description": "oidc claim website.",
+        "other": {
+            "en": "Website",
+            "de": "Website",
+            "fr": "Site web",
+            "ja": "ウェブサイト",
+            "zh": "网站",
+            "he": "אתר אינטרנט",
+            "ar": "الموقع الإلكتروني",
+            "ru": "Веб-сайт"
+        }
+    },
+    {
+        "id": "oidc_claim_gender",
+        "description": "oidc claim gender.",
+        "other": {
+            "en": "Gender",
+            "de": "Geschlecht",
+            "fr": "Genre",
+            "ja": "性別",
+            "zh": "性别",
+            "he": "מגדר",
+            "ar": "الجنس",
+            "ru": "Пол"
+        }
+    },
+    {
+        "id": "oidc_claim_birthdate",
+        "description": "oidc claim birthdate.",
+        "other": {
+            "en": "Birth date",
+            "de": "Geburtsdatum",
+            "fr": "Date de naissance",
+            "ja": "生年月日",
+            "zh": "出生日期",
+            "he": "תאריך לידה",
+            "ar": "تاريخ الميلاد",
+            "ru": "Дата рождения"
+        }
+    },
+    {
+        "id": "oidc_claim_zoneinfo",
+        "description": "oidc claim zoneinfo.",
+        "other": {
+            "en": "Time zone",
+            "de": "Zeitzone",
+            "fr": "Fuseau horaire",
+            "ja": "タイムゾーン",
+            "zh": "时区",
+            "he": "אזור זמן",
+            "ar": "المنطقة الزمنية",
+            "ru": "Часовой пояс"
+        }
+    },
+    {
+        "id": "oidc_claim_locale",
+        "description": "oidc claim locale.",
+        "other": {
+            "en": "Language",
+            "de": "Sprache",
+            "fr": "Langue",
+            "ja": "言語",
+            "zh": "语言",
+            "he": "שפה",
+            "ar": "اللغة",
+            "ru": "Язык"
+        }
+    },
+    {
+        "id": "oidc_claim_updated_at",
+        "description": "oidc claim updated at.",
+        "other": {
+            "en": "Profile update time",
+            "de": "Zeit der Profilaktualisierung",
+            "fr": "Date de mise à jour du profil",
+            "ja": "プロフィール更新日時",
+            "zh": "个人资料更新时间",
+            "he": "מועד עדכון הפרופיל",
+            "ar": "وقت تحديث الملف الشخصي",
+            "ru": "Время обновления профиля"
+        }
+    },
+    {
+        "id": "oidc_claim_email_verified",
+        "description": "oidc claim email verified.",
+        "other": {
+            "en": "Email verification status",
+            "de": "E-Mail-Bestätigungsstatus",
+            "fr": "État de vérification de l’e-mail",
+            "ja": "メールアドレスの確認状態",
+            "zh": "电子邮件验证状态",
+            "he": "מצב אימות הדוא״ל",
+            "ar": "حالة التحقق من البريد الإلكتروني",
+            "ru": "Статус подтверждения почты"
+        }
+    },
+    {
+        "id": "oidc_claim_phone_verified",
+        "description": "oidc claim phone verified.",
+        "other": {
+            "en": "Phone verification status",
+            "de": "Telefon-Bestätigungsstatus",
+            "fr": "État de vérification du téléphone",
+            "ja": "電話番号の確認状態",
+            "zh": "电话号码验证状态",
+            "he": "מצב אימות הטלפון",
+            "ar": "حالة التحقق من الهاتف",
+            "ru": "Статус подтверждения телефона"
+        }
+    },
+    {
+        "id": "oidc_claim_acr",
+        "description": "oidc claim acr.",
+        "other": {
+            "en": "Sign-in assurance",
+            "de": "Anmeldesicherheitsstufe",
+            "fr": "Niveau d’assurance de connexion",
+            "ja": "サインイン保証レベル",
+            "zh": "登录保证级别",
+            "he": "רמת אבטחת הכניסה",
+            "ar": "مستوى ضمان تسجيل الدخول",
+            "ru": "Уровень надёжности входа"
+        }
+    },
+    {
+        "id": "oidc_claim_amr",
+        "description": "oidc claim amr.",
+        "other": {
+            "en": "Sign-in methods",
+            "de": "Anmeldemethoden",
+            "fr": "Méthodes de connexion",
+            "ja": "サインイン方法",
+            "zh": "登录方式",
+            "he": "שיטות כניסה",
+            "ar": "طرق تسجيل الدخول",
+            "ru": "Способы входа"
+        }
+    },
+    {
+        "id": "oidc_claim_auth_time",
+        "description": "oidc claim auth time.",
+        "other": {
+            "en": "Sign-in time",
+            "de": "Anmeldezeit",
+            "fr": "Heure de connexion",
+            "ja": "サインイン日時",
+            "zh": "登录时间",
+            "he": "מועד הכניסה",
+            "ar": "وقت تسجيل الدخول",
+            "ru": "Время входа"
+        }
+    },
+    {
+        "id": "authentication_retry",
+        "description": "authentication retry.",
+        "other": {
+            "en": "We could not verify your credentials. Check them and try again.",
+            "de": "Ihre Anmeldedaten konnten nicht überprüft werden. Prüfen Sie sie und versuchen Sie es erneut.",
+            "fr": "Nous n’avons pas pu vérifier vos identifiants. Vérifiez-les et réessayez.",
+            "ja": "認証情報を確認できませんでした。確認して再試行してください。",
+            "zh": "无法验证您的凭据。请检查后重试。",
+            "he": "לא ניתן לאמת את פרטי הכניסה. יש לבדוק אותם ולנסות שוב.",
+            "ar": "تعذر التحقق من بيانات اعتمادك. تحقق منها وحاول مرة أخرى.",
+            "ru": "Не удалось проверить ваши учётные данные. Проверьте их и повторите попытку."
+        }
+    },
+    {
+        "id": "authentication_wait",
+        "description": "authentication wait.",
+        "other": {
+            "en": "Too many attempts. Please wait before trying again.",
+            "de": "Zu viele Versuche. Bitte warten Sie vor einem weiteren Versuch.",
+            "fr": "Trop de tentatives. Veuillez patienter avant de réessayer.",
+            "ja": "試行回数が多すぎます。しばらく待ってから再試行してください。",
+            "zh": "尝试次数过多。请稍后重试。",
+            "he": "ניסיונות רבים מדי. יש להמתין לפני ניסיון נוסף.",
+            "ar": "محاولات كثيرة جداً. يرجى الانتظار قبل المحاولة مجدداً.",
+            "ru": "Слишком много попыток. Подождите перед повторной попыткой."
+        }
+    },
+    {
+        "id": "authentication_ended",
+        "description": "authentication ended.",
+        "other": {
+            "en": "This sign-in session has ended. Start again to sign in.",
+            "de": "Diese Anmeldesitzung wurde beendet. Starten Sie die Anmeldung erneut.",
+            "fr": "Cette session de connexion est terminée. Recommencez pour vous connecter.",
+            "ja": "このサインインセッションは終了しました。サインインをやり直してください。",
+            "zh": "此登录会话已结束。请重新开始登录。",
+            "he": "הפעלת הכניסה הסתיימה. יש להתחיל מחדש כדי להיכנס.",
+            "ar": "انتهت جلسة تسجيل الدخول هذه. ابدأ من جديد لتسجيل الدخول.",
+            "ru": "Этот сеанс входа завершён. Начните вход заново."
+        }
+    },
+    {
+        "id": "registration_invalid_request",
+        "description": "registration invalid request.",
+        "other": {
+            "en": "Registration request is non compliant",
+            "de": "Die Registrierungsanfrage entspricht nicht den Anforderungen",
+            "fr": "La demande d’inscription n’est pas conforme",
+            "ja": "登録要求が要件を満たしていません",
+            "zh": "注册请求不符合要求",
+            "he": "בקשת הרישום אינה עומדת בדרישות",
+            "ar": "طلب التسجيل غير مستوفٍ للشروط",
+            "ru": "Запрос на регистрацию не соответствует требованиям"
+        }
+    },
+    {
+        "id": "registration_form_failed",
+        "description": "registration form failed.",
+        "other": {
+            "en": "Failed processing the registration form",
+            "de": "Das Registrierungsformular konnte nicht verarbeitet werden",
+            "fr": "Impossible de traiter le formulaire d’inscription",
+            "ja": "登録フォームを処理できませんでした",
+            "zh": "无法处理注册表单",
+            "he": "עיבוד טופס הרישום נכשל",
+            "ar": "فشلت معالجة نموذج التسجيل",
+            "ru": "Не удалось обработать форму регистрации"
+        }
+    },
+    {
+        "id": "registration_invalid_code",
+        "description": "registration invalid code.",
+        "other": {
+            "en": "Failed processing the registration form due to invalid verification code",
+            "de": "Der Bestätigungscode im Registrierungsformular ist ungültig",
+            "fr": "Le code de vérification du formulaire d’inscription est invalide",
+            "ja": "登録フォームの確認コードが無効です",
+            "zh": "注册表单中的验证码无效",
+            "he": "קוד האימות בטופס הרישום אינו תקין",
+            "ar": "رمز التحقق في نموذج التسجيل غير صالح",
+            "ru": "Неверный код подтверждения в форме регистрации"
+        }
+    },
+    {
+        "id": "registration_accept_terms",
+        "description": "registration accept terms.",
+        "other": {
+            "en": "Failed processing the registration form due to the failure to accept terms and conditions",
+            "de": "Bitte akzeptieren Sie die Nutzungsbedingungen, um sich zu registrieren",
+            "fr": "Veuillez accepter les conditions générales pour vous inscrire",
+            "ja": "登録するには利用規約に同意してください",
+            "zh": "请接受条款和条件以完成注册",
+            "he": "יש להסכים לתנאי השימוש כדי להירשם",
+            "ar": "يرجى قبول الشروط والأحكام للتسجيل",
+            "ru": "Для регистрации примите условия использования"
+        }
+    },
+    {
+        "id": "registration_invalid_username",
+        "description": "registration invalid username.",
+        "other": {
+            "en": "Check your username and try again.",
+            "de": "Prüfen Sie Ihren Benutzernamen und versuchen Sie es erneut.",
+            "fr": "Vérifiez votre nom d’utilisateur et réessayez.",
+            "ja": "ユーザー名を確認して再試行してください。",
+            "zh": "请检查用户名后重试。",
+            "he": "יש לבדוק את שם המשתמש ולנסות שוב.",
+            "ar": "تحقق من اسم المستخدم وحاول مرة أخرى.",
+            "ru": "Проверьте имя пользователя и повторите попытку."
+        }
+    },
+    {
+        "id": "registration_invalid_password",
+        "description": "registration invalid password.",
+        "other": {
+            "en": "Check your password and try again.",
+            "de": "Prüfen Sie Ihr Passwort und versuchen Sie es erneut.",
+            "fr": "Vérifiez votre mot de passe et réessayez.",
+            "ja": "パスワードを確認して再試行してください。",
+            "zh": "请检查密码后重试。",
+            "he": "יש לבדוק את הסיסמה ולנסות שוב.",
+            "ar": "تحقق من كلمة المرور وحاول مرة أخرى.",
+            "ru": "Проверьте пароль и повторите попытку."
+        }
+    },
+    {
+        "id": "registration_invalid_email",
+        "description": "registration invalid email.",
+        "other": {
+            "en": "Check your email address and try again.",
+            "de": "Prüfen Sie Ihre E-Mail-Adresse und versuchen Sie es erneut.",
+            "fr": "Vérifiez votre adresse e-mail et réessayez.",
+            "ja": "メールアドレスを確認して再試行してください。",
+            "zh": "请检查电子邮件地址后重试。",
+            "he": "יש לבדוק את כתובת הדוא״ל ולנסות שוב.",
+            "ar": "تحقق من عنوان بريدك الإلكتروني وحاول مرة أخرى.",
+            "ru": "Проверьте адрес электронной почты и повторите попытку."
+        }
+    },
+    {
+        "id": "registration_internal_error",
+        "description": "registration internal error.",
+        "other": {
+            "en": "Internal registration error",
+            "de": "Interner Registrierungsfehler",
+            "fr": "Erreur interne d’inscription",
+            "ja": "登録の内部エラー",
+            "zh": "注册内部错误",
+            "he": "שגיאה פנימית ברישום",
+            "ar": "خطأ داخلي في التسجيل",
+            "ru": "Внутренняя ошибка регистрации"
+        }
+    },
+    {
+        "id": "registration_identifier_missing",
+        "description": "registration identifier missing.",
+        "other": {
+            "en": "Registration identifier not found",
+            "de": "Registrierungskennung nicht gefunden",
+            "fr": "Identifiant d’inscription introuvable",
+            "ja": "登録識別子が見つかりません",
+            "zh": "未找到注册标识符",
+            "he": "מזהה הרישום לא נמצא",
+            "ar": "لم يتم العثور على معرّف التسجيل",
+            "ru": "Идентификатор регистрации не найден"
+        }
+    },
+    {
+        "id": "registration_ack_failed",
+        "description": "registration ack failed.",
+        "other": {
+            "en": "Failed processing the registration acknowledgement form",
+            "de": "Das Registrierungsbestätigungsformular konnte nicht verarbeitet werden",
+            "fr": "Impossible de traiter le formulaire de confirmation d’inscription",
+            "ja": "登録確認フォームを処理できませんでした",
+            "zh": "无法处理注册确认表单",
+            "he": "עיבוד טופס אישור הרישום נכשל",
+            "ar": "فشلت معالجة نموذج تأكيد التسجيل",
+            "ru": "Не удалось обработать форму подтверждения регистрации"
+        }
+    },
+    {
+        "id": "registration_ack_invalid",
+        "description": "registration ack invalid.",
+        "other": {
+            "en": "Malformed registration acknowledgement request",
+            "de": "Ungültige Registrierungsbestätigungsanfrage",
+            "fr": "Demande de confirmation d’inscription incorrecte",
+            "ja": "登録確認要求の形式が不正です",
+            "zh": "注册确认请求格式错误",
+            "he": "בקשת אישור הרישום אינה תקינה",
+            "ar": "طلب تأكيد التسجيل غير صالح",
+            "ru": "Некорректный запрос подтверждения регистрации"
+        }
+    },
+    {
+        "id": "registration_confirmation_denied",
+        "description": "registration confirmation denied.",
+        "other": {
+            "en": "Registration confirmation denied",
+            "de": "Registrierungsbestätigung abgelehnt",
+            "fr": "Confirmation d’inscription refusée",
+            "ja": "登録確認が拒否されました",
+            "zh": "注册确认被拒绝",
+            "he": "אישור הרישום נדחה",
+            "ar": "تم رفض تأكيد التسجيل",
+            "ru": "Подтверждение регистрации отклонено"
+        }
+    },
+    {
+        "id": "registration_identifier_mismatch",
+        "description": "registration identifier mismatch.",
+        "other": {
+            "en": "Registration identifier mismatch",
+            "de": "Registrierungskennung stimmt nicht überein",
+            "fr": "L’identifiant d’inscription ne correspond pas",
+            "ja": "登録識別子が一致しません",
+            "zh": "注册标识符不匹配",
+            "he": "מזהה הרישום אינו תואם",
+            "ar": "معرّف التسجيل غير متطابق",
+            "ru": "Идентификатор регистрации не совпадает"
+        }
+    },
+    {
+        "id": "registration_session_terminated",
+        "description": "registration session terminated.",
+        "other": {
+            "en": "Registration session terminated",
+            "de": "Registrierungssitzung beendet",
+            "fr": "Session d’inscription terminée",
+            "ja": "登録セッションが終了しました",
+            "zh": "注册会话已终止",
+            "he": "הפעלת הרישום הסתיימה",
+            "ar": "انتهت جلسة التسجيل",
+            "ru": "Сеанс регистрации завершён"
+        }
+    },
+    {
+        "id": "registration_session_invalid",
+        "description": "registration session invalid.",
+        "other": {
+            "en": "Registration session is no longer valid",
+            "de": "Registrierungssitzung ist nicht mehr gültig",
+            "fr": "La session d’inscription n’est plus valide",
+            "ja": "登録セッションは無効になりました",
+            "zh": "注册会话已失效",
+            "he": "הפעלת הרישום אינה תקפה עוד",
+            "ar": "لم تعد جلسة التسجيل صالحة",
+            "ru": "Сеанс регистрации больше не действителен"
+        }
+    },
+    {
+        "id": "sign_up",
+        "description": "sign up.",
+        "other": {
+            "en": "Sign Up",
+            "de": "Registrieren",
+            "fr": "S’inscrire",
+            "ja": "登録",
+            "zh": "注册",
+            "he": "הרשמה",
+            "ar": "إنشاء حساب",
+            "ru": "Регистрация"
+        }
+    },
+    {
+        "id": "username_length_hint",
+        "description": "username length hint.",
+        "other": {
+            "en": "Username length: {{.Min}}–{{.Max}} characters.",
+            "de": "Länge des Benutzernamens: {{.Min}}–{{.Max}} Zeichen.",
+            "fr": "Longueur du nom d’utilisateur : {{.Min}} à {{.Max}} caractères.",
+            "ja": "ユーザー名の長さ：{{.Min}}〜{{.Max}}文字。",
+            "zh": "用户名长度：{{.Min}}–{{.Max}}个字符。",
+            "he": "אורך שם המשתמש: {{.Min}}–{{.Max}} תווים.",
+            "ar": "طول اسم المستخدم: {{.Min}}–{{.Max}} محرفاً.",
+            "ru": "Длина имени пользователя: {{.Min}}–{{.Max}} символов."
+        }
+    },
+    {
+        "id": "password_length_hint",
+        "description": "password length hint.",
+        "other": {
+            "en": "Password length: {{.Min}}–{{.Max}} characters.",
+            "de": "Passwortlänge: {{.Min}}–{{.Max}} Zeichen.",
+            "fr": "Longueur du mot de passe : {{.Min}} à {{.Max}} caractères.",
+            "ja": "パスワードの長さ：{{.Min}}〜{{.Max}}文字。",
+            "zh": "密码长度：{{.Min}}–{{.Max}}个字符。",
+            "he": "אורך הסיסמה: {{.Min}}–{{.Max}} תווים.",
+            "ar": "طول كلمة المرور: {{.Min}}–{{.Max}} محرفاً.",
+            "ru": "Длина пароля: {{.Min}}–{{.Max}} символов."
+        }
+    },
+    {
+        "id": "username_lowercase_hint",
+        "description": "username lowercase hint.",
+        "other": {
+            "en": "Use lowercase letters.",
+            "de": "Verwenden Sie Kleinbuchstaben.",
+            "fr": "Utilisez des lettres minuscules.",
+            "ja": "小文字を使用してください。",
+            "zh": "请使用小写字母。",
+            "he": "יש להשתמש באותיות קטנות.",
+            "ar": "استخدم أحرفاً صغيرة.",
+            "ru": "Используйте строчные буквы."
+        }
+    },
+    {
+        "id": "username_alphanumeric_hint",
+        "description": "username alphanumeric hint.",
+        "other": {
+            "en": "Use letters and digits only.",
+            "de": "Verwenden Sie nur Buchstaben und Ziffern.",
+            "fr": "Utilisez uniquement des lettres et des chiffres.",
+            "ja": "英数字のみを使用してください。",
+            "zh": "仅允许使用字母和数字。",
+            "he": "יש להשתמש באותיות ובספרות בלבד.",
+            "ar": "استخدم الأحرف والأرقام فقط.",
+            "ru": "Используйте только буквы и цифры."
+        }
+    },
+    {
+        "id": "password_uppercase_hint",
+        "description": "password uppercase hint.",
+        "other": {
+            "en": "Include uppercase letters.",
+            "de": "Verwenden Sie Großbuchstaben.",
+            "fr": "Incluez des lettres majuscules.",
+            "ja": "大文字を含めてください。",
+            "zh": "请包含大写字母。",
+            "he": "יש לכלול אותיות גדולות.",
+            "ar": "ضمّن أحرفاً كبيرة.",
+            "ru": "Добавьте прописные буквы."
+        }
+    },
+    {
+        "id": "password_lowercase_hint",
+        "description": "password lowercase hint.",
+        "other": {
+            "en": "Include lowercase letters.",
+            "de": "Verwenden Sie Kleinbuchstaben.",
+            "fr": "Incluez des lettres minuscules.",
+            "ja": "小文字を含めてください。",
+            "zh": "请包含小写字母。",
+            "he": "יש לכלול אותיות קטנות.",
+            "ar": "ضمّن أحرفاً صغيرة.",
+            "ru": "Добавьте строчные буквы."
+        }
+    },
+    {
+        "id": "password_number_hint",
+        "description": "password number hint.",
+        "other": {
+            "en": "Include digits.",
+            "de": "Verwenden Sie Ziffern.",
+            "fr": "Incluez des chiffres.",
+            "ja": "数字を含めてください。",
+            "zh": "请包含数字。",
+            "he": "יש לכלול ספרות.",
+            "ar": "ضمّن أرقاماً.",
+            "ru": "Добавьте цифры."
+        }
+    },
+    {
+        "id": "password_special_hint",
+        "description": "password special hint.",
+        "other": {
+            "en": "Include special characters.",
+            "de": "Verwenden Sie Sonderzeichen.",
+            "fr": "Incluez des caractères spéciaux.",
+            "ja": "特殊文字を含めてください。",
+            "zh": "请包含特殊字符。",
+            "he": "יש לכלול תווים מיוחדים.",
+            "ar": "ضمّن محارف خاصة.",
+            "ru": "Добавьте специальные символы."
+        }
+    },
+    {
+        "id": "mfa_verify_prompt",
+        "description": "mfa verify prompt.",
+        "other": {
+            "en": "Could you please verify yourself?",
+            "de": "Bitte bestätigen Sie Ihre Identität.",
+            "fr": "Veuillez confirmer votre identité.",
+            "ja": "本人確認をお願いします。",
+            "zh": "请验证您的身份。",
+            "he": "יש לאמת את זהותך.",
+            "ar": "يرجى التحقق من هويتك.",
+            "ru": "Подтвердите свою личность."
+        }
+    },
+    {
+        "id": "authentication_portal_title",
+        "description": "authentication portal title.",
+        "other": {
+            "en": "Authentication Portal",
+            "de": "Authentifizierungsportal",
+            "fr": "Portail d’authentification",
+            "ja": "認証ポータル",
+            "zh": "身份验证门户",
+            "he": "פורטל אימות",
+            "ar": "بوابة المصادقة",
+            "ru": "Портал аутентификации"
+        }
+    },
+    {
+        "id": "portal_description",
+        "description": "portal description.",
+        "other": {
+            "en": "Performs user authentication.",
+            "de": "Authentifiziert Benutzer.",
+            "fr": "Authentifie les utilisateurs.",
+            "ja": "ユーザー認証を行います。",
+            "zh": "执行用户身份验证。",
+            "he": "מבצע אימות משתמשים.",
+            "ar": "يُجري مصادقة المستخدمين.",
+            "ru": "Выполняет аутентификацию пользователей."
+        }
+    },
+    {
+        "id": "unauthorized_title",
+        "description": "Browser error title for HTTP 401.",
+        "other": {
+            "en": "Unauthorized",
+            "de": "Nicht autorisiert",
+            "fr": "Non autorisé",
+            "ja": "認証が必要です",
+            "zh": "需要身份验证",
+            "he": "לא מורשה",
+            "ar": "غير مصرح",
+            "ru": "Требуется авторизация"
+        }
+    },
+    {
+        "id": "method_not_allowed_title",
+        "description": "Browser error title for HTTP 405.",
+        "other": {
+            "en": "Method Not Allowed",
+            "de": "Methode nicht erlaubt",
+            "fr": "Méthode non autorisée",
+            "ja": "許可されていないメソッド",
+            "zh": "不允许的请求方法",
+            "he": "השיטה אינה מורשית",
+            "ar": "الطريقة غير مسموح بها",
+            "ru": "Метод не разрешён"
+        }
+    },
+    {
+        "id": "too_many_requests_title",
+        "description": "Browser error title for HTTP 429.",
+        "other": {
+            "en": "Too Many Requests",
+            "de": "Zu viele Anfragen",
+            "fr": "Trop de requêtes",
+            "ja": "リクエストが多すぎます",
+            "zh": "请求过多",
+            "he": "יותר מדי בקשות",
+            "ar": "طلبات كثيرة جدًا",
+            "ru": "Слишком много запросов"
+        }
+    },
+    {
+        "id": "not_implemented_title",
+        "description": "Browser error title for HTTP 501.",
+        "other": {
+            "en": "Not Implemented",
+            "de": "Nicht implementiert",
+            "fr": "Non implémenté",
+            "ja": "実装されていません",
+            "zh": "尚未实现",
+            "he": "הפעולה אינה נתמכת",
+            "ar": "غير مطبق",
+            "ru": "Не реализовано"
+        }
+    },
+    {
+        "id": "bad_gateway_title",
+        "description": "Browser error title for HTTP 502.",
+        "other": {
+            "en": "Bad Gateway",
+            "de": "Gateway-Fehler",
+            "fr": "Erreur de passerelle",
+            "ja": "ゲートウェイエラー",
+            "zh": "网关错误",
+            "he": "שגיאת שער",
+            "ar": "خطأ في البوابة",
+            "ru": "Ошибка шлюза"
+        }
+    },
+    {
+        "id": "service_unavailable_title",
+        "description": "Browser error title for HTTP 503.",
+        "other": {
+            "en": "Service Unavailable",
+            "de": "Dienst nicht verfügbar",
+            "fr": "Service indisponible",
+            "ja": "サービスを利用できません",
+            "zh": "服务不可用",
+            "he": "השירות אינו זמין",
+            "ar": "الخدمة غير متاحة",
+            "ru": "Сервис недоступен"
+        }
+    },
+    {
+        "id": "request_failed_title",
+        "description": "Localized fallback title for other browser HTTP errors.",
+        "other": {
+            "en": "Unable to complete request",
+            "de": "Anfrage konnte nicht abgeschlossen werden",
+            "fr": "Impossible de traiter la requête",
+            "ja": "リクエストを完了できません",
+            "zh": "无法完成请求",
+            "he": "לא ניתן להשלים את הבקשה",
+            "ar": "تعذر إكمال الطلب",
+            "ru": "Не удалось выполнить запрос"
         }
     }
 ]

@@ -12,7 +12,7 @@ function environment(responses, clipboard = async () => { throw new Error('denie
   const elements = new Map();
   const document = {
     title: options.title || 'Test portal - Sign in on another device',
-    currentScript: { dataset: { base: '/tenant/auth' } },
+    currentScript: { dataset: { base: '/tenant/auth', i18n: JSON.stringify(options.messages || {}) } },
     getElementById: id => elements.get(id) || null,
     activeElement: null,
   };
@@ -313,4 +313,22 @@ test('a late start response after cancellation is cancelled without reviving the
   assert.equal(e.elements.get('cross-device-details').hidden, true);
   assert.equal(e.elements.get('cross-device-status').textContent, 'This sign-in request has been cancelled. Start again when you’re ready.');
   assert.equal(e.timers.size, 0);
+});
+
+test('localized dynamic states keep protocol values and matching codes unchanged', async () => {
+  const messages = {
+    cross_device_waiting: 'En attente d’approbation.', cross_device_copied: '<copié> & prêt',
+    cross_device_cancelled_title: 'Connexion annulée', cross_device_cancelled: 'Recommencez quand vous le souhaitez.',
+  };
+  const e = environment([interaction(), { status: 'cancelled' }], async () => {}, AbortSignal, { messages });
+  await flush();
+  assert.equal(e.elements.get('cross-device-status').textContent, messages.cross_device_waiting);
+  assert.equal(e.elements.get('cross-device-code').textContent, 'ABCD-EFGH');
+  await e.elements.get('cross-device-copy').events.click();
+  assert.equal(e.elements.get('cross-device-copy-status').textContent, messages.cross_device_copied);
+  await e.elements.get('cross-device-cancel').events.click();
+  assert.equal(e.elements.get('cross-device-title').textContent, messages.cross_device_cancelled_title);
+  assert.ok(e.document.title.endsWith(messages.cross_device_cancelled_title));
+  assert.equal(e.elements.get('cross-device-status').textContent, messages.cross_device_cancelled);
+  assert.ok(e.requests[1].url.endsWith('/cancel'));
 });

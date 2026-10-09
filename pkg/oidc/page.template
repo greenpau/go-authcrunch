@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ .LanguageCode }}" dir="{{ .Direction }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,49 +10,49 @@
     <div class="oidc-shell">
     <main class="oidc-card" aria-labelledby="oidc-title">
       <header class="oidc-header">
-        <p class="oidc-eyebrow">{{ if eq .Kind "consent" }}Application access{{ else if eq .Kind "form_post" }}Return to application{{ else }}Sign-in request{{ end }}</p>
+        <p class="oidc-eyebrow">{{ if eq .Kind "consent" }}{{ .Translate "oidc_application_access" }}{{ else if eq .Kind "form_post" }}{{ .Translate "oidc_return_to_application" }}{{ else }}{{ .Translate "oidc_sign_in_request" }}{{ end }}</p>
         <h1 id="oidc-title">{{ .Title }}</h1>
         {{ if eq .Kind "consent" }}
-        <p class="oidc-intro"><strong class="oidc-client">{{ .ClientName }}</strong> would like to access your account.</p>
-        <div class="oidc-account"><span class="oidc-account-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/></svg></span><div><span class="oidc-account-label">Signed in as</span><strong class="oidc-username">{{ .Username }}</strong></div></div>
+        <p class="oidc-intro">{{ .Translate "oidc_client_request" }} <strong class="oidc-client" dir="auto">{{ .ClientName }}</strong></p>
+        <div class="oidc-account"><span class="oidc-account-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/></svg></span><div><span class="oidc-account-label">{{ .Translate "oidc_signed_in_as" }}</span><strong class="oidc-username" dir="auto">{{ .Username }}</strong></div></div>
         {{ else if eq .Kind "form_post" }}
-        <p class="oidc-intro">Continue to <strong class="oidc-client">{{ .ClientName }}</strong> to finish this request.</p>
+        <p class="oidc-intro">{{ .Translate "oidc_continue_instruction" }} <strong class="oidc-client" dir="auto">{{ .ClientName }}</strong></p>
         {{ else }}
         <p class="oidc-intro" role="alert">{{ .Message }}</p>
         {{ end }}
       </header>
       {{ if eq .Kind "consent" }}
       <section class="oidc-permissions" aria-labelledby="oidc-permissions-title">
-        <h2 id="oidc-permissions-title">Review requested access</h2>
+        <h2 id="oidc-permissions-title">{{ .Translate "oidc_review_access" }}</h2>
         <ul class="oidc-permission-list">
           {{ range .Permissions }}
           <li><span class="oidc-permission-mark" aria-hidden="true">&#8226;</span><div><h3>{{ .Title }}</h3><p>{{ .Description }}</p></div></li>
           {{ end }}
         </ul>
         {{ if .UserInfoClaims }}
-        <div class="oidc-claims"><h3>Additional information</h3><p>The application can also access:</p><ul>{{ range .UserInfoClaims }}<li>{{ . }}</li>{{ end }}</ul></div>
+        <div class="oidc-claims"><h3>{{ .Translate "oidc_additional_information" }}</h3><p>{{ .Translate "oidc_additional_access" }}</p><ul>{{ range .UserInfoClaims }}<li>{{ . }}</li>{{ end }}</ul></div>
         {{ end }}
         {{ if .IDTokenClaims }}
-        <div class="oidc-claims"><h3>Included when you sign in</h3><p>These details will be sent directly to the application:</p><ul>{{ range .IDTokenClaims }}<li>{{ . }}</li>{{ end }}</ul></div>
+        <div class="oidc-claims"><h3>{{ .Translate "oidc_sign_in_information" }}</h3><p>{{ .Translate "oidc_direct_information" }}</p><ul>{{ range .IDTokenClaims }}<li>{{ . }}</li>{{ end }}</ul></div>
         {{ end }}
       </section>
       <footer class="oidc-footer">
-        <p class="oidc-notice">Only continue if you trust this application.</p>
+        <p class="oidc-notice">{{ .Translate "oidc_trust_notice" }}</p>
         <form method="post" action="{{ .Action }}" class="oidc-actions">
           <input type="hidden" name="csrf" value="{{ .CSRF }}">
-          <button class="oidc-button oidc-button-primary" type="submit" name="decision" value="allow">Allow access</button>
-          <button class="oidc-button oidc-button-secondary" type="submit" name="decision" value="deny">Deny</button>
+          <button class="oidc-button oidc-button-primary" type="submit" name="decision" value="allow">{{ .Translate "oidc_allow_access" }}</button>
+          <button class="oidc-button oidc-button-secondary" type="submit" name="decision" value="deny">{{ .Translate "deny_action" }}</button>
         </form>
-        <p class="oidc-footnote">Choosing Deny returns you to the application without granting access.</p>
+        <p class="oidc-footnote">{{ .Translate "oidc_deny_notice" }}</p>
       </footer>
       {{ else if eq .Kind "form_post" }}
       <footer class="oidc-footer">
         <form id="response" method="post" action="{{ .Action }}">
           {{ range $key, $values := .Values }}{{ range $values }}<input type="hidden" name="{{ $key }}" value="{{ . }}">{{ end }}{{ end }}
-          <button class="oidc-button oidc-button-primary oidc-button-wide" type="submit">Continue</button>
+          <button class="oidc-button oidc-button-primary oidc-button-wide" type="submit">{{ .Translate "continue_action" }}</button>
         </form>
-        <p class="oidc-footnote">If you are not redirected automatically, select Continue.</p>
-        <noscript><p class="oidc-footnote">Automatic redirection is unavailable. You can continue using the button above.</p></noscript>
+        <p class="oidc-footnote">{{ .Translate "oidc_manual_continue" }}</p>
+        <noscript><p class="oidc-footnote">{{ .Translate "oidc_noscript" }}</p></noscript>
       </footer>
       {{ end }}
     </main>

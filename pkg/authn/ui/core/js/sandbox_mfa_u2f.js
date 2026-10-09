@@ -4,6 +4,9 @@
  */
 
 /* add mfa u2f */
+const mfaMessages = JSON.parse(document.currentScript?.dataset.i18n || '{}');
+const mfaText = (id, fallback) => mfaMessages[id] || fallback;
+
 function str_to_uint8_array(s) {
   buf = [];
   for (let i = 0; i < s.length; i += 2) {
@@ -295,17 +298,13 @@ function register_u2f_token(formID, btnID, params) {
       })
       .catch((err) => {
         console.log("navigator credentials error", err);
-        if (typeof err === 'string' || err instanceof String) {
-          render_u2f_status(formID, "Navigator Credentials Error", err);
-        } else {
-          render_u2f_status(formID, err.name, err.message);
-        }
+        render_u2f_status(formID, '', mfaText('mfa_browser_registration_failed', "Security key registration did not complete. Try again and follow your browser's instructions."));
       });
     return
   } else {
     console.error("navigator credentials credentials not found");
   }
-  render_u2f_status(formID, "Failed Token Registration", "navigator.credentials is not supported");
+  render_u2f_status(formID, "", mfaText("mfa_browser_unsupported", "This browser does not support security keys. Try another browser."));
 }
 
 function render_u2f_status(formID, name, message) {
@@ -313,7 +312,7 @@ function render_u2f_status(formID, name, message) {
   const msgDiv = document.createElement("div");
   msgDiv.className = 'space-y-6 pb-4 text-lg leading-7 text-primary-600';
   const msgBody = document.createElement("p");
-  const msgBodyText = document.createTextNode(name + ": " + message);
+  const msgBodyText = document.createTextNode(name ? name + ": " + message : message);
   msgBody.appendChild(msgBodyText);
   msgDiv.appendChild(msgBody);
   form.parentNode.insertBefore(msgDiv, form.nextSibling);
@@ -376,9 +375,9 @@ function authenticate_u2f_token(formID, params) {
         document.getElementById(formID).submit();
       })
       .catch((err) => {
-        render_u2f_status(formID, err.name, err.message);
+        render_u2f_status(formID, "", mfaText("mfa_browser_failed", "Security key verification did not complete. Try again and follow your browser's instructions."));
       });
     return
   }
-  render_u2f_status(formID, "Failed Token Test", "navigator.credentials is not supported");
+  render_u2f_status(formID, "", mfaText("mfa_browser_unsupported", "This browser does not support security keys. Try another browser."));
 }

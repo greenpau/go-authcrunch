@@ -38,9 +38,9 @@ func (p *Portal) handleSessionPage(ctx context.Context, w http.ResponseWriter, r
 	resp := p.ui.GetArgs()
 	resp.BaseURL(p.config.RefreshTokens.BasePath)
 	resp.Data["session_action"] = action
-	resp.PageTitle, resp.Message = "Continue your session", "Checking your session…"
+	resp.PageTitle, resp.Message = resp.Translate("session_continue_title"), resp.Translate("session_checking")
 	if action == "logout" {
-		resp.PageTitle, resp.Message = "Sign out", "Sign out of this browser session?"
+		resp.PageTitle, resp.Message = resp.Translate("sign_out"), resp.Translate("session_logout_question")
 		next := strings.TrimSuffix(p.config.RefreshTokens.BasePath, "/") + "/login"
 		if target := redirects.GetRedirectURI(r.URL); target != nil && redirects.Match(target, p.config.TrustedLogoutRedirectURIConfigs) {
 			next = target.String()

@@ -80,6 +80,20 @@ requires no script. The Foundation harness in
 element; keep Allow before Deny in DOM order, or deliberately update and validate
 that consumer with a layout change.
 
+## Language
+
+The portal forwards its existing UI language through runtime `Options.Language`.
+The provider normalizes this value, defaults to English, and localizes browser
+page titles, errors, scope descriptions and individual claim labels before
+calling the renderer. `Page.Language`, `LanguageCode`, `Direction` and `Translate`
+are available to both standalone and custom renderers. API error codes, callback
+values, hidden fields and application/account names are never translated.
+`Options.Language` is host presentation integration, not a persisted OIDC
+provider or client directive. Portal configuration continues to use `ui.language`.
+
+Read the [portal internationalization contract](../../authentication-portal-themes/references/internationalization.md)
+for catalog coverage, escaping, RTL and browser tests.
+
 ## Filesystem override
 
 Use the existing `ui.Parameters.Templates` map; no new directive grammar or

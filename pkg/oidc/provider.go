@@ -29,6 +29,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/state"
+	"github.com/greenpau/go-authcrunch/pkg/translate"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
 )
 
@@ -40,6 +41,7 @@ var errOIDCAdmission = errors.New("oidc admission unavailable")
 // Provider implements an OpenID Provider backed by an IdentityVerifier.
 // Construct it with NewProvider; a Provider must not be copied after use.
 type Provider struct {
+	language                                    translate.LangID
 	state                                       *state.Record
 	verifier                                    IdentityVerifier
 	loginURL                                    string

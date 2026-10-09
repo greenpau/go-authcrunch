@@ -1,4 +1,7 @@
-description: Browser page. Use the embedded forms and retain cookies.
+description: >-
+  Browser page. Built-in portal template text follows the configured UI language.
+  Use the embedded forms and retain cookies. Form field names and protocol
+  values are independent of the display language.
 content:
   text/html:
     schema:

@@ -672,8 +672,18 @@ func (p *Portal) configureUserInterface() error {
 	)
 
 	p.ui = ui.NewFactory()
+	if p.config.UI.Language == "" {
+		p.config.UI.Language = "en"
+	}
+
+	if !translate.IsSupportedLanguage(p.config.UI.Language) {
+		return errors.ErrUserInterfaceLanguageNotFound.WithArgs(p.config.Name, p.config.UI.Language)
+	}
+
+	p.ui.Language = translate.NormalizeLanguage(p.config.UI.Language)
+	p.ui.LogoDescription = translate.Translate("authentication_portal_title", p.ui.Language, nil)
 	if p.config.UI.Title == "" {
-		p.ui.Title = "Sign In"
+		p.ui.Title = translate.Translate("sign_in", p.ui.Language, nil)
 	} else {
 		p.ui.Title = p.config.UI.Title
 	}
@@ -726,7 +736,7 @@ func (p *Portal) configureUserInterface() error {
 	if p.config.UI.MetaTitle != "" {
 		p.ui.MetaTitle = p.config.UI.MetaTitle
 	} else {
-		p.ui.MetaTitle = "Authentication Portal"
+		p.ui.MetaTitle = translate.Translate("authentication_portal_title", p.ui.Language, nil)
 	}
 
 	if p.config.UI.MetaAuthor != "" {
@@ -738,7 +748,7 @@ func (p *Portal) configureUserInterface() error {
 	if p.config.UI.MetaDescription != "" {
 		p.ui.MetaDescription = p.config.UI.MetaDescription
 	} else {
-		p.ui.MetaDescription = "Performs user authentication."
+		p.ui.MetaDescription = translate.Translate("portal_description", p.ui.Language, nil)
 	}
 
 	if len(p.config.UI.PrivateLinks) > 0 {
@@ -755,16 +765,6 @@ func (p *Portal) configureUserInterface() error {
 	if _, exists := ui.Themes[p.config.UI.Theme]; !exists {
 		return errors.ErrUserInterfaceThemeNotFound.WithArgs(p.config.Name, p.config.UI.Theme)
 	}
-
-	if p.config.UI.Language == "" {
-		p.config.UI.Language = "en"
-	}
-
-	if !translate.IsSupportedLanguage(p.config.UI.Language) {
-		return errors.ErrUserInterfaceLanguageNotFound.WithArgs(p.config.Name, p.config.UI.Language)
-	}
-
-	p.ui.Language = translate.NormalizeLanguage(p.config.UI.Language)
 
 	// User Interface Templates
 	for _, k := range ui.PageTemplates.GetAssetPaths() {

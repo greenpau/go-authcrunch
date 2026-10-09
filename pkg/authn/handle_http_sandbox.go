@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 
@@ -158,7 +159,13 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 			zap.String("request_id", rr.ID),
 			zap.Error(err),
 		)
-		data["error"] = err.Error()
+		messageID := "authentication_retry"
+		if data["view"] == "terminate" {
+			messageID = "authentication_ended"
+		} else if rr.Response.Code == http.StatusTooManyRequests {
+			messageID = "authentication_wait"
+		}
+		data["error"] = translate.Translate(messageID, p.ui.Language, nil)
 	} else {
 		p.logger.Debug(
 			"next user authorization checkpoint",
@@ -243,9 +250,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 	}
 	resp.BaseURL(rr.Upstream.BasePath)
 	resp.Data["id"] = sandboxID
-	for k, v := range data {
-		resp.Data[k] = v
-	}
+	maps.Copy(resp.Data, data)
 
 	resp.Data["i18n_mfa_requirement_notice"] = translate.Translate("mfa_requirement_notice", p.ui.Language, nil)
 	resp.Data["i18n_mfa_not_configured_error"] = translate.Translate("mfa_not_configured_error", p.ui.Language, nil)
@@ -259,9 +264,9 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 	return p.handleHTTPRenderHTML(ctx, w, rr.Response.Code, content.Bytes())
 }
 
-func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, usr *user.User, action string) (map[string]interface{}, error) {
+func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, usr *user.User, action string) (map[string]any, error) {
 	var verifiedCount int
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	backend := p.getIdentityStoreByRealm(usr.Authenticator.Realm)
 	if backend == nil {
 		m["title"] = translate.Translate("internal_server_error_message", p.ui.Language, nil)
@@ -287,7 +292,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 		}
 		if checkpoint.FailedAttempts > 5 {
 			rr.Response.Code = http.StatusForbidden
-			m["title"] = "Authorization Failed"
+			m["title"] = translate.Translate("authorization_failed_title", p.ui.Language, nil)
 			m["view"] = "terminate"
 			return m, fmt.Errorf("You have failed a number of security challenges. Thus, your session failed to meet authorization requirements")
 		}
@@ -296,11 +301,11 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 			if r.Method != "POST" {
 				switch action {
 				case "password-recovery":
-					m["title"] = "Password Recovery"
+					m["title"] = translate.Translate("password_recovery_title", p.ui.Language, nil)
 					m["view"] = "password_recovery"
 					m["action"] = "auth"
 				default:
-					m["title"] = "Authentication"
+					m["title"] = translate.Translate("authentication_title", p.ui.Language, nil)
 					m["view"] = "password_auth"
 					m["action"] = "auth"
 				}
@@ -310,7 +315,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 			case "password-recovery":
 				rr.Response.Code = http.StatusNotImplemented
 				// User recovers a password
-				m["title"] = "Password Recovery Failed"
+				m["title"] = translate.Translate("password_recovery_failed_title", p.ui.Language, nil)
 				m["view"] = "terminate"
 				return m, fmt.Errorf("Password recovery failed. Please retry")
 			default:
@@ -326,7 +331,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				})
 				if passwordErr != nil {
 					checkpoint.FailedAttempts++
-					m["title"] = "Authentication Failed"
+					m["title"] = translate.Translate("authentication_failed_title", p.ui.Language, nil)
 					m["view"] = "error"
 					if passwordErr == errPasswordAttemptLimited {
 						rr.Response.Code = http.StatusTooManyRequests
@@ -387,13 +392,13 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					zap.String("checkpoint_type", checkpoint.Type),
 				)
 				rr.Response.Code = http.StatusForbidden
-				m["title"] = "Authorization Failed"
+				m["title"] = translate.Translate("authorization_failed_title", p.ui.Language, nil)
 				m["view"] = "error"
 				return m, fmt.Errorf("account temporarily locked due to too many failed MFA attempts")
 			}
 			if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
 				checkpoint.FailedAttempts++
-				m["title"] = "Authorization Failed"
+				m["title"] = translate.Translate("authorization_failed_title", p.ui.Language, nil)
 				m["view"] = "error"
 				return m, err
 			}
@@ -434,15 +439,15 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 
 			switch {
 			case !configured && (action == ""):
-				m["title"] = "Token Registration"
+				m["title"] = translate.Translate("mfa_registration_title", p.ui.Language, nil)
 				m["view"] = "mfa_mixed_register"
 				m["action"] = "register"
 			case appConfigured && uniConfigured && (action == ""):
-				m["title"] = "Token Selection"
+				m["title"] = translate.Translate("mfa_selection_title", p.ui.Language, nil)
 				m["view"] = "mfa_mixed_auth"
 				m["action"] = "auth"
 			case appConfigured && (action == "mfa-app-auth" || action == ""):
-				m["title"] = "Authenticator App"
+				m["title"] = translate.Translate("mfa_app_label", p.ui.Language, nil)
 				m["view"] = "mfa_app_auth"
 				m["action"] = "auth"
 				if r.Method != "POST" {
@@ -450,7 +455,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				}
 				// Handle authenticator app passcode.
 				if err := validateMfaAuthTokenForm(r, rr); err != nil {
-					m["title"] = "Authorization Failed"
+					m["title"] = translate.Translate("authorization_failed_title", p.ui.Language, nil)
 					m["view"] = "error"
 					return m, err
 				}
@@ -491,7 +496,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				)
 				return m, fmt.Errorf("invalid MFA token passcode")
 			case uniConfigured && (action == "mfa-u2f-auth" || action == ""):
-				m["title"] = "Hardware Token"
+				m["title"] = translate.Translate("mfa_hardware_label", p.ui.Language, nil)
 				m["view"] = "mfa_u2f_auth"
 				m["action"] = "auth"
 				if r.Method == "POST" {
@@ -542,12 +547,12 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 					return m, err
 				}
 				bundle := rr.Response.Payload.(*identity.MfaTokenBundle)
-				creds := []map[string]interface{}{}
+				creds := []map[string]any{}
 				for _, t := range bundle.Get() {
 					if t.Type != "u2f" {
 						continue
 					}
-					cred := make(map[string]interface{})
+					cred := make(map[string]any)
 					cred["id"] = t.Parameters["u2f_id"]
 					cred["type"] = t.Parameters["u2f_type"]
 					cred["transports"] = strings.Split(t.Parameters["u2f_transports"], ",")
@@ -560,10 +565,10 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				m["webauthn_user_verification"] = "discouraged"
 				m["webauthn_ext_uvm"] = "false"
 				m["webauthn_ext_loc"] = "false"
-				m["webauthn_tx_auth_simple"] = "Could you please verify yourself?"
+				m["webauthn_tx_auth_simple"] = translate.Translate("mfa_verify_prompt", p.ui.Language, nil)
 				m["webauthn_credentials"] = creds
 			case !appConfigured && (action == "mfa-app-register"):
-				m["title"] = "Authenticator App Registration"
+				m["title"] = translate.Translate("mfa_app_registration_title", p.ui.Language, nil)
 				m["view"] = "mfa_app_register"
 				m["action"] = "register"
 				if r.Method == "POST" {
@@ -605,7 +610,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				m["code_uri"] = qr.Get()
 				m["code_uri_encoded"] = qr.GetEncoded()
 			case !uniConfigured && (action == "mfa-u2f-register"):
-				m["title"] = "Hardware Token Registration"
+				m["title"] = translate.Translate("mfa_hardware_registration_title", p.ui.Language, nil)
 				m["view"] = "mfa_u2f_register"
 				m["action"] = "register"
 				binding, err := getWebAuthnEnrollmentBinding(r, rr, usr, "sandbox")
@@ -654,7 +659,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				}
 			default:
 				checkpoint.FailedAttempts++
-				m["title"] = "Bad Request"
+				m["title"] = translate.Translate("bad_request_title", p.ui.Language, nil)
 				m["view"] = "error"
 				return m, fmt.Errorf("Detected unsupported MFA authorization type")
 			}
@@ -663,7 +668,7 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 			}
 		default:
 			checkpoint.FailedAttempts++
-			m["title"] = "Bad Request"
+			m["title"] = translate.Translate("bad_request_title", p.ui.Language, nil)
 			m["view"] = "error"
 			return m, fmt.Errorf("Detected unsupported authorization type: %v", checkpoint.Type)
 		}

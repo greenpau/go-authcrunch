@@ -165,6 +165,11 @@ func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http
 		resp.Data["username_validate_title"] = userRegistry.GetUsernamePolicySummary()
 		resp.Data["password_validate_pattern"] = userRegistry.GetPasswordPolicyRegex()
 		resp.Data["password_validate_title"] = userRegistry.GetPasswordPolicySummary()
+		if localized, ok := userRegistry.(registry.LocalizedUI); ok {
+			resp.PageTitle = localized.GetTitleForLanguage(p.ui.Language)
+			resp.Data["username_validate_title"] = localized.GetUsernamePolicySummaryForLanguage(p.ui.Language)
+			resp.Data["password_validate_title"] = localized.GetPasswordPolicySummaryForLanguage(p.ui.Language)
+		}
 		if reg.message != "" {
 			resp.Message = reg.message
 		}
@@ -192,7 +197,7 @@ func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http
 	resp.Data["i18n_confirmation_email_arrival"] = translate.Translate(
 		"confirmation_email_arrival",
 		p.ui.Language,
-		map[string]interface{}{
+		map[string]any{
 			"minutes": 15,
 		},
 	)
@@ -242,7 +247,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 	}
 
 	if len(violations) > 0 {
-		message = "Registration request is non compliant"
+		message = translate.Translate("registration_invalid_request", p.ui.Language, nil)
 		p.logger.Warn(
 			message,
 			zap.String("session_id", rr.Upstream.SessionID),
@@ -266,7 +271,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 			zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
 			zap.String("error", err.Error()),
 		)
-		message = "Failed processing the registration form"
+		message = translate.Translate("registration_form_failed", p.ui.Language, nil)
 		validUserRegistration = false
 	} else {
 		for k, v := range r.Form {
@@ -292,14 +297,14 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 		if userRegistry.GetCode() != "" {
 			if userCode != userRegistry.GetCode() {
 				validUserRegistration = false
-				message = "Failed processing the registration form due to invalid verification code"
+				message = translate.Translate("registration_invalid_code", p.ui.Language, nil)
 			}
 		}
 
 		if userRegistry.GetRequireAcceptTerms() {
 			if !userAccept {
 				validUserRegistration = false
-				message = "Failed processing the registration form due to the failure to accept terms and conditions"
+				message = translate.Translate("registration_accept_terms", p.ui.Language, nil)
 			}
 		}
 
@@ -309,19 +314,19 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 			}
 			switch k {
 			case "username":
-				handleOpts := make(map[string]interface{})
+				handleOpts := make(map[string]any)
 				if err := validators.ValidateUserInput("handle", userHandle, handleOpts); err != nil {
 					validUserRegistration = false
-					message = "Failed processing the registration form due " + err.Error()
+					message = translate.Translate("registration_invalid_username", p.ui.Language, nil)
 				}
 			case "password":
-				secretOpts := make(map[string]interface{})
+				secretOpts := make(map[string]any)
 				if err := validators.ValidateUserInput("secret", userSecret, secretOpts); err != nil {
 					validUserRegistration = false
-					message = "Failed processing the registration form due " + err.Error()
+					message = translate.Translate("registration_invalid_password", p.ui.Language, nil)
 				}
 			case "email":
-				emailOpts := make(map[string]interface{})
+				emailOpts := make(map[string]any)
 				if userRegistry.GetRequireDomainMX() {
 					emailOpts["check_domain_mx"] = true
 				}
@@ -330,7 +335,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 				}
 				if err := validators.ValidateUserInput(k, userMail, emailOpts); err != nil {
 					validUserRegistration = false
-					message = "Failed processing the registration form due " + err.Error()
+					message = translate.Translate("registration_invalid_email", p.ui.Language, nil)
 				}
 			}
 		}
@@ -354,7 +359,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 				zap.String("realm_name", userRegistry.GetRealmName()),
 				zap.Error(err),
 			)
-			message = "Internal registration error"
+			message = translate.Translate("registration_internal_error", p.ui.Language, nil)
 			validUserRegistration = false
 		} else {
 			p.logger.Debug(
@@ -403,7 +408,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 					zap.Error(err),
 				)
 				userRegistry.DeleteRegistrationEntry(registrationID)
-				message = translate.Translate("internal_registration_messaging_error", p.ui.Language, map[string]interface{}{
+				message = translate.Translate("internal_registration_messaging_error", p.ui.Language, map[string]any{
 					"admin_emails": strings.Join(userRegistry.GetAdminEmails(), ", "),
 					"Count":        len(userRegistry.GetAdminEmails()),
 				})
@@ -456,7 +461,7 @@ func (p *Portal) handleHTTPRegisterAck(ctx context.Context, w http.ResponseWrite
 	registrationID := registerEndpoint.registrationID
 
 	if _, err := userRegistry.GetRegistrationEntry(registrationID); err != nil {
-		reg.message = "Registration identifier not found"
+		reg.message = translate.Translate("registration_identifier_missing", p.ui.Language, nil)
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
@@ -480,7 +485,7 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 			zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
 			zap.String("error", err.Error()),
 		)
-		reg.message = "Failed processing the registration acknowledgement form"
+		reg.message = translate.Translate("registration_ack_failed", p.ui.Language, nil)
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
@@ -488,7 +493,7 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 
 	registerEndpoint, err := parseRegisterEndpoint(r.URL.Path)
 	if err != nil {
-		reg.message = "Malformed registration acknowledgement request"
+		reg.message = translate.Translate("registration_ack_invalid", p.ui.Language, nil)
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 	registrationID := registerEndpoint.registrationID
@@ -500,11 +505,11 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 
 	if confirmer, ok := userRegistry.(registry.ConfirmationProvider); ok {
 		if len(r.PostForm["registration_code"]) != 1 || len(r.Form["registration_code"]) != 1 {
-			reg.message = "Registration confirmation denied"
+			reg.message = translate.Translate("registration_confirmation_denied", p.ui.Language, nil)
 			return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 		}
 		if err := confirmer.ConfirmRegistration(ctx, registrationID, registrationCode); err != nil {
-			reg.message = "Registration confirmation denied"
+			reg.message = translate.Translate("registration_confirmation_denied", p.ui.Language, nil)
 			return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 		}
 		return p.handleHTTPRedirectSeeOther(ctx, w, r, rr, "/login")
@@ -512,7 +517,7 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 
 	usr, err := userRegistry.GetRegistrationEntry(registrationID)
 	if err != nil {
-		reg.message = "Registration identifier not found"
+		reg.message = translate.Translate("registration_identifier_missing", p.ui.Language, nil)
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
@@ -524,7 +529,7 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 			zap.String("src_ip", addrutil.GetSourceAddress(r)),
 			zap.String("src_conn_ip", addrutil.GetSourceConnAddress(r)),
 		)
-		reg.message = "Registration identifier mismatch"
+		reg.message = translate.Translate("registration_identifier_mismatch", p.ui.Language, nil)
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
@@ -542,7 +547,7 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 	}
 
 	if err := userRegistry.DeleteRegistrationEntry(registrationID); err != nil {
-		reg.message = "Registration session terminated"
+		reg.message = translate.Translate("registration_session_terminated", p.ui.Language, nil)
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 
@@ -553,7 +558,7 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 			zap.String("request_id", rr.ID),
 			zap.Error(err),
 		)
-		reg.message = "Registration session is no longer valid"
+		reg.message = translate.Translate("registration_session_invalid", p.ui.Language, nil)
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
 

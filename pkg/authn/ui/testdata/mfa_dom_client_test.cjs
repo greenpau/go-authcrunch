@@ -13,7 +13,7 @@ for (const scriptName of ["mfa_add_app.js", "sandbox_mfa_add_app.js"]) {
       secret: "fixture secret", digits: "6&mode=wide", period: "30#tail",
       barcode_uri: "/auth/mfa-app-barcode?size=200",
     };
-    const oldImage = { nodeName: "IMG" };
+    const oldImage = { nodeName: "IMG", alt: "رمز QR" };
     const link = { href: "" };
     const imageDiv = {
       childNodes: [null, oldImage], replacement: null,
@@ -41,6 +41,10 @@ for (const scriptName of ["mfa_add_app.js", "sandbox_mfa_add_app.js"]) {
     assert.match(imageDiv.replacement.attributes.src, /^https:\/\/portal\.example\.test\/auth\/mfa-app-barcode\//);
     assert.match(imageDiv.replacement.attributes.src, /\.png\?size=200$/);
     assert.equal(imageDiv.replacement.children, undefined);
+    assert.equal(imageDiv.replacement.attributes.alt, oldImage.alt);
+    const payload = new URL(imageDiv.replacement.attributes.src).pathname.split("/").pop().slice(0, -4);
+    assert.match(payload, /^[A-Za-z0-9_-]+$/, "QR payload must use a canonical path segment");
+    assert.equal(Buffer.from(payload, "base64url").toString("utf8"), link.href);
 
     elements.barcode_uri.value = "https://elsewhere.example.test/barcode";
     imageDiv.replacement = null;

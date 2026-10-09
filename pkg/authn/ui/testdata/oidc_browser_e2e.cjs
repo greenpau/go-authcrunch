@@ -267,7 +267,7 @@ async function checkProportions(tab) {
       }),
       fields: [...document.querySelectorAll("label[for]")].filter(visible).map((label) => {
         const input = document.getElementById(label.htmlFor);
-        return { label: box(label), input: box(input), font: parseFloat(getComputedStyle(label).fontSize), lineHeight: parseFloat(getComputedStyle(label).lineHeight), align: getComputedStyle(label).textAlign };
+        return { label: box(label), input: box(input), font: parseFloat(getComputedStyle(label).fontSize), lineHeight: parseFloat(getComputedStyle(label).lineHeight), align: getComputedStyle(label).textAlign === "start" ? (getComputedStyle(label).direction === "rtl" ? "right" : "left") : getComputedStyle(label).textAlign };
       }),
       actions: [...document.querySelectorAll(".app-form-actions")].filter(visible).map((row) => ({
         row: box(row), buttons: [...row.querySelectorAll("button")].map((button) => ({

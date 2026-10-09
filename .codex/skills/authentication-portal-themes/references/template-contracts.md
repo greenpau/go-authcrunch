@@ -17,6 +17,8 @@ Important common fields:
 | Field | Meaning |
 | --- | --- |
 | `.ActionEndpoint` | Request's portal base path, e.g. `/xauth`; join local route/asset segments onto it |
+| `.Language`, `.LanguageCode`, `.Direction` | Normalized portal language and document reading direction |
+| `.Translate`, `.Messages` | Plain-text catalog lookup and escaped JSON client message attributes; see [internationalization](internationalization.md) |
 | `.PageTitle` | Page heading selected by the handler |
 | `.MetaTitle`, `.MetaDescription`, `.MetaAuthor` | Configured site metadata |
 | `.LogoURL`, `.LogoDescription` | Configured logo, with the base path already applied to local URLs |
