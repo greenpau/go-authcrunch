@@ -152,6 +152,33 @@ For authorization login return URLs, run:
 make test TEST_DIR='./pkg/authz/... .' TEST='TestRedirect|TestLocationHeaderRedirect|TestJavascriptRedirect|TestE2EAuthorizationRedirect|TestE2EServerAuthorizationLoginRedirectProtocols' COVERAGE_DIR=.coverage/authorization-redirects
 ```
 
+## Login return regression boundaries
+
+`pkg/authn/login_redirect_e2e_test.go` defines consumer regressions for login
+return destinations using real TLS and local password authentication.
+`TestE2ELoginRedirectSignedInTabs` completes both signed-in GET responses before
+following either redirect with a shared cookie jar. It checks both follow orders
+and a single-tab control without sleeps. Completing each tab's entire redirect
+chain serially does not exercise shared-cookie destination replacement.
+
+`TestE2ELoginRedirectPathBoundaryBrowser` uses headless Chrome and
+`pkg/authn/ui/testdata/login_redirect_browser_e2e.cjs` to follow actual redirects.
+An exact host and restricted path prefix must reject destinations whose literal,
+encoded, or mixed dot segments resolve outside that prefix. Preserve successful
+plain and escaped-path/query controls. Exercise both signed-in GET/cookie and
+POST/flow destinations; Go's parsed path alone is not an independent oracle for
+the browser's final path.
+
+These are regression requirements, not a claim that the implementation currently
+satisfies them. The shared matcher permits the demonstrated path escape, and
+signed-in GET still hands its destination through a shared cookie. The tests
+intentionally remain failing until those behaviors are corrected; do not skip
+them or change their expectations to the observed unsafe behavior.
+
+```sh
+make test TEST_DIR='./pkg/authn' TEST='^TestE2ELoginRedirect' COVERAGE_DIR=.coverage/login-redirect-regressions
+```
+
 ## Scanner evidence
 
 Read the complete SARIF source-to-sink path and the selected query version.
