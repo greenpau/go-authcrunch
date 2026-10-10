@@ -49,7 +49,8 @@ and exact UTF-8 passwords of 12–72 bytes. Reject reserved password-import form
 and username `nobody`. Email is canonicalized to lowercase. The portal generates
 64–96 character registration IDs and 6–8 character confirmation codes. IDs and
 codes are SHA-256 digests in pending storage; passwords use default-cost bcrypt.
-GetRegistrationEntry returns only username/email/realm for a live pending entry.
+GetRegistrationEntry returns username/email/realm and `return_url` for a live
+pending entry; never password hashes or confirmation codes.
 AsMap excludes paths, origins and credentials. The outbox necessarily contains
 the plaintext confirmation code for delivery; protect it separately.
 
@@ -126,3 +127,26 @@ driver. Core TLS coverage
 checks the legacy path and that a failed capability cannot fall through.
 Also run public units/parser/consumer with CGO_ENABLED=0, excluding the
 external-module driver which intentionally runs Go's race detector.
+
+## Bound post-registration navigation
+
+The portal captures a validated `return_url` in the immutable pending entry.
+The workflow stores this optional metadata (at most 16384 bytes, valid text),
+without treating it as identity or credentials. Confirmation and cancellation
+clear this metadata along with the pending secrets. Portal trust rules are applied
+at capture and again when successful confirmation releases it. A confirmation
+query or shared cookie cannot replace it. The capability path reads metadata
+before consuming the record, withholds navigation on failure/uncertainty, and
+returns a login URL with an explicit destination (empty means portal). The local
+registry cache snapshots maps on insertion and retrieval and refuses overwriting
+an existing ID;
+its successful legacy confirmation page carries the same navigation.
+
+Pending storage is version 2, adding `return_url TEXT NOT NULL DEFAULT ''`.
+`internal/sqlitedb.OpenMigrated` checks the exact version-1 schema, upgrades and
+checks the exact final schema in one immediate transaction. Existing entries
+retain all evidence and receive an empty destination; unknown versions, schema
+drift and failed migrations do not proceed. Drain old runtimes before upgrading;
+older binaries cannot reopen version 2. The public consumer E2E starts with a
+version-1 database, registers through TLS, restarts, reconciles an uncertain
+confirmation, then submits the rendered login form and checks its final URL.

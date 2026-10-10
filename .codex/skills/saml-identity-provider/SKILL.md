@@ -29,23 +29,34 @@ the [shared parser contract](../coding-directives/references/configuration-parse
 
 GET initiates an SP AuthnRequest. RelayState is a random transaction identifier,
 never a redirect destination or browser credential. Bind it server-side to the
-initiating browser secret, exact configured ACS callback, AuthnRequest ID and a
+initiating browser secret, exact configured ACS callback, AuthnRequest ID, validated
+post-login destination and a
 five-minute deadline. Admit matching callbacks atomically once, before XML
 validation; failed verification requires a new initiation. Capacity is bounded;
 expiry reclamation must not allow replay or evict active state to admit another
 request. No unconditional IdP-initiated acceptance is supported.
 
-SAML binds no post-login destination to the transaction. A trusted `redirect_url`
-on the initiating GET only refreshes the portal's shared redirect cookie, and the
-portal never reads one from the ACS callback URL; see the
-[redirect trust boundaries](../threat-hunting/references/redirects.md#portal-login-and-external-providers).
-`TestE2ESAMLCallbackIgnoresDestinationOnItsURL` keeps that boundary.
+The initiating GET captures the validated destination. The provider clears any
+callback-supplied destination and releases the stored value only after assertion
+verification. `ReturnURLBound` preserves an empty choice; a callback query or
+shared redirect cookie cannot replace it. See the
+[redirect trust boundaries](../threat-hunting/references/redirects.md#per-flow-login-destinations).
 
 The portal browser binding must survive a real cross-site HTTP-POST callback.
 A default/Lax session cookie is insufficient even if Go's cookiejar sends it in
 TLS tests. Use the dedicated factory-managed SAML binding cookie with host-only,
 Secure, HttpOnly, SameSite=None attributes, independent of the ordinary session
-cookie and RelayState. Domain-scoped session IDs must not supply SAML proof.
+cookie and RelayState. Each initiation has its own cookie named
+`<configured SAML base>_<canonical RelayState>`; its value is an independent
+random secret. The provider returns runtime `Response.LoginState` on initiation
+so the portal can issue it. Accept exactly one matching cookie. Delete only that
+transaction's cookie on success. An initiation already carrying 16 transaction
+cookies returns 429 rather than evicting another login's proof. This request-cookie
+check is not an atomic browser-wide quota: simultaneous initiations can arrive
+before their new cookies are visible. The provider's server-side state capacity
+remains atomic; expired browser proofs disappear after five minutes.
+Domain-scoped session IDs must not supply SAML proof. Legacy static SAML-cookie
+factory helpers remain available, but portal callbacks use transaction helpers.
 Cookie names/configuration/parsing/collision checks belong to
 [portal cookies](../authentication-portal-cookies/SKILL.md).
 
@@ -64,7 +75,8 @@ not permission for arbitrary descendants of a configured CA certificate.
 
 Unit tests cover state lifetime/capacity/concurrency and certificate precedence.
 `pkg/authn/saml_state_e2e_test.go` uses real signed responses and a TLS portal:
-valid login, missing/wrong-browser/wrong-callback/replayed state and rogue metadata
+reverse-order same-browser tabs with distinct destinations, cookie-capacity
+recovery, valid login, missing/wrong-browser/wrong-callback/replayed state and rogue metadata
 cert rejection. Preserve a real Chrome cross-site POST journey for cookie
 semantics; a net/http cookiejar alone cannot validate SameSite. Document migration
 from earlier unsolicited IdP responses and test only synthetic local IdPs.

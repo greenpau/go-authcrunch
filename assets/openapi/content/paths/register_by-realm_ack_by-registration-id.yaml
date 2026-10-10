@@ -20,6 +20,8 @@ get:
       $ref: ../components/responses/HTML.yaml
   x-source-files:
   - pkg/authn/handle_register.go
+  - plugins/registration-workflows/sqlite/workflow.go
+  - internal/sqlitedb/database.go
   - pkg/registry/cache.go
   - pkg/registry/local_user_registry.go
   parameters:
@@ -57,17 +59,21 @@ post:
     That capability requires exactly one body registration_code and exactly one value across body/query;
     duplicate or missing values render the registration screen without consuming the entry. Registry
     capability errors are presented as Registration confirmation denied, without backend error details.
-    The registry owns persistence, expiry and successful confirmation semantics.
+    The registry owns persistence, expiry and successful confirmation semantics. Successful capability confirmation returns 303 to login with the destination stored in the pending entry; legacy confirmation carries it on the completion page link. The portal revalidates it, ignores callback redirect_url and shared cookies, and carries an explicit empty destination if rejected. SQLite registrations preserve this navigation across restart; confirmation failure or replay cannot release it.
   security: []
   responses:
     '200':
       $ref: ../components/responses/HTML.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
     '302':
       $ref: ../components/responses/Redirect.yaml
     '400':
       $ref: ../components/responses/HTML.yaml
   x-source-files:
   - pkg/authn/handle_register.go
+  - plugins/registration-workflows/sqlite/workflow.go
+  - internal/sqlitedb/database.go
   - pkg/registry/cache.go
   - pkg/registry/local_user_registry.go
   requestBody:

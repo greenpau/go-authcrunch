@@ -32,6 +32,7 @@ type loginBinding struct {
 	sessionID string
 	callback  string
 	requestID string
+	returnURL string
 	expiresAt time.Time
 }
 
@@ -50,7 +51,7 @@ func newStateManager() *stateManager {
 	}
 }
 
-func (sm *stateManager) add(sessionID, callback, requestID string) (string, error) {
+func (sm *stateManager) add(sessionID, callback, requestID, returnURL string) (string, error) {
 	if sessionID == "" || callback == "" || requestID == "" {
 		return "", fmt.Errorf("SAML browser binding is missing")
 	}
@@ -73,6 +74,7 @@ func (sm *stateManager) add(sessionID, callback, requestID string) (string, erro
 		sessionID: sessionID,
 		callback:  callback,
 		requestID: requestID,
+		returnURL: returnURL,
 		expiresAt: sm.now().Add(samlLoginLifetime),
 	}
 	return state, nil
@@ -80,15 +82,15 @@ func (sm *stateManager) add(sessionID, callback, requestID string) (string, erro
 
 // consume admits a response only once, from the initiating browser, at the
 // initiating callback. A mismatch does not consume another browser's state.
-func (sm *stateManager) consume(state, sessionID, callback string) (string, bool) {
+func (sm *stateManager) consume(state, sessionID, callback string) (loginBinding, bool) {
 	sm.mux.Lock()
 	defer sm.mux.Unlock()
 	binding, exists := sm.bindings[state]
 	if !exists || sessionID == "" || callback != binding.callback || !sm.now().Before(binding.expiresAt) || subtle.ConstantTimeCompare([]byte(sessionID), []byte(binding.sessionID)) != 1 {
-		return "", false
+		return loginBinding{}, false
 	}
 	delete(sm.bindings, state)
-	return binding.requestID, true
+	return binding, true
 }
 
 func (sm *stateManager) del(state string) {

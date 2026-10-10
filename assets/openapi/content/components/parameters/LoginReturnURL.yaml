@@ -1,0 +1,13 @@
+name: redirect_url
+in: query
+required: false
+description: >-
+  This flow's post-login destination. Only the first value is used, even if it
+  contains malformed query escapes or an unescaped semicolon. The URL must
+  be absolute HTTP(S), match the configured trusted login redirect rules, and
+  contain no dot path segments. Maximum 16384 bytes both before and after
+  stripping login_hint and re-encoding. Empty, malformed, untrusted or larger values select
+  the portal and never fall back to another tab's shared cookie. Values above
+  2048 bytes are carried with the flow without writing a redirect cookie.
+schema:
+  type: string

@@ -155,6 +155,8 @@ func TestLoginReturnURLUsesFirstValue(t *testing.T) {
 	}{
 		{query: "redirect_url=" + url.QueryEscape("https://app.example.test/first") + "&redirect_url=" + url.QueryEscape("https://app.example.test/second"), want: "https://app.example.test/first"},
 		{query: "redirect_url=" + url.QueryEscape("https://evil.example.test/") + "&redirect_url=" + url.QueryEscape("https://app.example.test/second")},
+		{query: "redirect_url=%zz&redirect_url=" + url.QueryEscape("https://app.example.test/second")},
+		{query: "redirect_url=https://app.example.test/first;ignored=1&redirect_url=" + url.QueryEscape("https://app.example.test/second")},
 		{query: "redirect_url="},
 		{query: ""},
 	} {
@@ -165,28 +167,54 @@ func TestLoginReturnURLUsesFirstValue(t *testing.T) {
 	}
 }
 
+func TestLoginDestinationQueryPreservesMalformedChoice(t *testing.T) {
+	for _, tc := range []struct {
+		query   string
+		want    string
+		present bool
+	}{
+		{query: "other=value"},
+		{query: "redirect_url", present: true},
+		{query: "redirect_url=&redirect_url=later", present: true},
+		{query: "redirect_url=%zz&redirect_url=later", present: true},
+		{query: "redirect_url=first;ignored=1&redirect_url=later", present: true},
+		{query: "%72edirect_url=%zz&redirect_url=later", present: true},
+		{query: "%72edirect_url=first%3Bkept&redirect_url=later", want: "first;kept", present: true},
+		{query: "other=%zz&redirect_url=first+value", want: "first value", present: true},
+	} {
+		t.Run(tc.query, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, "/login?"+tc.query, nil)
+			got, present := loginDestinationQuery(r)
+			if got != tc.want || present != tc.present || hasLoginDestination(r) != tc.present {
+				t.Fatalf("destination=(%q,%t), want (%q,%t)", got, present, tc.want, tc.present)
+			}
+		})
+	}
+}
+
 // The destination carried by the login flow wins over the shared redirect
 // cookie, which is consumed either way. A flow destination that is no longer
-// trusted when access is granted falls back to the cookie.
+// trusted when access is granted falls back to the portal.
 func TestGrantAccessPrefersLoginFlowDestination(t *testing.T) {
 	trusted := newLoginReturnTrust(t)
 	for _, tc := range []struct {
 		name         string
 		returnURL    string
+		bound        bool
 		cookie       string
 		wantLocation string
 	}{
 		{name: "flow over cookie", returnURL: "https://app.example.test/flow", cookie: "https://app.example.test/cookie", wantLocation: "https://app.example.test/flow"},
 		{name: "flow without cookie", returnURL: "https://app.example.test/flow", wantLocation: "https://app.example.test/flow"},
-		{name: "untrusted flow falls back to cookie", returnURL: "https://evil.example.test/flow", cookie: "https://app.example.test/cookie", wantLocation: "https://app.example.test/cookie"},
-		{name: "oversized flow falls back to cookie", returnURL: "https://app.example.test/" + strings.Repeat("a", maxLoginReturnURLLength), cookie: "https://app.example.test/cookie", wantLocation: "https://app.example.test/cookie"},
-		{name: "untrusted flow without cookie", returnURL: "https://evil.example.test/flow", wantLocation: "https://login.example.test/auth/portal"},
+		{name: "untrusted flow returns to portal", returnURL: "https://evil.example.test/flow", cookie: "https://app.example.test/cookie", wantLocation: "https://login.example.test/auth/portal?redirect_url="},
+		{name: "oversized flow returns to portal", returnURL: "https://app.example.test/" + strings.Repeat("a", maxLoginReturnURLLength), cookie: "https://app.example.test/cookie", wantLocation: "https://login.example.test/auth/portal?redirect_url="},
+		{name: "untrusted flow without cookie", returnURL: "https://evil.example.test/flow", wantLocation: "https://login.example.test/auth/portal?redirect_url="},
+		{name: "bound empty", bound: true, cookie: "https://app.example.test/cookie", wantLocation: "https://login.example.test/auth/portal?redirect_url="},
 		{name: "cookie alone", cookie: "https://app.example.test/cookie", wantLocation: "https://app.example.test/cookie"},
-		// The bound applies to a destination the portal keeps for a login flow,
-		// not to the cookie the browser holds.
-		{name: "long cookie", cookie: "https://app.example.test/" + strings.Repeat("a", 2*maxLoginReturnURLLength), wantLocation: "https://app.example.test/" + strings.Repeat("a", 2*maxLoginReturnURLLength)},
+		// The same hard bound applies to legacy cookie destinations.
+		{name: "long cookie", cookie: "https://app.example.test/" + strings.Repeat("a", 2*maxLoginReturnURLLength), wantLocation: "https://login.example.test/auth/portal"},
 		// The cookie is held to the rules the flow destination failed.
-		{name: "dot segments in flow and cookie", returnURL: "https://app.example.test/flow/../other", cookie: "https://app.example.test/cookie/%2e%2e/other", wantLocation: "https://login.example.test/auth/portal"},
+		{name: "dot segments in flow and cookie", returnURL: "https://app.example.test/flow/../other", cookie: "https://app.example.test/cookie/%2e%2e/other", wantLocation: "https://login.example.test/auth/portal?redirect_url="},
 		{name: "cookie with other scheme", cookie: "ftp://app.example.test/cookie", wantLocation: "https://login.example.test/auth/portal"},
 		{name: "cookie without host", cookie: "https:///app.example.test/cookie", wantLocation: "https://login.example.test/auth/portal"},
 	} {
@@ -205,6 +233,7 @@ func TestGrantAccessPrefersLoginFlowDestination(t *testing.T) {
 			rr.Upstream.BaseURL = "https://login.example.test"
 			rr.Upstream.SessionID = "test-session"
 			rr.Response.ReturnURL = tc.returnURL
+			rr.Response.ReturnURLBound = tc.bound
 			usr := newRefererCleanupUser(t)
 			if err := p.keystore.SignToken(nil, nil, usr); err != nil {
 				t.Fatal(err)
@@ -229,8 +258,8 @@ func TestGrantAccessPrefersLoginFlowDestination(t *testing.T) {
 // signed in elsewhere and submitted again. The shared cookie is neither written
 // nor read; it is removed only when it holds that destination, which nothing
 // else would consume, and another tab's is kept. Without this portal's session,
-// a fresh login, or a destination it does not trust, the tab keeps its path
-// through the portal page and the cookie.
+// or a fresh login, the tab keeps the destination on its portal continuation.
+// A rejected destination chooses the portal without consulting the cookie.
 func TestHandleHTTPLoginSignedInReturnsToOwnDestination(t *testing.T) {
 	trusted := newLoginReturnTrust(t)
 	destination := "https://app.example.test/tab?x=one%26two"
@@ -249,15 +278,16 @@ func TestHandleHTTPLoginSignedInReturnsToOwnDestination(t *testing.T) {
 	}{
 		{name: "post with destination", method: http.MethodPost, query: "?redirect_url=" + url.QueryEscape(destination), wantStatus: http.StatusSeeOther, wantLocation: destination},
 		{name: "post with destination the cookie holds", method: http.MethodPost, query: "?redirect_url=" + url.QueryEscape(destination), cookie: destination, wantStatus: http.StatusSeeOther, wantLocation: destination, wantCookie: "delete"},
-		{name: "fresh post with destination", method: http.MethodPost, query: "?fresh=1&redirect_url=" + url.QueryEscape(destination), wantStatus: http.StatusFound, wantLocation: portal},
-		{name: "post with untrusted destination", method: http.MethodPost, query: "?redirect_url=" + url.QueryEscape("https://evil.example.test/"), wantStatus: http.StatusFound, wantLocation: portal},
+		{name: "fresh post with destination", method: http.MethodPost, query: "?fresh=1&redirect_url=" + url.QueryEscape(destination), wantStatus: http.StatusFound, wantLocation: portal + "?redirect_url=" + url.QueryEscape(destination)},
+		{name: "post with untrusted destination", method: http.MethodPost, query: "?redirect_url=" + url.QueryEscape("https://evil.example.test/"), wantStatus: http.StatusSeeOther, wantLocation: portal + "?redirect_url="},
+		{name: "post with malformed destination", method: http.MethodPost, query: "?redirect_url=%zz", wantStatus: http.StatusSeeOther, wantLocation: portal + "?redirect_url="},
 		{name: "post without destination", method: http.MethodPost, wantStatus: http.StatusFound, wantLocation: portal},
-		{name: "post without portal session", method: http.MethodPost, query: "?redirect_url=" + url.QueryEscape(destination), noSession: true, wantStatus: http.StatusFound, wantLocation: portal},
+		{name: "post without portal session", method: http.MethodPost, query: "?redirect_url=" + url.QueryEscape(destination), noSession: true, wantStatus: http.StatusFound, wantLocation: portal + "?redirect_url=" + url.QueryEscape(destination)},
 		{name: "get with destination", method: http.MethodGet, query: "?redirect_url=" + url.QueryEscape(destination), wantStatus: http.StatusSeeOther, wantLocation: destination},
 		{name: "get with destination the cookie holds", method: http.MethodGet, query: "?redirect_url=" + url.QueryEscape(destination), cookie: destination, wantStatus: http.StatusSeeOther, wantLocation: destination, wantCookie: "delete"},
-		{name: "get with untrusted destination", method: http.MethodGet, query: "?redirect_url=" + url.QueryEscape("https://evil.example.test/"), wantStatus: http.StatusFound, wantLocation: portal},
-		{name: "get with escaping destination", method: http.MethodGet, query: "?redirect_url=" + url.QueryEscape("https://app.example.test/tab/%2e%2e/other"), wantStatus: http.StatusFound, wantLocation: portal},
-		{name: "get without portal session", method: http.MethodGet, query: "?redirect_url=" + url.QueryEscape(destination), noSession: true, wantStatus: http.StatusFound, wantLocation: portal, wantCookie: destination},
+		{name: "get with untrusted destination", method: http.MethodGet, query: "?redirect_url=" + url.QueryEscape("https://evil.example.test/"), wantStatus: http.StatusSeeOther, wantLocation: portal + "?redirect_url="},
+		{name: "get with escaping destination", method: http.MethodGet, query: "?redirect_url=" + url.QueryEscape("https://app.example.test/tab/%2e%2e/other"), wantStatus: http.StatusSeeOther, wantLocation: portal + "?redirect_url="},
+		{name: "get without portal session", method: http.MethodGet, query: "?redirect_url=" + url.QueryEscape(destination), noSession: true, wantStatus: http.StatusFound, wantLocation: portal + "?redirect_url=" + url.QueryEscape(destination), wantCookie: destination},
 		{name: "fresh get with destination", method: http.MethodGet, query: "?fresh=1&redirect_url=" + url.QueryEscape(destination), wantStatus: http.StatusOK, wantCookie: destination},
 		{name: "head with destination", method: http.MethodHead, query: "?redirect_url=" + url.QueryEscape(destination), wantStatus: http.StatusSeeOther, wantLocation: destination},
 	} {
@@ -327,9 +357,9 @@ func TestHandleHTTPLoginScreenFlowDestination(t *testing.T) {
 		wantWatch bool
 	}{
 		{name: "destination", query: "?redirect_url=" + url.QueryEscape(destination), wantForm: "/auth/login?redirect_url=" + url.QueryEscape(destination), wantWatch: true},
-		{name: "untrusted destination", query: "?redirect_url=" + url.QueryEscape("https://evil.example.test/"), wantForm: "/auth/login", wantWatch: true},
-		{name: "no destination", wantForm: "/auth/login", wantWatch: true},
-		{name: "fresh login", query: "?fresh=1", wantForm: "/auth/login?fresh=1"},
+		{name: "untrusted destination", query: "?redirect_url=" + url.QueryEscape("https://evil.example.test/"), wantForm: "/auth/login?redirect_url=", wantWatch: true},
+		{name: "no destination", wantForm: "/auth/login?redirect_url=", wantWatch: true},
+		{name: "fresh login", query: "?fresh=1", wantForm: "/auth/login?fresh=1&redirect_url="},
 		{name: "fresh login with destination", query: "?fresh=1&redirect_url=" + url.QueryEscape(destination), wantForm: "/auth/login?fresh=1&redirect_url=" + url.QueryEscape(destination)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -414,14 +444,18 @@ func TestHandleHTTPLoginRefreshContinuesToOwnDestination(t *testing.T) {
 			if w.Code != http.StatusOK || gotNext == nil || link == nil {
 				t.Fatalf("login returned HTTP %d without a session continue page", w.Code)
 			}
-			if got := html.UnescapeString(gotNext[1]); got != tc.wantNext {
-				t.Errorf("continued session returns to %q, want %q", got, tc.wantNext)
+			wantNext := tc.wantNext
+			if wantNext == "" {
+				wantNext = "/auth/portal?redirect_url="
+			}
+			if got := html.UnescapeString(gotNext[1]); got != wantNext {
+				t.Errorf("continued session returns to %q, want %q", got, wantNext)
 			}
 			fresh, err := url.Parse(html.UnescapeString(link[1]))
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := fresh.Query().Get("redirect_url"); got != tc.wantNext {
+			if got := fresh.Query().Get("redirect_url"); !fresh.Query().Has("redirect_url") || got != tc.wantNext {
 				t.Errorf("fresh sign-in link carries %q, want %q", got, tc.wantNext)
 			}
 			var deleted bool
@@ -535,7 +569,9 @@ func TestHandleHTTPPortalSignedOutKeepsDestination(t *testing.T) {
 	destination := "https://app.example.test/tab?x=one%26two"
 	for _, tc := range []struct{ query, want string }{
 		{query: "?redirect_url=" + url.QueryEscape(destination), want: "https://login.example.test/auth/login?redirect_url=" + url.QueryEscape(destination)},
-		{query: "?redirect_url=" + url.QueryEscape("https://evil.example.test/"), want: "https://login.example.test/auth/login"},
+		{query: "?redirect_url=" + url.QueryEscape("https://evil.example.test/"), want: "https://login.example.test/auth/login?redirect_url="},
+		{query: "?redirect_url=%zz", want: "https://login.example.test/auth/login?redirect_url="},
+		{query: "?redirect_url=", want: "https://login.example.test/auth/login?redirect_url="},
 		{want: "https://login.example.test/auth/login"},
 	} {
 		p := newLoginScreenPortal(t, newLoginReturnTrust(t))
@@ -554,8 +590,9 @@ func TestHandleHTTPPortalSignedOutKeepsDestination(t *testing.T) {
 }
 
 // A signed-in tab reaching the portal page with its own destination returns
-// there, as from the login page, without writing the shared cookie. Without a
-// trusted destination, the cookie path is unchanged.
+// there, as from the login page, without writing the shared cookie. An explicit
+// rejected or empty destination suppresses cookie fallback. Only legacy requests
+// without destination context keep the cookie path.
 func TestHandleHTTPPortalSignedInReturnsToOwnDestination(t *testing.T) {
 	destination := "https://app.example.test/tab?x=one%26two"
 	for _, tc := range []struct {
@@ -569,9 +606,11 @@ func TestHandleHTTPPortalSignedInReturnsToOwnDestination(t *testing.T) {
 	}{
 		{name: "destination", query: "?redirect_url=" + url.QueryEscape(destination), cookie: "https://app.example.test/other-tab", wantStatus: http.StatusSeeOther, wantLocation: destination},
 		{name: "destination the cookie holds", query: "?redirect_url=" + url.QueryEscape(destination), cookie: destination, wantStatus: http.StatusSeeOther, wantLocation: destination, wantCookie: "delete"},
-		{name: "escaping destination", query: "?redirect_url=" + url.QueryEscape("https://app.example.test/tab/../other"), cookie: "https://app.example.test/other-tab", wantStatus: http.StatusSeeOther, wantLocation: "https://app.example.test/other-tab", wantCookie: "delete"},
+		{name: "escaping destination", query: "?redirect_url=" + url.QueryEscape("https://app.example.test/tab/../other"), cookie: "https://app.example.test/other-tab", wantStatus: http.StatusOK},
+		{name: "malformed destination", query: "?redirect_url=%zz", cookie: "https://app.example.test/other-tab", wantStatus: http.StatusOK},
+		{name: "empty destination", query: "?redirect_url=", cookie: "https://app.example.test/other-tab", wantStatus: http.StatusOK},
 		{name: "escaping cookie", cookie: "https://app.example.test/tab/.%2e/other", wantStatus: http.StatusOK, wantCookie: "delete"},
-		{name: "without portal session", query: "?redirect_url=" + url.QueryEscape(destination), noSession: true, wantStatus: http.StatusFound, wantLocation: "https://login.example.test/auth/login", wantCookie: destination},
+		{name: "without portal session", query: "?redirect_url=" + url.QueryEscape(destination), noSession: true, wantStatus: http.StatusFound, wantLocation: "https://login.example.test/auth/login?redirect_url=" + url.QueryEscape(destination), wantCookie: destination},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p := newLoginScreenPortal(t, newLoginReturnTrust(t))

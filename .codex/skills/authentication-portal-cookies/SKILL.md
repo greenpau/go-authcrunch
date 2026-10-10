@@ -42,7 +42,8 @@ applies the prefix before explicit names regardless of statement order.
 When adding a role, update the complete name list, parser mapping, factory,
 collision checks, and corresponding unit/E2E assertions. Include the effective
 refresh name after its feature override in cross-role collision checks.
-Do not introduce feature-specific hashed names or mandatory `__Host-` or
+The SAML transaction suffix described below is code-owned browser isolation.
+Do not introduce unrelated feature-specific hashed names or mandatory `__Host-` or
 `__Secure-` prefixes. Such names are explicit compatibility configurations;
 required attributes remain enforced independently of naming.
 
@@ -116,12 +117,21 @@ override applied before factory creation. These credentials remain Secure,
 HttpOnly, host-only, and mount-scoped with their feature-owned lifetimes.
 
 SAML uses `SAMLSessionIDCookieName`, defaulting to
-`AUTHP_SAML_SESSION_ID`. `cookie saml session id name <name>` changes the name;
+`AUTHP_SAML_SESSION_ID`. `cookie saml session id name <name>` changes the base;
 the common prefix also covers this role. Issuance remains host-only, `Path=/`,
 `Secure`, `HttpOnly`, `SameSite=None`, and `Max-Age=300` even when ordinary
-cookies configure Domain, path, insecure mode, SameSite, or lifetime. Rotate
-the value at every SP initiation, require exactly one callback cookie, and
-delete it with the same attributes after successful assertion validation.
+cookies configure Domain, path, insecure mode, SameSite, or lifetime. Each portal
+transaction appends `_` and its canonical 43-character base64url RelayState to
+that base and gets a fresh independent cookie value. The factory's
+`SAMLSessionIDCookieNameForState`, `GetSAMLSessionIDCookieForState` and matching
+delete helper reject malformed/noncanonical states. Only the completed cookie
+is deleted. Reserve `<base>_` against other portal roles and provider-owned
+identity/login cookies; the parser uses the
+same validation. Initiations already carrying 16 transaction cookies receive 429;
+simultaneous requests can arrive before new cookies are visible, so the provider's
+atomic server-state capacity remains the hard bound.
+Retain the static helpers for callers that explicitly use the older transport;
+portal SAML uses the transaction helpers.
 Reject duplicate callback cookies so a sibling Domain cookie cannot win by
 header ordering. An optional `__Host-` configured name adds browser-enforced
 Domain protection; do not require that prefix for compatibility.

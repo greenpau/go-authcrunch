@@ -36,6 +36,11 @@ import (
 // transaction identifier and never acts as a callback destination.
 func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	r.Response.Code = http.StatusBadRequest
+	returnURL := r.Response.ReturnURL
+	// A callback can release only the destination captured on initiation, and
+	// only after the assertion has passed every verification step.
+	r.Response.ReturnURL = ""
+	r.Response.LoginState = ""
 	callbackURL := r.Upstream.BaseURL + path.Join(r.Upstream.BasePath, r.Upstream.Method, r.Upstream.Realm)
 	sp, serviceProviderExists := b.serviceProviders[callbackURL]
 	if !serviceProviderExists {
@@ -49,7 +54,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		if err != nil {
 			return fmt.Errorf("failed creating SAML authentication request: %w", err)
 		}
-		relayState, err := b.state.add(r.Upstream.SessionID, callbackURL, authnRequest.ID)
+		relayState, err := b.state.add(r.Upstream.SessionID, callbackURL, authnRequest.ID, returnURL)
 		if err != nil {
 			return err
 		}
@@ -59,6 +64,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 			return fmt.Errorf("failed creating SAML authentication redirect: %w", err)
 		}
 		r.Response.Code = http.StatusFound
+		r.Response.LoginState = relayState
 		r.Response.RedirectURL = redirectURL.String()
 		return nil
 	}
@@ -84,7 +90,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 	if len(relayStateValues) != 1 || relayStateValues[0] == "" {
 		return fmt.Errorf("request form must have exactly one RelayState field")
 	}
-	requestID, ok := b.state.consume(relayStateValues[0], r.Upstream.SessionID, callbackURL)
+	binding, ok := b.state.consume(relayStateValues[0], r.Upstream.SessionID, callbackURL)
 	if !ok {
 		return fmt.Errorf("SAML RelayState browser binding is invalid or expired")
 	}
@@ -99,7 +105,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		}
 	}
 
-	samlAssertions, err := sp.ParseXMLResponse(samlResponseBytes, []string{requestID}, sp.AcsURL)
+	samlAssertions, err := sp.ParseXMLResponse(samlResponseBytes, []string{binding.requestID}, sp.AcsURL)
 	if err != nil {
 		return fmt.Errorf("failed to ParseXMLResponse: %s", err)
 	}
@@ -172,5 +178,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 
 	r.Response.Code = 200
 	r.Response.Payload = m
+	r.Response.ReturnURL = binding.returnURL
+	r.Response.ReturnURLBound = true
 	return nil
 }

@@ -600,6 +600,11 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
+			name:  "test ui.LoginNavigation struct",
+			entry: &ui.LoginNavigation{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test requests.AuthorizationResponse struct",
 			entry: &requests.AuthorizationResponse{},
 			opts: &Options{

@@ -48,6 +48,11 @@ func (p *Portal) handleSessionPage(ctx context.Context, w http.ResponseWriter, r
 		resp.Data["session_next"] = next
 	}
 	if action == "continue" {
+		p.bindLoginNavigation(resp, r, p.loginReturnURL(r, rr))
+		resp.LoginNavigation.Continue = true
+		if hasLoginDestination(r) {
+			resp.Data["session_next"] = strings.TrimSuffix(p.config.RefreshTokens.BasePath, "/") + "/portal?redirect_url="
+		}
 		// After the refresh, the tab returns to the destination its own login
 		// URL carries, not through the redirect cookie that every tab shares.
 		if returnURL := p.loginReturnURL(r, rr); returnURL != "" {

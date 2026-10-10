@@ -16,7 +16,11 @@ file permissions do not provide encryption or protection from that account.
 Windows and network/distributed filesystems are outside this reference contract.
 
 The driver is pure Go `modernc.org/sqlite`. Each category owns a distinct
-application ID, exact version-1 schema, and separate database file. Schema SQL is
+application ID, pinned versioned schema, and separate database file. `Open`
+continues to require version 1. Registration uses `OpenMigrated` for version 2: an
+exact old-schema check, ordered code-owned upgrade statements, version update
+and exact new-schema check share one immediate transaction. Unknown versions or
+extra/changed objects reject before migration; failure rolls back DDL and data. Schema SQL is
 compiled code, never user input. The helper currently accepts tables whose
 creation order is independent; dependent DDL needs explicit ordering support.
 Never share a file across categories or weaken schema checks to allow it.

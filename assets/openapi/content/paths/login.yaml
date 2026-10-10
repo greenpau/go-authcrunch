@@ -5,13 +5,21 @@ get:
   summary: Open the login page
   description: Browser entry point. Keep Accept as text/html. fresh=1 forces a new login; a refresh cookie
     can otherwise open the session continuation page. A trusted redirect_url is this tab's own destination
-    in addition to the shared redirect cookie the request records. The rendered form target and OAuth/SAML
-    provider links carry it (and fresh=1), and the continuation page returns to it after a refresh, removing
+    and is kept in its login transaction. Only short destinations also produce a legacy redirect cookie. The rendered form target and OAuth/SAML
+    provider, registration and cross-device links carry it; password forms retain fresh=1, and the continuation page returns to it after a refresh, removing
     the shared cookie only when it holds the same destination. Except on a fresh login, the page script
     polls whoami with probe=login while visible and then leaves for that destination, or the portal. A
     signed-in GET with a trusted redirect_url, without fresh=1 and with a stored portal session receives
     303 to that destination without the shared cookie; any other signed-in GET redirects to the portal,
-    which consumes the cookie.
+    which consumes the cookie only when no explicit flow destination was supplied. Empty or rejected redirect_url values explicitly select the portal.
+    Filesystem themes can preserve GET navigation, including submit-button method overrides,
+    when all of a form's submission targets are supported portal navigation routes.
+    Forms mixing those targets with external or provider-protocol actions require explicit theme handling;
+    the renderer does not add shared destination fields that those unrelated actions would also receive.
+    When it supplies bound fields, conflicting reserved names on existing controls are removed,
+    including controls associated from outside the form. Malformed forms with ambiguous field ownership
+    require correction before relying on automatic GET adaptation. Methods and submitter types use
+    HTML ASCII-only keyword matching and its invalid-value defaults.
   security: []
   responses:
     '200':
@@ -24,6 +32,8 @@ get:
   - pkg/authn/handle_http_login.go
   - pkg/authn/handle_http_session.go
   - pkg/authn/inject_redirect_url.go
+  - pkg/authn/ui/login_navigation.go
+  - pkg/authn/ui/login_navigation_forms.go
   parameters:
   - name: fresh
     in: query
@@ -33,13 +43,7 @@ get:
       type: string
       enum:
       - '1'
-  - name: redirect_url
-    in: query
-    description: Only configured trusted absolute HTTP(S) destinations without dot path segments are accepted;
-      at most 2048 bytes after login_hint is removed are carried per login. Only the first value is used.
-    required: false
-    schema:
-      type: string
+  - $ref: ../components/parameters/LoginReturnURL.yaml
 post:
   operationId: login
   tags:
@@ -181,13 +185,7 @@ post:
               description: Login realm selecting the enabled identity store.
               minLength: 1
   parameters:
-  - name: redirect_url
-    in: query
-    description: 'Browser form only: the login page''s trusted HTTP(S) destination, at most 2048 bytes after
-      login_hint is removed. Only the first value is used.'
-    required: false
-    schema:
-      type: string
+  - $ref: ../components/parameters/LoginReturnURL.yaml
   - name: fresh
     in: query
     description: 'Browser form only: the form belongs to a fresh login, which a signed-in browser still completes.'

@@ -44,7 +44,10 @@ ordering, revocation, expiry and consent even when the JSON shape stays stable.
 
 `assets/openapi/reviewed-sources.yaml` fingerprints local contract inputs.
 Generation, ordinary Go tests and CI reject added/changed/removed inputs.
-This is a review gate, not proof of exhaustive runtime coverage. Expand
+The inventory also includes the SQLite registration workflow and its private
+SQLite helper: persistence and migration affect confirmation-to-login navigation.
+Keep the CLI E2E isolated checkout and its source-drift cases aligned with new
+owners. This is a review gate, not proof of exhaustive runtime coverage. Expand
 `internal/openapi/sources.go` for new owners. External crypto/parser dependency
 changes also require review even when wrapper hashes stay unchanged.
 

@@ -60,7 +60,7 @@ func TestSourcesUsesLocalOwners(t *testing.T) {
 	if sources.Module != "github.com/greenpau/go-authcrunch" {
 		t.Fatal("wrong source module")
 	}
-	for _, path := range []string{"server.go", "pkg/authn/handle_provider_login.go", "pkg/httpserver/server.go", "cmd/authdb/main.go", "pkg/registry/local_user_registry.go", "pkg/redirects/redirect_match.go", "pkg/util/addr/utils.go", "pkg/util/redirect.go", "pkg/util/sanitizer.go", "pkg/waf/malformed_input_check.go"} {
+	for _, path := range []string{"plugins/registration-workflows/sqlite/workflow.go", "internal/sqlitedb/database.go", "server.go", "pkg/authn/handle_provider_login.go", "pkg/httpserver/server.go", "cmd/authdb/main.go", "pkg/registry/local_user_registry.go", "pkg/redirects/redirect_match.go", "pkg/util/addr/utils.go", "pkg/util/redirect.go", "pkg/util/sanitizer.go", "pkg/waf/malformed_input_check.go"} {
 		if sources.Files[path] == "" {
 			t.Fatalf("missing local owner %s", path)
 		}

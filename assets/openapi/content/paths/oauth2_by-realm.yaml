@@ -9,8 +9,7 @@ get:
     for five minutes; only one callback can claim that state. PKCE/nonce behavior follows provider configuration.
     Presence of state, code, error or access_token switches the provider into callback processing even
     on this login URL. Missing/unknown providers produce HTML 400; upstream validation failures produce
-    HTML 401. A trusted redirect_url on the start request is recorded in the shared redirect cookie and
-    bound to this login's state; only a successful callback of that login returns it, ahead of the cookie.
+    HTML 401. A trusted redirect_url on the start request is bound to this login's state; only a successful callback of that login returns it. An empty or rejected destination selects the portal. Callback query values and shared cookies cannot replace it.
   security: []
   responses:
     '200':
@@ -43,14 +42,7 @@ get:
     schema:
       type: string
       minLength: 1
-  - name: redirect_url
-    in: query
-    required: false
-    description: Post-login destination for this login. Only a configured trusted HTTP(S) URL of at most
-      2048 bytes after login_hint is removed is bound to the login; the cookie records trusted values as
-      before. Only the first value is used.
-    schema:
-      type: string
+  - $ref: ../components/parameters/LoginReturnURL.yaml
   - name: login_hint
     in: query
     required: false

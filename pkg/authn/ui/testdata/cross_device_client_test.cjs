@@ -12,7 +12,7 @@ function environment(responses, clipboard = async () => { throw new Error('denie
   const elements = new Map();
   const document = {
     title: options.title || 'Test portal - Sign in on another device',
-    currentScript: { dataset: { base: '/tenant/auth', i18n: JSON.stringify(options.messages || {}) } },
+    currentScript: { dataset: { base: '/tenant/auth', returnUrl: options.returnURL || '', i18n: JSON.stringify(options.messages || {}) } },
     getElementById: id => elements.get(id) || null,
     activeElement: null,
   };
@@ -331,4 +331,15 @@ test('localized dynamic states keep protocol values and matching codes unchanged
   assert.ok(e.document.title.endsWith(messages.cross_device_cancelled_title));
   assert.equal(e.elements.get('cross-device-status').textContent, messages.cross_device_cancelled);
   assert.ok(e.requests[1].url.endsWith('/cancel'));
+});
+
+test('only start carries the requester destination; approval link and polling do not', async () => {
+  const returnURL = 'https://app.test/document?x=one%26two';
+  const e = environment([interaction(), { status: 'approved', next: returnURL }], undefined, undefined, { returnURL });
+  await flush();
+  assert.equal(e.requests[0].url, '/tenant/auth/cross-device/start?redirect_url=' + encodeURIComponent(returnURL));
+  assert.equal(e.elements.get('cross-device-link').value, interaction().verification_uri);
+  await e.tick();
+  assert.equal(e.requests[1].url, '/tenant/auth/cross-device/poll');
+  assert.deepEqual(e.navigations, [returnURL]);
 });

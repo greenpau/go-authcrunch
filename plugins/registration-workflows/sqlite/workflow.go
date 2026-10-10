@@ -68,11 +68,15 @@ type Workflow struct {
 	renderer *registry.LocalUserRegistryProvider
 	binding  [32]byte
 }
+
+const pendingSchemaV1 = "CREATE TABLE registrations (id BLOB PRIMARY KEY, binding BLOB NOT NULL, username TEXT NOT NULL, email TEXT NOT NULL, enrollment TEXT NOT NULL, password BLOB, code BLOB, expires INTEGER NOT NULL, attempts INTEGER NOT NULL, state TEXT NOT NULL)"
+const pendingSchemaV2 = "CREATE TABLE registrations (id BLOB PRIMARY KEY, binding BLOB NOT NULL, username TEXT NOT NULL, email TEXT NOT NULL, enrollment TEXT NOT NULL, password BLOB, code BLOB, expires INTEGER NOT NULL, attempts INTEGER NOT NULL, state TEXT NOT NULL, return_url TEXT NOT NULL DEFAULT '')"
+
 type pending struct {
-	username, email, enrollment, state string
-	password, code                     []byte
-	expires                            int64
-	attempts                           int
+	username, email, enrollment, state, returnURL string
+	password, code                                []byte
+	expires                                       int64
+	attempts                                      int
 }
 
 // New opens a workflow bound to an existing SQLite identity store and outbox.
@@ -99,7 +103,9 @@ func New(ctx context.Context, config *Config, store *accounts.Store, outbox *not
 	if err := renderer.SetMessaging(messagingConfig); err != nil {
 		return nil, ErrInvalid
 	}
-	db, err := sqlitedb.Open(ctx, c.Path, c.Timeout, 1094931287, map[string]string{"registrations": "CREATE TABLE registrations (id BLOB PRIMARY KEY, binding BLOB NOT NULL, username TEXT NOT NULL, email TEXT NOT NULL, enrollment TEXT NOT NULL, password BLOB, code BLOB, expires INTEGER NOT NULL, attempts INTEGER NOT NULL, state TEXT NOT NULL)"})
+	db, err := sqlitedb.OpenMigrated(ctx, c.Path, c.Timeout, 1094931287,
+		map[string]string{"registrations": pendingSchemaV2}, map[string]string{"registrations": pendingSchemaV1},
+		[]string{"ALTER TABLE registrations ADD COLUMN return_url TEXT NOT NULL DEFAULT ''"})
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +116,7 @@ func registrationID(id string) bool { return matches(`^[A-Za-z0-9]{64,96}$`, id)
 func (w *Workflow) read(ctx context.Context, tx *sql.Tx, id string) (pending, error) {
 	var p pending
 	digest := sha256.Sum256([]byte(id))
-	err := tx.QueryRowContext(ctx, "SELECT username,email,enrollment,password,code,expires,attempts,state FROM registrations WHERE id=? AND binding=?", digest[:], w.binding[:]).Scan(&p.username, &p.email, &p.enrollment, &p.password, &p.code, &p.expires, &p.attempts, &p.state)
+	err := tx.QueryRowContext(ctx, "SELECT username,email,enrollment,password,code,expires,attempts,state,return_url FROM registrations WHERE id=? AND binding=?", digest[:], w.binding[:]).Scan(&p.username, &p.email, &p.enrollment, &p.password, &p.code, &p.expires, &p.attempts, &p.state, &p.returnURL)
 	if errors.Is(err, sql.ErrNoRows) {
 		return pending{}, ErrDenied
 	}
@@ -126,7 +132,7 @@ func (w *Workflow) AddRegistrationEntry(id string, data map[string]string) error
 	if w == nil || w.db == nil {
 		return ErrUnavailable
 	}
-	if !registrationID(id) || data["realm_name"] != w.config.Realm || !matches(`^[a-z0-9]{3,25}$`, data["username"]) || data["username"] == "nobody" || !matches(`^[A-Za-z0-9]{6,8}$`, data["registration_code"]) || identity.IsPasswordHashImport(data["password"]) {
+	if (data["return_url"] != "" && !sqlitedb.ValidText(data["return_url"], 16384)) || !registrationID(id) || data["realm_name"] != w.config.Realm || !matches(`^[a-z0-9]{3,25}$`, data["username"]) || data["username"] == "nobody" || !matches(`^[A-Za-z0-9]{6,8}$`, data["registration_code"]) || identity.IsPasswordHashImport(data["password"]) {
 		return ErrInvalid
 	}
 	email := strings.ToLower(data["email"])
@@ -154,7 +160,7 @@ func (w *Workflow) AddRegistrationEntry(id string, data map[string]string) error
 		if count >= 10000 {
 			return ErrFull
 		}
-		_, err := tx.ExecContext(ctx, "INSERT INTO registrations VALUES(?,?,?,?,?,?,?,?,0,'pending')", digest[:], w.binding[:], data["username"], email, uuid.NewString(), hash, code[:], time.Now().Add(45*time.Minute).Unix())
+		_, err := tx.ExecContext(ctx, "INSERT INTO registrations VALUES(?,?,?,?,?,?,?,?,0,'pending',?)", digest[:], w.binding[:], data["username"], email, uuid.NewString(), hash, code[:], time.Now().Add(45*time.Minute).Unix(), data["return_url"])
 		return err
 	})
 }
@@ -176,7 +182,7 @@ func (w *Workflow) GetRegistrationEntry(id string) (map[string]string, error) {
 		if !live(p) {
 			return ErrDenied
 		}
-		result = map[string]string{"username": p.username, "email": p.email, "realm_name": w.config.Realm}
+		result = map[string]string{"username": p.username, "email": p.email, "realm_name": w.config.Realm, "return_url": p.returnURL}
 		return nil
 	})
 	if err != nil {
@@ -195,7 +201,7 @@ func (w *Workflow) DeleteRegistrationEntry(id string) error {
 	}
 	digest := sha256.Sum256([]byte(id))
 	return w.db.Write(context.Background(), func(ctx context.Context, tx *sql.Tx) error {
-		_, err := tx.ExecContext(ctx, "UPDATE registrations SET state='cancelled',password=NULL,code=NULL WHERE id=? AND binding=? AND state='pending'", digest[:], w.binding[:])
+		_, err := tx.ExecContext(ctx, "UPDATE registrations SET state='cancelled',password=NULL,code=NULL,return_url='' WHERE id=? AND binding=? AND state='pending'", digest[:], w.binding[:])
 		return err
 	})
 }
@@ -243,7 +249,7 @@ func (w *Workflow) ConfirmRegistration(ctx context.Context, id, code string) err
 		if !time.Now().Before(expires) {
 			return ErrDenied
 		}
-		_, err = tx.ExecContext(ctx, "UPDATE registrations SET state='confirmed',password=NULL,code=NULL WHERE id=?", digest[:])
+		_, err = tx.ExecContext(ctx, "UPDATE registrations SET state='confirmed',password=NULL,code=NULL,return_url='' WHERE id=?", digest[:])
 		return err
 	})
 	if err != nil {

@@ -75,6 +75,21 @@ func Normalize(path, timeout *string) error {
 // Open initializes a dedicated application/version-1 schema. Definitions are
 // trusted SQL constants supplied by plugin code, never user configuration.
 func Open(ctx context.Context, path, timeout string, application int, schema map[string]string) (*Database, error) {
+	return open(ctx, path, timeout, application, 1, schema, nil, nil)
+}
+
+// OpenMigrated initializes version 2 or atomically upgrades an exactly matching
+// version-1 schema. Both schemas and migration statements must be code-owned
+// constants. Unknown versions or extra/modified objects fail before mutation.
+// Existing Open callers continue to require version 1.
+func OpenMigrated(ctx context.Context, path, timeout string, application int, schema, previous map[string]string, migration []string) (*Database, error) {
+	if len(previous) == 0 || len(migration) == 0 {
+		return nil, ErrUnavailable
+	}
+	return open(ctx, path, timeout, application, 2, schema, previous, migration)
+}
+
+func open(ctx context.Context, path, timeout string, application, target int, schema, previous map[string]string, migration []string) (*Database, error) {
 	if ctx == nil || Normalize(&path, &timeout) != nil || application <= 0 || len(schema) == 0 || runtime.GOOS == "windows" {
 		return nil, ErrUnavailable
 	}
@@ -120,7 +135,7 @@ func Open(ctx context.Context, path, timeout string, application int, schema map
 			if _, err := tx.ExecContext(ctx, "PRAGMA application_id="+strconv.Itoa(application)); err != nil {
 				return err
 			}
-			if _, err := tx.ExecContext(ctx, "PRAGMA user_version=1"); err != nil {
+			if _, err := tx.ExecContext(ctx, "PRAGMA user_version="+strconv.Itoa(target)); err != nil {
 				return err
 			}
 			for _, statement := range schema {
@@ -130,32 +145,25 @@ func Open(ctx context.Context, path, timeout string, application int, schema map
 			}
 			return nil
 		}
-		if app != application || version != 1 {
+		if app != application {
 			return ErrUnavailable
 		}
-		rows, err := tx.QueryContext(ctx, "SELECT name,sql FROM sqlite_schema WHERE name NOT GLOB 'sqlite_*'")
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		count := 0
-		for rows.Next() {
-			var name, definition string
-			if err := rows.Scan(&name, &definition); err != nil {
+		if version == 1 && target == 2 {
+			if err := checkSchema(ctx, tx, previous); err != nil {
 				return err
 			}
-			if schema[name] != definition {
-				return ErrUnavailable
+			for _, statement := range migration {
+				if _, err := tx.ExecContext(ctx, statement); err != nil {
+					return err
+				}
 			}
-			count++
-		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		if count != len(schema) {
+			if _, err := tx.ExecContext(ctx, "PRAGMA user_version=2"); err != nil {
+				return err
+			}
+		} else if version != target {
 			return ErrUnavailable
 		}
-		return nil
+		return checkSchema(ctx, tx, schema)
 	})
 	if err != nil {
 		_ = store.Close()
@@ -324,6 +332,32 @@ func (s *Database) Close() error {
 	}
 	s.closed.Store(true)
 	if s.db.Close() != nil {
+		return ErrUnavailable
+	}
+	return nil
+}
+
+func checkSchema(ctx context.Context, tx *sql.Tx, schema map[string]string) error {
+	rows, err := tx.QueryContext(ctx, "SELECT name,sql FROM sqlite_schema WHERE name NOT GLOB 'sqlite_*'")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		var name, definition string
+		if err := rows.Scan(&name, &definition); err != nil {
+			return err
+		}
+		if schema[name] != definition {
+			return ErrUnavailable
+		}
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if count != len(schema) {
 		return ErrUnavailable
 	}
 	return nil

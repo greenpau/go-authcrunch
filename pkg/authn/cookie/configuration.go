@@ -146,6 +146,9 @@ func (c *Config) validateNames() error {
 		if seen[*entry.value] {
 			return fmt.Errorf("duplicate cookie name for %s", entry.suffix)
 		}
+		if entry.suffix != DefaultSAMLSessionIDCookieName && strings.HasPrefix(*entry.value, c.SAMLSessionIDCookieName+"_") {
+			return fmt.Errorf("cookie name for %s overlaps SAML transaction cookies", entry.suffix)
+		}
 		seen[*entry.value] = true
 	}
 	return nil

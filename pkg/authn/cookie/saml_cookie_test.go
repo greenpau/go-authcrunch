@@ -14,6 +14,7 @@
 package cookie_test
 
 import (
+	"encoding/base64"
 	"net/http"
 	"strings"
 	"testing"
@@ -50,5 +51,47 @@ func TestSAMLBrowserBindingCookie(t *testing.T) {
 	host, err := cookie.NewFactory(&cookie.Config{SAMLSessionIDCookieName: "__Host-SAML"})
 	if err != nil || !strings.HasPrefix(host.GetSAMLSessionIDCookie("binding"), "__Host-SAML=") {
 		t.Fatal("optional __Host- SAML binding name rejected")
+	}
+}
+
+func TestSAMLTransactionCookies(t *testing.T) {
+	f, err := cookie.NewFactory(&cookie.Config{SAMLSessionIDCookieName: "__Host-SAML"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := base64.RawURLEncoding.EncodeToString(make([]byte, 32))
+	if f.ValidateIdentityTokenCookieName(f.SAMLSessionIDCookieName+"_"+first) == nil || f.ValidateProviderLoginCookieName(f.SAMLSessionIDCookieName+"_"+first, "/") == nil {
+		t.Fatal("provider cookie may overwrite transaction proof")
+	}
+	other := make([]byte, 32)
+	other[0] = 1
+	second := base64.RawURLEncoding.EncodeToString(other)
+	a, err := http.ParseSetCookie(f.GetSAMLSessionIDCookieForState("first-proof", first))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := http.ParseSetCookie(f.GetSAMLSessionIDCookieForState("second-proof", second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.Name == b.Name || a.Name != f.SAMLSessionIDCookieNameForState(first) {
+		t.Fatal("independent transactions share a cookie")
+	}
+	for _, issued := range []*http.Cookie{a, b} {
+		if issued.Path != "/" || issued.Domain != "" || !issued.Secure || !issued.HttpOnly || issued.MaxAge != 300 || issued.SameSite != http.SameSiteNoneMode {
+			t.Fatal("transaction proof lost its browser security attributes")
+		}
+	}
+	deleted, err := http.ParseSetCookie(f.GetDeleteSAMLSessionIDCookieForState(first))
+	if err != nil || deleted.Name != a.Name || deleted.Name == b.Name || deleted.MaxAge >= 0 || deleted.Path != a.Path || deleted.Domain != a.Domain {
+		t.Fatal("completion deletes another transaction or changes cookie scope")
+	}
+	for _, invalid := range []string{"", "https://app.example/", first + "=", first[:42], strings.Repeat("a", 4096)} {
+		if f.SAMLSessionIDCookieNameForState(invalid) != "" || f.GetSAMLSessionIDCookieForState("proof", invalid) != "" || f.GetDeleteSAMLSessionIDCookieForState(invalid) != "" {
+			t.Fatal("invalid state selected a browser proof cookie")
+		}
+	}
+	if _, err := cookie.NewFactory(&cookie.Config{SAMLSessionIDCookieName: "SAML", AccessTokenCookieName: "SAML_" + first}); err == nil {
+		t.Fatal("access cookie may overwrite SAML proof")
 	}
 }

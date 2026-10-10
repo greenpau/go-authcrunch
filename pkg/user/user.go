@@ -56,7 +56,9 @@ type User struct {
 	// this sandbox user belongs to, and LoginFresh whether that login started as
 	// a fresh one, which going back to the login page must keep.
 	LoginReturnURL string `json:"-" xml:"-" yaml:"-"`
-	LoginFresh     bool   `json:"-" xml:"-" yaml:"-"`
+	// LoginReturnURLBound preserves an explicit empty destination through the sandbox.
+	LoginReturnURLBound bool `json:"-" xml:"-" yaml:"-"`
+	LoginFresh          bool `json:"-" xml:"-" yaml:"-"`
 
 	Claims          *Claims       `json:"claims,omitempty" xml:"claims,omitempty" yaml:"claims,omitempty"`
 	Token           string        `json:"token,omitempty" xml:"token,omitempty" yaml:"token,omitempty"`

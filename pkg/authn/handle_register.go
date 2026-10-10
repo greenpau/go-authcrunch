@@ -35,6 +35,7 @@ type registerRequest struct {
 	view           string
 	message        string
 	registrationID string
+	returnURL      string
 }
 
 type registerEndpoint struct {
@@ -131,6 +132,13 @@ func (p *Portal) handleHTTPRegisterScreenWithMessage(ctx context.Context, w http
 	resp := p.ui.GetArgs()
 	resp.BaseURL(rr.Upstream.BasePath)
 	resp.Data["view"] = reg.view
+	// Confirmation destinations come only from the immutable pending entry.
+	returnURL := reg.returnURL
+	if reg.view == "register" || reg.view == "registered" {
+		returnURL = p.loginReturnURL(r, rr)
+	}
+	resp.Data["login_return_url"] = p.trustedLoginReturnURL(returnURL)
+	p.bindLoginNavigation(resp, r, p.trustedLoginReturnURL(returnURL))
 
 	userRegistry, err := p.fetchUserRegistry(r, rr)
 	if err != nil {
@@ -350,6 +358,7 @@ func (p *Portal) handleHTTPRegisterRequest(ctx context.Context, w http.ResponseW
 			"email":             userMail,
 			"registration_code": registrationCode,
 			"realm_name":        userRegistry.GetRealmName(),
+			"return_url":        p.loginReturnURL(r, rr),
 		}
 		if err := userRegistry.AddRegistrationEntry(registrationID, cachedEntry); err != nil {
 			p.logger.Warn(
@@ -460,7 +469,8 @@ func (p *Portal) handleHTTPRegisterAck(ctx context.Context, w http.ResponseWrite
 	}
 	registrationID := registerEndpoint.registrationID
 
-	if _, err := userRegistry.GetRegistrationEntry(registrationID); err != nil {
+	_, err = userRegistry.GetRegistrationEntry(registrationID)
+	if err != nil {
 		reg.message = translate.Translate("registration_identifier_missing", p.ui.Language, nil)
 		return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 	}
@@ -508,11 +518,18 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 			reg.message = translate.Translate("registration_confirmation_denied", p.ui.Language, nil)
 			return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 		}
+		// Load navigation before consuming the entry, but release it only after
+		// successful, single-use confirmation. Callback query/cookies cannot replace it.
+		entry, err := userRegistry.GetRegistrationEntry(registrationID)
+		if err != nil {
+			reg.message = translate.Translate("registration_confirmation_denied", p.ui.Language, nil)
+			return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
+		}
 		if err := confirmer.ConfirmRegistration(ctx, registrationID, registrationCode); err != nil {
 			reg.message = translate.Translate("registration_confirmation_denied", p.ui.Language, nil)
 			return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 		}
-		return p.handleHTTPRedirectSeeOther(ctx, w, r, rr, "/login")
+		return p.handleHTTPRedirectSeeOther(ctx, w, r, rr, boundLoginPageLocation(p.trustedLoginReturnURL(entry["return_url"]), false))
 	}
 
 	usr, err := userRegistry.GetRegistrationEntry(registrationID)
@@ -599,6 +616,7 @@ func (p *Portal) handleHTTPRegisterAckRequest(ctx context.Context, w http.Respon
 		)
 	}
 
+	reg.returnURL = p.trustedLoginReturnURL(usr["return_url"])
 	reg.view = "acked"
 	return p.handleHTTPRegisterScreenWithMessage(ctx, w, r, rr, reg)
 }

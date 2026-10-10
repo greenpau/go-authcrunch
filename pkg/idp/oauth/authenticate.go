@@ -160,6 +160,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 			r.Response.Payload = m
 			r.Response.Code = http.StatusOK
 			r.Response.ReturnURL = returnURL
+			r.Response.ReturnURLBound = true
 			b.logger.Debug(
 				"decoded claims from OAuth 2.0 authorization server access token",
 				zap.String("request_id", r.ID),
@@ -179,6 +180,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 			r.Response.Payload = m
 			r.Response.Code = http.StatusOK
 			r.Response.ReturnURL = returnURL
+			r.Response.ReturnURLBound = true
 
 			if b.config.IdentityTokenCookieEnabled {
 				r.Response.IdentityTokenCookie.Enabled = true

@@ -19,9 +19,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"mime/quotedprintable"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -38,6 +40,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authclient"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	accounts "github.com/greenpau/go-authcrunch/plugins/identity-stores/sqlite"
 	notifications "github.com/greenpau/go-authcrunch/plugins/messaging/sqlite"
@@ -81,6 +84,23 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 	if err := json.Unmarshal(raw, &restored); err != nil {
 		t.Fatal(err)
 	}
+	// An installed version-1 workflow must upgrade without manual file replacement.
+	legacy, err := sql.Open("sqlite", restored.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, statement := range []string{"PRAGMA application_id=1094931287", "PRAGMA user_version=1", "CREATE TABLE registrations (id BLOB PRIMARY KEY, binding BLOB NOT NULL, username TEXT NOT NULL, email TEXT NOT NULL, enrollment TEXT NOT NULL, password BLOB, code BLOB, expires INTEGER NOT NULL, attempts INTEGER NOT NULL, state TEXT NOT NULL)"} {
+		if _, err := legacy.ExecContext(t.Context(), statement); err != nil {
+			legacy.Close()
+			t.Fatal(err)
+		}
+	}
+	if err := legacy.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(restored.Path, 0600); err != nil {
+		t.Fatal(err)
+	}
 	workflow, err := enrollment.New(t.Context(), &restored, store, out)
 	if err != nil {
 		t.Fatal(err)
@@ -91,9 +111,14 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 			p.Close()
 		}
 	}()
+	destination := "https://trusted.example.test/registered?x=one%26two"
+	trusted, err := redirects.NewRedirectURIMatchConfig("exact", "trusted.example.test", "prefix", "/")
+	if err != nil {
+		t.Fatal(err)
+	}
 	install := func() {
 		t.Helper()
-		p, err := authn.NewPortal(authn.PortalParameters{Config: &authn.PortalConfig{Name: "registration", IdentityStores: []string{"accounts"}, UserRegistries: []string{"enrollment"}, RawCryptoKeyStoreConfig: []string{"crypto key sign-verify " + signingKey}}, Logger: zap.NewNop(), IdentityStores: []ids.IdentityStore{store}})
+		p, err := authn.NewPortal(authn.PortalParameters{Config: &authn.PortalConfig{Name: "registration", TrustedLoginRedirectURIConfigs: []*redirects.RedirectURIMatchConfig{trusted}, IdentityStores: []string{"accounts"}, UserRegistries: []string{"enrollment"}, RawCryptoKeyStoreConfig: []string{"crypto key sign-verify " + signingKey}}, Logger: zap.NewNop(), IdentityStores: []ids.IdentityStore{store}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -121,9 +146,13 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 		}
 	}
 	client := server.Client()
+	client.Jar, _ = cookiejar.New(nil)
 	client.Timeout = 15 * time.Second
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	request := func(method, target string, form url.Values, host string) (int, string, string) {
+		if strings.HasPrefix(target, "/") {
+			target = server.URL + target
+		}
 		t.Helper()
 		var body io.Reader
 		if form != nil {
@@ -153,7 +182,7 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 	if status, _, _ := request("GET", server.URL+"/tenant/auth/register/staff", nil, ""); status != 200 {
 		t.Fatal("registration form", status)
 	}
-	if status, _, body := request("POST", server.URL+"/tenant/auth/register/staff", url.Values{"registrant": {"alice"}, "registrant_password": {password}, "registrant_email": {"alice@example.test"}}, "attacker.example.test"); status != 200 {
+	if status, _, body := request("POST", server.URL+"/tenant/auth/register/staff?redirect_url="+url.QueryEscape(destination), url.Values{"registrant": {"alice"}, "registrant_password": {password}, "registrant_email": {"alice@example.test"}}, "attacker.example.test"); status != 200 {
 		t.Fatal("registration submission", status, body)
 	}
 	if _, err := store.FetchUserData("alice", "alice@example.test"); err == nil {
@@ -255,8 +284,11 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 		t.Fatal(err)
 	}
 	install()
-	if status, location, body := request("POST", link, url.Values{"registration_code": {code}}, ""); status != 303 || !strings.HasSuffix(location, "/auth/login") {
+	loginLocation := ""
+	if status, location, body := request("POST", link+"?redirect_url=https%3A%2F%2Ftrusted.example.test%2Freplaced", url.Values{"registration_code": {code}}, ""); status != 303 || location != server.URL+"/tenant/auth/login?redirect_url="+url.QueryEscape(destination) {
 		t.Fatal("confirmation did not activate login", status, location, body)
+	} else {
+		loginLocation = strings.TrimPrefix(location, server.URL)
 	}
 	reconciled, err := store.FetchUserData("alice", "alice@example.test")
 	if err != nil || created["id"] != reconciled["id"] {
@@ -265,6 +297,31 @@ func TestE2ESQLiteRegistrationPortal(t *testing.T) {
 	if status, _, body := request("POST", link, url.Values{"registration_code": {code}}, ""); status != 200 || !strings.Contains(body, "Registration confirmation denied") {
 		t.Fatal("confirmation replay accepted", status, body)
 	}
+
+	// Submit the rendered form, not a handcrafted destination at completion.
+	if status, _, page := request("GET", server.URL+loginLocation, nil, ""); status != 200 {
+		t.Fatal("login page", status)
+	} else {
+		action := regexp.MustCompile(`<form[^>]*action="([^"]+)"`).FindStringSubmatch(page)
+		if len(action) != 2 {
+			t.Fatal("login form absent")
+		}
+		formURL := html.UnescapeString(action[1])
+		if !strings.HasPrefix(formURL, "/") {
+			t.Fatal("invalid login form")
+		}
+		status, sandbox, _ := request("POST", server.URL+formURL, url.Values{"username": {"alice"}, "realm": {"staff"}}, "")
+		if status != 303 {
+			t.Fatal("login start", status)
+		}
+		if status, _, _ := request("POST", sandbox, url.Values{"secret": {password}}, ""); status != 303 {
+			t.Fatal("password", status)
+		}
+		if status, location, _ := request("GET", sandbox, nil, ""); status != 303 || location != destination {
+			t.Fatal("registration destination lost at login", status, location)
+		}
+	}
+	client.Jar = nil // Later registration attempts use an anonymous consumer again.
 	native, err := authclient.NewClient(&authclient.Config{BaseURL: server.URL + "/tenant/auth", Realm: "staff", Username: "alice", Password: password}, authclient.Options{HTTPClient: client})
 	if err != nil {
 		t.Fatal(err)

@@ -189,14 +189,14 @@ async function legacyJourney(requester, approver, contextId) {
   assert.equal(await evaluate(requester, () => document.title), 'Legacy portal - Sign-in cancelled');
   assert.equal(await evaluate(requester, () => document.activeElement.id), 'cross-device-title');
   stage = 'legacy theme fresh login and approval';
-  await navigate(requester, '/auth/cross-device');
+  await navigate(requester, '/auth/cross-device?redirect_url=' + encodeURIComponent(origin + '/auth/portal?requester=legacy'));
   await waitFor(() => evaluate(requester, () => document.getElementById('cross-device-details')?.hidden === false));
   const link = await evaluate(requester, () => document.getElementById('cross-device-link').value);
   assert.equal((await command('Storage.getCookies', { browserContextId: contextId })).cookies.some(c => c.name === 'AUTHP_ACCESS_TOKEN'), false);
   await navigate(approver, link.slice(origin.length));
   await signIn(approver);
   await evaluate(approver, () => document.querySelector('button[value="approve"]').click());
-  await waitFor(() => evaluate(requester, () => location.pathname === '/auth/portal' && document.readyState === 'complete'));
+  await waitFor(() => evaluate(requester, () => location.pathname === '/auth/portal' && location.search.startsWith('?requester=') && document.readyState === 'complete'));
   assert.ok((await command('Storage.getCookies', { browserContextId: contextId })).cookies.some(c => c.name === 'AUTHP_ACCESS_TOKEN'));
   assert.deepEqual(scriptErrors, [], 'legacy theme raised an unhandled client error');
 }
@@ -224,7 +224,7 @@ async function legacyJourney(requester, approver, contextId) {
       return;
     }
     stage = 'visible login link';
-    await navigate(requester, '/auth/login');
+    await navigate(requester, '/auth/login?redirect_url=' + encodeURIComponent(origin + '/auth/portal?requester=basic'));
     const visibleLink = () => evaluate(requester, () => {
       const link = document.querySelector('#cross-device-link a');
       return link && link.getClientRects().length > 0;
@@ -322,7 +322,7 @@ async function legacyJourney(requester, approver, contextId) {
     assert.equal((await command('Storage.getCookies', { browserContextId: first.browserContextId })).cookies.some(c => c.name === 'AUTHP_ACCESS_TOKEN'), false);
     stage = 'explicit approval and requester polling';
     await evaluate(approver, () => document.querySelector('button[value="approve"]').click());
-    await waitFor(() => evaluate(requester, () => location.pathname === '/auth/portal' && document.readyState === 'complete'));
+    await waitFor(() => evaluate(requester, () => location.pathname === '/auth/portal' && location.search.startsWith('?requester=') && document.readyState === 'complete'));
     await layout(approver, '06-approved', 'Sign-in approved');
     const requesterCookies = (await command('Storage.getCookies', { browserContextId: first.browserContextId })).cookies;
     const approverCookies = (await command('Storage.getCookies', { browserContextId: second.browserContextId })).cookies;

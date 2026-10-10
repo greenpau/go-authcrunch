@@ -38,11 +38,11 @@ func (p *Portal) injectRedirectURL(_ context.Context, w http.ResponseWriter, r *
 // request's redirect_url query parameter, or an empty string. Unlike the shared
 // redirect cookie, it belongs to the one login flow whose URL carries it.
 func (p *Portal) loginReturnURL(r *http.Request, rr *requests.Request) string {
-	values := r.URL.Query()["redirect_url"]
-	if len(values) < 1 {
+	value, present := loginDestinationQuery(r)
+	if !present {
 		return ""
 	}
-	returnURL := p.trustedLoginReturnURL(values[0])
+	returnURL := p.trustedLoginReturnURL(value)
 	if returnURL == "" {
 		p.logger.Debug(
 			"login flow destination is not trusted, ignoring",
@@ -51,6 +51,33 @@ func (p *Portal) loginReturnURL(r *http.Request, rr *requests.Request) string {
 		)
 	}
 	return returnURL
+}
+
+// loginDestinationQuery preserves the first choice even when it is malformed.
+// URL.Query silently drops invalid escapes and unescaped semicolons; treating
+// those as absence would permit a later value or another tab's cookie to win.
+func loginDestinationQuery(r *http.Request) (string, bool) {
+	for field := range strings.SplitSeq(r.URL.RawQuery, "&") {
+		key, value, _ := strings.Cut(field, "=")
+		name, err := url.QueryUnescape(key)
+		if err != nil || name != "redirect_url" {
+			continue
+		}
+		if strings.Contains(field, ";") {
+			return "", true
+		}
+		decoded, err := url.QueryUnescape(value)
+		if err != nil {
+			return "", true
+		}
+		return decoded, true
+	}
+	return "", false
+}
+
+func hasLoginDestination(r *http.Request) bool {
+	_, present := loginDestinationQuery(r)
+	return present
 }
 
 // errLoginElsewhereNotAdmitted reports that the login page's probe carries a
@@ -106,28 +133,24 @@ func (p *Portal) consumeOwnRedirectCookie(w http.ResponseWriter, r *http.Request
 }
 
 // maxLoginReturnURLLength bounds a destination carried by a login flow, which
-// the portal keeps for the life of that login; a longer one is left to the
-// redirect cookie, which the browser holds.
-const maxLoginReturnURLLength = 2048
+// the portal keeps for the life of that login. Values beyond the bound fail
+// closed to the portal; they never switch to another tab's cookie.
+const maxLoginReturnURLLength = 16 * 1024
 
-// trustedLoginReturnURL returns the trusted destination a login flow carries
-// itself, or an empty string. The bound applies to the value as returned,
-// which re-encoding can lengthen.
+// Leave room for attributes within browser cookie limits. Long destinations
+// travel with their login transaction and are never written into a cookie.
+const maxRedirectCookieURLLength = 2048
+
+// trustedLoginReturnURL applies the same bounded policy as legacy cookies.
 func (p *Portal) trustedLoginReturnURL(raw string) string {
-	if len(raw) > maxLoginReturnURLLength {
-		return ""
-	}
-	if returnURL := p.trustedLoginRedirectURL(raw); len(returnURL) <= maxLoginReturnURLLength {
-		return returnURL
-	}
-	return ""
+	return p.trustedLoginRedirectURL(raw)
 }
 
 // trustedLoginRedirectURL applies the trusted login redirect rules to an
 // absolute HTTP(S) destination, returning it without its login hint, or an
 // empty string. The login flows and the redirect cookie share these rules.
 func (p *Portal) trustedLoginRedirectURL(raw string) string {
-	if raw == "" || len(p.config.TrustedLoginRedirectURIConfigs) < 1 {
+	if raw == "" || len(raw) > maxLoginReturnURLLength || len(p.config.TrustedLoginRedirectURIConfigs) < 1 {
 		return ""
 	}
 	parsed, err := url.Parse(raw)
@@ -137,7 +160,11 @@ func (p *Portal) trustedLoginRedirectURL(raw string) string {
 	if !redirects.Match(parsed, p.config.TrustedLoginRedirectURIConfigs) {
 		return ""
 	}
-	return util.StripQueryParam(raw, "login_hint")
+	destination := util.StripQueryParam(raw, "login_hint")
+	if len(destination) > maxLoginReturnURLLength {
+		return ""
+	}
+	return destination
 }
 
 // recordRedirectURL persists a trusted post-login destination without assigning
@@ -145,8 +172,7 @@ func (p *Portal) trustedLoginRedirectURL(raw string) string {
 // endpoint.
 func (p *Portal) recordRedirectURL(w http.ResponseWriter, r *http.Request, rr *requests.Request) string {
 	if r.Method == "GET" {
-		q := r.URL.Query()
-		if redirectURL, exists := q["redirect_url"]; exists {
+		if redirectURL, exists := loginDestinationQuery(r); exists {
 			if len(p.config.TrustedLoginRedirectURIConfigs) < 1 {
 				p.logger.Debug(
 					"trust login redirect uri is not configured, but detected redirect_url attempt",
@@ -156,16 +182,7 @@ func (p *Portal) recordRedirectURL(w http.ResponseWriter, r *http.Request, rr *r
 				return ""
 			}
 
-			if len(redirectURL) < 1 {
-				p.logger.Debug(
-					"unexpected redirect_url format",
-					zap.String("session_id", rr.Upstream.SessionID),
-					zap.String("request_id", rr.ID),
-				)
-				return ""
-			}
-
-			loginRedirectURL := p.trustedLoginRedirectURL(redirectURL[0])
+			loginRedirectURL := p.trustedLoginRedirectURL(redirectURL)
 			if loginRedirectURL == "" {
 				p.logger.Debug(
 					"provided redirect_url is not trusted",
@@ -175,17 +192,38 @@ func (p *Portal) recordRedirectURL(w http.ResponseWriter, r *http.Request, rr *r
 				return ""
 			}
 
+			if len(loginRedirectURL) > maxRedirectCookieURLLength {
+				return ""
+			}
+
 			c := p.cookie.GetRefererCookie(rr.Upstream.BasePath, loginRedirectURL)
 			p.logger.Debug(
 				"redirect recorded",
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
 				zap.String("redirect_url", c),
-				zap.Any("redirect_url_any", redirectURL),
+				zap.Any("redirect_url_any", []string{redirectURL}),
 			)
 			w.Header().Add("Set-Cookie", c)
 			return c
 		}
 	}
 	return ""
+}
+
+// boundLoginPageLocation preserves an explicit empty destination. An empty or
+// rejected value means the portal, not whichever shared cookie happens to remain.
+func boundLoginPageLocation(returnURL string, fresh bool) string {
+	query := url.Values{"redirect_url": {returnURL}}
+	if fresh {
+		query.Set("fresh", "1")
+	}
+	return "/login?" + query.Encode()
+}
+
+func (p *Portal) loginPageRequestLocation(r *http.Request, rr *requests.Request, fresh bool) string {
+	if hasLoginDestination(r) {
+		return boundLoginPageLocation(p.loginReturnURL(r, rr), fresh)
+	}
+	return loginPageLocation(p.loginReturnURL(r, rr), fresh)
 }

@@ -203,3 +203,20 @@ test("a login page without a destination does not watch", () => {
   assert.equal(env.intervals.length, 0);
   assert.equal(env.listeners.has("visibilitychange"), false);
 });
+
+test("realm registration navigation keeps the page destination", () => {
+  const destination = "https://app.test/return?x=one%26two";
+  for (const value of [destination, ""]) {
+    const e = environment("providers", { dataset: { loginDestination: value, returnUrl: "/auth/portal?redirect_url=" } });
+    for (const id of ["user_actions", "user_register_link", "forgot_username_link", "contact_support_link"]) {
+      const node = e.document.createElement(id);
+      const anchor = { href: "" };
+      node.getElementsByTagName = () => [anchor];
+    }
+    e.showLoginForm("staff", "yes", "no", "no", "/auth/");
+    const link = new URL(e.elements.get("user_register_link").getElementsByTagName("a")[0].href, "https://portal.test");
+    assert.equal(link.pathname, "/auth/register/staff");
+    assert.equal(link.searchParams.get("redirect_url"), value);
+    assert.equal(e.elements.get("realm").value, "staff");
+  }
+});

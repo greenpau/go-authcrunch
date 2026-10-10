@@ -254,6 +254,8 @@ var loginFormAction = regexp.MustCompile(`<form[^>]*action="([^"]*/login[^"]*)"[
 
 var loginReturnURL = regexp.MustCompile(`login\.js"[^>]*data-return-url="([^"]*)"`)
 
+var loginProbeURL = regexp.MustCompile(`login\.js"[^>]*data-whoami="([^"]*)"`)
+
 // redirectTab is one browser tab: its protected destination and the login page
 // it was left on. The tabs of one test share a cookie jar, as a browser's do.
 type redirectTab struct {
@@ -263,6 +265,7 @@ type redirectTab struct {
 	// returnURL is where the page's script sends the tab once the browser is
 	// signed in elsewhere.
 	returnURL string
+	probeURL  string
 }
 
 // follow requests target and expects a redirect, returning its absolute destination.
@@ -360,6 +363,9 @@ func (f *redirectLoginFixture) loadLogin(t *testing.T, target string, loginURL *
 	if m := loginReturnURL.FindStringSubmatch(page); m != nil {
 		tab.returnURL = html.UnescapeString(m[1])
 	}
+	if m := loginProbeURL.FindStringSubmatch(page); m != nil {
+		tab.probeURL = html.UnescapeString(m[1])
+	}
 	return tab
 }
 
@@ -408,7 +414,7 @@ func TestE2EServerAuthorizationLoginRedirectPerTab(t *testing.T) {
 			resubmitted := f.openTab(t, "/tab/resubmitted")
 
 			for _, tab := range []*redirectTab{first, reloaded, resubmitted} {
-				if tab.returnURL != tab.target {
+				if tab.returnURL != tab.target || tab.probeURL != "/auth/whoami?probe=login" {
 					t.Errorf("tab %s page sends a signed-in browser to %q", tab.target, tab.returnURL)
 				}
 			}
@@ -448,44 +454,60 @@ func TestE2EServerAuthorizationLoginRedirectPerTab(t *testing.T) {
 	}
 }
 
-// A destination is kept on the server for the life of its login, so one that is
-// unreasonably long is not carried with the flow; the cookie alone holds it, as
-// it did before destinations travelled per tab. An untrusted destination is
-// carried neither way, and the login lands on the portal.
-func TestE2EServerAuthorizationLoginRedirectNotCarried(t *testing.T) {
+// Long destinations remain bound to the login without a browser cookie. Values
+// outside the bound or trust policy select the portal even when another tab
+// changes the shared cookie before authentication completes.
+func TestE2EServerAuthorizationLoginRedirectBoundaries(t *testing.T) {
 	f := newRedirectLoginFixture(t, 1, "/auth/")
 	var err error
 	f.client.Jar, err = cookiejar.New(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tab := f.openTab(t, "/tab/"+strings.Repeat("a", 3000))
-	if tab.loginURL.RawQuery != "" || tab.form.String() != f.portal+"/auth/login" || tab.returnURL != "/auth/portal" {
-		t.Fatalf("oversized destination was carried: login page %s, form %s", tab.loginURL.Path+"?"+tab.loginURL.RawQuery[:min(len(tab.loginURL.RawQuery), 40)], tab.form.Path)
+	tab := f.openTab(t, "/tab/"+strings.Repeat("a", 8000))
+	if tab.loginURL.Query().Get("redirect_url") != tab.target || tab.form.Query().Get("redirect_url") != tab.target || tab.returnURL != tab.target {
+		t.Fatal("long destination was not retained in the page and form")
 	}
+	for _, c := range f.client.Jar.Cookies(tab.loginURL) {
+		if c.Name == "AUTHP_REDIRECT_URL" {
+			t.Fatal("long destination was written into a redirect cookie")
+		}
+	}
+	f.client.Jar.SetCookies(tab.loginURL, []*http.Cookie{{Name: "AUTHP_REDIRECT_URL", Value: f.application + "/another-tab", Path: "/auth"}})
 	if got := f.signIn(t, tab.form); got.String() != tab.target {
-		t.Fatalf("oversized destination did not return through the cookie, landed on %.80s", got)
+		t.Fatalf("long destination lost to another tab, landed on %.80s", got)
 	}
 	f.request(t, http.MethodGet, tab.target, nil, http.StatusOK)
 
-	f.client.Jar, err = cookiejar.New(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	untrusted, err := url.Parse(f.portal + "/auth/login?redirect_url=" + url.QueryEscape("https://untrusted.example.test/tab"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	tab = f.loadLogin(t, "", untrusted)
-	if tab.form.String() != f.portal+"/auth/login" || tab.returnURL != "/auth/portal" {
-		t.Fatalf("untrusted destination was carried: form %s, page destination %q", tab.form, tab.returnURL)
-	}
-	if got := f.signIn(t, tab.form); got.String() != f.portal+"/auth/portal" {
-		t.Fatalf("untrusted destination login landed on %s", got)
-	}
-	// Signed in, the untrusted login URL itself is submitted again.
-	if got := f.leavePortal(t, f.follow(t, http.MethodPost, untrusted, url.Values{"username": {"alice"}, "realm": {"local"}})); got.String() != f.portal+"/auth/portal" {
-		t.Fatalf("signed-in untrusted submission landed on %s", got)
+	for _, query := range []string{
+		"redirect_url=" + url.QueryEscape("https://untrusted.example.test/tab"),
+		"redirect_url=" + url.QueryEscape(f.application+"/tab/"+strings.Repeat("a", 17000)),
+		"redirect_url=",
+		"redirect_url=%zz",
+		"redirect_url=%zz&redirect_url=" + url.QueryEscape(f.application+"/second"),
+		"redirect_url=" + f.application + "/first;ignored=1&redirect_url=" + url.QueryEscape(f.application+"/second"),
+	} {
+		f.client.Jar, err = cookiejar.New(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		login, err := url.Parse(f.portal + "/auth/login?" + query)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tab = f.loadLogin(t, "", login)
+		if tab.form.String() != f.portal+"/auth/login?redirect_url=" || tab.returnURL != "/auth/portal?redirect_url=" {
+			t.Fatalf("rejected destination did not bind an empty choice: form %s, page destination %q", tab.form, tab.returnURL)
+		}
+		f.client.Jar.SetCookies(login, []*http.Cookie{{Name: "AUTHP_REDIRECT_URL", Value: f.application + "/another-tab", Path: "/auth"}})
+		if got := f.signIn(t, tab.form); got.String() != f.portal+"/auth/portal?redirect_url=" {
+			t.Fatalf("rejected destination login landed on %s", got)
+		}
+		// Submitting the original URL again while signed in must stay isolated.
+		f.client.Jar.SetCookies(login, []*http.Cookie{{Name: "AUTHP_REDIRECT_URL", Value: f.application + "/another-tab", Path: "/auth"}})
+		if got := f.leavePortal(t, f.follow(t, http.MethodPost, login, url.Values{"username": {"alice"}, "realm": {"local"}})); got.String() != f.portal+"/auth/portal?redirect_url=" {
+			t.Fatalf("signed-in rejected submission landed on %s", got)
+		}
 	}
 }
 
@@ -506,8 +528,8 @@ func TestE2EServerAuthorizationLoginRedirectFreshBack(t *testing.T) {
 	}
 	tab := f.loadLogin(t, target, login)
 	// html/template escapes the query with lowercase hex; compare its values.
-	if tab.form.Path != login.Path || tab.form.Query().Encode() != login.Query().Encode() || tab.returnURL != "" {
-		t.Fatalf("fresh login page posts to %s and watches for %q", tab.form, tab.returnURL)
+	if tab.form.Path != login.Path || tab.form.Query().Encode() != login.Query().Encode() || tab.probeURL != "" {
+		t.Fatalf("fresh login page posts to %s and probes %q", tab.form, tab.probeURL)
 	}
 	sandbox := f.follow(t, http.MethodPost, tab.form, url.Values{"username": {"alice"}, "realm": {"local"}})
 	back := f.follow(t, http.MethodGet, sandbox.JoinPath("terminate"), nil)

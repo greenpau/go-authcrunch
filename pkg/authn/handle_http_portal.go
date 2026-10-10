@@ -49,7 +49,7 @@ func (p *Portal) handleHTTPPortal(ctx context.Context, w http.ResponseWriter, r 
 			return p.handleSessionPage(ctx, w, r, rr, "continue")
 		}
 		// Keep the destination in this tab's URL, as the portal root does.
-		return p.handleHTTPRedirect(ctx, w, r, rr, loginPageLocation(p.loginReturnURL(r, rr), false))
+		return p.handleHTTPRedirect(ctx, w, r, rr, p.loginPageRequestLocation(r, rr, false))
 	}
 	usr, err := p.sessions.Get(parsedUser.Claims.ID)
 	if err != nil {
@@ -61,13 +61,13 @@ func (p *Portal) handleHTTPPortal(ctx context.Context, w http.ResponseWriter, r 
 			zap.Any("user", parsedUser.Claims),
 			zap.Error(err),
 		)
-		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
+		return p.handleHTTPRedirect(ctx, w, r, rr, p.loginPageRequestLocation(r, rr, false))
 	}
 	return p.handleHTTPPortalScreen(ctx, w, r, rr, usr)
 }
 
 func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
-	if cookie, err := r.Cookie(p.cookie.RefererCookieName); err == nil {
+	if cookie, err := r.Cookie(p.cookie.RefererCookieName); err == nil && !hasLoginDestination(r) {
 		if redirectURL := p.trustedLoginRedirectURL(cookie.Value); redirectURL != "" {
 			p.logger.Debug(
 				"Cookie-based redirect",

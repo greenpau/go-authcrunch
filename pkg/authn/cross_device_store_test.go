@@ -17,6 +17,7 @@ package authn
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -29,7 +30,7 @@ func crossDeviceStoreFixture(t *testing.T) (*crossDeviceStore, *time.Time, *cros
 	t.Helper()
 	now := time.Now()
 	s := newCrossDeviceStore(func() time.Time { return now })
-	e, secret, err := s.start("https://portal.test", "/auth/", "192.0.2.1")
+	e, secret, err := s.start("https://portal.test", "/auth/", "192.0.2.1", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +137,7 @@ func TestCrossDeviceStoreExpiryCancellationAndShutdown(t *testing.T) {
 				t.Fatal("dead request approved")
 			}
 			if state == "closed" {
-				if _, _, err := s.start(e.origin, e.basePath, "new"); err == nil {
+				if _, _, err := s.start(e.origin, e.basePath, "new", ""); err == nil {
 					t.Fatal("closed store admitted request")
 				}
 			}
@@ -147,23 +148,23 @@ func TestCrossDeviceStoreExpiryCancellationAndShutdown(t *testing.T) {
 func TestCrossDeviceStoreCapacity(t *testing.T) {
 	s, now, e, _, _ := crossDeviceStoreFixture(t)
 	for i := 1; i < crossDeviceSourceCapacity; i++ {
-		if _, _, err := s.start(e.origin, e.basePath, e.source); err != nil {
+		if _, _, err := s.start(e.origin, e.basePath, e.source, ""); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, _, err := s.start(e.origin, e.basePath, e.source); !errors.Is(err, errCrossDeviceLimited) {
+	if _, _, err := s.start(e.origin, e.basePath, e.source, ""); !errors.Is(err, errCrossDeviceLimited) {
 		t.Fatal("source capacity bypassed")
 	}
 	for i := crossDeviceSourceCapacity; i < crossDeviceCapacity; i++ {
-		if _, _, err := s.start(e.origin, e.basePath, fmt.Sprint(i)); err != nil {
+		if _, _, err := s.start(e.origin, e.basePath, fmt.Sprint(i), ""); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, _, err := s.start(e.origin, e.basePath, "new"); !errors.Is(err, errCrossDeviceLimited) {
+	if _, _, err := s.start(e.origin, e.basePath, "new", ""); !errors.Is(err, errCrossDeviceLimited) {
 		t.Fatal("global capacity bypassed")
 	}
 	*now = now.Add(crossDeviceLifetime)
-	if _, _, err := s.start(e.origin, e.basePath, e.source); err != nil {
+	if _, _, err := s.start(e.origin, e.basePath, e.source, ""); err != nil {
 		t.Fatal("expired requests retained capacity")
 	}
 }
@@ -196,7 +197,7 @@ func TestCrossDeviceStoreConcurrentRedemption(t *testing.T) {
 
 func TestCrossDeviceStoreBindingIsolationAndLogout(t *testing.T) {
 	s, _, first, _, proof := crossDeviceStoreFixture(t)
-	second, secret, err := s.start(first.origin, first.basePath, "other")
+	second, secret, err := s.start(first.origin, first.basePath, "other", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,5 +223,43 @@ func TestCrossDeviceStoreBindingIsolationAndLogout(t *testing.T) {
 	s.revoke("rotated", "family")
 	if _, err := s.poll(second.code, secret, second.origin, second.basePath, false); !errors.Is(err, errCrossDeviceDenied) {
 		t.Fatal("logged-out family redeemed")
+	}
+}
+
+// Approver identity evidence must never replace the requester's navigation.
+func TestCrossDeviceStoreRequesterDestinations(t *testing.T) {
+	s, _, _, _, proof := crossDeviceStoreFixture(t)
+	destinations := []string{"https://app.test/first", "https://app.test/second", ""}
+	entries := make([]*crossDeviceRequest, len(destinations))
+	secrets := make([]string, len(destinations))
+	for i, destination := range destinations {
+		var err error
+		entries[i], secrets[i], err = s.start("https://portal.test", "/auth/", fmt.Sprint(i), destination)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i, e := range slices.Backward(entries) {
+		binding := fmt.Sprint(i)
+		if err := s.bind(e.code, binding, e.origin, e.basePath); err != nil {
+			t.Fatal(err)
+		}
+		proof.returnURL = "https://app.test/approver"
+		if !s.complete(binding, e.origin, e.basePath, proof) {
+			t.Fatal("complete")
+		}
+		if err := s.decide(binding, e.origin, e.basePath, true); err != nil {
+			t.Fatal(err)
+		}
+		result, err := s.poll(e.code, secrets[i], e.origin, e.basePath, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.returnURL != destinations[i] {
+			t.Fatalf("destination = %q, want %q", result.returnURL, destinations[i])
+		}
+		if _, err := s.poll(e.code, secrets[i], e.origin, e.basePath, false); err == nil {
+			t.Fatal("replayed transfer")
+		}
 	}
 }

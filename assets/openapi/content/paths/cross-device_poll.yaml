@@ -14,7 +14,8 @@ post:
     transfers are consumed once, issue browser cookies (never JSON bearer credentials), and return the
     portal redirect. Session revocation/expiry before redemption fails. Content-Type parameters such as
     charset=utf-8 are accepted. Form fields are read from the body, without trimming; query fields cannot
-    supply code, secret or csrf. Repeated body fields fail, including unrecognized fields.'
+    supply code, secret or csrf. Repeated body fields fail, including unrecognized fields.
+    The approved next URL is the requester destination captured at start and revalidated at redemption; empty or rejected destinations select the portal. Poll query values and the approving device cannot replace it.'
   security: []
   responses:
     '200':

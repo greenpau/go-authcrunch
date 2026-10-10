@@ -200,9 +200,10 @@ components:
     SAMLBrowserBinding:
       type: apiKey
       in: cookie
-      name: AUTHP_SAML_SESSION_ID
-      description: Dedicated host-only SAML browser-binding cookie issued by portal-started login. The
-        name can be configured. Secure, HttpOnly, SameSite=None, Path=/, Max-Age=300; exactly one matching
+      name: AUTHP_SAML_SESSION_ID_<RelayState>
+      description: Transaction-specific host-only SAML browser proof. The wire name is the configured
+        base (default AUTHP_SAML_SESSION_ID), an underscore, and the exact canonical 43-character
+        RelayState. The angle-bracket suffix here is a placeholder; OpenAPI cannot model dynamic cookie names. Secure, HttpOnly, SameSite=None, Path=/, Max-Age=300; exactly one matching
         cookie must return with the IdP POST. RelayState and the signed response are independently required.
   headers:
     NoStore:

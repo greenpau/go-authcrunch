@@ -21,16 +21,27 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
-// injectSAMLSessionID supplies the provider with a short-lived browser binding
-// distinct from the ordinary portal session. Initiation always rotates it, so a
-// parent-domain cookie cannot choose the value bound into new SAML state.
+// injectSAMLSessionID supplies a fresh secret for each initiation. The cookie
+// carrying it is selected by RelayState, so concurrent tabs never replace each
+// other's proof. An incoming cookie cannot choose a new transaction's secret.
 func (p *Portal) injectSAMLSessionID(w http.ResponseWriter, r *http.Request, rr *requests.Request) {
 	if r.Method != http.MethodPost {
 		rr.Upstream.SessionID = util.GetRandomStringFromRange(36, 46)
-		w.Header().Add("Set-Cookie", p.cookie.GetSAMLSessionIDCookie(rr.Upstream.SessionID))
 		return
 	}
-	cookies := r.CookiesNamed(p.cookie.SAMLSessionIDCookieName)
+	rr.Upstream.SessionID = ""
+	if r.ContentLength < 500 || r.ContentLength > 30000 || r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 30000)
+	if r.ParseForm() != nil || len(r.PostForm["RelayState"]) != 1 {
+		return
+	}
+	name := p.cookie.SAMLSessionIDCookieNameForState(r.PostForm.Get("RelayState"))
+	if name == "" {
+		return
+	}
+	cookies := r.CookiesNamed(name)
 	if len(cookies) != 1 {
 		rr.Upstream.SessionID = ""
 		return

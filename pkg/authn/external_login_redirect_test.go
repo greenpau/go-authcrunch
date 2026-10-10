@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
@@ -51,6 +52,7 @@ func (p *externalLoginTestProvider) Request(op operator.Type, r *requests.Reques
 	if op == operator.Authenticate {
 		p.returnURL = r.Response.ReturnURL
 		r.Response.Code = http.StatusFound
+		r.Response.LoginState = strings.Repeat("A", 43)
 		if p.redirectURL != "" {
 			r.Response.RedirectURL = p.redirectURL
 		}
@@ -75,8 +77,7 @@ func TestExternalLoginSeparatesReturnURLFromProviderRedirect(t *testing.T) {
 		wantLocation     string
 		wantReturnCookie bool
 		staleRedirectURL string
-		// wantBoundURL is the destination bound to the login itself. Only
-		// OAuth binds one; a SAML callback URL must not be able to choose it.
+		// Both providers bind the initiating request's destination.
 		wantBoundURL string
 	}{
 		{
@@ -97,6 +98,7 @@ func TestExternalLoginSeparatesReturnURLFromProviderRedirect(t *testing.T) {
 			wantStatus:       http.StatusFound,
 			wantLocation:     "https://identity.example.test/saml/sso",
 			wantReturnCookie: true,
+			wantBoundURL:     returnURL,
 		},
 		{
 			name:         "untrusted return URL does not replace provider destination",
@@ -122,6 +124,7 @@ func TestExternalLoginSeparatesReturnURLFromProviderRedirect(t *testing.T) {
 			wantStatus:       http.StatusBadGateway,
 			wantReturnCookie: true,
 			staleRedirectURL: "https://stale.example.test/saml/sso",
+			wantBoundURL:     returnURL,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

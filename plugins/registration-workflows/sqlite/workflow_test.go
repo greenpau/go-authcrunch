@@ -71,7 +71,7 @@ func TestRegistrationSingleUseAndLockout(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := w.GetRegistrationEntry(id)
-	if err != nil || len(got) != 3 || got["username"] != "alice" {
+	if err != nil || len(got) != 4 || got["username"] != "alice" {
 		t.Fatal("unsafe metadata", err)
 	}
 	got["username"] = "attacker"
@@ -423,7 +423,7 @@ func TestRegistrationCapacityAndConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := w.db.Write(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
-		_, err := tx.ExecContext(ctx, "INSERT INTO registrations SELECT CAST(printf('%064d',n.x) AS BLOB),binding,username,email,enrollment,password,code,expires,attempts,state FROM registrations CROSS JOIN (WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM n WHERE x<9999) SELECT x FROM n) n")
+		_, err := tx.ExecContext(ctx, "INSERT INTO registrations SELECT CAST(printf('%064d',n.x) AS BLOB),binding,username,email,enrollment,password,code,expires,attempts,state,return_url FROM registrations CROSS JOIN (WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM n WHERE x<9999) SELECT x FROM n) n")
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -531,5 +531,48 @@ func TestRegistrationExpiryDuringAccountLock(t *testing.T) {
 	}
 	if _, err := w.store.FetchUserData("alice", "alice@example.test"); err == nil {
 		t.Fatal("expired registration persisted an account")
+	}
+}
+
+func TestRegistrationDestinationSurvivesRestart(t *testing.T) {
+	w, config := setupWorkflow(t)
+	id := strings.Repeat("d", 64)
+	data := enrollment("destination")
+	destination := "https://app.test/" + strings.Repeat("x", 8000)
+	data["return_url"] = destination
+	if err := w.AddRegistrationEntry(id, data); err != nil {
+		t.Fatal(err)
+	}
+	data["return_url"] = "https://app.test/replaced"
+	if err := w.AddRegistrationEntry(id, data); !errors.Is(err, ErrConflict) {
+		t.Fatal("mutable destination", err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := New(t.Context(), config, w.store, w.outbox)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	result, err := reopened.GetRegistrationEntry(id)
+	if err != nil || result["return_url"] != destination {
+		t.Fatal("lost destination after restart", err)
+	}
+	data["return_url"] = strings.Repeat("x", 16385)
+	if err := reopened.AddRegistrationEntry(strings.Repeat("e", 64), data); !errors.Is(err, ErrInvalid) {
+		t.Fatal("unbounded destination", err)
+	}
+	if err := reopened.ConfirmRegistration(t.Context(), id, "ABC123"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reopened.GetRegistrationEntry(id); !errors.Is(err, ErrDenied) {
+		t.Fatal("spent destination published", err)
+	}
+	var retained string
+	if err := reopened.db.Read(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+		return tx.QueryRowContext(ctx, "SELECT return_url FROM registrations").Scan(&retained)
+	}); err != nil || retained != "" {
+		t.Fatal("completed registration retained navigation metadata", err)
 	}
 }

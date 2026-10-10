@@ -221,6 +221,9 @@ remain active when nonce compatibility is disabled.
 The login binding also carries the embedding application's post-login destination:
 the `requests.Response.ReturnURL` present when login starts is published with the
 binding and is opaque to the provider. It never enters the authorization URL.
+Successful completion also sets runtime `ReturnURLBound`, including an empty
+destination, so the portal cannot fall back to another tab's cookie. The portal
+revalidates the destination at grant and uses the shared 16384-byte bound.
 Every callback request clears any `ReturnURL` it carried before the state is
 claimed, and sets the bound value only on success, so neither a callback URL nor a
 failed or unadmitted callback can choose a destination. The value is read before

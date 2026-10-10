@@ -68,6 +68,12 @@ type Response struct {
 	// is separate from RedirectURL, which identity providers use for their
 	// authorization endpoint.
 	ReturnURL string `json:"-" xml:"-" yaml:"-"`
+	// ReturnURLBound means the login transaction owns its destination. An empty
+	// or rejected destination then selects the portal, never a shared cookie.
+	ReturnURLBound bool `json:"-" xml:"-" yaml:"-"`
+	// LoginState identifies a provider's browser transaction, independently of
+	// its browser-binding secret. SAML uses it to scope the binding cookie.
+	LoginState string `json:"-" xml:"-" yaml:"-"`
 }
 
 // IdentityTokenCookie holds the id_token cookie name and payload.

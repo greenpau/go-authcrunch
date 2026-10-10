@@ -118,10 +118,11 @@ func TestE2EExternalLoginReturnURLIsSeparateFromProviderRedirect(t *testing.T) {
 			wantFinal:        issuer.server.URL + "/post-login",
 			wantReturnCookie: true,
 		},
+		{name: "long destination without a cookie", returnURL: issuer.server.URL + "/post-login?q=" + strings.Repeat("x", 8000), wantFinal: issuer.server.URL + "/post-login?q=" + strings.Repeat("x", 8000)},
 		{
 			name:      "untrusted return URL is rejected",
 			returnURL: "https://evil.example.test/post-login",
-			wantFinal: portal.server.URL + "/auth/portal",
+			wantFinal: portal.server.URL + "/auth/portal?redirect_url=",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

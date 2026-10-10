@@ -130,7 +130,11 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 	case sandboxPartition == "terminate":
 		p.sandboxes.Delete(sandboxID)
 		// Back to this tab's own login page, which keeps its destination.
-		return p.handleHTTPRedirectSeeOther(ctx, w, r, rr, loginPageLocation(usr.LoginReturnURL, usr.LoginFresh))
+		location := loginPageLocation(usr.LoginReturnURL, usr.LoginFresh)
+		if usr.LoginReturnURLBound {
+			location = boundLoginPageLocation(usr.LoginReturnURL, usr.LoginFresh)
+		}
+		return p.handleHTTPRedirectSeeOther(ctx, w, r, rr, location)
 	}
 
 	p.logger.Debug(
@@ -210,6 +214,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		}
 		// The issued user is built afresh; the destination stays on the sandbox.
 		rr.Response.ReturnURL = proof.LoginReturnURL
+		rr.Response.ReturnURLBound = proof.LoginReturnURLBound
 		responseHeaders := w.Header().Clone()
 		if err := p.grantAccess(ctx, w, r, rr, issued); err != nil {
 			cleanupErr := p.discardUndeliveredRefresh(ctx, tokens, proof.RefreshTransport)
@@ -257,6 +262,10 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 	resp.BaseURL(rr.Upstream.BasePath)
 	resp.Data["id"] = sandboxID
 	maps.Copy(resp.Data, data)
+	if data["view"] == "terminate" {
+		p.bindLoginNavigation(resp, r, usr.LoginReturnURL)
+		resp.LoginNavigation.Fresh = usr.LoginFresh
+	}
 
 	resp.Data["i18n_mfa_requirement_notice"] = translate.Translate("mfa_requirement_notice", p.ui.Language, nil)
 	resp.Data["i18n_mfa_not_configured_error"] = translate.Translate("mfa_not_configured_error", p.ui.Language, nil)

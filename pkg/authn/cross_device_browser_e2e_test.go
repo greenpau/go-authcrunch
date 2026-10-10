@@ -28,6 +28,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	cookieparser "github.com/greenpau/go-authcrunch/pkg/authn/cookie/parser"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 )
 
 func TestE2ECrossDeviceBrowser(t *testing.T) {
@@ -42,6 +43,11 @@ func testCrossDeviceBrowser(t *testing.T, theme string) {
 	t.Helper()
 	f, _, _ := newLoginIdentityConfiguredE2E(t, true, true, false, "", func(config *authn.PortalConfig) {
 		crossDeviceConfig(t, config)
+		trusted, err := redirects.NewRedirectURIMatchConfig("regex", `^127\.0\.0\.1:[0-9]+$`, "prefix", "/auth/portal")
+		if err != nil {
+			t.Fatal(err)
+		}
+		config.TrustedLoginRedirectURIConfigs = []*redirects.RedirectURIMatchConfig{trusted}
 		if theme == "legacy" {
 			config.UI = &ui.Parameters{Templates: map[string]string{"cross_device": "ui/testdata/cross_device_legacy.template"}}
 		}

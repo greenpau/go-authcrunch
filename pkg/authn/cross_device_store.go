@@ -52,6 +52,7 @@ type crossDeviceRequest struct {
 	secret                            [32]byte
 	binding                           [32]byte
 	origin, basePath, source, display string
+	returnURL                         string
 	expires, nextPoll                 time.Time
 	approved                          bool
 	proof                             *crossDeviceProof
@@ -63,6 +64,8 @@ type crossDeviceProof struct {
 	refreshSessionID string
 	sessionToken     [32]byte
 	expires          int64
+	// The destination belongs to the requester, independently of the approver.
+	returnURL string
 	// Provider attributes captured before portal transforms, as JSON, so they
 	// can be transformed for the requesting device without sharing maps.
 	providerClaims []byte
@@ -75,7 +78,7 @@ func newCrossDeviceStore(now func() time.Time) *crossDeviceStore {
 
 func crossDeviceHash(s string) [32]byte { return sha256.Sum256([]byte(s)) }
 
-func (s *crossDeviceStore) start(origin, basePath, source string) (*crossDeviceRequest, string, error) {
+func (s *crossDeviceStore) start(origin, basePath, source, returnURL string) (*crossDeviceRequest, string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closed {
@@ -98,6 +101,7 @@ func (s *crossDeviceStore) start(origin, basePath, source string) (*crossDeviceR
 	secret := rand.Text()
 	display := rand.Text()[:8]
 	entry := &crossDeviceRequest{code: rand.Text(), secret: crossDeviceHash(secret), origin: origin, basePath: basePath, source: source, display: display[:4] + "-" + display[4:], expires: now.Add(crossDeviceLifetime)}
+	entry.returnURL = returnURL
 	s.entries[crossDeviceHash(entry.code)] = entry
 	copy := *entry
 	return &copy, secret, nil
@@ -240,7 +244,9 @@ func (s *crossDeviceStore) poll(code, secret, origin, basePath string, cancel bo
 	if entry.proof == nil || now.Unix() >= entry.proof.expires {
 		return nil, errCrossDeviceDenied
 	}
-	return entry.proof, nil
+	proof := *entry.proof
+	proof.returnURL = entry.returnURL
+	return &proof, nil
 }
 
 func (s *crossDeviceStore) close() {

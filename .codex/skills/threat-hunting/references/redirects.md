@@ -51,39 +51,77 @@ destination, per flow or in the cookie (`recordRedirectURL`, `grantAccess`,
 `handleHTTPPortalScreen`): `TrustedLoginRedirectURIConfigs`, an absolute `http`
 or `https` URL with a host, a `redirects.Match`, and `login_hint` stripped. A
 browser reads the first path segment of a URL without a host as its host, so
-such a URL is never trusted. `Portal.trustedLoginReturnURL` adds the per-flow
-storage bound of 2048 bytes, both as received and after re-encoding, which can
-lengthen it. The bound is not a trust rule: a longer trusted destination still
-travels in the cookie, while an untrusted one is trusted by neither path.
-`loginReturnURL` applies the check to the first
-`redirect_url` query value only. The capture points are the redirects from the
-portal root and from a signed-out portal page to the login page, which keep
-`redirect_url` in its URL (`loginPageLocation`), the login page's form target and
-provider links, the login POST (stored on the sandbox user as `LoginReturnURL`,
-with `LoginFresh`, and restored when the user goes back from the password step or
-starts over after a failed login), and an OAuth login start (bound to the
-provider's state; see [OAuth browser
-state](../../oauth-identity-provider/SKILL.md#browser-state-and-nonce-policy)). A
-SAML login and its ACS callback carry none, and neither does an HTTP login
-provider: its first request must have an empty query, so `configureLoginIcons`
-marks only OAuth/SAML authenticators `login_return_url_enabled`, and
-`handleHTTPProviderLogin` resets the response. An oversized value is not carried
-per flow and still travels in the cookie; an untrusted one travels in neither.
-The cookie is still written
-for a login page that renders, so themes without the new template keys, SAML, HTTP
-login providers, registration and cross-device requesters keep the previous shared
-behavior.
+such a URL is never trusted. Destinations are bounded to 16384 bytes before and
+again after removing `login_hint` and re-encoding. Values above 2048 bytes must
+never be serialized into redirect cookies; they travel with their transaction.
+The first `redirect_url` value chooses the destination. An explicitly empty,
+untrusted, oversized or subsequently distrusted choice means the portal; it must
+never fall back to another tab's cookie. Keep the explicit `redirect_url=` marker
+on local continuations, including the final portal redirect, to protect the GET
+following a 303 from intervening cookie writes. Legacy clients without any flow
+context can still use the cookie within the common hard bound.
 
-`grantAccess` revalidates `requests.Response.ReturnURL` and prefers it over the
-cookie, still consuming the cookie with exactly one deletion. A flow destination
-that is no longer trusted falls back to the cookie, then to the portal. Never
+Preserve the presence of malformed first values too. Go's `URL.Query` silently
+drops invalid escapes and unescaped semicolons, allowing a later value to win.
+`loginDestinationQuery` selects the first decoded parameter name from the raw
+query and treats an invalid value as an explicit empty choice. Cookie capture,
+password binding, signed-in redirects and refresh continuation use that same
+selection. Unit tests and the server TLS boundary journey cover malformed first
+values, later trusted values, encoded parameter names and competing cookies.
+
+Capture points include password sandbox `LoginReturnURL` and
+`LoginReturnURLBound`, OAuth state, SAML request/RelayState bindings, pending
+registration `return_url`, and the cross-device requester's pending transfer.
+Registration releases its stored destination only after successful confirmation;
+SQLite persists it across restart. Cross-device approval contributes identity,
+never requester navigation. Callback URLs, poll queries and another tab's cookie
+cannot replace these bindings. Every successful OAuth/SAML or cross-device
+transaction sets `requests.Response.ReturnURLBound`, including an empty choice.
+`grantAccess` revalidates the destination and consumes any legacy cookie with one
+deletion, but never uses it for a bound flow or a rejected nonempty flow value.
+
+The renderer receives runtime `ui.Args.LoginNavigation` and adds navigation to
+ordinary forms and portal links in both built-in and filesystem themes. It uses
+an HTML tokenizer, preserves script text, encodes query values, and limits edits
+to known portal routes and configured OAuth/SAML initiation endpoints. It fills
+core login, refresh and cross-device script attributes. Provider-owned HTTP
+login routes retain their empty-query protocol and are not rewritten. Custom
+JavaScript which invents new navigation must preserve this context explicitly;
+render-time adaptation cannot inspect future DOM mutations. Do not treat a
+return URL or the rendering context as authentication evidence.
+
+GET forms need leading hidden destination/freshness controls because submission
+replaces the action query. Analyze the form owner and every submitter's effective
+action/method before adding shared controls: a foreign or protocol override must
+not receive a portal destination, and a GET override on a POST form still needs
+controls. Keep empty actions unchanged so they keep submitting to the document
+URL rather than its base. Mixed-target forms need explicit theme handling.
+Map plans to actual parsed elements/source positions: matching opening-tag text
+can inject fields at an ignored nested form and leak them through its foreign
+outer form. Table parsing and malformed closing tags can associate submitters
+with forms outside their DOM ancestry; do not trust ancestry alone or inject
+fields where ownership is ambiguous. See the
+[HTML form owner rules](https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#association-of-controls-and-forms).
+When adding bound fields, remove conflicting reserved `name`/`dirname` attributes
+from that form's existing controls, including those before the form via `form=`.
+Do not disable a submit button or alter ordinary field values to resolve this.
+Classify core scripts using their first `src`, including duplicate attributes.
+HTML enumerated attributes need ASCII-only keyword matching. Unicode case folding
+can classify a browser's invalid/default GET as POST, or an invalid/default
+submit button as reset; either breaks this submission analysis. Retain unit and
+real-browser regressions for `poſt` and `reſet`, plus valid mixed-case ASCII.
+Resolve links against the first active HTML base,
+ignoring inert template bases, and never attach destinations to navigation made
+foreign by a base URL. Fragment-only links keep their original behavior.
+
+Never
 reuse `Response.RedirectURL` for it: identity providers own that field. A
 signed-in login page, or a signed-in portal page, with a trusted destination and
 without `fresh=1` answers 303 to it (`returnToLoginDestination`) without writing
 the cookie, so two signed-in tabs whose responses interleave cannot exchange
 destinations. It requires the portal session (`hasPortalSession`), as the portal
-page it would otherwise pass through does; without one the request keeps the
-cookie path. With refresh tokens or OIDC every login POST starts a new login
+page it would otherwise pass through does; without one, the portal clears stale
+access evidence and keeps the explicit destination on the login continuation. With refresh tokens or OIDC every login POST starts a new login
 whose sandbox carries the destination. A GET with only a refresh cookie renders
 the session continue page with the destination as `data-next` and on its
 `fresh=1` sign-in link. These paths delete the shared cookie only when it holds
@@ -215,8 +253,9 @@ Root `TestE2EServerAuthorizationLoginRedirectPerTab` sends three tabs of one
 cookie jar through the gate over HTTP/1.1, HTTP/2 and HTTP/3: one goes back from
 the password step, one logs in, one reloads and one resubmits, and each lands on
 its own encoded destination.
-`TestE2EServerAuthorizationLoginRedirectNotCarried` keeps oversized destinations
-on the cookie path and lands untrusted ones on the portal.
+`TestE2EServerAuthorizationLoginRedirectBoundaries` carries destinations above
+the cookie-size bound with their flow, and lands untrusted or larger-than-16-KiB
+values on the portal without falling back to a competing cookie.
 `TestE2EServerAuthorizationLoginRedirectFreshBack` goes back from a fresh login's
 password step and lands on its destination.
 `TestE2EExternalLoginReturnsEachTabToItsOwnPage` completes two OAuth callbacks in
@@ -245,7 +284,8 @@ scanner output alone does not establish these contracts.
 For per-flow login destinations, run:
 
 ```sh
-make test TEST_DIR='./pkg/authn/... ./pkg/idp/oauth ./pkg/redirects ./plugins/identity-providers/sqlite .' TEST='MatchRejectsDotSegments|LoginReturnURL|LoginPageLocation|LoginElsewhereProbe|HTTPPortalSigned|RefererCookieCleanup|^TestE2ELoginRedirect|LoginContinuation|LoginRedirectFreshBack|LoginPageProviderLinks|SQLiteTicketPortalLoginPageDestination|LoginFlowDestination|LoginSignedInReturnsToOwnDestination|LoginRefreshContinues|LoginScreenFlowDestination|BasicLoginCarriesFlowDestination|ExternalLogin|StateBindingReturnURL|ReturnsBoundDestination|LoginRedirectPerTab|LoginRedirectNotCarried|SAMLCallbackIgnoresDestination|LoginElsewhere' COVERAGE_DIR=.coverage/login-destinations
+make test TEST_DIR='./pkg/authn/... ./pkg/idp/oauth ./pkg/redirects ./plugins/identity-providers/sqlite .' TEST='MatchRejectsDotSegments|LoginReturnURL|LoginPageLocation|LoginElsewhereProbe|HTTPPortalSigned|RefererCookieCleanup|^TestE2ELoginRedirect|LoginContinuation|LoginRedirectFreshBack|LoginPageProviderLinks|SQLiteTicketPortalLoginPageDestination|LoginFlowDestination|LoginSignedInReturnsToOwnDestination|LoginRefreshContinues|LoginScreenFlowDestination|BasicLoginCarriesFlowDestination|ExternalLogin|StateBindingReturnURL|ReturnsBoundDestination|LoginRedirectPerTab|LoginRedirectBoundaries|SAMLCallbackIgnoresDestination|LoginElsewhere' COVERAGE_DIR=.coverage/login-destinations
+make test TEST_DIR='./pkg/authn/... ./pkg/idp/saml ./pkg/registry ./internal/sqlitedb ./plugins/registration-workflows/sqlite/...' TEST='LegacyTheme|LoginDestination|Registration|Migration|SAML|StateManager|CrossDevice' COVERAGE_DIR=.coverage/login-destinations-extended
 make test-ui
 ```
 

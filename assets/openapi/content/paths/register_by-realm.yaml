@@ -6,7 +6,7 @@ get:
   description: Requires an enabled configured user registry. Registration is browser HTML, not JSON. Authenticated
     users redirect to the portal. Input validation, domain/MX checks, verification code and terms depend
     on registration configuration. Validation failures commonly render HTTP 200 with a page message. Submission
-    and confirmation do not themselves guarantee account activation.
+    and confirmation do not themselves guarantee account activation. The form carries its validated redirect_url; submission binds it to the pending registration. Confirmation URLs cannot override it.
   security: []
   responses:
     '200':
@@ -20,6 +20,7 @@ get:
   x-source-files:
   - pkg/authn/handle_register.go
   parameters:
+  - $ref: ../components/parameters/LoginReturnURL.yaml
   - name: realm
     in: path
     description: Configured enabled realm.
@@ -35,7 +36,7 @@ post:
   description: Requires an enabled configured user registry. Registration is browser HTML, not JSON. Authenticated
     users redirect to the portal. Input validation, domain/MX checks, verification code and terms depend
     on registration configuration. Validation failures commonly render HTTP 200 with a page message. Submission
-    and confirmation do not themselves guarantee account activation. Submission requires Content-Length
+    and confirmation do not themselves guarantee account activation. The form carries its validated redirect_url; submission binds it to the pending registration. Confirmation URLs cannot override it. Submission requires Content-Length
     from 15 through 1000 bytes and the exact Content-Type application/x-www-form-urlencoded (a charset
     parameter fails this handler). Missing/chunked length fails the same check. Admission errors render
     HTML with HTTP 200. Recognized fields use the first merged form value; body values take precedence
@@ -61,6 +62,7 @@ post:
     x-minBytes: 15
     x-maxBytes: 1000
   parameters:
+  - $ref: ../components/parameters/LoginReturnURL.yaml
   - name: realm
     in: path
     description: Configured enabled realm.

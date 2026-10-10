@@ -56,7 +56,7 @@ async function navigate(page, url) {
 	const callback = callbacks.get(page);
 	if (callback) return callback;
 	const latest = statuses.get(page);
-	if (latest && (latest.url.endsWith("/auth/portal") || (latest.url.includes("/auth/saml/upstream") && latest.status >= 400))) return latest;
+	if (latest && (latest.url.endsWith("/auth/portal?redirect_url=") || (latest.url.includes("/auth/saml/upstream") && latest.status >= 400))) return latest;
     await new Promise(resolve => setTimeout(resolve, 20));
   }
   throw new Error(stage + ": SAML navigation timed out at " + JSON.stringify(statuses.get(page)));

@@ -10,6 +10,8 @@ function hideLoginForm() {
 }
 
 let qrCodeLoginPanels = null;
+// Capture while this core script executes; realm switching happens later.
+const loginReturnURL = document.currentScript?.dataset.loginDestination ?? document.currentScript?.dataset.returnUrl ?? '';
 
 function showQRCode(path) {
   if (qrCodeLoginPanels !== null) return;
@@ -57,7 +59,7 @@ function showLoginForm(storeName, registrationEnabled, usernameRecoveryEnabled, 
   const userActions = document.getElementById('user_actions');
   if (registrationEnabled == 'yes' || usernameRecoveryEnabled == 'yes' || contactSupportEnabled == 'yes') {
     const userRegisterLink = document.getElementById('user_register_link');
-    userRegisterLink.getElementsByTagName('a')[0].href = baseUrl + 'register/' + storeName;
+    userRegisterLink.getElementsByTagName('a')[0].href = baseUrl + 'register/' + storeName + '?redirect_url=' + encodeURIComponent(loginReturnURL);
     const forgotUsernameLink = document.getElementById('forgot_username_link');
     forgotUsernameLink.getElementsByTagName('a')[0].href = baseUrl + 'forgot/' + storeName;
     const contactSupportLink = document.getElementById('contact_support_link');

@@ -4,6 +4,7 @@
   const messages = JSON.parse(document.currentScript.dataset.i18n || "{}");
   const t = (id, fallback) => messages[id] || fallback;
   const base = document.currentScript.dataset.base.replace(/\/$/, '') + '/';
+  const returnURL = document.currentScript.dataset.returnUrl || '';
   const status = document.getElementById('cross-device-status');
   const details = document.getElementById('cross-device-details');
   const controls = document.getElementById('cross-device-controls');
@@ -57,7 +58,8 @@
     }
     const deadline = setTimeout(abort, timeout);
     try {
-      const response = await fetch(base + 'cross-device/' + action, {
+      const destination = action === 'start' && returnURL ? '?redirect_url=' + encodeURIComponent(returnURL) : '';
+      const response = await fetch(base + 'cross-device/' + action + destination, {
         method: 'POST', credentials: 'same-origin', cache: 'no-store',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams(values), signal: operation.signal,

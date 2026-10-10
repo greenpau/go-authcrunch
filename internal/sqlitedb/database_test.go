@@ -213,3 +213,73 @@ func TestDatabaseCanceledMutationDoesNotPoison(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestDatabaseMigrationIsAtomicAndPinned(t *testing.T) {
+	previous := map[string]string{"records": "CREATE TABLE records (id INTEGER PRIMARY KEY, value TEXT)"}
+	current := map[string]string{"records": "CREATE TABLE records (id INTEGER PRIMARY KEY, value TEXT, return_url TEXT NOT NULL DEFAULT '')"}
+	upgrade := []string{"ALTER TABLE records ADD COLUMN return_url TEXT NOT NULL DEFAULT ''"}
+	for _, scenario := range []string{"upgrade", "fresh", "rollback", "foreign schema", "future version"} {
+		t.Run(scenario, func(t *testing.T) {
+			db, file := openTest(t)
+			if _, err := db.db.Exec("INSERT INTO records VALUES(1,'retained')"); err != nil {
+				t.Fatal(err)
+			}
+			switch scenario {
+			case "fresh":
+				if err := db.Close(); err != nil {
+					t.Fatal(err)
+				}
+				file = filepath.Join(filepath.Dir(file), "fresh.db")
+			case "foreign schema":
+				if _, err := db.db.Exec("CREATE TABLE extra (id TEXT)"); err != nil {
+					t.Fatal(err)
+				}
+			case "future version":
+				if _, err := db.db.Exec("PRAGMA user_version=3"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := db.Close(); err != nil {
+				t.Fatal(err)
+			}
+			statements := upgrade
+			if scenario == "rollback" {
+				statements = append(append([]string{}, upgrade...), "invalid SQL")
+			}
+			migrated, err := OpenMigrated(t.Context(), file, "1s", 71, current, previous, statements)
+			if scenario == "rollback" || scenario == "foreign schema" || scenario == "future version" {
+				if err == nil || migrated != nil {
+					t.Fatal("unsafe migration accepted")
+				}
+				if scenario == "rollback" {
+					restored, err := Open(t.Context(), file, "1s", 71, previous)
+					if err != nil {
+						t.Fatal("migration was not rolled back", err)
+					}
+					restored.Close()
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if scenario == "upgrade" {
+				var value, destination string
+				if err := migrated.Read(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+					return tx.QueryRowContext(ctx, "SELECT value,return_url FROM records WHERE id=1").Scan(&value, &destination)
+				}); err != nil || value != "retained" || destination != "" {
+					t.Fatal("migration changed data", err)
+				}
+			}
+			migrated.Close()
+			reopened, err := OpenMigrated(t.Context(), file, "1s", 71, current, previous, upgrade)
+			if err != nil {
+				t.Fatal(err)
+			}
+			reopened.Close()
+			if downgraded, err := Open(t.Context(), file, "1s", 71, previous); err == nil || downgraded != nil {
+				t.Fatal("old binary accepted upgraded database")
+			}
+		})
+	}
+}

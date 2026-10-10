@@ -272,8 +272,16 @@ func (f *samlE2EFixture) begin(t *testing.T) url.Values {
 }
 
 func (f *samlE2EFixture) beginWithSigner(t *testing.T, rogue bool) url.Values {
+	return f.beginWithDestination(t, rogue, "")
+}
+
+func (f *samlE2EFixture) beginWithDestination(t *testing.T, rogue bool, destination string) url.Values {
 	t.Helper()
-	resp, err := f.client.Get(f.portalURL + "/auth/saml/upstream")
+	endpoint := f.portalURL + "/auth/saml/upstream"
+	if destination != "" {
+		endpoint += "?" + url.Values{"redirect_url": {destination}}.Encode()
+	}
+	resp, err := f.client.Get(endpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,6 +321,68 @@ func (f *samlE2EFixture) beginWithSigner(t *testing.T, rogue bool) url.Values {
 		t.Fatal("signed IdP response omitted SAMLResponse or RelayState")
 	}
 	return form
+}
+
+func TestE2ESAMLReturnsEachTabToItsBoundDestination(t *testing.T) {
+	trusted, err := redirects.NewRedirectURIMatchConfig("exact", "trusted.example.test", "prefix", "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := newSAMLE2EFixture(t, func(c *authn.PortalConfig) {
+		c.TrustedLoginRedirectURIConfigs = []*redirects.RedirectURIMatchConfig{trusted}
+	})
+	first := "https://trusted.example.test/first?keep=one%26two"
+	second := "https://trusted.example.test/second?q=" + strings.Repeat("x", 8000)
+	forms := []url.Values{f.beginWithDestination(t, false, first), f.beginWithDestination(t, false, second)}
+	endpoint := f.portalURL + "/auth/saml/upstream?redirect_url=" + url.QueryEscape("https://trusted.example.test/callback-override")
+	portalURL := mustSAMLE2EURL(t, f.portalURL)
+	for _, tc := range []struct {
+		index int
+		want  string
+	}{{1, second}, {0, first}} {
+		f.client.Jar.SetCookies(&portalURL, []*http.Cookie{{Name: "AUTHP_REDIRECT_URL", Value: "https://trusted.example.test/another-tab", Path: "/auth", Secure: true}})
+		resp := samlE2EPost(t, f.client, endpoint, forms[tc.index])
+		if resp.StatusCode != http.StatusSeeOther || resp.Header.Get("Authorization") == "" {
+			t.Fatalf("SAML tab %d did not complete: HTTP %d", tc.index, resp.StatusCode)
+		}
+		if got := resp.Header.Get("Location"); got != tc.want {
+			t.Fatalf("tab %d destination=%q, want %q", tc.index, got, tc.want)
+		}
+		if replay := samlE2EPost(t, f.client, endpoint, forms[tc.index]); replay.StatusCode != http.StatusUnauthorized || replay.Header.Get("Authorization") != "" {
+			t.Fatalf("replayed callback issued credentials: HTTP %d", replay.StatusCode)
+		}
+	}
+}
+
+func TestE2ESAMLTransactionCookieCapacity(t *testing.T) {
+	f := newSAMLE2EFixture(t)
+	first := f.begin(t)
+	for range 15 {
+		f.begin(t)
+	}
+	resp, err := f.client.Get(f.portalURL + "/auth/saml/upstream")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("seventeenth pending SAML login returned HTTP %d", resp.StatusCode)
+	}
+	completed := samlE2EPost(t, f.client, f.portalURL+"/auth/saml/upstream", first)
+	if completed.StatusCode != http.StatusSeeOther || completed.Header.Get("Authorization") == "" {
+		t.Fatal("capacity refusal invalidated an existing SAML transaction")
+	}
+	u := mustSAMLE2EURL(t, f.portalURL)
+	remaining := 0
+	for _, c := range f.client.Jar.Cookies(&u) {
+		if strings.HasPrefix(c.Name, "SAML_E2E_BROWSER_") {
+			remaining++
+		}
+	}
+	if remaining != 15 {
+		t.Fatalf("completion retained %d proofs, want 15", remaining)
+	}
+	f.begin(t) // Completing a transaction frees a browser slot.
 }
 
 func samlE2EPost(t *testing.T, client *http.Client, endpoint string, form url.Values) *http.Response {
@@ -368,7 +438,7 @@ func TestE2ESAMLResponseBoundToBrowserRequestAndCallback(t *testing.T) {
 			t.Fatal(err)
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		req.Header.Set("Cookie", "SAML_E2E_BROWSER=attacker")
+		req.Header.Set("Cookie", "SAML_E2E_BROWSER_"+form.Get("RelayState")+"=attacker")
 		resp, err := f.client.Do(req)
 		if err != nil {
 			t.Fatal(err)
@@ -447,9 +517,7 @@ func TestE2ESAMLBrowserCrossSitePOSTBinding(t *testing.T) {
 	}
 }
 
-// A SAML login has no per-flow destination: the identity provider posts back
-// to its registered callback, so a redirect_url on the callback URL was never
-// chosen by the tab that started the login and must not pick where it lands.
+// A callback URL cannot replace the destination bound by the initiating tab.
 func TestE2ESAMLCallbackIgnoresDestinationOnItsURL(t *testing.T) {
 	trusted, err := redirects.NewRedirectURIMatchConfig("exact", "trusted.example.test", "prefix", "/")
 	if err != nil {

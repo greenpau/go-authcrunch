@@ -4,6 +4,7 @@ files:
     config.go: 515cfb1446a474cf892819526e6f8bb3239db12abef7454c740bbbb52e537d8c
     config_oauth_applications.go: c3d105f8cb5eab55866d97259bd990d3b0da25eb68412f6069b293e21c20491d
     config_oauth_authorization.go: 19e0d80bce0f703c65752ade6259436bd033bc258a420a76b83a1edb0ab6de62
+    internal/sqlitedb/database.go: 27a6ec74e19241fea34f5e25e9e87a0b9155dcaab0c615d1dbe1857df70989ba
     pkg/apiauth/auth_error_response.go: 15887895577cd296d58d59e5feda3db37732348547dd488c9fcd5bfe1b8434a0
     pkg/apiauth/auth_request.go: 033621ff07d821fb87bd1e18287ca99cb82bcdacc387d455ccc86ffd244e4dc9
     pkg/apiauth/auth_response.go: 485363e7e285da38ab07a463b30e540744f168a18558e54a9123f619db909b9e
@@ -51,7 +52,7 @@ files:
     pkg/authn/cache/session.go: 1a44d71329691f9ad62c882377c8fe2be79fd7c1e64093836eb54eaa0f811d5d
     pkg/authn/cache/session_state.go: 04c1414b2add1922cbb1e8004944abcf5d5001bf2b8d5bedaf6f634e1850e459
     pkg/authn/config.go: ed450feb9c3e03c427e75ff77eb82ef1df5690d0c4a85de427d1c14fb0e79cac
-    pkg/authn/cookie/configuration.go: a59e64e5738f2c1ee4c7aac5ae329439306100fff4b2efe6efc2c1d113f8f7a0
+    pkg/authn/cookie/configuration.go: c89e48e1005516398c401d9a2ec8ac5071b49624d04d231309c883873a0a2fff
     pkg/authn/cookie/cookie_config.go: f31bf9a80aea16aef7e6c10f3d0d2c525312f0f490ce3494fe90483e6f7bb979
     pkg/authn/cookie/cookie_delete.go: 08debc2a2dc4987986ce5695ae1ef694687252ce6b8f24541aa159e0a22fa90d
     pkg/authn/cookie/cookie_domain_config.go: 08c59cb705e64d9b711bcab7aa30c1a3d55e4642d903d9b0abdae28a1897884e
@@ -59,14 +60,15 @@ files:
     pkg/authn/cookie/cross_device_cookie.go: 18d7c1086c1dddec9e439f8cdbe9a6e830dbefdeea1d0080c0bfbe7faf688c62
     pkg/authn/cookie/factory.go: 955ff64069a29ad1e9803951fea42ff7dfce55ed3850ff401f6bc88e308750af
     pkg/authn/cookie/parser/parser.go: 7d2a6a4c8af2ae524f44a44a778fcf11c2966c0a4564d974008f7e06d757d466
-    pkg/authn/cookie/prefix.go: 93fdd6989c4d8144c26386a5a8dbbdd9049d91d5b0fd7313b74467672355d371
-    pkg/authn/cookie/provider.go: 4107693b4bf2bd25abb5c868e4c8782e6732be2140d5fedf6908ff90b3b1af49
+    pkg/authn/cookie/prefix.go: 489a3988ae7c0c9635fb0095969684992f9ff971f0e61b67650f2d6e5d8275ff
+    pkg/authn/cookie/provider.go: 1b65c9f31fae2550ad9ee018aa184b4c69cad18b21461290f4579dc1ff60c59b
+    pkg/authn/cookie/saml_transaction.go: 919279c1742ecb903ecab874c1f8252075c795c9f6435fd5df09106086bed0f4
     pkg/authn/cookie/utils.go: 09c6a78f897b45cb30d486b0f5d56ab3d8f46f857c6c3beffe08e63f64243bad
     pkg/authn/cookie_config.go: 00ce9d7c835dc56692be16c65bc6ccded2ac0eee1f2d28a5058f9477601bb419
     pkg/authn/cross_device/parser/parser.go: 7c6d1199ef965c80d07d4de04a504def133ac9dc0bbd8f77629a4cced7fe2c35
     pkg/authn/cross_device_config.go: b44d7698e19f08d75d98c0edf1973638b26d9566f8e60b56738134d3006b4479
-    pkg/authn/cross_device_http.go: 7137ea1f2155f9ceeb9c6e560d3098cff1eafafdc038af8f4d911b6b37f5e980
-    pkg/authn/cross_device_store.go: 119bef9f3de8233412f779c761765661064069ec860bb85b3e07df910e48bc97
+    pkg/authn/cross_device_http.go: 34b208262fb7b02aa0387bdc376e9cfb21db004d4e14a4271c1f735d8e97b415
+    pkg/authn/cross_device_store.go: 9e59ee39cb388db34f89fe365c73826ccf824d4c4ace89d5fbdbcf95998d46d3
     pkg/authn/direct_authentication_identity.go: 411b8bff37f425721bb27660ca69713bda4deefc31ada2ce036bf7a3f193f7ce
     pkg/authn/enums/operator/operator.go: baade7cce4c965d2fb7e67d8cc27b7a39da231bef0a42455e7ad189331f2d576
     pkg/authn/enums/role/role.go: 7780fa2dfbbb8fbc1cd50c99a6839a88b64b1f34bad5b2f708f671e42ee45fc1
@@ -87,18 +89,18 @@ files:
     pkg/authn/handle_authenticate_basic_auth_request.go: 52e93e1f01067cf016a47326abdd114e75f96d076ef3f4dc10810deb466ad002
     pkg/authn/handle_basic_login.go: 776a4cab72ce30511232983af36c5fe7bbe191c3378d09053f833ba79873dab2
     pkg/authn/handle_external_http_logout.go: f53443cef20c3d5356058e6c55f8061a14726134176029ed3636e5e1f5ab12cb
-    pkg/authn/handle_external_login.go: 74cfe88c4fa81ee048f99f0a450466e68c8529b83365af43b2113dd04ee5c62c
+    pkg/authn/handle_external_login.go: 55e6850c773c71c124be3e1c350bd42b654cd2df39f9ee83f9865c33bb704eb3
     pkg/authn/handle_http_apps.go: 324445332d0b34151752570fe903ca735bd0c2f7b4958fbe7c3ab85d3c52db04
     pkg/authn/handle_http_apps_mobile_access.go: 1f0272c219f3511d27744ca6ad9bd95f8a88f720e044ec09c5824bfd37013f20
     pkg/authn/handle_http_apps_sso.go: 7b289f6ed645160ae973323f091d197482852358fce9dc52965bb031dbc42d29
     pkg/authn/handle_http_barcode.go: d4edecd20670268ea1fe808b499cb08366828e681d1c3a5992a9d2608ef52727
     pkg/authn/handle_http_jwks.go: 339d4a3c81b1855e5e33a2ac2db87a78b48faa55e177be78e6c5f94c326d1553
-    pkg/authn/handle_http_login.go: 18502b2ac9039db313df585cb576617c5fd9f157809cdbd5d8150b88f870c2ab
+    pkg/authn/handle_http_login.go: b9f24dbd7d197bdd9680de35e25c83eccd3e299003d20217a5b96da0eb11d482
     pkg/authn/handle_http_logout.go: 0789fffec9fb5fe1744a40006e1b25a5053cfc92ad235a067cb533b7f5a8568d
-    pkg/authn/handle_http_portal.go: 55ebf28b71d05c6b19af318c8df97bf2ae58ef3a32e541f05578e8ce6a6d61a6
+    pkg/authn/handle_http_portal.go: b8b911797290e692c1da48650342e47ff2502e75ed925f067eda367ecad8d49a
     pkg/authn/handle_http_recover.go: 7e6e67dabc77df0d89834e17c83ccb762088c7d3c605df9aead2135f05d58e8f
-    pkg/authn/handle_http_sandbox.go: caeb21118e0bc8ae5485c176841d79413d0075c23933c30a81401cf7e93fd7cc
-    pkg/authn/handle_http_session.go: 78ce55278edf263353434a1bd417410386310a733a7ada15800179d5089a249b
+    pkg/authn/handle_http_sandbox.go: 683f4c880a490210872146168feec70f9d97da8b61293b9fffa7dc6342248aa0
+    pkg/authn/handle_http_session.go: e0008010d8c50f59e198844cd029b39f37dda3ae69f702db6817803d44d377f5
     pkg/authn/handle_http_static.go: 7ec4085cf0ca4cce149360b21a6f169298c0ba87051f6a0d74c90fa7d7676f5f
     pkg/authn/handle_http_whoami.go: a4a610129c66e4a8ec42cc5e7131c8d2ef59a3f68381d9c3eb27830b143aff33
     pkg/authn/handle_json_api_key_login.go: b6e3206dc92c7a855d68f649989a47b8bd62577b9e38122548822eb57308cf7c
@@ -106,12 +108,13 @@ files:
     pkg/authn/handle_json_login.go: 757e6a842693d3a30d9f3e5eb28b07344ee91fdc89ff6ba5987577f0d8f3ddb2
     pkg/authn/handle_json_whoami.go: 52d7d318065dcb3e9689ef95ecee61729d32b9ee11b5bfd3ada58650b7b10d56
     pkg/authn/handle_provider_login.go: f0790b6c840e238658ba545ae438be6261221d1e3aabd0ed6179dcd33fbf1e55
-    pkg/authn/handle_register.go: d67a0682d70b68df1a1b65824eccf3d4bb79d8ab1428a112a7915374c26ed3bf
+    pkg/authn/handle_register.go: d67fd72ac6e20cd543fa54af0822e05ba6a0e0f343dc824b6b3102dc35d22dba
     pkg/authn/icons/icon.go: 551a04786cc8d68efd0f81c581c1e37d0b77744183f9eb162d34609b7de9dbcc
     pkg/authn/idp_apikey_auth.go: 232daadcb3e4dbb2e493dc64adfd05ee7e87ff8b4ef942919ad512669cf39898
-    pkg/authn/inject_redirect_url.go: 52e27f7ab71eeac98ea59bffc3897a3f4038597e811cf04abbc8bdf1a588b933
-    pkg/authn/inject_saml_session_id.go: fcfaa88f892ede83ea59199b529f6647ac8022b2dd7bd264075de6e84a00f6b4
+    pkg/authn/inject_redirect_url.go: e14625ca6fd26821d85b6181cbb1bac6ca8052ffdb0a9745c26338ba0a5a374f
+    pkg/authn/inject_saml_session_id.go: cb836d656cbeaf983cf45961621f2355f62ced681d5c2477569fff679ca87b56
     pkg/authn/inject_session_id.go: 30f9cbde79b92d3ecc6870b663be61e968dbc140ff50b6cf6f9277825640850b
+    pkg/authn/login_navigation.go: fc13e3c952fe2e7a934fc68c537b4cbd89bd79c26b1f006d165518ed40a88f60
     pkg/authn/login_proof.go: 21818e86e771e5c9e00b98dc30f00cacaae75e71c1f5ff19f8e61ef10c5b29e5
     pkg/authn/mfa_form_validator.go: f75202a0cf50fd36f72151e78bf4934bfdcedbc8178a489562b72203a57b8170
     pkg/authn/oidc_config.go: 4be596c5e14491c2a68772633b752ae6c0ef24eb91146f950a0ffd8bce2d2ac2
@@ -124,7 +127,7 @@ files:
     pkg/authn/profile_auth_challenges.go: d016b39d03224bc98eb22d6f46698093637f41b126b0d9f65a6a219cc7b9a115
     pkg/authn/profile_identity.go: 0dbaf1f77b62c1042ff920d5d0d15d9090309a858d9ce16e9a93cb25d811120f
     pkg/authn/respond_api.go: 0d1d44773c9be0b75e1533b587f567c3592037fff9834bbbff69b5bc69ca1f14
-    pkg/authn/respond_http.go: 1fb35b6f91d4103838ad035e5805eb77e6f4a616f3c14ea695aa4edb02690c32
+    pkg/authn/respond_http.go: e58906e1ba381565e50ad0c57629334896c80c3f1c01209648b945c3e3a515d7
     pkg/authn/respond_json.go: 7e2f654801e337f6597d647e9fc0bd374b3dda1ea7bcfa6e92fe3301f2af5edd
     pkg/authn/respond_qrcode.go: b7a4842de4572629ccfde8f342e5d5b2db11ce4571708f252255ad39c51b451e
     pkg/authn/sandbox_user.go: 21a84ee260344cf4a40ec335f876b7443f61c379f4b68d61c3d4dc77388e908d
@@ -147,10 +150,12 @@ files:
     pkg/authn/ui/apps.go: 5d408c3bde4f382e3cdaf85f66da66d00ff77046279cc6eb379ffb8f3b5ea5d0
     pkg/authn/ui/i18n.go: 523e6712d75a42fe74d7b63085c7a408304dbd07f11d92e4082a987dc74c3274
     pkg/authn/ui/link.go: 8c825d577647a4d038d13ce38d8d77c8e64f8635bae33bfc891cf17a3e2fd6d4
+    pkg/authn/ui/login_navigation.go: 1f7b46d227e0983645ce92857b528d070973190710ed38d0f0258be444d2e2e2
+    pkg/authn/ui/login_navigation_forms.go: 559a8aca0e3677d6430fb30eb0c6af9b425e76bbe1d1e1bca2a4c713c18028ba
     pkg/authn/ui/pages.go: e002225ab0a23659e06e47c9a4518a6d49de00fe740cdf27601c34aa52e72904
     pkg/authn/ui/params.go: f9f7233f51f5e27beddb207972af90b4a034dda42730adc0a118332d6f1edb83
     pkg/authn/ui/static.go: 5540153e50e79360299205f8b4f31f88e0284c61741426302cc129d92e8b2f55
-    pkg/authn/ui/ui.go: 29da8dda9e0cb8008d712f742243f000a0bc160a1400141f718306f0bf269982
+    pkg/authn/ui/ui.go: 0e2c3bfe3fab272069ae7746c4ec9061ceb333118a804679a51c386e60dfac9e
     pkg/authn/validators/user_input.go: 9bb946a08ca17985de8b8d44810e957f8add8f3946a88294c961681af5b25733
     pkg/authn/webauthn_enrollment.go: f5755801bf27aa565e3326321accab37487dc4637576defbc9e2ff1e833c3abe
     pkg/authn/webauthn_origin.go: b22ebc04761f80c5b17ec22849129ad1c73bbad98036cd3ec48f7460c069bb6e
@@ -222,7 +227,7 @@ files:
     pkg/idp/config.go: 77879b813027f5f4f17a3fc0b96a698726c64e1f8633c8b839e0f1300585857d
     pkg/idp/http_login.go: 4c8407e9c587bc7608c6d9d47edfd3ee37cdd9876073e9140115069742ced80f
     pkg/idp/method.go: 534e2a5518aa774a073476334e0109af40abdfc00a15494c1115eba9f1d99a36
-    pkg/idp/oauth/authenticate.go: 0e6014497f35b37e4137598fa4db36632131123effea73997ef51a40c569bc86
+    pkg/idp/oauth/authenticate.go: 98001af765b7a4618ebb66f6f6690f94bd75a0aa68ee1a385240bd25dfadfc32
     pkg/idp/oauth/authenticate_setup.go: 45ab885b2a2b0ffaba95778476ad3ba43f9d2f81f5420336bd9dcb4f5f5a6b00
     pkg/idp/oauth/browser.go: fce0759058a6aa77f0c5988d47a4b5ce264e85a0026c47c6590024fb305a7c35
     pkg/idp/oauth/claim_parser.go: 5e3358c13287e806a8057f81e7be87401670a59b2652f33534d4d83f14716db7
@@ -242,10 +247,10 @@ files:
     pkg/idp/oauth/validator.go: bdcde646cfd7b32a11d146d315849aa4463f83ad97ec64020d31d180e992ef9f
     pkg/idp/parser/oauth.go: 0479066e24aa51b7e6315b667e8ce2e32fcfd64f7700fb0a0dc65d55fff492e9
     pkg/idp/provider.go: a5ce0f62eda79707e06c8317857bd260890e983612846b40ce35ea9be0bf578f
-    pkg/idp/saml/authenticate.go: 9593bb15bb6a0cc8edb3106874b67478a90b7befa0288abbe19c5d0beada3026
+    pkg/idp/saml/authenticate.go: 6fad85ea48e614839b7d45e0e602e18cae09864a296c70e57c708485f041bdba
     pkg/idp/saml/config.go: 12a8be624b244e96e0b337bda0f493d733a8c23e6eebac1a209b622e12871f6b
     pkg/idp/saml/provider.go: 80e5fe1f2ae76fb0bb941da642be77e6bbed8a6d61b118b8fd27d136a87add0c
-    pkg/idp/saml/state.go: cd29c5c3c89ea781d5c081c32cd24d0f80a0c597cd3df466c78a89853f574329
+    pkg/idp/saml/state.go: c9e5ccf513d50c044eee33457e8f7f84e9549dd404242c24892ee5ecf4c9dec0
     pkg/ids/config.go: 13aee8d1114f926d80db93a7c129a83667b98cd0a923b05a5fc39abc70039a5f
     pkg/ids/ldap/authenticator.go: ce5d52bcf993186c4b65e405285bf6a3d5cad4b327604fc4c17c176b870aec6e
     pkg/ids/ldap/parse_dn.go: be6e2de880f9528c68fb586f3cef4f29ea4f7f9e64f686f9916e16daec4b366a
@@ -295,7 +300,7 @@ files:
     pkg/redirects/redirect.go: e46f61ccdf5ffbed2865b714042b8970e63edb526cf3527051802e3ab36ec1e0
     pkg/redirects/redirect_match.go: 2aef7ac5e85f4570f71714f3f6ee36ed43b43eff6db5fb5493d0cba9b988d443
     pkg/redirects/redirect_parser.go: cd235cceba7385a2af1b56f0bcfc80718b1ce552845a20fdb261fef41120a919
-    pkg/registry/cache.go: 258d6af9d35db897b437d17821fadf029403a93eae6e3d71109f71d89d7b2bc7
+    pkg/registry/cache.go: 4de83e5eade9d0cc1e093c6dd5122cf8bae8acd7c1d75e4e4ff5fdeead8e9c25
     pkg/registry/config.go: 02e08901a58843f332269145b75860cff8d8c63a181fb33a0ca5c82e63f97851
     pkg/registry/confirmation.go: 2c75875b6907dd918d01954640563f3bbb5d165a1be7f3caae5b5d11d1d25ee5
     pkg/registry/domain_restriction_check.go: 5f9c9b8ee7947bc025dd6c401a9da22f7ce9d28fb74f8bcdd9e3db08252b7cf6
@@ -305,7 +310,7 @@ files:
     pkg/registry/provider.go: d80c9ccbd8e3bdf04d81cac93ee9878e3d49f83658f0498fbd71eb83abc8b7c7
     pkg/registry/ui.go: 80049e0d92f764757baeaa2bfd795d715149f82dca817872c831db3fb44f13bb
     pkg/requests/authz.go: e426392daccf6024a7938f474515c893ec3bed19c6f179c169a1a08e2a76ebd9
-    pkg/requests/requests.go: 70fe24359dab0936fda1747da752ab1ba7ef928f593c6a9444ead49f16b88e36
+    pkg/requests/requests.go: e762818515590c05bee3ebfc64f2f9300115531b03c7a222b7b59f95ec45c3fc
     pkg/sso/config.go: 326210fcfe9656c0948930df047af09a8cded3a9376b51d6c8321b6e49c5f7c0
     pkg/sso/metadata.go: e7e4fb6c3133c7e365606f455e345606f01a33e019eb4f5671f5cf1be1f20c03
     pkg/sso/provider.go: 75a1854f8c6187b0a89c417c505b08f25421e2dab8d11397ee544a316c5a9fe4
@@ -321,7 +326,7 @@ files:
     pkg/tagging/tag.go: 5a0972f52593f58976d9cb94083e08b0079de67928adc19404672312cb207225
     pkg/user/authentication_methods.go: b6e8ee5eabd758cff4a89a010b6021f79a0a110c55fdd6d682e0e2ba21516a29
     pkg/user/session_state.go: 642d98676d32886681913a857c27bb4806f6c8cfaf8817ff5ba3f9552e01c586
-    pkg/user/user.go: 768438e035a852072e6cf0fce05cd265e0dfdcfd897deabdd8f1b7bc4b3622ff
+    pkg/user/user.go: 089d123a0cfe3109b44ed097ae38c9b4c0a8b74c367876e375d287fba3cb0229
     pkg/util/addr/utils.go: 22157e27830b59fcc3b7c6e5caf90545d4ce70fa6de4bee73e9b7dbff941a55d
     pkg/util/charset/utils.go: 969092dd187af88174a1bb613fdb389cb3af6e58d86cf1d56687ca417b4d3a7d
     pkg/util/random.go: 19319a12773cceb9a348fc6500e06f8663236fc3b8d1b37956cf70d1a7cb910f
@@ -331,5 +336,8 @@ files:
     pkg/util/validate/additional_scopes.go: 0343fc55b0e850cc0c49ae12f28c1aa597232a88c8c626671f9c728d1e051ebb
     pkg/util/validate/login_hint.go: 0f415460fec2fdb3047635b8d8b6d703790fad279fc171fc67f8614c27e199eb
     pkg/waf/malformed_input_check.go: eaf3b3f2b24f741257709fa61f09f192efbb43b785b51e72b5ee26c597663785
+    plugins/registration-workflows/sqlite/config.go: 17c42cd759d1092d178e1eb983d134cbfc03d1123e222e9a91505970b95554b5
+    plugins/registration-workflows/sqlite/parser/parser.go: 757678ff613256309f3a9a536ff968ed87cde46c3ee691300193d98a031fbd04
+    plugins/registration-workflows/sqlite/workflow.go: 4ddedd74461407312ebd4b0b4839eb28c0044dddbab3d945c859e5a3a45419a7
     server.go: 018a67cf81f2c27ea5d2b6383d623e8ddf29651934c75d767c49e8c22d03968f
     server_persistent_state.go: 706d1920510d914041ee78a43143068a11b7294028eadb234b363073065cd371

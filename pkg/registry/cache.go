@@ -17,6 +17,7 @@ package registry
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"sync"
 	"time"
 )
@@ -168,6 +169,10 @@ func (c *RegistrationCache) Add(registrationID string, u map[string]string) erro
 		}
 	}
 
+	if _, exists := c.Entries[registrationID]; exists {
+		return errors.New("cached registration id already exists")
+	}
+
 	for _, m := range c.Entries {
 		if m.user == nil {
 			continue
@@ -182,7 +187,7 @@ func (c *RegistrationCache) Add(registrationID string, u map[string]string) erro
 	c.Entries[registrationID] = &RegistrationCacheEntry{
 		registrationID: registrationID,
 		createdAt:      time.Now().UTC(),
-		user:           u,
+		user:           maps.Clone(u),
 	}
 	return nil
 }
@@ -213,7 +218,7 @@ func (c *RegistrationCache) Get(registrationID string) (map[string]string, error
 		if err := entry.Valid(c.maxEntryLifetime); err != nil {
 			return nil, err
 		}
-		return entry.user, nil
+		return maps.Clone(entry.user), nil
 	}
 	return nil, errors.New("cached registration id not found")
 }

@@ -30,7 +30,10 @@ A `fresh=1` login page does not probe the identity endpoint for a login complete
 in another tab; ordinary login pages do. A continue page reached from the login
 page with a trusted `redirect_url` replaces itself with that destination after the
 refresh, else with the portal, and deletes the shared redirect cookie when it
-holds that destination; see [per-flow login
+holds that destination. The renderer supplies `data-next` for older filesystem
+themes too. Empty/rejected choices use `portal?redirect_url=` and fresh-login
+links retain an explicit empty marker, preventing a later cookie write from
+changing the continuation; see [per-flow login
 destinations](../threat-hunting/references/redirects.md#per-flow-login-destinations).
 
 Refresh exchanges require the exact configured HTTPS origin, effective host, and

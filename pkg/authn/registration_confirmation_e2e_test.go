@@ -28,6 +28,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
@@ -49,6 +50,12 @@ func TestE2ERegistrationConfirmationCapability(t *testing.T) {
 		t.Run(fmt.Sprintf("capability_%t", capability), func(t *testing.T) {
 			f := newRefreshPortal(t, false, false)
 			f.portal.config.UserRegistries = []string{"enrollment"}
+			destination := "https://trusted.example.test/registration"
+			trusted, err := redirects.NewRedirectURIMatchConfig("exact", "trusted.example.test", "prefix", "/")
+			if err != nil {
+				t.Fatal(err)
+			}
+			f.portal.config.TrustedLoginRedirectURIConfigs = []*redirects.RedirectURIMatchConfig{trusted}
 			dbPath := filepath.Join(t.TempDir(), "registrations.json")
 			config := &registry.LocalUserRegistryProvider{Name: "enrollment", Dropbox: dbPath, IdentityStoreName: "localdb", RealmName: "local", EmailProviderName: "file", AdminEmails: []string{"admin@example.test"}}
 			provider, err := config.NewRuntime(zap.NewNop())
@@ -60,7 +67,7 @@ func TestE2ERegistrationConfirmationCapability(t *testing.T) {
 				t.Fatal(err)
 			}
 			id := strings.Repeat("a", 64)
-			if err := provider.AddRegistrationEntry(id, map[string]string{"username": "alice", "email": "alice@example.test", "password": "Synthetic-registration-password-2026!", "registration_code": "ABC123", "realm_name": "local"}); err != nil {
+			if err := provider.AddRegistrationEntry(id, map[string]string{"username": "alice", "email": "alice@example.test", "password": "Synthetic-registration-password-2026!", "registration_code": "ABC123", "realm_name": "local", "return_url": destination}); err != nil {
 				t.Fatal(err)
 			}
 			rejecting := &rejectingRegistration{LocalUserRegistryProvider: provider}
@@ -78,7 +85,7 @@ func TestE2ERegistrationConfirmationCapability(t *testing.T) {
 			}))
 			defer server.Close()
 			form := url.Values{"registration_code": {"ABC123"}}
-			response, err := server.Client().PostForm(server.URL+"/auth/register/local/ack/"+id, form)
+			response, err := server.Client().PostForm(server.URL+"/auth/register/local/ack/"+id+"?redirect_url="+url.QueryEscape("https://trusted.example.test/override"), form)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -98,8 +105,13 @@ func TestE2ERegistrationConfirmationCapability(t *testing.T) {
 				if rejecting.called.Load() != 1 || accountErr == nil || pendingErr != nil || !strings.Contains(string(body), "Registration confirmation denied") || strings.Contains(string(body), "synthetic private backend error") {
 					t.Fatal("capability failure fell through, consumed pending entry, or leaked error")
 				}
-			} else if accountErr != nil || pendingErr == nil {
-				t.Fatal("legacy registration sequence changed", accountErr, pendingErr)
+			} else {
+				if accountErr != nil || pendingErr == nil {
+					t.Fatal("legacy registration sequence changed", accountErr, pendingErr)
+				}
+				if !strings.Contains(string(body), "redirect_url="+url.QueryEscape(destination)) || strings.Contains(string(body), "redirect_url="+url.QueryEscape("https://trusted.example.test/override")) {
+					t.Fatal("legacy confirmation lost its bound destination")
+				}
 			}
 		})
 	}

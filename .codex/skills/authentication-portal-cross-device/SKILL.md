@@ -195,3 +195,21 @@ make test TEST_DIR='./pkg/authn ./pkg/authn/cookie/... ./pkg/authn/cross_device/
 make test-ui
 make ci-check
 ```
+
+## Requester destinations
+
+The request page carries its validated `redirect_url` into the start POST query;
+the 4096-byte form-body limit stays unchanged. Start binds the destination to
+the pending transfer independently of approving-browser evidence. It is never
+included in the activation link or QR. Poll redemption revalidates that stored
+value and marks the response destination bound, including an empty choice.
+Approval, callback/poll query values and shared cookies cannot replace it.
+An empty or rejected destination goes to `portal?redirect_url=`. The ordinary
+login link and older filesystem request themes receive the same context through
+the renderer. Preserve the start-only query in the client; poll/cancel carry only
+their existing body capabilities.
+
+`TestCrossDeviceStoreRequesterDestinations` checks immutable requester ownership;
+`TestE2ECrossDeviceRequesterDestinationIsolation` approves multiple requests in
+reverse order with conflicting cookies and poll queries. Real Chrome exercises
+destination navigation with both basic and legacy request themes.

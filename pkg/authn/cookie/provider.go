@@ -27,6 +27,9 @@ func (f *Factory) ValidateProviderLoginCookieName(name, path string) error {
 	if name == "" {
 		return nil
 	}
+	if strings.HasPrefix(name, f.SAMLSessionIDCookieName+"_") {
+		return fmt.Errorf("provider login cookie overlaps SAML transaction cookies")
+	}
 	if len(name) > 128 || (&http.Cookie{Name: name}).Valid() != nil {
 		return fmt.Errorf("invalid provider login cookie name")
 	}

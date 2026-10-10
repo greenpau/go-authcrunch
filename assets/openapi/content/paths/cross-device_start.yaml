@@ -14,7 +14,7 @@ post:
     are accepted. Form fields are read from the body, without trimming; query fields cannot supply code,
     secret or csrf. Repeated body fields fail, including unrecognized fields. Pending transfers are volatile
     and are discarded on portal stop/restart; refresh-state persistence does not persist them. The response
-    QR is a 256 by 256 pixel PNG.'
+    QR is a 256 by 256 pixel PNG. The optional redirect_url query is captured at start and belongs to the requester. It is not included in the activation link or QR. Approval, poll queries and shared cookies cannot replace it; an empty or rejected destination selects the portal.'
   security: []
   responses:
     '200':
@@ -133,6 +133,7 @@ post:
           properties: {}
     x-maxBytes: 4096
   parameters:
+  - $ref: ../components/parameters/LoginReturnURL.yaml
   - name: Origin
     in: header
     description: Exact HTTPS portal origin.

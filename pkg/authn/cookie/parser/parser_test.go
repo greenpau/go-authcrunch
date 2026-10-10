@@ -66,6 +66,7 @@ func TestSAMLCookieDirective(t *testing.T) {
 		{name: "prefix", directives: []string{"cookie prefix PORTAL"}, want: "PORTAL_SAML_SESSION_ID"},
 		{name: "explicit", directives: []string{"cookie saml session id name SAML_BROWSER"}, want: "SAML_BROWSER"},
 		{name: "collision", directives: []string{"cookie saml session id name AUTHP_ACCESS_TOKEN"}, invalid: true},
+		{name: "transaction namespace collision", directives: []string{"cookie saml session id name SAML", "cookie access token name SAML_transaction"}, invalid: true},
 		{name: "duplicate", directives: []string{"cookie saml session id name ONE", "cookie saml session id name TWO"}, invalid: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -20,6 +20,7 @@ import (
 	stderrors "errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -52,7 +53,10 @@ func (p *Portal) handleHTTPLogin(ctx context.Context, w http.ResponseWriter, r *
 		// session, as the portal page it would otherwise pass through does.
 		// With refresh tokens or OIDC, a POST never gets here: it starts a new
 		// login above, whose sandbox carries the destination.
-		if returnURL := p.loginReturnURL(r, rr); returnURL != "" {
+		if returnURL := p.loginReturnURL(r, rr); returnURL != "" || hasLoginDestination(r) {
+			if returnURL == "" {
+				returnURL = rr.Upstream.BaseURL + path.Join(rr.Upstream.BasePath, "/portal") + "?redirect_url="
+			}
 			switch {
 			case usr != nil && p.hasPortalSession(usr):
 				return p.returnToLoginDestination(w, r, rr, returnURL)
@@ -71,7 +75,11 @@ func (p *Portal) handleHTTPLogin(ctx context.Context, w http.ResponseWriter, r *
 		return p.handleHTTPLoginScreen(ctx, w, r, rr)
 	}
 	if usr != nil {
-		return p.handleHTTPRedirect(ctx, w, r, rr, "/portal")
+		location := "/portal"
+		if hasLoginDestination(r) {
+			location += "?" + url.Values{"redirect_url": {p.loginReturnURL(r, rr)}}.Encode()
+		}
+		return p.handleHTTPRedirect(ctx, w, r, rr, location)
 	}
 	if r.Method == http.MethodGet && p.hasRefreshCookie(r) {
 		return p.handleSessionPage(ctx, w, r, rr, "continue")
@@ -101,6 +109,8 @@ func (p *Portal) handleHTTPLoginScreen(ctx context.Context, w http.ResponseWrite
 	fresh := r.URL.Query().Get("fresh") == "1"
 	resp.Data["login_fresh"] = fresh
 	resp.Data["login_elsewhere_enabled"] = !fresh
+	p.bindLoginNavigation(resp, r, p.loginReturnURL(r, rr))
+	resp.LoginNavigation.Watch = !fresh
 
 	resp.Data["i18n_provide_username_or_email"] = translate.Translate("provide_username_or_email", p.ui.Language, nil)
 	resp.Data["i18n_back_action"] = translate.Translate("back_action", p.ui.Language, nil)
@@ -186,6 +196,7 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 	}
 	// The login form posts to its page's own URL, which carries the destination.
 	usr.LoginReturnURL = p.loginReturnURL(r, rr)
+	usr.LoginReturnURLBound = hasLoginDestination(r)
 	usr.LoginFresh = r.URL.Query().Get("fresh") == "1"
 
 	if err := p.sandboxes.Add(usr.Authenticator.TempSessionID, usr); err != nil {
@@ -482,7 +493,7 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	// forwarded a user to the authentication portal. The cookie is consumed even
 	// when the flow's own destination is used, so a stale value cannot linger.
 	if cookie, err := r.Cookie(p.cookie.RefererCookieName); err == nil {
-		if redirectLocation == "" {
+		if redirectLocation == "" && !rr.Response.ReturnURLBound && rr.Response.ReturnURL == "" {
 			if redirectURL := p.trustedLoginRedirectURL(cookie.Value); redirectURL != "" {
 				redirectLocation = redirectURL
 				p.logger.Debug(
@@ -505,6 +516,9 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	if redirectLocation == "" {
 		// Redirect authenticated user to portal page when no redirect cookie found.
 		redirectLocation = rr.Upstream.BaseURL + path.Join(rr.Upstream.BasePath, "/portal")
+		if rr.Response.ReturnURLBound || rr.Response.ReturnURL != "" {
+			redirectLocation += "?redirect_url="
+		}
 	}
 	w.Header().Set("Location", redirectLocation)
 	rr.Response.Code = http.StatusSeeOther

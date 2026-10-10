@@ -4,18 +4,11 @@ get:
   - Authentication Portal
   summary: Enter the authentication portal
   description: The mounted portal root redirects to its login page. A trusted redirect_url is recorded
-    in the shared redirect cookie and also kept in the login page URL, so each browser tab returns to its
-    own destination; untrusted, non-HTTP(S) or oversized values are not carried in the URL.
+    in a legacy redirect cookie only when at most 2048 bytes, and kept in the login page URL, so each browser tab returns to its
+    own destination. Empty, untrusted, non-HTTP(S) or oversized values become an explicit empty redirect_url selecting the portal; they cannot fall back to a shared cookie.
   security: []
   parameters:
-  - name: redirect_url
-    in: query
-    description: Post-login destination. Only an HTTP(S) URL matching a configured trusted login redirect,
-      at most 2048 bytes after login_hint is removed, is carried to the login page URL. Only the first
-      value is used.
-    required: false
-    schema:
-      type: string
+  - $ref: ../components/parameters/LoginReturnURL.yaml
   responses:
     '302':
       $ref: ../components/responses/Redirect.yaml

@@ -19,6 +19,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -26,6 +28,7 @@ import (
 	"net/url"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -248,11 +251,72 @@ func TestE2ELoginRedirectPathBoundaryBrowser(t *testing.T) {
 			}
 			// Accept either a local error or the usual portal fallback. The
 			// test specifies the trust boundary, not the rejection renderer.
-			if tc.Actual != f.server.URL+"/portal" && !strings.HasPrefix(tc.Actual, f.server.URL+"/login?") {
+			if tc.Actual != f.server.URL+"/portal" && tc.Actual != f.server.URL+"/portal?redirect_url=" && !strings.HasPrefix(tc.Actual, f.server.URL+"/login?") {
 				t.Errorf("untrusted browser destination reached: input %q, actual %q", tc.Target, tc.Actual)
 			}
 			if tc.Status != http.StatusOK && tc.Status != http.StatusBadRequest && tc.Status != http.StatusForbidden {
 				t.Errorf("unexpected rejection status HTTP %d", tc.Status)
+			}
+		})
+	}
+}
+
+func TestE2ELoginDestinationBoundsAndEmptyChoice(t *testing.T) {
+	for _, size := range []int{0, 2049, 8000, 16384, 16385} {
+		t.Run(fmt.Sprint(size), func(t *testing.T) {
+			f := newLoginRedirectFixture(t)
+			destination := ""
+			if size != 0 {
+				prefix := f.server.URL + "/_test/allowed/"
+				destination = prefix + strings.Repeat("x", size-len(prefix))
+			}
+			endpoint := f.server.URL + "/login?redirect_url=" + url.QueryEscape(destination)
+			response, err := f.client.Get(endpoint)
+			if err != nil {
+				t.Fatal(err)
+			}
+			body, err := io.ReadAll(response.Body)
+			response.Body.Close()
+			if err != nil || response.StatusCode != 200 {
+				t.Fatal("login rendering", err)
+			}
+			for _, cookie := range response.Cookies() {
+				if cookie.Name == "AUTHP_REDIRECT_URL" && size > 2048 {
+					t.Fatal("oversized destination written to cookie")
+				}
+			}
+			action := regexp.MustCompile(`<form[^>]*action="([^"]+)"`).FindSubmatch(body)
+			if len(action) != 2 {
+				t.Fatal("missing form")
+			}
+			target, err := url.Parse(html.UnescapeString(string(action[1])))
+			if err != nil {
+				t.Fatal(err)
+			}
+			origin, _ := url.Parse(f.server.URL)
+			target = origin.ResolveReference(target)
+			f.client.Jar.SetCookies(origin, []*http.Cookie{{Name: "AUTHP_REDIRECT_URL", Value: f.server.URL + "/_test/allowed/another-tab", Path: "/"}})
+			start := f.request(t, http.MethodPost, target.String(), url.Values{"username": {"alice"}, "realm": {"local"}})
+			sandbox, err := start.Location()
+			if err != nil {
+				t.Fatal(err)
+			}
+			password := f.request(t, http.MethodPost, sandbox.String(), url.Values{"secret": {tests.TestPwd1}})
+			if password.StatusCode != 303 {
+				t.Fatal("password checkpoint failed")
+			}
+			complete := f.request(t, http.MethodGet, sandbox.String(), nil)
+			// Another tab may write its cookie after the login's 303 but before
+			// this tab follows it. The explicit empty marker must survive that gap.
+			if size == 0 || size > 16384 {
+				f.client.Jar.SetCookies(origin, []*http.Cookie{{Name: "AUTHP_REDIRECT_URL", Value: f.server.URL + "/_test/allowed/between-redirects", Path: "/"}})
+			}
+			want := destination
+			if size == 0 || size > 16384 {
+				want = f.server.URL + "/portal?redirect_url="
+			}
+			if got := f.follow(t, complete); got != want {
+				t.Fatalf("size %d returned to another destination", size)
 			}
 		})
 	}

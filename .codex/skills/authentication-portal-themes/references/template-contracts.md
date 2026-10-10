@@ -101,7 +101,66 @@ When `.Data.login_elsewhere_enabled` is true, give the `login.js` script tag
 sends a waiting tab to that destination once another tab completes the login. Omit
 both attributes otherwise, notably for a `fresh=1` login. The sandbox `terminate`
 view's start-over link receives the same two keys and builds the same login page
-query. Templates without these keys fall back to the redirect cookie.
+query. The portal also supplies runtime `Args.LoginNavigation`. After Go template
+execution, the renderer carries the destination (including explicit empty
+`redirect_url=`) across known local forms, submit overrides and navigation links,
+and configured OAuth/SAML initiation endpoints. Root and nested mounts work.
+Filesystem templates from before these keys therefore keep flow isolation.
+GET navigation forms receive hidden `redirect_url` and, when applicable,
+`fresh` controls: browsers replace a GET action's query when submitting it.
+Existing controls in that form lose those reserved `name`/`dirname` attributes
+when the renderer supplies their replacement. This includes externally associated
+controls before the form: document order would otherwise let their old values
+win. Ordinary field names/values and the ability to activate submit buttons stay
+intact. Preserve a theme's own freshness controls when no replacement is needed.
+Compute effective actions and methods for every submit button, including controls
+associated by `form="id"` outside the form. GET method overrides on POST forms
+need these fields too. Match `method`, `formmethod` and input/button `type`
+keywords using ASCII-only case folding, with their HTML invalid-value defaults.
+Unicode folding can mistake `poſt` for POST or `reſet` for a non-submitting reset
+button, causing lost navigation or disclosure to a foreign action. See the
+[HTML keyword rules](https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#keywords-and-enumerated-attributes).
+Shared fields must not be added when any submission can
+target an external URL, callback or provider-owned protocol endpoint. Such mixed
+forms need separate forms or explicit per-submission handling by the theme.
+Identify each form by its parsed element and source position, never by matching
+opening-tag text: the HTML parser can discard nested forms, and identical real
+tags can have different submitters. Inert template forms receive no fields.
+Malformed table/form nesting can leave controls with a parser-only form owner
+outside their DOM ancestry. Withhold shared fields when their placement is
+ambiguous, and conservatively account for submitters that could retain such an
+owner. Correct malformed themes before relying on automatic GET adaptation.
+Use the first duplicate attribute, as browsers do, when classifying core script
+sources; a later ignored `src` must not override it.
+An explicit empty `action` or `formaction` stays empty: it submits to the current
+document URL, whereas adding only a query would resolve against the HTML base.
+See the [HTML form submission contract](https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#form-submission-algorithm).
+Fragment-only links stay unchanged. Resolve navigation using the first active
+HTML `<base href>`; bases inside inert templates do not apply. Only relative
+bases can be resolved as local from this runtime context. Absolute/foreign bases
+must not cause the adapter to attach destinations to links or core-asset tags;
+custom themes using such bases must carry navigation explicitly.
+The adapter fills core script attributes, including `data-login-destination`
+for realm-dependent registration links. `data-return-url` may instead point to
+`portal?redirect_url=` for an empty choice. Refresh continuation receives
+`data-next`, and cross-device request scripts receive `data-return-url`.
+
+Preserve ordinary HTML navigation and core assets when customizing themes.
+External URLs, HTTP provider protocol routes, callbacks, unrelated parameters
+and inline script text remain unchanged. Custom scripts which create or replace
+links at runtime must carry `redirect_url` themselves; `showLoginForm` does this
+for registration. Do not use raw HTML or JavaScript interpolation for URLs.
+`TestLegacyThemeNavigation` covers escaped/long/empty values and root/nested
+mounts; the real Chrome waiting-tabs test also runs the pre-feature filesystem
+login template with an 8 KiB destination and real GET/default/override/empty-action
+submissions, including conflicting controls before their form and `dirname` fields. It also
+loads a core script with duplicate sources. External submit overrides and malformed
+nested/table/ancestor-closed forms submit to a separate TLS receiver; no navigation
+fields may reach that receiver. `TestLegacyThemeFormOverrides` also covers ownership,
+duplicate IDs, inert controls, ASCII/Unicode keyword boundaries and provider-protocol exclusions. Keep
+`TestLegacyThemeFormIdentity`, `TestLegacyThemeScriptFirstSource` and
+`TestLegacyThemeReservedFormControls` alongside these browser checks.
+Fresh login never watches another tab.
 See [per-flow login destinations](../../threat-hunting/references/redirects.md#per-flow-login-destinations).
 
 `core/js/login.js` uses `loginform`, `authenticators`, `username`, `realm`,

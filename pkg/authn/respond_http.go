@@ -38,7 +38,7 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 		p.injectRedirectURL(ctx, w, r, rr)
 		// Keep the destination in this tab's URL too: the cookie is shared by
 		// every tab of the browser, so the last tab to arrive would win it.
-		return p.handleHTTPRedirect(ctx, w, r, rr, loginPageLocation(p.loginReturnURL(r, rr), false))
+		return p.handleHTTPRedirect(ctx, w, r, rr, p.loginPageRequestLocation(r, rr, false))
 	case providerLoginRouteIndex(r.URL.Path) >= 0:
 		return p.handleHTTPProviderLogin(ctx, w, r, rr)
 	case strings.Contains(r.URL.Path, "/profile/"):

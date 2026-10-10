@@ -76,6 +76,8 @@ type UserRealm struct {
 // Args is a collection of page attributes
 // that needs to be passed to Render method.
 type Args struct {
+	// LoginNavigation carries trusted portal-owned navigation across theme versions.
+	LoginNavigation         *LoginNavigation `json:"-" xml:"-" yaml:"-"`
 	Language                translate.LangID `json:"language,omitempty" xml:"language,omitempty" yaml:"language,omitempty"`
 	PageTitle               string           `json:"page_title,omitempty" xml:"page_title,omitempty" yaml:"page_title,omitempty"`
 	LogoURL                 string           `json:"logo_url,omitempty" xml:"logo_url,omitempty" yaml:"logo_url,omitempty"`
@@ -317,6 +319,9 @@ func (f *Factory) Render(name string, args *Args) (*bytes.Buffer, error) {
 	err := f.Templates[name].Template.Execute(b, args)
 	if err != nil {
 		return nil, err
+	}
+	if args != nil && args.LoginNavigation != nil {
+		return carryLoginNavigation(b, args)
 	}
 	return b, nil
 }

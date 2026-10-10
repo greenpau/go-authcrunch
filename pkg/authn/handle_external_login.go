@@ -24,6 +24,11 @@ import (
 	"go.uber.org/zap"
 )
 
+// Refuse initiation when the request already carries this many transaction
+// cookies. Concurrent responses may not be visible yet; provider state capacity
+// is bounded separately. Cookies expire after five minutes; never evict a proof.
+const maxSAMLBrowserTransactions = 16
+
 func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, authMethod string) error {
 	p.disableClientCache(w)
 	p.recordRedirectURL(w, r, rr)
@@ -68,13 +73,25 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 	}
 	portalSessionID := rr.Upstream.SessionID
+	var samlSessionID string
 	if authMethod == "saml" {
+		if r.Method == http.MethodGet {
+			count := 0
+			for _, c := range r.Cookies() {
+				if strings.HasPrefix(c.Name, p.cookie.SAMLSessionIDCookieName+"_") {
+					count++
+				}
+			}
+			if count >= maxSAMLBrowserTransactions {
+				return p.handleHTTPError(ctx, w, r, rr, http.StatusTooManyRequests)
+			}
+		}
 		p.injectSAMLSessionID(w, r, rr)
+		samlSessionID = rr.Upstream.SessionID
 	}
-	// An OAuth provider binds the destination to the login it starts here and
-	// hands it back on that login's callback, whose URL cannot carry it. SAML
-	// binds none, so its callback URL must not be able to choose one.
-	if authMethod == "oauth2" {
+	// Providers bind the destination on initiation and release it only after a
+	// verified callback. Neither OAuth nor SAML callback URLs may replace it.
+	if authMethod == "oauth2" || (authMethod == "saml" && r.Method == http.MethodGet) {
 		rr.Response.ReturnURL = p.loginReturnURL(r, rr)
 	}
 	err = provider.Request(operator.Authenticate, rr)
@@ -95,7 +112,7 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusBadRequest)
 	case http.StatusOK:
 		if authMethod == "saml" {
-			w.Header().Add("Set-Cookie", p.cookie.GetDeleteSAMLSessionIDCookie())
+			w.Header().Add("Set-Cookie", p.cookie.GetDeleteSAMLSessionIDCookieForState(r.PostForm.Get("RelayState")))
 		}
 		p.logger.Info(
 			"Successful login",
@@ -106,6 +123,13 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 			zap.Any("user", rr.Response.Payload),
 		)
 	case http.StatusFound:
+		if authMethod == "saml" {
+			bindingCookie := p.cookie.GetSAMLSessionIDCookieForState(samlSessionID, rr.Response.LoginState)
+			if bindingCookie == "" {
+				return p.handleHTTPError(ctx, w, r, rr, http.StatusBadGateway)
+			}
+			w.Header().Add("Set-Cookie", bindingCookie)
+		}
 		if rr.Response.RedirectURL == "" {
 			p.logger.Warn(
 				"Authentication provider returned an empty redirect URL",

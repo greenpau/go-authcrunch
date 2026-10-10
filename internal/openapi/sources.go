@@ -54,7 +54,7 @@ func Sources(ctx context.Context, repository string) (*ReviewedSources, error) {
 		}
 	}
 	// Recursive walks detect new dispatchers, handlers, validators and serializers.
-	for _, relative := range []string{"pkg/authn", "pkg/apiauth", "pkg/oidc", "pkg/identity", "pkg/system", "pkg/kms", "pkg/requests", "pkg/authz", "pkg/registry", "pkg/ids", "pkg/idp", "pkg/sso", "pkg/user", "pkg/authchal", "pkg/tagging", "pkg/httpserver", "cmd/authdb", "pkg/redirects", "pkg/waf", "pkg/util/addr", "pkg/util/validate", "pkg/util/charset", "pkg/util/random.go", "pkg/util/request_id.go", "pkg/util/redirect.go", "pkg/util/sanitizer.go"} {
+	for _, relative := range []string{"plugins/registration-workflows/sqlite", "internal/sqlitedb", "pkg/authn", "pkg/apiauth", "pkg/oidc", "pkg/identity", "pkg/system", "pkg/kms", "pkg/requests", "pkg/authz", "pkg/registry", "pkg/ids", "pkg/idp", "pkg/sso", "pkg/user", "pkg/authchal", "pkg/tagging", "pkg/httpserver", "cmd/authdb", "pkg/redirects", "pkg/waf", "pkg/util/addr", "pkg/util/validate", "pkg/util/charset", "pkg/util/random.go", "pkg/util/request_id.go", "pkg/util/redirect.go", "pkg/util/sanitizer.go"} {
 		err := filepath.WalkDir(filepath.Join(repository, relative), func(file string, entry fs.DirEntry, walkErr error) error {
 			if err := ctx.Err(); err != nil {
 				return err

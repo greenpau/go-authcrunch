@@ -72,7 +72,7 @@ const href = (tab) => evaluate(tab, () => document.readyState === "complete" ? l
   try {
     const { browserContextId } = await command("Target.createBrowserContext");
     const login = config.origin + "/login";
-    const destination = config.origin + "/_test/tab/waiting?view=one%26two";
+    const destination = config.origin + "/_test/tab/waiting?long=" + "x".repeat(8000) + "&view=one%26two";
     const tabs = {};
     stage = "open login pages";
     for (const [name, url] of [
@@ -85,6 +85,59 @@ const href = (tab) => evaluate(tab, () => document.readyState === "complete" ? l
       const navigation = await command("Page.navigate", { url }, tabs[name]);
       if (navigation.errorText) throw new Error(name + " tab navigation failed");
       await waitFor(async () => (await href(tabs[name])) === url);
+    }
+
+    if (config.theme === "legacy") {
+      stage = "legacy GET form keeps its destination";
+      const getTab = await page(browserContextId);
+      const start = login + "?fresh=1&redirect_url=" + encodeURIComponent(destination);
+      await command("Page.navigate", { url: start }, getTab);
+      await waitFor(async () => (await href(getTab)) === start);
+      await evaluate(getTab, () => document.getElementById("legacy-get").requestSubmit());
+      await waitFor(async () => {
+        const current = await href(getTab);
+        return current && current !== start;
+      });
+      const submitted = new URL(await href(getTab));
+      assert.equal(submitted.searchParams.get("redirect_url"), destination, "GET controls replaced this tab's destination");
+      assert.equal(submitted.searchParams.get("fresh"), "1", "GET submission lost fresh login");
+      assert.equal(submitted.searchParams.getAll("redirect_url").length, 1, "obsolete controls still submit destinations");
+      assert.equal(submitted.searchParams.getAll("fresh").length, 1, "obsolete controls still submit freshness");
+      assert.equal(submitted.searchParams.get("note"), "ordinary", "dirname handling lost an ordinary field");
+      assert.equal(submitted.searchParams.get("message"), "ordinary", "dirname handling lost a textarea value");
+      assert.equal(probes.get(getTab) || 0, 0, "fresh GET navigation started polling");
+
+      const errors = [];
+      for (const [formID, submitID, external] of [
+        ["legacy-method", "legacy-method-submit", false],
+        ["legacy-unicode-method", "legacy-unicode-method-submit", false],
+        ["legacy-unicode-reset", "legacy-unicode-reset-submit", true],
+        ["legacy-empty", "legacy-empty-submit", false],
+        ["legacy-external", "legacy-external-submit", true],
+        ["legacy-nested-external", "legacy-nested-submit", true],
+        ["legacy-table", "legacy-table-submit", true],
+        ["legacy-closed", "legacy-closed-submit", true],
+      ]) {
+        stage = "legacy form override " + formID;
+        await command("Page.navigate", { url: start }, getTab);
+        await waitFor(async () => (await href(getTab)) === start);
+        await evaluate(getTab, ({ formID, submitID }) => {
+          document.getElementById(formID).requestSubmit(document.getElementById(submitID));
+        }, { formID, submitID });
+        await waitFor(async () => {
+          const current = await href(getTab);
+          return current && current !== start;
+        });
+        const result = new URL(await href(getTab));
+        if (external) {
+          assert.equal(result.origin, config.receiver, "external submission did not reach its receiver");
+          assert.equal(result.searchParams.get("note"), "ordinary");
+          if (result.searchParams.has("redirect_url") || result.searchParams.has("fresh")) errors.push(formID + " leaked portal navigation");
+        } else if (result.searchParams.get("redirect_url") !== destination || result.searchParams.get("fresh") !== "1") {
+          errors.push(formID + " lost this tab's destination or freshness");
+        }
+      }
+      assert.deepEqual(errors, []);
     }
 
     // A tab in the background does not ask; switching to it does.
@@ -103,7 +156,9 @@ const href = (tab) => evaluate(tab, () => document.readyState === "complete" ? l
     stage = "sign in from another tab";
     await command("Page.bringToFront", {}, tabs.signing);
     await evaluate(tabs.signing, async ({ origin, password }) => {
-      const start = await fetch(origin + "/login", {
+      const action = document.querySelector("form").action;
+      if (new URL(action).searchParams.get("redirect_url") !== origin + "/_test/tab/signing") throw new Error("theme lost form destination");
+      const start = await fetch(action, {
         method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "text/html" },
         body: new URLSearchParams({ username: "alice", realm: "local" })
       });
@@ -131,7 +186,7 @@ const href = (tab) => evaluate(tab, () => document.readyState === "complete" ? l
     await waitFor(async () => (await href(tabs.waiting)) === destination);
     stage = "tab without a destination leaves for the portal";
     await command("Page.bringToFront", {}, tabs.bare);
-    await waitFor(async () => (await href(tabs.bare)) === config.origin + "/portal");
+    await waitFor(async () => (await href(tabs.bare)) === config.origin + "/portal?redirect_url=");
     process.stdout.write(JSON.stringify({ passed: true }));
   } finally {
     await command("Browser.close").catch(() => {});

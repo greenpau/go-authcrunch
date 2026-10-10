@@ -64,6 +64,9 @@ func (f *Factory) ValidateIdentityTokenCookieName(name string) error {
 	if (&http.Cookie{Name: name}).Valid() != nil {
 		return fmt.Errorf("invalid identity cookie name")
 	}
+	if strings.HasPrefix(name, f.SAMLSessionIDCookieName+"_") {
+		return fmt.Errorf("identity cookie overlaps SAML transaction cookies")
+	}
 	return ValidatePrefix(name, "", "/whoami", !f.config.Insecure)
 }
 

@@ -23,6 +23,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -34,6 +35,7 @@ import (
 	cookieparser "github.com/greenpau/go-authcrunch/pkg/authn/cookie/parser"
 	crossparser "github.com/greenpau/go-authcrunch/pkg/authn/cross_device/parser"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
+	"github.com/greenpau/go-authcrunch/pkg/redirects"
 )
 
 func crossDeviceConfig(t *testing.T, config *authn.PortalConfig) {
@@ -67,7 +69,12 @@ func crossDevicePost(t *testing.T, f *oidcE2EFixture, route string, values url.V
 
 func crossDeviceStart(t *testing.T, f *oidcE2EFixture) map[string]string {
 	t.Helper()
-	res := crossDevicePost(t, f, "start", nil)
+	return crossDeviceStartDestination(t, f, "")
+}
+
+func crossDeviceStartDestination(t *testing.T, f *oidcE2EFixture, destination string) map[string]string {
+	t.Helper()
+	res := crossDevicePost(t, f, "start?redirect_url="+url.QueryEscape(destination), nil)
 	oidcE2EStatus(t, res, http.StatusOK)
 	if res.header.Get("Cache-Control") != "no-store" || res.header.Get("Referrer-Policy") != "strict-origin" {
 		t.Fatal("interaction can leak via cache/referrer")
@@ -635,5 +642,46 @@ func TestE2ECrossDeviceStaleConfirmation(t *testing.T) {
 	loginIdentityClaims(t, second, loginIdentityCookie(second, "AUTHP_ACCESS_TOKEN"), "bob")
 	if loginIdentityCookie(first, "AUTHP_ACCESS_TOKEN") != "" {
 		t.Fatal("another request received Bob's credentials")
+	}
+}
+
+func TestE2ECrossDeviceRequesterDestinationIsolation(t *testing.T) {
+	f, _, _ := newLoginIdentityConfiguredE2E(t, true, true, false, "", func(config *authn.PortalConfig) {
+		crossDeviceConfig(t, config)
+		trusted, err := redirects.NewRedirectURIMatchConfig("exact", "trusted.example.test", "prefix", "/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		config.TrustedLoginRedirectURIConfigs = []*redirects.RedirectURIMatchConfig{trusted}
+	})
+	destinations := []string{"https://trusted.example.test/first?x=one%26two", "https://trusted.example.test/second?q=" + strings.Repeat("x", 8000), "", "https://evil.example.test/", "https://trusted.example.test/" + strings.Repeat("x", 17000)}
+	interactions := make([]map[string]string, len(destinations))
+	for i, destination := range destinations {
+		interactions[i] = crossDeviceStartDestination(t, f, destination)
+	}
+	for i := range slices.Backward(interactions) {
+		approver := crossDeviceBrowser(f)
+		crossDeviceBegin(t, approver, interactions[i])
+		confirmation := crossDeviceLogin(t, approver, false)
+		oidcE2EStatus(t, crossDeviceDecision(t, approver, confirmation, "approve"), http.StatusOK)
+		portal, _ := url.Parse(f.issuer)
+		f.client.Jar.SetCookies(portal, []*http.Cookie{{Name: "AUTHP_REDIRECT_URL", Value: "https://trusted.example.test/another-tab", Path: "/"}})
+		res := crossDevicePost(t, f, "poll?redirect_url=https%3A%2F%2Ftrusted.example.test%2Fpoll-override", crossDevicePollValues(interactions[i]))
+		oidcE2EStatus(t, res, http.StatusOK)
+		var data struct{ Status, Next string }
+		if err := json.Unmarshal(res.body, &data); err != nil {
+			t.Fatal(err)
+		}
+		want := f.issuer + "/portal?redirect_url="
+		if i < 2 {
+			want = destinations[i]
+		}
+		if data.Status != "approved" || data.Next != want {
+			t.Fatalf("redemption %d: %#v, want %q", i, data, want)
+		}
+		if loginIdentityCookie(f, "AUTHP_ACCESS_TOKEN") == "" {
+			t.Fatal("missing authenticated requester")
+		}
+		oidcE2EStatus(t, crossDevicePost(t, f, "poll", crossDevicePollValues(interactions[i])), http.StatusGone)
 	}
 }

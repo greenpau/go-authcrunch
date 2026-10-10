@@ -26,7 +26,7 @@ func TestStateManagerBrowserCallbackExpiryAndReplay(t *testing.T) {
 	sm := newStateManager()
 	sm.now = func() time.Time { return now }
 
-	state, err := sm.add("browser-a", "https://portal.example/saml/upstream", "request-a")
+	state, err := sm.add("browser-a", "https://portal.example/saml/upstream", "request-a", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,15 +45,15 @@ func TestStateManagerBrowserCallbackExpiryAndReplay(t *testing.T) {
 			}
 		})
 	}
-	requestID, ok := sm.consume(state, "browser-a", "https://portal.example/saml/upstream")
-	if !ok || requestID != "request-a" {
-		t.Fatalf("valid binding rejected: requestID=%q ok=%v", requestID, ok)
+	binding, ok := sm.consume(state, "browser-a", "https://portal.example/saml/upstream")
+	if !ok || binding.requestID != "request-a" {
+		t.Fatalf("valid binding rejected: requestID=%q ok=%v", binding.requestID, ok)
 	}
 	if _, ok := sm.consume(state, "browser-a", "https://portal.example/saml/upstream"); ok {
 		t.Fatal("replayed binding admitted")
 	}
 
-	expiredState, err := sm.add("browser-a", "https://portal.example/saml/upstream", "request-b")
+	expiredState, err := sm.add("browser-a", "https://portal.example/saml/upstream", "request-b", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestStateManagerBrowserCallbackExpiryAndReplay(t *testing.T) {
 
 func TestStateManagerSingleUseConcurrent(t *testing.T) {
 	sm := newStateManager()
-	state, err := sm.add("browser-a", "https://portal.example/saml/upstream", "request-a")
+	state, err := sm.add("browser-a", "https://portal.example/saml/upstream", "request-a", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,14 +89,42 @@ func TestStateManagerCapacityReclaimsExpired(t *testing.T) {
 	sm := newStateManager()
 	sm.maxStates = 1
 	sm.now = func() time.Time { return now }
-	if _, err := sm.add("browser-a", "https://portal.example/saml/upstream", "request-a"); err != nil {
+	if _, err := sm.add("browser-a", "https://portal.example/saml/upstream", "request-a", ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := sm.add("browser-b", "https://portal.example/saml/upstream", "request-b"); err == nil {
+	if _, err := sm.add("browser-b", "https://portal.example/saml/upstream", "request-b", ""); err == nil {
 		t.Fatal("capacity was not enforced")
 	}
 	now = now.Add(samlLoginLifetime)
-	if _, err := sm.add("browser-b", "https://portal.example/saml/upstream", "request-b"); err != nil {
+	if _, err := sm.add("browser-b", "https://portal.example/saml/upstream", "request-b", ""); err != nil {
 		t.Fatalf("expired entry did not release capacity: %v", err)
+	}
+}
+
+func TestStateManagerReturnDestinationIsolation(t *testing.T) {
+	sm := newStateManager()
+	const callback = "https://portal.example/saml/upstream"
+	first, err := sm.add("browser", callback, "request-one", "https://app.example/one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := sm.add("browser", callback, "request-two", "https://app.example/two")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if binding, ok := sm.consume(first, "other-browser", callback); ok || binding.returnURL != "" {
+		t.Fatal("wrong browser obtained the destination")
+	}
+	for _, tc := range []struct{ state, request, destination string }{
+		{second, "request-two", "https://app.example/two"},
+		{first, "request-one", "https://app.example/one"},
+	} {
+		binding, ok := sm.consume(tc.state, "browser", callback)
+		if !ok || binding.requestID != tc.request || binding.returnURL != tc.destination {
+			t.Fatalf("transaction lost its destination: %#v, admitted=%v", binding, ok)
+		}
+		if replay, ok := sm.consume(tc.state, "browser", callback); ok || replay.returnURL != "" {
+			t.Fatal("replayed state released a destination")
+		}
 	}
 }

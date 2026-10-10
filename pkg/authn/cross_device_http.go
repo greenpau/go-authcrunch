@@ -155,7 +155,7 @@ func (p *Portal) handleCrossDevice(ctx context.Context, w http.ResponseWriter, r
 	case "":
 		return p.renderCrossDevice(ctx, w, r, rr, "request", nil)
 	case "/start":
-		entry, secret, err := p.crossDevice.start(origin, base, addrutil.GetSourceAddress(r))
+		entry, secret, err := p.crossDevice.start(origin, base, addrutil.GetSourceAddress(r), p.loginReturnURL(r, rr))
 		if err != nil {
 			crossDeviceFailure(w, http.StatusTooManyRequests)
 			return nil
@@ -240,6 +240,10 @@ func (p *Portal) renderCrossDevice(ctx context.Context, w http.ResponseWriter, r
 	args.BaseURL(rr.Upstream.BasePath)
 	args.PageTitle = args.Translate("cross_device_title")
 	args.Data["view"] = view
+	if view == "request" {
+		args.Data["login_return_url"] = p.loginReturnURL(r, rr)
+		p.bindLoginNavigation(args, r, p.loginReturnURL(r, rr))
+	}
 	maps.Copy(args.Data, data)
 	content, err := p.ui.Render("cross_device", args)
 	if err != nil {
@@ -298,6 +302,8 @@ func (p *Portal) completeCrossDeviceLogin(w http.ResponseWriter, r *http.Request
 }
 
 func (p *Portal) redeemCrossDevice(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, proof *crossDeviceProof) error {
+	rr.Response.ReturnURL = proof.returnURL
+	rr.Response.ReturnURLBound = true
 	if err := p.validateCrossDeviceSession(ctx, proof); err != nil {
 		crossDeviceFailure(w, crossDeviceSessionErrorStatus(err, http.StatusUnauthorized))
 		return nil
