@@ -161,6 +161,9 @@ func (p *Portal) userFromRefresh(ctx context.Context, tokens *tokenrefresh.Resul
 		return nil, tokenrefresh.ErrDenied
 	}
 	principal := tokens.Principal
+	if principal.Source == tokenrefresh.ProviderSnapshotSource {
+		return p.userFromProviderRefresh(ctx, tokens)
+	}
 	backend := p.getIdentityStoreByRealm(principal.Realm)
 	store, ok := backend.(refreshIdentityStore)
 	if !ok || backend.GetName() != principal.Backend || !p.refreshRealm(principal.Realm) {

@@ -721,3 +721,49 @@ func TestSQLiteRejectsAlteredSchema(t *testing.T) {
 		}
 	}
 }
+
+func TestSQLiteProviderEvidence(t *testing.T) {
+	s := testStore(t, 1, 3)
+	original := sessionFixture("provider-family")
+	original.Principal = tokenrefresh.Principal{Source: tokenrefresh.ProviderSnapshotSource, Backend: "upstream", BackendKind: "oauth", Realm: "upstream", UserID: "alice", Subject: "alice", AuthTime: time.Now().Unix(), Methods: []string{"federated"}, ProviderSnapshot: []byte(`{"sub":"alice","custom":{"tenant":"one"}}`)}
+	if err := s.Create(t.Context(), original, time.Now().Unix()+60); err != nil {
+		t.Fatal(err)
+	}
+	original.Principal.ProviderSnapshot[0] = 'x'
+	reopened := secondStore(t, s)
+	got, err := reopened.Lookup(t.Context(), original.Current, original.Binding)
+	if err != nil || got.Principal.Source != tokenrefresh.ProviderSnapshotSource || got.Principal.BackendKind != "oauth" || string(got.Principal.ProviderSnapshot) != `{"sub":"alice","custom":{"tenant":"one"}}` {
+		t.Fatal("provider evidence did not survive reopen", err)
+	}
+	got.Principal.ProviderSnapshot[0] = 'y'
+	again, err := s.Lookup(t.Context(), original.Current, original.Binding)
+	if err != nil || again.Principal.ProviderSnapshot[0] != '{' {
+		t.Fatal("lookup evidence aliases storage")
+	}
+	for _, edit := range []func(*tokenrefresh.Principal){
+		func(p *tokenrefresh.Principal) { p.Source = "unknown" }, func(p *tokenrefresh.Principal) { p.ProviderSnapshot = nil },
+		func(p *tokenrefresh.Principal) { p.ProviderSnapshot = []byte(`bad`) }, func(p *tokenrefresh.Principal) {
+			p.ProviderSnapshot = make([]byte, tokenrefresh.MaxProviderSnapshotSize+1)
+		},
+		func(p *tokenrefresh.Principal) { p.BackendKind = "saml" }, func(p *tokenrefresh.Principal) { p.Source = tokenrefresh.IdentityStoreSource },
+	} {
+		candidate := again
+		edit(&candidate.Principal)
+		if _, err := encodeSession(candidate); !errors.Is(err, tokenrefresh.ErrInvalid) {
+			t.Fatal("invalid source evidence accepted")
+		}
+	}
+	// Existing local records retain their canonical JSON bytes: optional source
+	// fields are omitted, so this format extension needs no destructive migration.
+	local := sessionFixture("legacy")
+	encoded, err := encodeSession(local)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "ProviderSnapshot") || strings.Contains(string(encoded), "BackendKind") || strings.Contains(string(encoded), "Source") {
+		t.Fatal("legacy format changed")
+	}
+	if _, err := decodeSession(encoded); err != nil {
+		t.Fatal("legacy record rejected", err)
+	}
+}

@@ -108,6 +108,16 @@ current refresh hashes or clearing replay history at restart is a security bug.
 Validate restored sessions and grants in detached maps, then publish them together.
 A failed restore must leave no partially restored authority, including through
 standalone OAuth gatekeeper and OIDC provider APIs.
+
+Refresh gob snapshots retain typed provider source, provider trust digest and
+bounded captured claim bytes as well as complete replay history. Restore rejects
+unknown sources, mixed local/provider evidence, invalid JSON, unsupported kinds
+and oversized snapshots before publishing detached state. Current provider
+trust and canonical claim checks still run at renewal. Keep provider configuration
+in custom portal bindings; persistence does not turn captured claims into live
+upstream revalidation. Provider cached users retain no local credential proof.
+`TestPersistentProviderEvidenceRejection` and the provider portal TLS restart
+journey cover these boundaries alongside existing local identity epochs.
 The portal response guard strips staged headers/cookies when a later composite
 login commit fails; preserve this even when the earlier session write succeeded.
 Check component health as well as the backing store: a session serialization

@@ -170,6 +170,15 @@ to cover login, sandbox, refresh, and OIDC routes; exact endpoint matches are
 intentionally specific to that operation. A stronger current policy requires
 fresh authentication, never an upgrade of stored AMR.
 
+Selected OAuth/OIDC snapshot renewal follows the same current-request contract
+through cached-user reconstruction. OAuth callback `iss` uses the established
+provider route ending in `/`; refresh evaluation uses its endpoint URL. Neither
+is the snapshot's upstream issuer. The final signed JWT retains the fixed family
+issuer. Provider snapshots have no local factor inventory and cannot satisfy a
+newly matching requirement. Preserve issuer/address policy denial and request
+claim transformations in `TestTokenRefreshProviderRequestPolicy`,
+`TestTokenRefreshProviderRequestClaims` and their public TLS E2E counterparts.
+
 `requests.User.AuthChallengePolicy` records an explicit stored policy or a
 matching portal replacement; local identification must reset stale markers
 and distinguish stored rules from backend defaults. Basic authentication checks
@@ -276,6 +285,12 @@ or issuance. Cover successful factor-only HTML/JSON login and independent AMR
 verification; unavailable or wrong factors, stale identity, and a stronger
 current policy must prevent issuance. Check refresh and OIDC independently
 and together, and preserve direct Basic/API-key/system-request boundaries.
+For provider snapshots, evaluate all recognized role contributions before
+factor policy and keep transformed roles authoritative through signing.
+Cover injected adapters returning root legacy nested role carriers as well as
+generic OAuth's flattened claims. Cross-device requester policy must receive
+the normalized roles and the requesting address/issuer; the approving provider
+login supplies federated evidence and cannot satisfy local factors.
 
 ```sh
 make test TEST_DIR='./pkg/authchal/... ./pkg/authn/transformer/... ./pkg/user ./pkg/acl ./pkg/identity ./pkg/ids/local ./pkg/ids/ldap ./pkg/authn ./internal/tag' COVERAGE_DIR=.coverage/authentication-challenges

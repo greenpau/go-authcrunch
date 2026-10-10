@@ -9,6 +9,12 @@ description: Maintain upstream OAuth identity-provider directive parsers, shared
 policy-selected login without a portal, its parser, callbacks, and opaque sessions.
 That peer consumer reuses this provider's authentication protocol and trust checks.
 
+Use [refresh-token-implementation](../refresh-token-implementation/SKILL.md) to
+maintain opt-in portal renewal after verified upstream login. That consumer's
+snapshot mode captures claims before transformations and never renews upstream
+tokens. Keep callback state/nonce/PKCE and signature verification in this owner;
+selected snapshot providers must disable upstream identity-token cookies.
+
 ## Ownership and Entry Points
 
 `pkg/idp/config.go` validates the shared provider parameter allowlist;

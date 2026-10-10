@@ -15,6 +15,7 @@
 package tokenrefresh
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -49,6 +50,21 @@ func (s *MemoryStore) ConfigurePersistentState(record *state.Record) error {
 		v := entry.Session
 		if s.now().Unix() >= v.IdleExpiresAt || s.now().Unix() >= v.AbsoluteExpiresAt {
 			continue
+		}
+		if len(v.Principal.ProviderSnapshot) > MaxProviderSnapshotSize {
+			return fmt.Errorf("invalid persisted provider evidence")
+		}
+		switch v.Principal.Source {
+		case "", IdentityStoreSource:
+			if len(v.Principal.ProviderSnapshot) != 0 || v.Principal.BackendKind != "" {
+				return fmt.Errorf("invalid persisted identity source")
+			}
+		case ProviderSnapshotSource:
+			if v.Principal.BackendKind != "oauth" || len(v.Principal.ProviderSnapshot) == 0 || !json.Valid(v.Principal.ProviderSnapshot) {
+				return fmt.Errorf("invalid persisted provider evidence")
+			}
+		default:
+			return fmt.Errorf("invalid persisted identity source")
 		}
 		if v.ID == "" || v.IdleExpiresAt > v.AbsoluteExpiresAt || len(entry.Digests) == 0 || len(entry.Digests) > s.maxRotations+1 || uint64(len(entry.Digests)-1) != v.Revision || entry.Digests[len(entry.Digests)-1] != v.Current || families[v.ID] != nil {
 			return fmt.Errorf("invalid persisted refresh family")

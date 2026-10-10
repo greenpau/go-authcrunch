@@ -14,7 +14,22 @@ get:
     claims. With no state/code/error/access_token parameter, this URL starts a new upstream login. Keep
     browser HTML negotiation. Successful upstream verification still passes portal authorization/transforms
     before issuing a session. A redirect_url on the callback URL never chooses the post-login destination:
-    only the one bound when this login started is returned, and only from a successful callback.'
+    only the one bound when this login started is returned, and only from a successful callback.
+
+    A realm explicitly selected by refresh_tokens.realms plus provider_revalidation with mode snapshot
+    receives a short portal access JWT and an opaque portal refresh family. Both arrive only in Secure,
+    HttpOnly cookies; Authorization is omitted. The verified subject is pinned before transformations,
+    auth_time is the portal callback time, and amr is federated. No upstream access/refresh/ID token is
+    stored by this feature. Identity-token cookies must be disabled for selected provider realms.
+    Snapshot renewal preserves captured provider attributes and re-runs current portal transforms
+    with the current portal request context, including issuer/address-dependent factor requirements;
+    recognized provider roles enter policy before signing, which preserves the transformed role set;
+    it does not observe upstream disablement, changed roles or provider logout. Access expiry is capped
+    by the family absolute deadline. Only an actual refresh extends the idle deadline. Unselected
+    providers retain access-only behavior. Fresh login atomically replaces presented browser families,
+    including at capacity; an undelivered new family is revoked after completion failure. The exact
+    configured HTTPS origin and mount are required. After successful state redemption, cross-site
+    document navigation is allowed; Fetch Metadata cannot select another transport.'
   security: []
   responses:
     '200':
@@ -27,6 +42,8 @@ get:
       $ref: ../components/responses/HTML.yaml
     '401':
       $ref: ../components/responses/HTML.yaml
+    '503':
+      $ref: ../components/responses/HTML.yaml
     '500':
       $ref: ../components/responses/HTML.yaml
     '502':
@@ -37,6 +54,9 @@ get:
       $ref: ../components/responses/HTML.yaml
   x-source-files:
   - pkg/authn/handle_external_login.go
+  - pkg/authn/handle_http_login.go
+  - pkg/authn/token_refresh_provider.go
+  - pkg/authn/token_refresh_config.go
   - pkg/idp/oauth/authenticate.go
   - pkg/idp/oauth/authenticate_setup.go
   - pkg/idp/oauth/state.go

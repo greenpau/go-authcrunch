@@ -1,9 +1,14 @@
 ---
 name: refresh-token-identity
-description: Maintain refresh-token login evidence, MFA completion, sandbox redemption, immutable local identity, credential-version invalidation, and transactional current-identity checks in AuthCrunch.
+description: Maintain refresh-token login evidence, MFA completion, sandbox redemption, immutable local identity, credential-version invalidation, transactional current-identity checks, and captured upstream provider snapshots in AuthCrunch.
 ---
 
 # Refresh Token Identity
+
+Read [provider snapshot renewal](references/provider-snapshots.md) when changing
+OAuth/OIDC-originated portal families, provider revalidation configuration,
+captured claims, or their persistence. That evidence has a separate typed source;
+local credential-version and profile authority must never be fabricated for it.
 
 ## Canonical Identity and Transformed Claims
 
@@ -38,7 +43,7 @@ backend UserInfo attributes. A transformed subject never becomes a backend
 lookup key or an OIDC/refresh proof username.
 
 Cached access-only users retain LoginEvidence, canonical LoginUsername/LoginEmail,
-and an independent LoginMethods slice. Renewed users reconstruct those fields
+and an independent LoginMethods slice. Renewed local users reconstruct those fields
 from the server-only cloned `tokenrefresh.Result.Principal` and current backend
 identity, never transformed access claims. Profile self-service consumes this
 metadata through [its bound adapter](../authentication-portal-profile/SKILL.md).

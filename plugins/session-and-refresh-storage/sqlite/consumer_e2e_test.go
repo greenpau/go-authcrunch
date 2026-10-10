@@ -415,3 +415,107 @@ func TestE2ESQLiteLoginRestartRefreshAndAuthorization(t *testing.T) {
 	restart()
 	send("/auth/refresh", "", "", first.Refresh, 401)
 }
+
+func TestE2ESQLiteProviderSnapshotRestart(t *testing.T) {
+	config := storageConfig(t, filepath.Join(privateDirectory(t), "provider.db"))
+	signer, pub, _ := newFixtureSigner(t)
+	var mu sync.RWMutex
+	var store *storage.Store
+	var manager *tokenrefresh.Manager
+	binding := tokenrefresh.Binding{Portal: "provider-consumer", Origin: "https://auth.example.test", BasePath: "/auth"}
+	open := func() {
+		t.Helper()
+		var err error
+		store, err = storage.New(t.Context(), config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		manager, err = tokenrefresh.NewManager(store, capturedProviderIdentity{}, signer, tokenrefresh.Policy{AccessLifetime: time.Minute, IdleTimeout: 2 * time.Minute, AbsoluteTimeout: 4 * time.Minute}, binding)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	open()
+	t.Cleanup(func() {
+		if err := store.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	principal := tokenrefresh.Principal{Source: tokenrefresh.ProviderSnapshotSource, Backend: "upstream", BackendKind: "oauth", Realm: "upstream", UserID: "immutable-provider-sub", Subject: "immutable-provider-sub", AuthTime: time.Now().Unix(), Methods: []string{"federated"}, ProviderSnapshot: []byte(`{"sub":"immutable-provider-sub","roles":["viewer"],"provider_name":"Captured User"}`)}
+	first, err := manager.Issue(t.Context(), principal, tokenrefresh.BodyTransport)
+	if err != nil {
+		t.Fatal(err)
+	}
+	principal.ProviderSnapshot[0] = 'x'
+	first.Principal.ProviderSnapshot[0] = 'y'
+	restart := func() {
+		mu.Lock()
+		defer mu.Unlock()
+		if err := store.Close(); err != nil {
+			t.Fatal(err)
+		}
+		open()
+	}
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.RLock()
+		defer mu.RUnlock()
+		if r.Method != http.MethodPost || r.URL.Path != "/auth/refresh" {
+			http.NotFound(w, r)
+			return
+		}
+		var input credentials
+		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024)).Decode(&input) != nil {
+			http.Error(w, "invalid", 400)
+			return
+		}
+		result, err := manager.Refresh(r.Context(), input.Refresh, tokenrefresh.BodyTransport)
+		if err != nil {
+			status := http.StatusServiceUnavailable
+			if errors.Is(err, tokenrefresh.ErrInvalid) || errors.Is(err, tokenrefresh.ErrDenied) {
+				status = http.StatusUnauthorized
+			}
+			http.Error(w, "refresh failed", status)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(credentials{Access: result.AccessToken, Refresh: result.RefreshToken, SessionID: result.SessionID})
+	}))
+	defer server.Close()
+	client := server.Client()
+	client.Timeout = 5 * time.Second
+	refresh := func(token string, want int) credentials {
+		t.Helper()
+		body, err := json.Marshal(credentials{Refresh: token})
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := client.Post(server.URL+"/auth/refresh", "application/json", bytes.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != want {
+			t.Fatal("provider storage refresh status", resp.StatusCode)
+		}
+		var output credentials
+		if want == http.StatusOK && json.NewDecoder(resp.Body).Decode(&output) != nil {
+			t.Fatal("invalid credential response")
+		}
+		return output
+	}
+	restart()
+	signer.fail.Store(true)
+	refresh(first.RefreshToken, http.StatusServiceUnavailable)
+	signer.fail.Store(false)
+	next := refresh(first.RefreshToken, http.StatusOK)
+	parsed, err := jwt.Parse(next.Access, func(token *jwt.Token) (any, error) { return pub, nil }, jwt.WithValidMethods([]string{"EdDSA", "Ed25519"}))
+	if err != nil || !parsed.Valid {
+		t.Fatal("renewed provider signature invalid")
+	}
+	claims := parsed.Claims.(jwt.MapClaims)
+	if claims["sub"] != principal.Subject || claims["sid"] != first.SessionID || claims["auth_time"].(float64) != float64(principal.AuthTime) || claims["provider_name"] != "Captured User" || claims["amr"].([]any)[0] != "federated" {
+		t.Fatal("provider evidence lost at reopen")
+	}
+	restart()
+	refresh(first.RefreshToken, http.StatusUnauthorized)
+	refresh(next.Refresh, http.StatusUnauthorized)
+}

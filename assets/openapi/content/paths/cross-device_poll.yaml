@@ -15,7 +15,12 @@ post:
     portal redirect. Session revocation/expiry before redemption fails. Content-Type parameters such as
     charset=utf-8 are accepted. Form fields are read from the body, without trimming; query fields cannot
     supply code, secret or csrf. Repeated body fields fail, including unrecognized fields.
-    The approved next URL is the requester destination captured at start and revalidated at redemption; empty or rejected destinations select the portal. Poll query values and the approving device cannot replace it.'
+    The approved next URL is the requester destination captured at start and revalidated at redemption; empty or rejected destinations select the portal. Poll query values and the approving device cannot replace it.
+    For selected OAuth snapshot realms, the requester remains access-only and receives verified
+    federated AMR and original authentication time from the approving login. Current requesting-device
+    policy evaluates normalized provider roles; signing preserves transformed roles. The requester
+    receives neither the approving family SID nor its refresh credential. Healthy approving-family
+    rotation keeps approval live; replay, logout or expiry invalidate it.'
   security: []
   responses:
     '200':
@@ -157,6 +162,7 @@ post:
           description: Do not store credentials or protocol responses.
   x-source-files:
   - pkg/authn/cross_device_http.go
+  - pkg/authn/token_refresh_provider.go
   requestBody:
     required: true
     content:

@@ -78,6 +78,16 @@ state, and keep secrets out of failures and reports. If a required E2E run is
 blocked, report the exact blocker and leave that validation explicitly
 incomplete rather than silently substituting unit coverage.
 
+Label each step in multi-request E2E assertions with a safe operation name and
+HTTP status; avoid dumping credential-bearing response bodies, cookies or
+sandbox URLs. Compare Go elapsed durations with event wall timestamps when a
+time-sensitive journey fails. A suspend/resume or wall-clock step can expire a
+live sandbox despite a short measured execution. On macOS, use
+`caffeinate -i make ci-check` for sustained local TLS/browser validation, retain
+failed timing evidence, and repeat the affected journey before the complete
+gate. Preserve production expiry checks and avoid per-request retries that hide
+the failure.
+
 ## Test Lifecycle
 
 The root Go module declares Go `1.26.0`. Repository coverage uses the pinned

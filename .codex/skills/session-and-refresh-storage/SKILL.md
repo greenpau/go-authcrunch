@@ -87,6 +87,19 @@ identity data. Do not restore stale live snapshots that revive spent credentials
 or revoked families; require fresh authentication after recovery that loses
 acknowledged history.
 
+Private principal records also retain typed provider source, backend kind and
+bounded canonical ProviderSnapshot bytes for opt-in upstream snapshot families.
+Limit the snapshot to 32 KiB and reject mixed local/provider or unknown source
+evidence. Deep-copy its bytes on input, lookup and result boundaries. The three
+new DTO fields are omitted for legacy local records, preserving their canonical
+encoding; older readers reject provider records. The 64 KiB record limit still
+applies after JSON/base64 encoding. Provider snapshots are private identity data,
+not upstream credentials. Authentication and current policy verification belong
+to the consumer's Identity adapter, not this storage plugin.
+Existing metadata bounds still apply: family IDs allow 256 bytes, identity and
+binding text allows 4,096 bytes, and each principal list allows 128 entries.
+The snapshot allowance does not expand those bounds or the total record limit.
+
 Creation closes and syncs a private temporary file before atomically linking it
 to the canonical name, without overwriting a concurrent constructor's database.
 The temporary name is removed and the directory synced. Interrupted startup can
@@ -164,6 +177,13 @@ during commit, post-commit expiry, and the continued usability of unrelated
 families. Use the driver's commit hook to cancel inside an actual SQLite commit.
 Parser unit cases and the executable example belong in `parser/parser_test.go`.
 Register public structs in `internal/tag/tag_test.go`.
+
+`TestSQLiteProviderEvidence` covers independent snapshot bytes, source validation
+and legacy record encoding. `TestE2ESQLiteProviderSnapshotRestart` composes public
+storage/manager APIs over TLS with real Ed25519 signing and captured server-held
+evidence. Preserve restart, signing-failure retry, pinned proof, custom claims
+and durable replay checks. Real upstream callback verification is covered by the
+portal owner's provider E2E; this storage fixture does not claim that boundary.
 
 `consumer_e2e_test.go` composes the public parser, real identity database,
 refresh engine, Ed25519 KMS, and gatekeeper over TLS. Preserve successful login,

@@ -89,6 +89,12 @@ identities, role removal, refresh renewal, cross-origin cookie submissions,
 and persistence checks showing rejected operations changed no credentials.
 Run focused tests through `make test` before the full quality gate.
 
+`TestE2ETokenRefreshProviderProfileBoundary` in
+`token_refresh_provider_e2e_test.go` checks the profile boundary before and after
+provider snapshot renewal. Even with profile enabled and portal profile roles,
+provider users lack the canonical local authentication evidence required by the
+bound adapter. Renewal cannot confer local credential-management authority.
+
 ```sh
 make test TEST_DIR='./pkg/identity ./pkg/ids/local ./pkg/authn' TEST='Profile|IdentityRequest|IdentityAlias|RoleChange' COVERAGE_DIR=.coverage/portal-profile
 ```

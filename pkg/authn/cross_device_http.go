@@ -365,13 +365,23 @@ func (p *Portal) issueCrossDeviceProvider(ctx context.Context, r *http.Request, 
 	if provider == nil || provider.GetName() != proof.user.Authenticator.Name {
 		return nil, errCrossDeviceDenied
 	}
-	m := make(map[string]any)
-	decoder := json.NewDecoder(bytes.NewReader(proof.providerClaims))
-	decoder.UseNumber()
-	if decoder.Decode(&m) != nil {
-		return nil, errCrossDeviceDenied
+	capturedSnapshot := proof.refreshSessionID != "" && p.refreshProviderMode(proof.user.Authenticator.Realm) == TokenRefreshProviderSnapshot
+	var m map[string]any
+	if capturedSnapshot {
+		var err error
+		m, err = decodeProviderSnapshot(proof.providerClaims)
+		if err != nil {
+			return nil, errCrossDeviceDenied
+		}
+		combineProviderRoles(m)
+	} else {
+		decoder := json.NewDecoder(bytes.NewReader(proof.providerClaims))
+		decoder.UseNumber()
+		if decoder.Decode(&m) != nil {
+			return nil, errCrossDeviceDenied
+		}
+		combineGroupRoles(m)
 	}
-	combineGroupRoles(m)
 	now := time.Now().Unix()
 	m["jti"], m["iat"], m["nbf"] = rr.Upstream.SessionID, now, now-60
 	m["exp"] = min(proof.expires, now+int64(p.keystore.GetTokenLifetime(nil, nil)))
@@ -385,6 +395,14 @@ func (p *Portal) issueCrossDeviceProvider(ctx context.Context, r *http.Request, 
 	// An upstream login cannot satisfy additional local factors at redemption.
 	if err := p.checkDirectAuthenticationPolicy(rr, m, nil); err != nil {
 		return nil, err
+	}
+	if capturedSnapshot {
+		// Policy owns the resulting roles; canonicalization cannot re-add raw
+		// nested roles. Proof comes from the approving issuer, not upstream AMR.
+		delete(m, "realm_access")
+		delete(m, "app_metadata")
+		m["amr"] = []string{"federated"}
+		m["auth_time"] = proof.user.AsMap()["auth_time"]
 	}
 	// Keep transfers bounded by the completed login's lifetime, even if a
 	// transform tries to extend expiry or replace the new session identifier.

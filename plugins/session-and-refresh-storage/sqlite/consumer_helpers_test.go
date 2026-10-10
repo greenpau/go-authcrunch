@@ -176,3 +176,22 @@ func newFixtureSigner(t *testing.T) (*fixtureSigner, ed25519.PublicKey, string) 
 	}
 	return &fixtureSigner{readerContext: t.Context(), keys: keys, blocked: make(chan *sql.Tx, 1), signing: make(chan struct{}, 1), canceled: make(chan struct{}, 1)}, pub, publicPath
 }
+
+// This storage consumer receives server-held evidence from completed provider
+// authentication. Portal callback admission is exercised in authn's TLS suite.
+// It never accepts a principal or claims document from an HTTP caller.
+type capturedProviderIdentity struct{}
+
+func (capturedProviderIdentity) WithIdentity(ctx context.Context, p tokenrefresh.Principal, apply func(map[string]any) error) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if p.Source != tokenrefresh.ProviderSnapshotSource || p.Backend != "upstream" || p.Realm != "upstream" || p.BackendKind != "oauth" || len(p.ProviderSnapshot) > tokenrefresh.MaxProviderSnapshotSize {
+		return tokenrefresh.ErrDenied
+	}
+	var claims map[string]any
+	if json.Unmarshal(p.ProviderSnapshot, &claims) != nil || claims["sub"] != p.Subject {
+		return tokenrefresh.ErrDenied
+	}
+	return apply(claims)
+}

@@ -14,7 +14,23 @@
 
 package tokenrefresh
 
-import "context"
+import (
+	"bytes"
+	"context"
+)
+
+// PrincipalSource identifies the server-owned origin of authentication evidence.
+type PrincipalSource string
+
+const (
+	// IdentityStoreSource uses transactional current-identity verification.
+	// An empty source retains the same behavior for existing local consumers.
+	IdentityStoreSource PrincipalSource = "store"
+	// ProviderSnapshotSource renews captured upstream claims without credentials.
+	ProviderSnapshotSource PrincipalSource = "provider_snapshot"
+	// MaxProviderSnapshotSize bounds the canonical server-only claims document.
+	MaxProviderSnapshotSize = 32 << 10
+)
 
 const (
 	// CookieTransport keeps both credentials out of browser JavaScript.
@@ -26,12 +42,15 @@ const (
 // Principal is server-only evidence of a completed authentication. Issue callers
 // must redeem that evidence once; possession of an access JWT is insufficient.
 type Principal struct {
-	Backend, Realm, UserID, Subject string   `json:"-" xml:"-" yaml:"-"`
-	BackendVersion                  string   `json:"-" xml:"-" yaml:"-"`
-	CredentialVersion               uint64   `json:"-" xml:"-" yaml:"-"`
-	AuthTime                        int64    `json:"-" xml:"-" yaml:"-"`
-	Methods, Challenges             []string `json:"-" xml:"-" yaml:"-"`
-	Audience, Scopes                []string `json:"-" xml:"-" yaml:"-"`
+	Backend, Realm, UserID, Subject string          `json:"-" xml:"-" yaml:"-"`
+	BackendVersion                  string          `json:"-" xml:"-" yaml:"-"`
+	CredentialVersion               uint64          `json:"-" xml:"-" yaml:"-"`
+	AuthTime                        int64           `json:"-" xml:"-" yaml:"-"`
+	Methods, Challenges             []string        `json:"-" xml:"-" yaml:"-"`
+	Audience, Scopes                []string        `json:"-" xml:"-" yaml:"-"`
+	Source                          PrincipalSource `json:"-" xml:"-" yaml:"-"`
+	BackendKind                     string          `json:"-" xml:"-" yaml:"-"`
+	ProviderSnapshot                []byte          `json:"-" xml:"-" yaml:"-"`
 }
 
 // Binding is stable across compatible portal instances and fixes transport.
@@ -90,6 +109,7 @@ type SessionValidator interface {
 }
 
 func cloneSession(s Session) Session {
+	s.Principal.ProviderSnapshot = bytes.Clone(s.Principal.ProviderSnapshot)
 	s.Principal.Methods = append([]string(nil), s.Principal.Methods...)
 	s.Principal.Challenges = append([]string(nil), s.Principal.Challenges...)
 	s.Principal.Audience = append([]string(nil), s.Principal.Audience...)

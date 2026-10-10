@@ -89,6 +89,8 @@ func TestPersistentRefreshReplayAndRevocation(t *testing.T) {
 		return h
 	}
 	h := open()
+	h.principal.Source, h.principal.BackendKind = ProviderSnapshotSource, "oauth"
+	h.principal.ProviderSnapshot = []byte(`{"sub":"alice","nested":{"label":"retained"}}`)
 	first := h.issue(t)
 	next, err := h.manager.Refresh(t.Context(), first.RefreshToken, CookieTransport)
 	if err != nil {
@@ -100,6 +102,14 @@ func TestPersistentRefreshReplayAndRevocation(t *testing.T) {
 	h = open()
 	if err = h.manager.ValidateSession(t.Context(), first.SessionID, CookieTransport); err != nil {
 		t.Fatalf("live family lost on restart: %v", err)
+	}
+	d, err := digest(next.RefreshToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, err := h.store.Lookup(t.Context(), d, Binding{Portal: h.manager.binding.Portal, Origin: h.manager.binding.Origin, BasePath: h.manager.binding.BasePath, Transport: CookieTransport})
+	if err != nil || string(stored.Principal.ProviderSnapshot) != string(first.Principal.ProviderSnapshot) || stored.Principal.Source != ProviderSnapshotSource || stored.Principal.BackendKind != "oauth" {
+		t.Fatal("provider evidence lost on restart", err)
 	}
 	if id, err := h.manager.GetSessionID(t.Context(), next.RefreshToken, CookieTransport); err != nil || id != first.SessionID {
 		t.Fatal("family lost on restart")
@@ -264,5 +274,54 @@ func TestE2EPersistentRefreshCapacityRollback(t *testing.T) {
 	}
 	if _, err = store.Lookup(context.Background(), other.Current, other.Binding); !errors.Is(err, ErrInvalid) {
 		t.Fatal("revoked family survived second reopen")
+	}
+}
+
+func TestPersistentProviderEvidenceRejection(t *testing.T) {
+	for _, kind := range []string{"unknown source", "invalid JSON", "missing snapshot", "oversized snapshot", "wrong kind", "mixed local evidence"} {
+		t.Run(kind, func(t *testing.T) {
+			storage, err := state.Open(&state.Config{Directory: filepath.Join(t.TempDir(), "state")})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer storage.Close()
+			record, err := storage.OpenRecord("refresh", "binding")
+			if err != nil {
+				t.Fatal(err)
+			}
+			v := capacitySession("provider", 1, 0)
+			v.Principal.Source = ProviderSnapshotSource
+			v.Principal.BackendKind = "oauth"
+			v.Principal.ProviderSnapshot = []byte(`{"sub":"alice"}`)
+			switch kind {
+			case "unknown source":
+				v.Principal.Source = "unknown"
+			case "invalid JSON":
+				v.Principal.ProviderSnapshot = []byte(`bad`)
+			case "missing snapshot":
+				v.Principal.ProviderSnapshot = nil
+			case "oversized snapshot":
+				v.Principal.ProviderSnapshot = make([]byte, MaxProviderSnapshotSize+1)
+			case "wrong kind":
+				v.Principal.BackendKind = "saml"
+			case "mixed local evidence":
+				v.Principal.Source = IdentityStoreSource
+			}
+			if err := record.Encode([]persistentFamily{{Session: v, Digests: [][32]byte{v.Current}}}); err != nil {
+				t.Fatal(err)
+			}
+			store, err := NewMemoryStore(1, 2)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer store.Close()
+			store.now = func() time.Time { return time.Unix(1000, 0) }
+			if err := store.ConfigurePersistentState(record); err == nil {
+				t.Fatal("malformed persisted evidence restored")
+			}
+			if len(store.families) != 0 || len(store.tokens) != 0 {
+				t.Fatal("failed restore published authority")
+			}
+		})
 	}
 }

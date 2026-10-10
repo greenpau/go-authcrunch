@@ -13,7 +13,8 @@ Contents:
 - [Validation](#validation)
 
 Portal refresh is opt-in. It retains JWT access tokens and adds a separate,
-opaque credential for renewing a completed local authentication. It does not
+opaque credential for renewing completed local or explicitly selected upstream
+authentication. It does not
 renew an upstream OAuth provider's tokens.
 
 ## Enable through library configuration
@@ -60,9 +61,26 @@ SameSite=Lax. Explicit `__Host-` names are supported only at the root mount.
 
 Only explicitly listed realms participate. The local identity store implements
 the required capability. Configuring an unsupported realm fails construction.
-LDAP, OAuth, SAML, basic-auth, and API key login remain access-only; no refresh credential
+OAuth/OIDC providers additionally require explicit snapshot selection; see below.
+LDAP, SAML, basic-auth, and API key login remain access-only; no refresh credential
 is minted from an existing access JWT. An absent or disabled block retains
 existing access-token lifetimes and allocates no refresh store.
+
+To select a provider, include its realm in `realms` and add, for example:
+
+```json
+{"provider_revalidation": [{"realm": "zitadel", "mode": "snapshot"}]}
+```
+
+In Go this is `[]authn.TokenRefreshProviderConfig` assigned to
+`TokenRefreshConfig.ProviderRevalidation`. Every selected provider must use kind
+`oauth`, have its identity-token cookie disabled, and have exactly one snapshot
+entry. A realm cannot resolve to both a store and a provider. Snapshot mode
+captures verified claims at login and reapplies current portal policy without
+contacting the upstream service. Upstream logout, disablement and role changes
+are not observed until fresh login. Select an absolute lifetime appropriate for
+that exposure. See the identity owner's
+[provider contract](../../refresh-token-identity/references/provider-snapshots.md).
 
 ## Encoded directives for embedding applications
 
@@ -97,7 +115,11 @@ token refresh {
 
 Only `realms`, `public origin`, and `base path` are required for enabled
 configurations. `realms` accepts multiple values on one line; the other value
-settings each accept one value. Optional `cookie name CUSTOM_REFRESH_TOKEN`
+settings each accept one value, except `provider revalidation REALM snapshot`.
+That directive is repeatable once per distinct realm, which must be listed in
+`realms`. For a mixed portal use `realms local zitadel` and
+`provider revalidation zitadel snapshot`. Unsupported modes and duplicate realms
+are errors. Optional `cookie name CUSTOM_REFRESH_TOKEN`
 overrides the portal factory's refresh-cookie name. Numeric settings are decimal
 integers; durations are seconds, and zero
 selects the existing default. The JSON/XML/YAML configuration keys retain their
@@ -107,7 +129,7 @@ State is expressed through keywords: `enabled` or `disabled` as a standalone
 line selects token refresh, and `body transport enabled` or
 `body transport disabled` selects native body transport. Token refresh defaults
 to enabled when the block is present; native body transport defaults to disabled.
-Each setting may appear once, so repeated or conflicting states are errors.
+Each singleton setting may appear once, so repeated or conflicting states are errors.
 Boolean literals such as true/false, on/off, and 1/0 are not directive syntax.
 Underscore directive keys are rejected.
 
@@ -138,6 +160,14 @@ owner serializes requests, checks that every checkpoint passed, and atomically
 redeems the completed login once. Signing happens once; delivery handles cookies,
 caching, JSON, and redirects.
 
+Selected providers issue a browser cookie family after their verified, single-use,
+browser-bound callback. They capture claims before transformations, pin the
+original provider subject and `["federated"]` authentication method, and retain
+no upstream credentials. They share replacement, replay, deadlines and logout
+with local families. Initial and renewed provider users gain no local profile
+credential authority. This browser flow does not enable native upstream token
+exchange or renewable provider cross-device requester sessions.
+
 A local login records the immutable user ID and credential version before
 checkpoints begin. Successful authentication records its actual time and method.
 Those values survive subsequent MFA without being refreshed. Issuance checks
@@ -159,7 +189,8 @@ adapter with equivalent transactional version checks.
 
 Claims preserve `sid`, `sub`, `iss`, `auth_time`, and actual `amr`. Each issuance
 has a new `jti`, `iat`, `nbf`, and `exp`. Refresh cannot expand the original
-audiences or scopes. Roles are rebuilt from current identity and transformation
+audiences or scopes. Roles are rebuilt from current local identity or captured
+provider attributes and current transformation
 policy. Transformations cannot replace the authentication event or invent `acr`.
 The original subject is pinned; an account rename requires another login.
 The issuer is the configured public origin plus mount, independent of the login
@@ -185,6 +216,9 @@ unknown or duplicate JSON fields, trailing JSON, and bodies over 1 KiB.
 The embedding server must strip or normalize forwarded host/protocol metadata,
 as it must for other portal routes. TLS and the effective host are checked
 against the configured origin.
+
+Only a successful refresh extends the idle deadline. Ordinary protected requests
+do not extend it, and the absolute deadline never moves.
 
 A successful response contains only metadata:
 

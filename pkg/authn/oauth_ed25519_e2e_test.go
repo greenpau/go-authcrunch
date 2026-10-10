@@ -29,6 +29,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -77,6 +78,9 @@ type oidcE2EIssuer struct {
 	accessSubjects                                              map[string]string
 	sequence, metadataFetches, keyFetches, exchanges, userInfos int
 	lastIdentity, lastSubject                                   string
+	identityClaims, userInfoClaims                              map[string]any
+	deactivated                                                 bool
+	issueRefreshToken                                           bool
 }
 
 func oidcE2EJSON(t *testing.T, value any) []byte {
@@ -164,6 +168,10 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 		f.keyFetches++
 		json.NewEncoder(w).Encode(map[string]any{"keys": f.keys})
 	case "/authorize":
+		if f.deactivated {
+			http.Error(w, "account disabled", http.StatusUnauthorized)
+			return
+		}
 		q := r.URL.Query()
 		nonceOmitted := f.failure == "nonce omitted"
 		if q.Get("client_id") != oidcE2EClientID || q.Get("redirect_uri") != f.callback || q.Get("response_type") != "code" || q.Get("state") == "" || (q.Get("nonce") == "") != nonceOmitted || q.Get("code_challenge_method") != "S256" || q.Get("code_challenge") == "" {
@@ -195,6 +203,7 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 		}
 		f.exchanges++
 		claims := map[string]any{"iss": f.server.URL, "aud": oidcE2EClientID, "sub": record.subject, "email": record.subject + "@example.test", "name": "OAuth User", "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(), "roles": []string{"viewer"}}
+		maps.Copy(claims, f.identityClaims)
 		if record.nonce != "" {
 			claims["nonce"] = record.nonce
 		}
@@ -225,6 +234,9 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 		f.lastIdentity = id
 		f.lastSubject = record.subject
 		response := map[string]any{"id_token": id, "access_token": access, "token_type": "Bearer", "expires_in": 3600}
+		if f.issueRefreshToken {
+			response["refresh_token"] = "synthetic-upstream-refresh-secret"
+		}
 		if f.failure == "oversized token response" {
 			response["padding"] = strings.Repeat("x", 1<<20)
 		}
@@ -238,6 +250,7 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 		}
 		f.userInfos++
 		response := map[string]any{"sub": subject, "email": subject + "@example.test", "roles": []string{"userinfo-user"}}
+		maps.Copy(response, f.userInfoClaims)
 		if f.failure == "oversized userinfo response" {
 			response["roles"] = []string{"oversized-userinfo-role"}
 			response["padding"] = strings.Repeat("x", 1<<20)

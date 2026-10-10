@@ -32,6 +32,9 @@ type principalRecord struct {
 	AuthTime                        int64
 	Methods, Challenges             []string
 	Audience, Scopes                []string
+	Source                          tokenrefresh.PrincipalSource `json:",omitempty"`
+	BackendKind                     string                       `json:",omitempty"`
+	ProviderSnapshot                []byte                       `json:",omitempty"`
 }
 
 type bindingRecord struct{ Portal, Origin, BasePath, Transport string }
@@ -87,6 +90,21 @@ func decodeSession(data []byte) (tokenrefresh.Session, error) {
 }
 
 func validSession(s tokenrefresh.Session) bool {
+	if len(s.Principal.ProviderSnapshot) > tokenrefresh.MaxProviderSnapshotSize {
+		return false
+	}
+	switch s.Principal.Source {
+	case "", tokenrefresh.IdentityStoreSource:
+		if len(s.Principal.ProviderSnapshot) != 0 || s.Principal.BackendKind != "" {
+			return false
+		}
+	case tokenrefresh.ProviderSnapshotSource:
+		if s.Principal.BackendKind != "oauth" || len(s.Principal.ProviderSnapshot) == 0 || !json.Valid(s.Principal.ProviderSnapshot) {
+			return false
+		}
+	default:
+		return false
+	}
 	if !validText(s.ID, 256) || s.Current == ([32]byte{}) || s.Revision > 100000 || s.Principal.AuthTime <= 0 || s.IdleExpiresAt <= 0 || s.IdleExpiresAt > s.AbsoluteExpiresAt {
 		return false
 	}

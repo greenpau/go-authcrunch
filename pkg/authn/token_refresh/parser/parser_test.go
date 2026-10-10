@@ -270,3 +270,49 @@ func ExampleNewTokenRefreshConfigFromDirectives() {
 	fmt.Println(portal.RefreshTokens.Enabled, portal.RefreshTokens.BasePath, portal.RefreshTokens.BodyTransportEnabled)
 	// Output: true /auth true
 }
+
+func TestTokenRefreshProviderDirectives(t *testing.T) {
+	base := []string{"realms local upstream second", "public origin https://auth.example.test", "base path /auth"}
+	valid := append(slices.Clone(base), "provider revalidation upstream snapshot", "provider revalidation second snapshot")
+	got, err := refreshparser.NewTokenRefreshConfigFromDirectives(valid)
+	if err != nil || len(got.ProviderRevalidation) != 2 {
+		t.Fatal("provider mode did not parse", err)
+	}
+	data, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var restored authn.TokenRefreshConfig
+	if err := json.Unmarshal(data, &restored); err != nil {
+		t.Fatal(err)
+	}
+	if err := restored.Validate(); err != nil || !cmp.Equal(got, &restored) {
+		t.Fatal("provider selection lost in reload", err)
+	}
+	for _, lines := range [][]string{
+		{"provider revalidation"}, {"provider revalidation upstream"}, {"provider revalidation upstream snapshot extra"},
+		{`provider revalidation "" snapshot`}, {`provider revalidation upstream ""`},
+		{"provider revalidation upstream userinfo"}, {"provider revalidation upstream refresh_token"}, {"provider revalidation upstream portal"},
+		{"provider revalidation upstream snapshot", "provider revalidation upstream snapshot"},
+		{"provider revalidation missing snapshot"}, {"provider_revalidation upstream snapshot"}, {`"provider revalidation" upstream snapshot`},
+	} {
+		before := slices.Clone(lines)
+		if got, err := refreshparser.NewTokenRefreshConfigFromDirectives(append(slices.Clone(base), lines...)); err == nil || got != nil {
+			t.Fatal("invalid provider directive accepted")
+		}
+		if !slices.Equal(before, lines) {
+			t.Fatal("parser mutated inputs")
+		}
+	}
+}
+
+func ExampleNewTokenRefreshConfigFromDirectives_provider() {
+	config, err := refreshparser.NewTokenRefreshConfigFromDirectives([]string{
+		"realms local upstream", "public origin https://auth.example.com", "base path /auth", "provider revalidation upstream snapshot",
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(config.ProviderRevalidation[0].Realm, config.ProviderRevalidation[0].Mode)
+	// Output: upstream snapshot
+}

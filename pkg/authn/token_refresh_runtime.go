@@ -45,21 +45,35 @@ func (p *Portal) configureRefresh() error {
 		return nil
 	}
 	for _, realm := range c.Realms {
-		matches := 0
+		stores, providers := 0, 0
 		for _, candidate := range p.identityStores {
 			if candidate.GetRealm() == realm {
-				matches++
+				stores++
 			}
 		}
-		if matches != 1 {
-			return fmt.Errorf("refresh realm %q must identify exactly one store", realm)
+		for _, candidate := range p.identityProviders {
+			if candidate.GetRealm() == realm {
+				providers++
+			}
 		}
-		store := p.getIdentityStoreByRealm(realm)
-		if _, ok := store.(refreshIdentityStore); !ok {
-			return fmt.Errorf("realm %q does not support refresh identity verification", realm)
+		if stores+providers != 1 {
+			return fmt.Errorf("refresh realm %q must identify exactly one renewal source", realm)
 		}
-		if p.getIdentityProviderByRealm(realm) != nil {
-			return fmt.Errorf("ambiguous refresh realm %q", realm)
+		if stores == 1 {
+			if p.refreshProviderMode(realm) != "" {
+				return fmt.Errorf("refresh provider mode requires a provider realm")
+			}
+			if _, ok := p.getIdentityStoreByRealm(realm).(refreshIdentityStore); !ok {
+				return fmt.Errorf("realm %q does not support refresh identity verification", realm)
+			}
+			continue
+		}
+		provider := p.getIdentityProviderByRealm(realm)
+		if provider.GetKind() != "oauth" || p.refreshProviderMode(realm) != TokenRefreshProviderSnapshot {
+			return fmt.Errorf("refresh provider realm %q requires explicit OAuth snapshot mode", realm)
+		}
+		if provider.GetIdentityTokenCookieName() != "" {
+			return fmt.Errorf("refresh provider snapshot mode requires identity token cookies disabled")
 		}
 	}
 	if err := c.validateCookieName(p.cookie.RefreshTokenCookieName); err != nil {
@@ -131,6 +145,16 @@ func (a *portalRefreshAdapter) Sign(ctx context.Context, claims map[string]any) 
 
 func (a *portalRefreshAdapter) WithIdentity(ctx context.Context, principal tokenrefresh.Principal, apply func(map[string]any) error) error {
 	p := a.portal
+	if principal.Source == tokenrefresh.ProviderSnapshotSource {
+		claims, err := p.refreshProviderClaims(ctx, principal)
+		if err != nil {
+			return err
+		}
+		return apply(claims)
+	}
+	if principal.Source != "" && principal.Source != tokenrefresh.IdentityStoreSource || len(principal.ProviderSnapshot) != 0 || principal.BackendKind != "" {
+		return tokenrefresh.ErrDenied
+	}
 	store := p.getIdentityStoreByRealm(principal.Realm)
 	backend, ok := store.(refreshIdentityStore)
 	if !ok || store.GetName() != principal.Backend || !p.refreshRealm(principal.Realm) {

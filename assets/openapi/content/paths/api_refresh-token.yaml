@@ -30,11 +30,24 @@ post:
 
     Rotation replaces the refresh credential and access jti while retaining session binding and absolute
     expiry. Replay revokes the family. Never automatically retry an ambiguous rotation. Capacity/storage
-    failure is 503. The optional browser session precondition prevents rotation against a different session.
+    failure is 503. A failure after committed cookie rotation revokes the undelivered family; failed
+    cleanup returns 503 even if identity or policy was denied. The optional browser session precondition
+    prevents rotation against a different session.
     For cookie transport, optional Sec-Fetch-Site must be same-origin, Sec-Fetch-Mode must be cors or
     same-origin, and Sec-Fetch-Dest must be the literal empty (or each header may have an empty value). Native transport
     rejects these headers even with empty values. Duplicate refresh cookies fail with 400. Transport checks
-    run before token validity checks.'
+    run before token validity checks.
+
+    Selected local stores revalidate current identity transactionally. Explicitly selected OAuth/OIDC
+    snapshot realms renew the verified claims captured at login and apply current portal transforms,
+    with the current portal request context, without upstream credentials or network calls.
+    Recognized provider role contributions are normalized before policy; signing cannot restore
+    roles removed by current portal transforms.
+    Issuer/address-dependent factor requirements must already be satisfied; snapshot provider evidence
+    supplies no local factors. Upstream role changes, disablement and logout
+    remain unseen until fresh login. Original sub, sid, auth_time and federated amr remain fixed.
+    Successful refresh extends idle expiry within the original absolute deadline; protected application
+    requests alone do not. Provider browser callbacks issue only cookie-transport families.'
   security:
   - RefreshCookie: []
   - {}
@@ -83,6 +96,8 @@ post:
       $ref: ../components/responses/PortalError.yaml
   x-source-files:
   - pkg/authn/handle_api_refresh_token.go
+  - pkg/authn/token_refresh_provider.go
+  - pkg/authn/token_refresh_runtime.go
   requestBody:
     required: true
     content:

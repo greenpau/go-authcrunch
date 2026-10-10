@@ -11,7 +11,8 @@ identifier `tokenrefresh`. Use that import path and qualifier in consumers. Read
 [configuration and client contract](references/configuration-and-clients.md)
 when exposing settings, integrating clients, or changing public behavior.
 Use [refresh-token-identity](../refresh-token-identity/SKILL.md) to change login
-proof, MFA completion, sandbox redemption, and credential-version revalidation.
+proof, MFA completion, sandbox redemption, credential-version revalidation, and
+captured upstream provider evidence.
 Use [refresh-token-transports](../refresh-token-transports/SKILL.md) to change
 refresh/logout HTTP routes, cookies, native transport, browser coordination,
 continuation, and fresh login.
@@ -47,13 +48,18 @@ directories for consumer integration; those repositories are updated separately.
   sandbox login must call the same issuer; `grantAccess` only delivers signed output.
 - `pkg/authn/token_refresh_runtime.go`: portal adapters, current transformations,
   challenge checks, and KMS signing.
+- `pkg/authn/token_refresh_provider.go`: completed OAuth callback issuance,
+  bounded provider snapshots, trust bindings, and provider-specific renewal.
 - `pkg/authn/token_refresh/{token,store,memory,manager}.go`: opaque encoding, store
   contract, bounded in-memory families, and staged issuance/rotation.
 - `pkg/kms/crypto_keystore.go`: actual access signing-key lifetime selection.
 
 ## Issuance and State
 
-A refresh family originates only from a completed, single-use local login.
+A refresh family originates from a completed, single-use local login or an
+explicitly selected OAuth/OIDC provider's verified, browser-bound callback.
+Provider realms additionally require `provider revalidation REALM snapshot`;
+use the identity owner's provider contract when changing this boundary.
 An access JWT, user-supplied method list, or refresh token from an OAuth provider
 cannot create that evidence. Disabled refresh allocates no store and preserves
 existing access-token lifetime behavior. Unsupported or ambiguous configured
@@ -62,14 +68,17 @@ realms fail portal construction; never silently claim renewal support.
 Raw refresh credentials use `acr1_` plus 32 random bytes in canonical unpadded
 base64url. Persist only their SHA-256 digests. Public `sid` and `jti` values
 are independently random and do not encode credentials. Session snapshots must
-copy owned slices; caller mutation must not change stored grants.
+copy owned slices, including provider snapshot bytes; caller mutation must not
+change stored grants. The legacy empty principal source means identity store;
+the explicit provider source cannot enter a local backend or profile adapter.
 
 Keep the family binding fixed: portal, exact origin, mount, and transport.
 Retain immutable backend/user identity, original authentication evidence,
 original audience/scope grant, current and spent digests, revision, and idle and
 absolute deadlines. Every renewal has a new `jti`, `iat`, `nbf`, and `exp`;
 `sid`, `sub`, `iss`, `auth_time`, and verified `amr` stay bound to the login.
-Rebuild roles from current identity and transformations. Audiences and scopes
+Rebuild roles from current local identity, or captured provider claims, using
+current transformations. Snapshot renewal makes no upstream request. Audiences and scopes
 can shrink but cannot expand, and transformations cannot invent `acr` or
 replace the authentication event. Losing all originally granted audiences
 requires login. Cap access expiry by both refresh config and the selected
@@ -105,7 +114,7 @@ authenticate a caller, revalidate identity, issue credentials, rotate tokens,
 extend deadlines or alter replay history. Keep healthy rotation valid and deny
 logout, replay, replacement and expiry, including across persistent restart.
 Consumers must establish authentication independently and obtain the reference
-from actual local issuance, not an arbitrary access/provider `sid` claim. Do not
+from actual completed portal issuance, not an arbitrary access/provider `sid` claim. Do not
 substitute a lookup of a captured refresh token: it becomes spent after rotation
 and such a lookup would revoke an otherwise healthy family.
 
@@ -156,7 +165,8 @@ previous token, an adapter lacking this optional interface returns
 Portal browser issuance supplies the effective refresh-cookie values, including
 duplicate paths, to this transaction. Native/API-key login stays independent.
 Subsequent cookie deletion and OIDC completion are outside the store transaction.
-HTML and JSON completion discard a newly committed, undelivered refresh family on error,
+HTML, JSON, and selected provider callback completion discard a newly committed,
+undelivered refresh family on error,
 including OIDC capacity or identity failure. Cleanup uses a bounded context
 independent of request cancellation; cleanup failure remains an unavailable
 error. Previously replaced families remain revoked. This releases admission for
@@ -164,6 +174,8 @@ a new login after the downstream failure recovers. An all-live full store reject
 independent login that does not present a family it can replace. Unobserved
 identity-version invalidation can retain a slot until a denial, logout, or
 expiry; backend mutations do not eagerly enumerate the store's families.
+Cookie renewal completion applies this cleanup contract after rotation too;
+the transport owner defines reconstruction context and cleanup-error status.
 Preserve deterministic capacity/replay/concurrency tests and actual parser-based
 TLS form/JSON logout/relogin/replacement coverage at capacity one.
 

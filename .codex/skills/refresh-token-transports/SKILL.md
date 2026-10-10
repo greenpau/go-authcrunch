@@ -66,6 +66,17 @@ issuance and rotation. Reject browser Origin, Fetch Metadata, and Cookie
 headers for native requests; return credentials in JSON and set no cookies.
 Never accept a cookie-family token through body transport or vice versa.
 
+Explicitly selected OAuth/OIDC snapshot realms issue cookie families from their
+verified browser-bound callbacks. The callback can be a cross-site GET navigation;
+its origin/mount and optional navigation Fetch Metadata checks follow completed
+state redemption. Keep ordinary refresh POST protections unchanged. Callback
+delivery omits bearer Authorization and upstream identity-token cookies must be
+disabled. Provider native token exchange and renewable cross-device requester
+sessions are unavailable. Use the identity owner's
+[provider snapshot contract](../refresh-token-identity/references/provider-snapshots.md)
+for proof and selection requirements. Existing browser coordination applies to
+provider families too.
+
 API key JSON `/login` is a separate access-only path owned by
 `authentication-client`. It does not enter sandbox refresh issuance, sets no
 cookies, and rejects `refresh_transport: body`, even in a refresh-enabled realm.
@@ -75,6 +86,15 @@ Use the status contract: 400 malformed/ambiguous request, 401 login required,
 403 origin/transport violation, 404 disabled/wrong mount, 405 wrong method,
 415 wrong content type, and 503 transient signing/storage/backend failure.
 No response delivers credentials before the store commits.
+
+After a cookie rotation commits, failure to reconstruct or cache the user must
+discard the undelivered family with bounded cleanup independent of request
+cancellation. Keep the current HTTP request context for reconstruction so
+issuer/address-dependent provider transforms see the same metadata as signing.
+If cleanup also fails, return 503 even when reconstruction denied identity or
+policy; a joined denial must not hide unavailable storage. The provider renewal
+completion-cleanup unit/TLS tests cover cancellation, recovered admission without
+presenting an old credential, and persistent cleanup failure.
 
 Completed browser logout also invalidates outstanding
 [cross-device approvals](../authentication-portal-cross-device/SKILL.md) tied to
@@ -234,3 +254,7 @@ accounts and realms, same-account MFA login, default/custom names, old-path
 cleanup, OIDC replacement, foreign-Origin denial, and native/API-key isolation.
 `login_replacement_test.go` injects a revocation outage and checks both selected
 and access-only completion, including preservation of the prior OIDC session.
+`token_refresh_provider_e2e_test.go` adds real verified OAuth callback issuance,
+provider/local replacement, cookie-only renewal, replay, logout and deadline
+coverage. Keep its cross-site navigation headers and independent expired-access
+authorization check.

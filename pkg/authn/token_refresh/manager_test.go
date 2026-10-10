@@ -129,10 +129,15 @@ func TestResultPrincipalIsIndependentSnapshot(t *testing.T) {
 	h := newTestManager(t)
 	h.principal.BackendVersion = "backend-version"
 	h.principal.CredentialVersion = 7
+	h.principal.Source = ProviderSnapshotSource
+	h.principal.BackendKind = "oauth"
+	h.principal.ProviderSnapshot = []byte(`{"sub":"alice"}`)
 	first := h.issue(t)
 	if first.Principal.UserID != h.principal.UserID || first.Principal.BackendVersion != "backend-version" || first.Principal.CredentialVersion != 7 {
 		t.Fatal("result omitted issuer principal")
 	}
+	h.principal.ProviderSnapshot[0] = 'x'
+	first.Principal.ProviderSnapshot[0] = 'y'
 	h.principal.Methods[0] = "changed"
 	first.Principal.Methods[0] = "result-changed"
 	first.Principal.Challenges[0] = "result-changed"
@@ -142,7 +147,7 @@ func TestResultPrincipalIsIndependentSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if next.Principal.Methods[0] != "pwd" || next.Principal.Challenges[0] != "password:" || next.Principal.Audience[0] != "app" || next.Principal.Scopes[0] != "read" {
+	if string(next.Principal.ProviderSnapshot) != `{"sub":"alice"}` || next.Principal.Methods[0] != "pwd" || next.Principal.Challenges[0] != "password:" || next.Principal.Audience[0] != "app" || next.Principal.Scopes[0] != "read" {
 		t.Fatal("caller mutation changed stored issuer principal")
 	}
 }

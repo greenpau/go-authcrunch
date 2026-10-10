@@ -297,6 +297,9 @@ func (p *Portal) identifyUserRequest(rr *requests.Request, identity map[string]s
 }
 
 func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
+	if rr.Upstream.Method == "oauth2" && p.refreshRealm(rr.Upstream.Realm) && p.refreshProviderMode(rr.Upstream.Realm) == TokenRefreshProviderSnapshot {
+		return p.authorizeProviderRefresh(ctx, w, r, rr)
+	}
 	var usr *user.User
 	var providerClaims []byte
 	if p.crossDevice != nil && p.crossDeviceBinding(r) != "" && (rr.Upstream.Method == "oauth2" || rr.Upstream.Method == "saml") {

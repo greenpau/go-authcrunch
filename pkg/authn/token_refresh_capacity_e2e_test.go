@@ -54,14 +54,20 @@ func TestE2ERefreshCapacityBrowser(t *testing.T) {
 				}, cookies)
 				origin := http.Header{"Origin": {f.server.URL}}
 				headers := http.Header{"Origin": {f.server.URL}, "X-Authcrunch-Refresh": {"1"}}
+				loginStatus := func(stage string, response oidcE2EResponse) {
+					t.Helper()
+					if response.status != http.StatusSeeOther {
+						t.Fatalf("%s: HTTP %d, expected %d", stage, response.status, http.StatusSeeOther)
+					}
+				}
 				login := func(name, realm, password string) {
 					t.Helper()
 					if flow == "html" {
 						start := f.request(t, http.MethodPost, "/login?fresh=1", url.Values{"username": {name}, "realm": {realm}}, origin)
-						oidcE2EStatus(t, start, http.StatusSeeOther)
+						loginStatus("start HTML login", start)
 						sandbox := start.header.Get("Location")
-						oidcE2EStatus(t, f.request(t, http.MethodPost, sandbox, url.Values{"secret": {password}}, origin), http.StatusSeeOther)
-						oidcE2EStatus(t, f.request(t, http.MethodGet, sandbox, nil, nil), http.StatusSeeOther)
+						loginStatus("complete password challenge", f.request(t, http.MethodPost, sandbox, url.Values{"secret": {password}}, origin))
+						loginStatus("redeem HTML sandbox", f.request(t, http.MethodGet, sandbox, nil, nil))
 					} else {
 						replacementLogin(t, f, name, realm, "", password, false, origin)
 					}

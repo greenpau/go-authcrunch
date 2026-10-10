@@ -43,6 +43,11 @@ import (
 // transport enabled" and "body transport disabled" select native body transport,
 // which defaults to disabled. Boolean literals and underscore keys are rejected.
 //
+// "provider revalidation REALM snapshot" explicitly selects captured-identity
+// renewal for one allowlisted OAuth/OIDC realm. Repeat it for distinct realms;
+// duplicates and unimplemented modes fail. There is no provider default. Snapshot
+// renewal neither stores upstream credentials nor observes upstream changes.
+//
 // Unknown directives, duplicates, empty values, and malformed statements fail.
 // Reject empty argument values before encoding: EncodeArgs can trim a final
 // empty field, which this parser cannot recover from the encoded statement.
@@ -95,6 +100,21 @@ func NewTokenRefreshConfigFromDirectives(statements []string) (*authn.TokenRefre
 			}
 			// Match separate keyword tokens, preserving quoted value boundaries.
 			key, values = args[0]+" "+args[1], args[2:]
+		}
+		if key == "provider revalidation" {
+			if len(values) != 2 || slices.Contains(values, "") {
+				return nil, fmt.Errorf("token refresh provider revalidation at line %d requires a realm and mode", i+1)
+			}
+			providerKey := key + " " + values[0]
+			if seen[providerKey] {
+				return nil, fmt.Errorf("duplicate token refresh provider revalidation at line %d", i+1)
+			}
+			if values[1] != authn.TokenRefreshProviderSnapshot {
+				return nil, fmt.Errorf("unsupported token refresh provider mode at line %d", i+1)
+			}
+			seen[providerKey] = true
+			config.ProviderRevalidation = append(config.ProviderRevalidation, authn.TokenRefreshProviderConfig{Realm: values[0], Mode: values[1]})
+			continue
 		}
 		if key != "realms" && stringsByKey[key] == nil && boolsByKey[key] == nil && intsByKey[key] == nil {
 			return nil, fmt.Errorf("unsupported token refresh directive at line %d", i+1)

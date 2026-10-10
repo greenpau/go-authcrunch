@@ -188,6 +188,7 @@ func TestTagCompliance(t *testing.T) {
 		{name: "test authncache.SandboxLease struct", entry: &authncache.SandboxLease{}, opts: &Options{}},
 		{name: "test identity.RefreshIdentity struct", entry: &identity.RefreshIdentity{}, opts: &Options{}},
 		{name: "test requests.AuthenticationEvidence struct", entry: &requests.AuthenticationEvidence{}, opts: &Options{}},
+		{name: "test authn.TokenRefreshProviderConfig struct", entry: &authn.TokenRefreshProviderConfig{}, opts: &Options{}},
 		{name: "test authn.TokenRefreshConfig struct", entry: &authn.TokenRefreshConfig{}, opts: &Options{}},
 		{name: "test authn.CrossDeviceLoginConfig struct", entry: &authn.CrossDeviceLoginConfig{}, opts: &Options{}},
 		{

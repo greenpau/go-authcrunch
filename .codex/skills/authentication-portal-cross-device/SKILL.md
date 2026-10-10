@@ -126,6 +126,15 @@ the original portal login; upstream ID/refresh tokens are not copied. Upstream
 revocation cannot be detected beyond the provider's existing login/session
 contract; this feature does not add introspection.
 
+For a selected OAuth snapshot realm, the approving browser has an opaque portal
+family while the requester remains access-only. Decode the bounded canonical
+snapshot, normalize recognized nested roles before current requester policy,
+and keep the resulting roles authoritative through signing. Carry federated
+AMR and original authentication time from the approving issuer's verified
+evidence, never upstream AMR/ACR. Do not copy its SID or refresh credential.
+Use [refresh-token-identity](../refresh-token-identity/SKILL.md) to maintain
+snapshot capture, role authority and the selected-provider trust boundary.
+
 Each requester receives a fresh session ID and ordinary credential cookies;
 poll JSON never includes bearer tokens. If grant, persistence or OIDC completion
 fails, remove newly cached credentials, revoke an undelivered refresh family,
@@ -177,6 +186,10 @@ cookie jar: a stale form cannot approve either request, and a valid new form
 delivers credentials only to its corresponding requester.
 Completion-capacity rejection must deliver no credentials and release the
 undelivered refresh family for subsequent logins.
+`TestTokenRefreshProviderCrossDevice` and
+`TestE2ETokenRefreshProviderCrossDevice` cover selected-provider snapshot
+composition: healthy approving-family rotation, requesting-device role overwrite
+and factor denial, verified AMR/authentication time, and access-only issuance.
 `cross_device_browser_e2e_test.go` runs Chrome with isolated browser contexts and
 real forms, QR rendering, responsive layout, scheduled polling, cookie checks,
 navigation and history recovery. Disable the newer AbortSignal static helpers in

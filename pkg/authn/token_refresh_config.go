@@ -34,10 +34,13 @@ const (
 // TokenRefreshConfig enables portal refresh for explicitly supported realms. All
 // durations are seconds. Nil or disabled configurations preserve access lifetimes.
 type TokenRefreshConfig struct {
-	Enabled      bool     `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
-	Realms       []string `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
-	PublicOrigin string   `json:"public_origin,omitempty" xml:"public_origin,omitempty" yaml:"public_origin,omitempty"`
-	BasePath     string   `json:"base_path,omitempty" xml:"base_path,omitempty" yaml:"base_path,omitempty"`
+	Enabled bool     `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Realms  []string `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
+	// ProviderRevalidation explicitly selects snapshot renewal per provider realm.
+	// Snapshot mode retains login claims and does not revalidate upstream identity.
+	ProviderRevalidation []TokenRefreshProviderConfig `json:"provider_revalidation,omitempty" xml:"provider_revalidation,omitempty" yaml:"provider_revalidation,omitempty"`
+	PublicOrigin         string                       `json:"public_origin,omitempty" xml:"public_origin,omitempty" yaml:"public_origin,omitempty"`
+	BasePath             string                       `json:"base_path,omitempty" xml:"base_path,omitempty" yaml:"base_path,omitempty"`
 	// CookieName overrides cookie_config.refresh_token_cookie_name when enabled.
 	// An empty name inherits the portal cookie factory's prefix and name settings.
 	CookieName             string `json:"cookie_name,omitempty" xml:"cookie_name,omitempty" yaml:"cookie_name,omitempty"`
@@ -50,6 +53,16 @@ type TokenRefreshConfig struct {
 	// MaxRotations bounds rotations and retained spent credentials per live family.
 	MaxRotations int `json:"max_rotations,omitempty" xml:"max_rotations,omitempty" yaml:"max_rotations,omitempty"`
 }
+
+// TokenRefreshProviderConfig selects renewal semantics for one allowlisted
+// upstream OAuth/OIDC realm. No upstream credentials are retained.
+type TokenRefreshProviderConfig struct {
+	Realm string `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
+	Mode  string `json:"mode,omitempty" xml:"mode,omitempty" yaml:"mode,omitempty"`
+}
+
+// TokenRefreshProviderSnapshot is the only supported provider renewal mode.
+const TokenRefreshProviderSnapshot = "snapshot"
 
 // Validate normalizes enabled refresh configuration and rejects ambiguous mounts.
 func (c *TokenRefreshConfig) Validate() error {
@@ -77,6 +90,13 @@ func (c *TokenRefreshConfig) Validate() error {
 			return fmt.Errorf("invalid or duplicate refresh realm")
 		}
 		seen[realm] = true
+	}
+	providers := make(map[string]bool)
+	for _, provider := range c.ProviderRevalidation {
+		if !seen[provider.Realm] || providers[provider.Realm] || provider.Mode != TokenRefreshProviderSnapshot {
+			return fmt.Errorf("invalid or duplicate refresh provider configuration")
+		}
+		providers[provider.Realm] = true
 	}
 	if c.AccessLifetimeSeconds == 0 {
 		c.AccessLifetimeSeconds = defaultRefreshAccessLifetime

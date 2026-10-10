@@ -228,8 +228,11 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 		return p.refreshError(ctx, w, err)
 	}
 	if transport == tokenrefresh.CookieTransport {
-		u, err := p.userFromRefresh(ctx, tokens)
+		u, err := p.userFromRefresh(refreshContext, tokens)
 		if err != nil {
+			if cleanupErr := p.discardUndeliveredRefresh(ctx, tokens, transport); cleanupErr != nil {
+				err = errors.Join(err, cleanupErr)
+			}
 			return p.refreshError(ctx, w, err)
 		}
 		if err := p.sessions.Add(u.Claims.ID, u); err != nil {
@@ -245,7 +248,7 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 }
 
 func (p *Portal) refreshError(ctx context.Context, w http.ResponseWriter, err error) error {
-	if errors.Is(err, tokenrefresh.ErrInvalid) || errors.Is(err, tokenrefresh.ErrDenied) {
+	if !errors.Is(err, tokenrefresh.ErrUnavailable) && (errors.Is(err, tokenrefresh.ErrInvalid) || errors.Is(err, tokenrefresh.ErrDenied)) {
 		return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Reauthentication required")
 	}
 	return p.handleJSONError(ctx, w, http.StatusServiceUnavailable, "Refresh temporarily unavailable")

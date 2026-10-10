@@ -27,8 +27,9 @@ type Policy struct {
 	AccessLifetime, IdleTimeout, AbsoluteTimeout time.Duration `json:"-" xml:"-" yaml:"-"`
 }
 
-// Identity resolves fresh attributes and checks security versions and required
-// challenges. It must serialize security mutations with the supplied callback,
+// Identity resolves attributes under the principal source's renewal policy and
+// checks its evidence and required challenges. Mutable identity backends must
+// serialize security mutations with the supplied callback,
 // which signs and atomically commits credentials. It must not call back on denial
 // or outage. ErrDenied is definitive; other errors leave the credential usable.
 type Identity interface {

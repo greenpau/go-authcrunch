@@ -51,6 +51,15 @@ func TestTokenRefreshConfig(t *testing.T) {
 		{"origin fragment", func(c *TokenRefreshConfig) { c.PublicOrigin += "#fragment" }},
 		{"empty realms", func(c *TokenRefreshConfig) { c.Realms = nil }},
 		{"duplicate realms", func(c *TokenRefreshConfig) { c.Realms = []string{"local", "local"} }},
+		{"unselected provider", func(c *TokenRefreshConfig) {
+			c.ProviderRevalidation = []TokenRefreshProviderConfig{{Realm: "upstream", Mode: TokenRefreshProviderSnapshot}}
+		}},
+		{"duplicate provider", func(c *TokenRefreshConfig) {
+			c.ProviderRevalidation = []TokenRefreshProviderConfig{{Realm: "local", Mode: TokenRefreshProviderSnapshot}, {Realm: "local", Mode: TokenRefreshProviderSnapshot}}
+		}},
+		{"unsupported provider mode", func(c *TokenRefreshConfig) {
+			c.ProviderRevalidation = []TokenRefreshProviderConfig{{Realm: "local", Mode: "userinfo"}}
+		}},
 		{"empty realm", func(c *TokenRefreshConfig) { c.Realms = []string{""} }},
 		{"relative mount", func(c *TokenRefreshConfig) { c.BasePath = "auth" }},
 		{"duplicate slash", func(c *TokenRefreshConfig) { c.BasePath = "//auth" }},
