@@ -1,4 +1,4 @@
-"""Exercise the real local scan, query configuration and SARIF diagnostic boundary."""
+"""Exercise the real local scan, query configuration and SARIF exceptions."""
 
 import json
 import os
@@ -10,7 +10,8 @@ import tempfile
 
 
 REPO = Path(__file__).resolve().parents[2]
-RULE = "go/clear-text-logging"
+CLEAR_TEXT_RULE = "go/clear-text-logging"
+WEAK_HASH_RULE = "go/weak-sensitive-data-hashing"
 FIXTURE = '''package fixture
 
 import (
@@ -283,6 +284,47 @@ func adjacentDiagnostic(logger *zap.Logger) {
 }
 '''
 
+HASH_FIXTURE = '''package sqlite
+
+import (
+    "crypto/sha256"
+    "encoding/json"
+
+    "golang.org/x/crypto/bcrypt"
+)
+
+type Account struct { Username string `json:"username"` }
+type Store struct{}
+
+func HashPassword(password string) ([]byte, error) {
+    return bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+}
+
+func (s *Store) Create(password string) {
+    hash, _ := HashPassword(password)
+    account := &Account{Username: "alice"}
+    s.CreateEnrollment(account, hash)
+    s.createAlternateFingerprint(account, hash)
+}
+
+func (s *Store) CreateEnrollment(input *Account, hash []byte) {
+    canonical, _ := json.Marshal(input)
+    fingerprint := sha256.Sum256(append(canonical, hash...)) // weak-exempt: enrollment-fingerprint
+    _ = fingerprint
+    otherHash := hash
+    _ = sha256.Sum256(append(canonical, otherHash...)) // weak-retain: nearby-expression
+}
+
+func (s *Store) createAlternateFingerprint(input *Account, hash []byte) {
+    canonical, _ := json.Marshal(input)
+    _ = sha256.Sum256(append(canonical, hash...)) // weak-retain: other-method
+}
+
+func directPasswordHash(password string) {
+    _ = sha256.Sum256([]byte(password)) // weak-retain: direct-password-hash
+}
+'''
+
 # The exact ACL file accepts all levels. Neighboring files and a nested path
 # with the same suffix retain only the ordinary diagnostic exceptions. The adjacent
 # file receives its sensitive value from the exempt file to test sink scoping.
@@ -293,6 +335,7 @@ FIXTURES = {
                               .replace("// retain:", "// exempt:"),
     "pkg/acl/rule_extra.go": ADJACENT_FIXTURE,
     "nested/pkg/acl/rule.go": FIXTURE,
+    "plugins/identity-stores/sqlite/store.go": HASH_FIXTURE,
 }
 
 
@@ -338,40 +381,52 @@ def main():
         destination = root / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(source)
-    # Use the same Zap dependency as the library, without changing its manifests.
+    # Use the same dependencies as the library, without changing its manifests.
     module = (REPO / "go.mod").read_text()
     zap_version = re.search(r"go\.uber\.org/zap (v\S+)", module).group(1)
+    crypto_version = re.search(r"golang\.org/x/crypto (v\S+)", module).group(1)
     go_version = re.search(r"(?m)^go (\S+)", module).group(1)
     (root / "go.mod").write_text(
         f"module github.com/greenpau/go-authcrunch\n\ngo {go_version}\n\n"
-        f"require go.uber.org/zap {zap_version}\n")
+        "require (\n"
+        f"\tgo.uber.org/zap {zap_version}\n"
+        f"\tgolang.org/x/crypto {crypto_version}\n"
+        ")\n")
     run(["go", "mod", "tidy"], root)
     run(["gofmt", "-w", *FIXTURES], root)
     expected = {
         kind: {(name, line) for name in FIXTURES
                for line, text in enumerate((root / name).read_text().splitlines(), 1)
                if f"// {kind}:" in text}
-        for kind in ("exempt", "retain", "injection")
+        for kind in ("exempt", "retain", "injection", "weak-exempt", "weak-retain")
     }
     output = root / ".coverage" / "scan"
     env = {**os.environ, "CODEQL": codeql, "CODEQL_OUTPUT_DIR": str(output)}
     run(["bash", "assets/scripts/run_codeql_scan.sh"], root, env)
     filtered = results_by_rule(output / "results.sarif")
-    if filtered.get(RULE, set()) != expected["retain"]:
+    if filtered.get(CLEAR_TEXT_RULE, set()) != expected["retain"]:
         raise AssertionError(f"Expected reportable locations {sorted(expected['retain'])}; "
-                             f"received {sorted(filtered.get(RULE, set()))}")
+                             f"received {sorted(filtered.get(CLEAR_TEXT_RULE, set()))}")
+    if filtered.get(WEAK_HASH_RULE, set()) != expected["weak-retain"]:
+        raise AssertionError(
+            f"Expected reportable weak-hash locations {sorted(expected['weak-retain'])}; "
+            f"received {sorted(filtered.get(WEAK_HASH_RULE, set()))}")
     # Compare the complete unmodified default suite on the same database.
     run([codeql, "database", "analyze", str(output / "database"),
          "codeql/go-queries",
          "--threads=2", "--ram=5922", "--format=sarif-latest",
          f"--output={output / 'upstream.sarif'}"], root)
     baseline = results_by_rule(output / "upstream.sarif")
-    if baseline.get(RULE, set()) != expected["retain"] | expected["exempt"]:
-        raise AssertionError(f"Upstream query did not cover the fixture: {baseline}")
+    if baseline.get(CLEAR_TEXT_RULE, set()) != expected["retain"] | expected["exempt"]:
+        raise AssertionError(f"Upstream clear-text query did not cover the fixture: {baseline}")
+    if (baseline.get(WEAK_HASH_RULE, set()) !=
+            expected["weak-retain"] | expected["weak-exempt"]):
+        raise AssertionError(f"Upstream weak-hash query did not cover the fixture: {baseline}")
     if rule_ids(output / "results.sarif") != rule_ids(output / "upstream.sarif"):
         raise AssertionError("Configured scan must retain every default rule ID")
-    if ({key: value for key, value in filtered.items() if key != RULE} !=
-            {key: value for key, value in baseline.items() if key != RULE}):
+    replaced = {CLEAR_TEXT_RULE, WEAK_HASH_RULE}
+    if ({key: value for key, value in filtered.items() if key not in replaced} !=
+            {key: value for key, value in baseline.items() if key not in replaced}):
         raise AssertionError("The exception changed results from another default query")
 
     # Log injection belongs to the extended suite. Select it explicitly alongside
@@ -385,8 +440,10 @@ def main():
     if not expected["injection"] <= extra.get("go/log-injection", set()):
         raise AssertionError("Debug, structured and ACL logging must remain subject to log injection")
     print(f"PASS: {len(expected['exempt'])} debug/realm/error/user/claims/ACL cases excepted; "
-          f"{len(expected['retain'])} other logging cases, all default rules and "
-          "explicitly selected debug/realm/error/user/claims/ACL log injection retained.")
+          f"{len(expected['retain'])} other logging cases retained; "
+          f"{len(expected['weak-exempt'])} enrollment fingerprints excepted; "
+          f"{len(expected['weak-retain'])} other weak password hashes retained; all default "
+          "rules and explicitly selected debug/realm/error/user/claims/ACL log injection retained.")
 
 
 if __name__ == "__main__":

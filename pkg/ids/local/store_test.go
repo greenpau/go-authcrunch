@@ -15,9 +15,11 @@
 package local
 
 import (
+	"bytes"
 	"fmt"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
@@ -27,6 +29,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	logutil "github.com/greenpau/go-authcrunch/pkg/util/log"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestNewIdentityStore(t *testing.T) {
@@ -241,6 +244,60 @@ func TestNewIdentityStore(t *testing.T) {
 
 			tests.EvalObjectsWithLog(t, "config", tc.want, got, msgs)
 		})
+	}
+}
+
+func TestE2EIdentityStoreUnsupportedOperationLogRedaction(t *testing.T) {
+	db, err := testutils.CreateTestDatabase("TestE2EIdentityStoreUnsupportedOperationLogRedaction")
+	if err != nil {
+		t.Fatalf("failed to create test database: %v", err)
+	}
+	var output bytes.Buffer
+	logger := zap.New(zapcore.NewCore(
+		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+		zapcore.AddSync(&output),
+		zap.DebugLevel,
+	))
+	store, err := NewIdentityStore(&Config{Name: "local_store", Realm: "local", Path: db.GetPath()}, logger)
+	if err != nil {
+		t.Fatalf("failed to create identity store: %v", err)
+	}
+	if err := store.Configure(); err != nil {
+		t.Fatalf("failed to configure identity store: %v", err)
+	}
+
+	markers := []string{
+		"synthetic-session-secret",
+		"synthetic-password-secret",
+		"synthetic-old-password-secret",
+		"synthetic-api-key-secret",
+		"synthetic-mfa-secret",
+		"synthetic-mfa-passcode",
+		"synthetic-webauthn-register",
+		"synthetic-webauthn-challenge",
+		"synthetic-webauthn-request",
+	}
+	r := &requests.Request{
+		Upstream: requests.Upstream{SessionID: markers[0]},
+		User: requests.User{
+			Password:    markers[1],
+			OldPassword: markers[2],
+		},
+		Key:      requests.Key{Payload: markers[3]},
+		MfaToken: requests.MfaToken{Secret: markers[4], Passcode: markers[5]},
+		WebAuthn: requests.WebAuthn{Register: markers[6], Challenge: markers[7], Request: markers[8]},
+	}
+	if err := store.Request(operator.Unknown, r); err == nil || err.Error() != errors.ErrOperatorNotSupported.WithArgs(operator.Unknown).Error() {
+		t.Fatalf("unexpected unsupported-operation result: %v", err)
+	}
+	encoded := output.String()
+	if !strings.Contains(encoded, `"msg":"detected unsupported identity store operation"`) || !strings.Contains(encoded, `"op":"Unknown"`) {
+		t.Fatalf("unsupported-operation diagnostic missing safe context: %s", encoded)
+	}
+	for _, marker := range markers {
+		if strings.Contains(encoded, marker) {
+			t.Fatalf("unsupported-operation diagnostic disclosed synthetic credential marker %q", marker)
+		}
 	}
 }
 

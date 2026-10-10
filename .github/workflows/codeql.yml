@@ -81,7 +81,7 @@ jobs:
           category: /language:${{ matrix.language }}
           output: .coverage/codeql-analysis
           upload: false
-      - name: Verify debug logging exception
+      - name: Verify Go query exceptions
         if: matrix.language == 'go'
         env:
           CODEQL: ${{ steps.init-go.outputs.codeql-path }}

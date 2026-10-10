@@ -4,9 +4,11 @@ queries:
   - uses: ./.github/codeql/queries
 
 query-filters:
-  # Replace only the upstream query. The local query retains the same rule ID
-  # and excepts explicit Zap debug diagnostics, structured realm/error/user/claims
-  # fields, and sinks in pkg/acl/rule.go.
+  # Replace only these upstream queries. The local queries retain their rule IDs,
+  # source/sink models and path evidence while applying repository-scoped policy.
   - exclude:
       id: go/clear-text-logging
       query path: Security/CWE-312/CleartextLogging.ql
+  - exclude:
+      id: go/weak-sensitive-data-hashing
+      query path: Security/CWE-327/WeakSensitiveDataHashing.ql

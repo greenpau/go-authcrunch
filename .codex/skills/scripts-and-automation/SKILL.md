@@ -41,7 +41,7 @@ boundary for these workflows.
 | `make openapi-browser-test` | Qualify the real pinned Scalar viewer in Chrome |
 | `make test-ui` | Node spec-reported login and refresh client tests (`*_client_test.cjs`) |
 | `make test-automation` | Verbose Python automation/version/release fixture tests |
-| `make test-codeql` | Real CodeQL fixture scan verifying accepted diagnostic logging exceptions and retained alerts; requires CodeQL CLI |
+| `make test-codeql` | Real CodeQL fixture scan verifying scoped query exceptions and retained alerts; requires CodeQL CLI |
 | `make brand-assets` / `make brand-assets-check` | Regenerate SVG branding and shared colors from the palette, or check drift without writes |
 | `make generate-acl` | Regenerate the four ACL condition/rule source and test files from the local Python generator |
 | `make ci-check` | Complete sequential quality gates and full Go tests |

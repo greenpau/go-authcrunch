@@ -168,8 +168,7 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 
 	b.logger.Error(
 		"detected unsupported identity store operation",
-		zap.Any("op", op),
-		zap.Any("params", r),
+		zap.String("op", op.String()),
 	)
 	return errors.ErrOperatorNotSupported.WithArgs(op)
 }
