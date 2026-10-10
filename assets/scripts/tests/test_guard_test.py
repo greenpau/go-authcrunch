@@ -168,10 +168,46 @@ class TestGuardTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         windows = int(self.status()['elapsed_seconds'] / guard.CONSOLE_WINDOW_SECONDS) + 1
         self.assertLess(len(result.stdout), windows * (guard.CONSOLE_BYTES + 256) + 1000)
-        self.assertIn('Output rate limit reached', result.stdout)
+        self.assertTrue('Output rate limit reached' in result.stdout, result.stdout[-1000:])
         self.assertGreater(self.status()['console_dropped_bytes'], 0)
         self.assertEqual(self.status()['exit_code'], 7)
         self.assertEqual(self.status()['status'], 'failed')
+
+    def test_e2e_pending_notice_survives_child_exit(self):
+        for exit_code in (0, 7):
+            with self.subTest(exit_code=exit_code):
+                (self.root / 'reports with spaces/resource-usage.json').unlink(missing_ok=True)
+                self.tool('import os,sys\n'
+                          'for _ in range(128): os.write(1,b"x"*8192)\n'
+                          f'sys.exit({exit_code})')
+                first = subprocess.Popen(self.command('test'), cwd=self.root, env=self.env,
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                try:
+                    # Keep the pipe full until cleanup and evidence finalization.
+                    # This forces the last notice retry to happen after child exit.
+                    deadline = time.monotonic() + 5
+                    status = {}
+                    while 'exit_code' not in status:
+                        self.assertLess(time.monotonic(), deadline, status)
+                        time.sleep(.02)
+                        try:
+                            status = self.status()
+                        except FileNotFoundError:
+                            pass
+                    self.assertEqual(status['exit_code'], exit_code)
+                    self.assertEqual(status['status'], 'passed' if exit_code == 0 else 'failed')
+                    self.assertGreater(status['console_dropped_bytes'], 0)
+                    stdout, stderr = first.communicate(timeout=5)
+                    self.assertEqual(first.returncode == 0, exit_code == 0, stderr)
+                    notice = ('Output rate limit reached; live output resumes in the next second. '
+                              'Full logs remain in the tested evidence.')
+                    self.assertTrue(notice in stdout, stdout[-1000:])
+                    self.assertEqual(stdout.count(notice), 1)
+                    self.assertLess(stdout.index(notice), stdout.index('[test guard] Omitted'))
+                finally:
+                    if first.poll() is None:
+                        first.kill()
+                    first.communicate(timeout=5)
 
     def test_console_rate_recovers_and_preserves_heartbeat(self):
         output = bytearray()
@@ -359,6 +395,11 @@ class TestGuardTests(unittest.TestCase):
             stdout, stderr = first.communicate(timeout=10)
             self.assertNotEqual(first.returncode, 0, stdout[-1000:] + stderr)
             self.assertIn('exceeded 1 seconds', stderr)
+            notice = ('Output rate limit reached; live output resumes in the next second. '
+                      'Full logs remain in the tested evidence.')
+            self.assertTrue(notice in stdout, stdout[-1000:])
+            self.assertEqual(stdout.count(notice), 1)
+            self.assertEqual(self.status()['status'], 'aborted')
         finally:
             if first.poll() is None:
                 first.kill()

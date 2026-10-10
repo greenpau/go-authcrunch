@@ -341,6 +341,10 @@ def supervise(command, output, memory_mb, seconds, max_processes, artifact_mb, r
         os.set_blocking(stdout_fd, was_blocking)
     if status['status'] == 'aborted':
         print(f"\n[test guard] STOPPED: {status['reason']}. Evidence: {output}", file=sys.stderr, flush=True)
+    # The final child output may have left the notice blocked or partly written.
+    # Retry with the restored stream mode only after cleanup and final evidence,
+    # so terminal backpressure cannot delay resource checks or child termination.
+    console.flush_notice()
     if console.dropped_bytes:
         print(f'\n[test guard] Omitted {console.dropped_bytes} console bytes; '
               'inspect the tested evidence files for full output.', flush=True)

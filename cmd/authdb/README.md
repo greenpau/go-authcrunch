@@ -223,15 +223,19 @@ explicitly select an interface, such as `0.0.0.0:8443` for all IPv4 interfaces.
 
 Every `http.portals[].name` must match a name in
 `security.authentication_portals`. Route names are unique. Use mounts such as
-`/`, `/auth`, or `/tenant/auth`; omit the trailing slash except for `/` itself.
+`/`, `/auth`, `/xauth`, or `/tenant/auth`; omit the trailing slash except for `/` itself.
 Multiple portals need separate, nonoverlapping paths. A root mount owns the
 entire path space.
 
 Mount roots redirect temporarily to their own `/login`, preserving query
 parameters. Paths outside configured mounts return `404`. Mounts cannot
 contain URL escapes, control characters, or reserved endpoint namespaces such
-as `api`, `assets`, or `login`. Prefixes such as `login-service` and `profile-ui`
-are also reserved; choose a neutral name such as `/auth`.
+as `api`, `assets`, `saml`, `oauth2`, `oidc`, `provider`, `cross-device`, or
+`.well-known`. This applies to every segment: `/tenant/saml` is also invalid.
+Prefixes such as `login-service` and `profile-ui` are also reserved; choose a
+neutral name such as `/auth` or `/xauth`. The
+[route catalogue](../../pkg/authn/testdata/reserved_route_words.json) records
+which names reserve a whole segment or any segment starting with that name.
 
 ### Explicit HTTP for Local Development
 

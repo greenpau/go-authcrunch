@@ -118,6 +118,9 @@ func (cfg *Config) Validate() error {
 			return fmt.Errorf("portal route %d requires a canonical absolute path", i+1)
 		}
 		// Portal endpoint dispatch discovers its base using these namespaces.
+		// Keep reservations aligned with the independent route/mount catalogue
+		// in pkg/authn/testdata/reserved_route_words.json; contract tests check
+		// both rejection and continued acceptance of neutral/lookalike mounts.
 		for segment := range strings.SplitSeq(strings.Trim(route.Path, "/"), "/") {
 			// Several legacy base-path helpers match an endpoint prefix rather
 			// than a whole segment. For example, /login-service/login would
@@ -128,7 +131,7 @@ func (cfg *Config) Validate() error {
 				}
 			}
 			switch segment {
-			case "api", "qrcode", "sandbox", "apps", "barcode", "saml", "oauth2", "basic", "assets":
+			case "api", "qrcode", "sandbox", "apps", "barcode", "saml", "oauth2", "basic", "assets", "provider", "cross-device", "oidc", ".well-known":
 				return fmt.Errorf("portal route %d uses a reserved endpoint segment", i+1)
 			}
 		}

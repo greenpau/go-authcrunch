@@ -82,6 +82,14 @@ portal namespace/prefix checks. Do not let `http.ServeMux` clean a malformed pat
 a different namespace, and do not strip a mount before delegation. Refresh
 base paths and OIDC issuer paths must match their portal mounts.
 
+Follow the shared [reserved route and mount contract](../coding-directives/references/portal-routing.md)
+when changing mount validation. The independent catalogue distinguishes forbidden
+whole segments (`saml`, `oauth2`, `provider`, discovery and other namespaces)
+from legacy prefix reservations (`login-service`, `profile-ui`). Check every
+segment of nested mounts, preserve `/auth` and `/xauth`, and reject reservations
+before provisioning even when a feature is disabled. Catalogue-driven typed,
+parser and listener-startup tests must accompany new route reservations.
+
 The direct listener discards `Forwarded`, all `X-Forwarded-*`, and `X-Real-IP`
 headers before invoking AuthCrunch. TLS terminates locally; there is no trusted
 proxy configuration. Preserve a cloned request so an embedding caller's headers

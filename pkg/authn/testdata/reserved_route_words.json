@@ -1,0 +1,122 @@
+{
+  ".well-known": {
+    "kind": "early_namespace",
+    "owner": "Discovery: portal signing JWKS and OIDC metadata",
+    "mount": "deny_segment"
+  },
+  "api": {
+    "kind": "namespace",
+    "owner": "Portal JSON API, profile, administration and refresh transport",
+    "mount": "deny_segment"
+  },
+  "apps": {
+    "kind": "namespace",
+    "owner": "Portal applications and SSO metadata",
+    "mount": "deny_segment"
+  },
+  "assets": {
+    "kind": "namespace",
+    "owner": "Embedded or configured portal static assets",
+    "mount": "deny_segment"
+  },
+  "auth": {
+    "kind": "mount",
+    "owner": "Legacy default portal mount; not a feature namespace",
+    "mount": "allow"
+  },
+  "barcode": {
+    "kind": "namespace",
+    "owner": "Portal MFA barcode resources",
+    "mount": "deny_segment"
+  },
+  "basic": {
+    "kind": "namespace",
+    "owner": "Direct Basic identity-store login",
+    "mount": "deny_segment"
+  },
+  "beacon": {
+    "kind": "endpoint",
+    "owner": "Portal JSON authentication beacon",
+    "mount": "deny_prefix"
+  },
+  "cross-device": {
+    "kind": "namespace",
+    "owner": "Optional cross-device login transfer",
+    "mount": "deny_segment"
+  },
+  "favicon": {
+    "kind": "asset_prefix",
+    "owner": "Portal favicon resources; legacy prefix matching",
+    "mount": "deny_prefix"
+  },
+  "forgot": {
+    "kind": "endpoint",
+    "owner": "Legacy password recovery placeholder",
+    "mount": "deny_prefix"
+  },
+  "login": {
+    "kind": "endpoint",
+    "owner": "Portal interactive and JSON login",
+    "mount": "deny_prefix"
+  },
+  "logout": {
+    "kind": "endpoint",
+    "owner": "Portal browser logout",
+    "mount": "deny_prefix"
+  },
+  "oauth2": {
+    "kind": "namespace",
+    "owner": "Upstream OAuth login; exact policy callbacks are delegated by the host",
+    "mount": "deny_segment"
+  },
+  "oidc": {
+    "kind": "early_namespace",
+    "owner": "Downstream OpenID Provider under its configured issuer mount",
+    "mount": "deny_segment"
+  },
+  "portal": {
+    "kind": "endpoint",
+    "owner": "Authenticated portal landing page",
+    "mount": "deny_prefix"
+  },
+  "profile": {
+    "kind": "namespace",
+    "owner": "Portal profile application",
+    "mount": "deny_prefix"
+  },
+  "provider": {
+    "kind": "namespace",
+    "owner": "Identity-provider HTTP login capability",
+    "mount": "deny_segment"
+  },
+  "qrcode": {
+    "kind": "namespace",
+    "owner": "Portal QR code resources",
+    "mount": "deny_segment"
+  },
+  "recover": {
+    "kind": "endpoint",
+    "owner": "Legacy password recovery placeholder",
+    "mount": "deny_prefix"
+  },
+  "register": {
+    "kind": "namespace",
+    "owner": "Registration submission and acknowledgement",
+    "mount": "deny_prefix"
+  },
+  "saml": {
+    "kind": "namespace",
+    "owner": "Upstream SAML provider login and assertion consumer",
+    "mount": "deny_segment"
+  },
+  "sandbox": {
+    "kind": "namespace",
+    "owner": "Portal authentication checkpoints",
+    "mount": "deny_segment"
+  },
+  "whoami": {
+    "kind": "endpoint",
+    "owner": "Portal identity and session probe",
+    "mount": "deny_prefix"
+  }
+}

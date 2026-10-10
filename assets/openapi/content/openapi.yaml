@@ -24,7 +24,13 @@ servers:
       description: Public HTTPS origin without a trailing slash.
     portalBasePath:
       default: /auth
-      description: Actual portal mount without a trailing slash; empty for a root-mounted portal.
+      description: >-
+        Actual portal mount without a trailing slash; empty for a root-mounted portal.
+        Use a neutral mount such as /auth, /xauth or /tenant/auth. Do not use reserved
+        route namespaces such as saml or oauth2 as mount segments, including inside
+        nested mounts. Legacy endpoint prefixes such as login-service and profile-ui
+        are also reserved. The standalone host rejects reserved mounts at startup;
+        other embedding hosts own their mount validation.
 tags:
 - name: Registration
   description: Browser registration submission and acknowledgement.

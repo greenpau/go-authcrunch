@@ -87,6 +87,13 @@ Go output remains in tested's raw evidence until an artifact or other resource
 budget is reached. Workspace VS Code settings exclude generated reports/build
 directories from watching/search and retain 2,000 terminal scrollback lines.
 
+Retry any unsent throttling notice after child cleanup and final evidence are
+complete, using the restored output mode before printing the final summary.
+A fast child can exit while the last notice write is blocked; later child output
+or a heartbeat is not guaranteed. Keep writes nonblocking while supervising
+work. Regression fixtures must withhold stdout reads until final evidence exists,
+then verify the complete notice and both successful and failing child results.
+
 `resource-usage.json` records execution status, budget, peak memory/process
 counts, recent largest process IDs, elapsed time and stop reason.
 `console_dropped_bytes` counts child-output bytes omitted by throttling or a

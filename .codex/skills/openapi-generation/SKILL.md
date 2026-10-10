@@ -77,6 +77,13 @@ literals in `cmd/authdb/main.go` and `pkg/identity/database.go` are normalized;
 other bytes in those files remain protected. Thus ordinary release projection
 changes do not create false HTTP review failures.
 
+For new portal paths, also apply the
+[portal route contract](../coding-directives/references/portal-routing.md).
+`TestPortalRouteContract` checks authored paths against the shared reserved-word
+catalogue and mount extraction. New top-level names require an explicit owner;
+existing standalone endpoint names cannot silently become namespaces. Preserve
+full feature prefixes in path names and descriptions.
+
 ## Author precise contracts
 
 Use one path item per file, registered reusable components and local `.yaml`

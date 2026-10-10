@@ -217,6 +217,13 @@ Do not add mutable process-global runtime state; existing shared registries and
 key buffers have explicit ownership contracts. Name repeated configuration keys,
 cookie/header names, provider kinds, and defaults with package-local constants.
 
+## Reserved portal route words
+
+Read [portal routing](references/portal-routing.md) before adding or changing a
+portal endpoint, route predicate, namespace, or base-path extraction. It defines
+the reserved-word catalogue, namespace ownership, and automated route checks.
+A handler and OpenAPI entry alone do not establish safe routing.
+
 ## Configuration
 
 Keep external config structs serializable with matching `json`, `xml`, and

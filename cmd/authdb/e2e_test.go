@@ -173,7 +173,7 @@ func TestE2EAuthdb(t *testing.T) {
 			}
 		}
 	})
-	for _, mount := range []string{"/", "/auth", "/tenant/auth"} {
+	for _, mount := range []string{"/", "/auth", "/xauth", "/tenant/auth"} {
 		t.Run("TLS portal "+mount, func(t *testing.T) {
 			cfg, client := executableConfig(t, mount, false)
 			var options []string

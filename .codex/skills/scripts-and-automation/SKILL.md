@@ -91,6 +91,9 @@ flooding, monitoring failures, cancellation, descendant cleanup, overlapping
 runs, override forwarding, host memory pressure refusal, and live progress
 during quiet work before the child finishes. Output fixtures verify recovery
 after rate-limited bursts, visible throttling notices, and continued heartbeats.
+They also hold stdout unread through child exit and evidence finalization to
+verify queued notices survive shutdown without delaying cleanup or changing
+the child result.
 Linux proc-read fixtures distinguish normal process exits from accounting
 failures and verify child results and cleanup through Make on either host.
 The OpenAPI target fixture verifies both Go phases use guarded tested reports,
