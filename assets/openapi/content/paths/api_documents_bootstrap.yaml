@@ -1,0 +1,94 @@
+get:
+  operationId: documentsBootstrap
+  tags:
+  - Documents
+  summary: Discover identity and limits
+  description: 'Send no request body. Returns the cryptographic domain `protocol`, persistent `portal_id`,
+    the exact local database `user_id`, plaintext `chunk_size` in bytes, ciphertext byte/file/recipient limits
+    and `upload_ttl_seconds`. The example uses default limits; use the returned values. This also reserves
+    the immutable identity-source binding, so it can return 507 when identity capacity is exhausted.
+
+
+    Disabled by default; requires explicit APIConfig.DocumentsEnabled plus validated storage settings. Admin/Profile
+    flags and storage settings alone do not enable Documents. Require an allowed local identity-store realm,
+    portal user/admin role, valid portal access token AND current stored browser login evidence. Ordinary access-only
+    JSON login, API-key, LDAP and unmapped OAuth/SAML sessions do not establish this authority. Ownership is
+    the exact local database user id. Each operation runs inside transactional current-identity verification;
+    transformed subject/email never select an owner, and administrators have no access override. Persistent
+    source bindings reject UUID collisions across stores and survive reset/restart. MaxKeys bounds both active
+    registrations and permanent admitted identity reservations; renaming an authoritative store/realm requires
+    an explicit migration.
+
+
+    Target the configured HTTPS origin and exact portal mount. Origin, if present, must match exactly; Sec-Fetch-Site
+    must be same-origin or none. No CORS. Content-Encoding is rejected. The HTTP method and resource path select
+    the operation. Path identifiers must not be repeated or overridden in a JSON body. Unknown, encoded or
+    noncanonical paths return 404; malformed resource IDs or chunk numbers return 400. Unsupported methods
+    return 405 with Allow: GET. Only file.list accepts the optional after query parameter; duplicate, unknown,
+    empty or noncanonical query parameters (including a bare ?) return 400.
+
+
+    Send no request body, including no empty JSON object. Content-Type is not required. Request parameters
+    are in the documented path or query. Any nonempty body returns 400 and cannot change the selected resource.
+
+
+    Every success is a JSON response message with HTTP 200; failures use the generic status/message object.
+    Responses are no-store. Quotas reserve full ciphertext size, not physical disk space. Allocation collects
+    expired unfinished uploads; there is no background janitor.'
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: Cryptographic portal context, immutable authenticated user ID and current transfer limits.
+        Use these fields directly to initialize the encrypted client.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/DocumentsBootstrapResponse.yaml
+          examples:
+            bootstrap:
+              summary: Discover identity and limits
+              value:
+                protocol: authcrunch-documents
+                chunk_size: 1048576
+                portal_id: AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE
+                user_id: 00000000-0000-4000-8000-000000000002
+                max_file_bytes: 268435456
+                max_user_bytes: 1073741824
+                max_user_files: 1000
+                max_recipients: 100
+                upload_ttl_seconds: 86400
+    '400':
+      $ref: ../components/responses/DocumentsBadRequest.yaml
+    '401':
+      $ref: ../components/responses/DocumentsUnauthorized.yaml
+    '403':
+      $ref: ../components/responses/DocumentsForbidden.yaml
+    '404':
+      $ref: ../components/responses/DocumentsNotFound.yaml
+    '405':
+      $ref: ../components/responses/DocumentsMethodNotAllowed.yaml
+    '409':
+      $ref: ../components/responses/DocumentsConflict.yaml
+    '413':
+      $ref: ../components/responses/DocumentsTooLarge.yaml
+    '415':
+      $ref: ../components/responses/DocumentsUnsupportedMediaType.yaml
+    '507':
+      $ref: ../components/responses/DocumentsQuotaExceeded.yaml
+    '503':
+      $ref: ../components/responses/DocumentsUnavailable.yaml
+  x-source-files:
+  - pkg/authn/documents_http.go
+  - pkg/authn/documents/store.go
+  - pkg/authn/documents/transfer.go
+  - pkg/authn/documents/protocol.go
+  - pkg/authn/documents/config.go

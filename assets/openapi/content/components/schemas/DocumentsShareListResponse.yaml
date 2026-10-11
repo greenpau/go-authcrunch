@@ -1,0 +1,4 @@
+$ref: ./DocumentsRecipients.yaml
+title: List a file's recipients (response)
+description: The current recipient user IDs for the owned committed document. Contains an empty array
+  when there are no grants.

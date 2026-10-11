@@ -1,0 +1,22 @@
+type: object
+additionalProperties: false
+required:
+- key_id
+- ephemeral_key
+- ciphertext
+properties:
+  key_id:
+    $ref: ./DocumentsID.yaml
+    description: SHA-256 fingerprint of the intended recipient public key, not the ephemeral_key. Must match
+      that recipient’s current registered key.
+  ephemeral_key:
+    type: string
+    pattern: ^B[A-P][A-Za-z0-9_-]{84}[AEIMQUYcgkosw048]$
+    description: Fresh ephemeral P-256 public point used for this wrapping operation, encoded as canonical
+      unpadded base64url of the 65-byte SEC1 uncompressed point (first byte 0x04). Runtime validates curve
+      membership. The ephemeral private key is never transmitted.
+  ciphertext:
+    type: string
+    pattern: ^[A-Za-z0-9_-]{64}$
+    description: 32-byte document key encrypted for this recipient, followed by its 16-byte GCM tag. Never
+      send the unwrapped key.

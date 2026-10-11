@@ -1,0 +1,18 @@
+type: object
+additionalProperties: false
+required:
+- manifest
+properties:
+  manifest:
+    $ref: ./DocumentsManifest.yaml
+    description: Encrypted filename/media metadata and owner key envelope for this allocated document.
+      Derive encryption context from its immutable descriptor. Identical retries succeed; different bytes
+      conflict. No plaintext filename, content type or document key may be sent.
+title: Store encrypted metadata and the owner envelope (request)
+description: 'JSON body contains only `manifest`. Resource identifiers come from the path and must not
+  be repeated in the body. Path `id` selects an owned upload. Body field `manifest` contains `metadata`
+  (encrypted filename, media type and plaintext size) and `envelope` (the document key wrapped for the
+  owner). The envelope contains the owner `key_id`, a fresh P-256 `ephemeral_key` and `ciphertext`. Metadata
+  is 16..32768 encrypted bytes including its GCM tag. The server never receives the plaintext metadata.
+  Installation is immutable: exact retries succeed even after commit; changed data or the wrong owner
+  fingerprint returns 409. Inaccessible/expired files return 404.'

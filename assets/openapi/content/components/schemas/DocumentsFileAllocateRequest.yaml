@@ -1,0 +1,9 @@
+$ref: ./DocumentsAllocation.yaml
+title: Reserve an encrypted upload (request)
+description: 'Both `size` and `chunks` are required integers. `size` is the complete ciphertext byte count,
+  including one 16-byte GCM tag per chunk. For plaintext length N: `chunks = max(1, ceil(N / 1048576))`
+  and `size = N + 16 * chunks`; an empty file therefore has size 16 and one chunk. Returns a fresh `id`,
+  local UUID `owner`, `size`, `chunks`, `state: "uploading"`, `created_at` and `expires_at` (whole Unix
+  seconds UTC). Requires key enrollment (404 if absent); invalid shape/size returns 400 and reserved-byte/file
+  quota exhaustion returns 507. Allocation is not idempotent: reconcile a lost response through `file.list`
+  without guessing among concurrent uploads. Allocate before deriving encryption context.'

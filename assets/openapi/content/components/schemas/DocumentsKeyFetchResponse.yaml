@@ -1,0 +1,4 @@
+$ref: ./DocumentsKey.yaml
+title: Read your encrypted recovery vault (response)
+description: Your registered public key, fingerprint and encrypted recovery vault. Decrypt the vault locally;
+  no private key or recovery secret is returned.

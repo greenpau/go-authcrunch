@@ -70,7 +70,7 @@ func TestE2EMakeOpenAPI(t *testing.T) {
 				if err := os.MkdirAll(filepath.Dir(destination), 0755); err != nil {
 					return err
 				}
-				if strings.HasPrefix(name, "pkg/") && (!strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go")) {
+				if strings.HasPrefix(name, "pkg/") && name != "pkg/authn/documents/client/crypto.mjs" && (!strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go")) {
 					return nil
 				}
 				data, err := os.ReadFile(path)
@@ -220,7 +220,7 @@ func TestE2EMakeOpenAPI(t *testing.T) {
 	runMake(true, artifactTarget)
 	checkArtifact(t, artifactDirectory, original)
 	// Source drift must fail before touching an otherwise valid bundle.
-	for _, relative := range []string{"plugins/registration-workflows/sqlite/workflow.go", "internal/sqlitedb/database.go", "pkg/authn/serve_http.go", "pkg/redirects/redirect_match.go", "pkg/util/addr/utils.go", "pkg/util/redirect.go", "pkg/util/sanitizer.go", "pkg/waf/malformed_input_check.go"} {
+	for _, relative := range []string{"pkg/authn/documents/client/crypto.mjs", "plugins/registration-workflows/sqlite/workflow.go", "internal/sqlitedb/database.go", "pkg/authn/serve_http.go", "pkg/redirects/redirect_match.go", "pkg/util/addr/utils.go", "pkg/util/redirect.go", "pkg/util/sanitizer.go", "pkg/waf/malformed_input_check.go"} {
 		trackedSource := filepath.Join(dir, relative)
 		originalSource, err := os.ReadFile(trackedSource)
 		if err != nil {

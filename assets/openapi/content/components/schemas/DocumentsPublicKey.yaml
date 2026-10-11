@@ -1,0 +1,20 @@
+type: object
+additionalProperties: false
+required:
+- user_id
+- key_id
+- public_key
+properties:
+  user_id:
+    $ref: ./DocumentsUserID.yaml
+    description: Immutable local account UUID selected by the key lookup resource path.
+  key_id:
+    $ref: ./DocumentsID.yaml
+    description: Canonical unpadded base64url SHA-256 fingerprint of the raw public key. Compare it against
+      the recipient’s independently shared fingerprint before granting access.
+  public_key:
+    type: string
+    pattern: ^B[A-P][A-Za-z0-9_-]{84}[AEIMQUYcgkosw048]$
+    description: Canonical base64url of the 65-byte SEC1 uncompressed P-256 point. Runtime also validates
+      curve membership. The first byte must be 0x04.
+description: Public registration only; encrypted vaults are never returned to other users.

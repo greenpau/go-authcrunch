@@ -1,0 +1,4 @@
+interface:
+  display_name: "Portal Documents API"
+  short_description: "Maintain encrypted portal document storage"
+  default_prompt: "Use $authentication-portal-documents to maintain the encrypted Documents API and its security boundaries."

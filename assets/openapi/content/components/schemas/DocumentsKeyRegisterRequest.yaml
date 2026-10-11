@@ -1,0 +1,16 @@
+type: object
+additionalProperties: false
+required:
+- key
+properties:
+  key:
+    $ref: ./DocumentsKey.yaml
+    description: Locally generated public-key registration and encrypted recovery vault for the current
+      bootstrap user_id. Never include a recovery secret or plaintext private key. This registration is
+      immutable until an explicitly confirmed reset.
+title: Enroll a public key and encrypted vault (request)
+description: The required `key` object contains `user_id`, `key_id`, `public_key` and `vault`. `user_id`
+  must equal the authenticated bootstrap identity. The fingerprint must match the public point. Generate
+  the keypair and random recovery secret in the browser; save the secret before submitting the encrypted
+  vault. An identical registration retry returns 200; replacing an existing registration returns 409.
+  Key capacity exhaustion returns 507.

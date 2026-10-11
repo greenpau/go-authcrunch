@@ -1,0 +1,20 @@
+type: object
+additionalProperties: false
+required:
+- salt
+- nonce
+- ciphertext
+properties:
+  salt:
+    type: string
+    pattern: ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$
+    description: 32 fresh random HKDF-SHA256 salt bytes.
+  nonce:
+    type: string
+    pattern: ^[A-Za-z0-9_-]{16}$
+    description: 12 fresh random AES-GCM nonce bytes.
+  ciphertext:
+    type: string
+    pattern: ^[A-Za-z0-9_-]{64}$
+    description: 32-byte P-256 private scalar encrypted under the client-only recovery key, followed by
+      its 16-byte GCM tag.

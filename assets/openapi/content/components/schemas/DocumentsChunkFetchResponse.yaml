@@ -1,0 +1,4 @@
+$ref: ./DocumentsChunk.yaml
+title: Download one encrypted chunk (response)
+description: The requested encrypted chunk, including its authentication tag, encoded as canonical unpadded
+  base64url. Authenticate it locally before using plaintext.

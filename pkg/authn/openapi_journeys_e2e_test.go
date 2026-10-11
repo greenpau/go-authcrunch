@@ -73,6 +73,10 @@ func openAPIJourneyResponse(t *testing.T, issuer string, target *url.URL, method
 				documented = "post"
 			} else if item["get"] != nil {
 				documented = "get"
+			} else if item["put"] != nil {
+				documented = "put"
+			} else if item["delete"] != nil {
+				documented = "delete"
 			} else {
 				return
 			}
@@ -88,6 +92,11 @@ func TestE2EOpenAPIContractNativeJourneys(t *testing.T) {
 		name string
 		run  func(*testing.T)
 	}{
+		{"documents", TestE2EDocumentsAuthorizationPersistenceAndIdentity},
+		{"documents_rejections", TestE2EDocumentsRequestBoundariesAndReset},
+		{"documents_reset_confirmation", TestE2EDocumentsResetConfirmationBinding},
+		{"documents_in_flight", TestE2EDocumentsRevalidatesAfterBodyRead},
+		{"documents_public_points", TestE2EDocumentsPublicPointEncoding},
 		{"oidc_consent", TestE2EOIDCProviderBrowserConsent},
 		{"oidc_pkce", TestE2EOIDCClientBindingAndPKCE},
 		{"oidc_errors", TestE2EOIDCProtocolErrors},
@@ -110,6 +119,11 @@ func TestE2EOpenAPIContractNativeJourneys(t *testing.T) {
 	for _, operation := range []string{"POST /login", "GET /oidc/authorize", "POST /oidc/token", "GET /oidc/userinfo", "POST /oidc/revoke", "POST /cross-device/start", "POST /cross-device/poll", "POST /api/refresh_token", "POST /api/logout"} {
 		if openAPIJourneyCoverage[operation] == 0 {
 			t.Errorf("native journey did not validate %s", operation)
+		}
+	}
+	for operation, endpoint := range documentsEndpoints {
+		if openAPIJourneyCoverage[endpoint.method+" "+endpoint.path] == 0 {
+			t.Errorf("native journey did not validate Documents %s", operation)
 		}
 	}
 	t.Logf("validated %d native HTTP operations", len(openAPIJourneyCoverage))

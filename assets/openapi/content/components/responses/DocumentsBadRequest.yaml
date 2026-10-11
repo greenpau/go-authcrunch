@@ -1,0 +1,15 @@
+description: Invalid request encoding, fields, query, or chunk shape.
+headers:
+  Cache-Control:
+    $ref: ../headers/NoStore.yaml
+  X-Content-Type-Options:
+    $ref: ../headers/NoSniff.yaml
+  Referrer-Policy:
+    $ref: ../headers/OIDCNoReferrer.yaml
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/DocumentsError.yaml
+    example:
+      status: 400
+      message: Bad Request

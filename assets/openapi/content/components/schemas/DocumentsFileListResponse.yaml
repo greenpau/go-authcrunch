@@ -1,0 +1,4 @@
+$ref: ./DocumentsPage.yaml
+title: List owned and received documents (response)
+description: A page of visible owned uploads and committed received documents, plus an optional exclusive
+  continuation cursor. Lists omit encrypted metadata and key envelopes.

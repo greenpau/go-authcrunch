@@ -1,0 +1,4 @@
+$ref: ./DocumentsBootstrap.yaml
+title: Discover identity and limits (response)
+description: Cryptographic portal context, immutable authenticated user ID and current transfer limits.
+  Use these fields directly to initialize the encrypted client.

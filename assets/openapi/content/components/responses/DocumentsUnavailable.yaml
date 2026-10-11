@@ -1,0 +1,15 @@
+description: Storage unavailable; commit outcome can be uncertain. Reconcile state before retrying mutations.
+headers:
+  Cache-Control:
+    $ref: ../headers/NoStore.yaml
+  X-Content-Type-Options:
+    $ref: ../headers/NoSniff.yaml
+  Referrer-Policy:
+    $ref: ../headers/OIDCNoReferrer.yaml
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/DocumentsError.yaml
+    example:
+      status: 503
+      message: Service Unavailable

@@ -1,0 +1,54 @@
+type: object
+additionalProperties: false
+required:
+- protocol
+- portal_id
+- user_id
+- chunk_size
+- max_file_bytes
+- max_user_bytes
+- max_user_files
+- max_recipients
+- upload_ttl_seconds
+properties:
+  protocol:
+    type: string
+    const: authcrunch-documents
+    description: Cryptographic protocol identifier. The client must recognize authcrunch-documents before
+      enrolling or unlocking keys.
+  portal_id:
+    $ref: ./DocumentsID.yaml
+    description: Persistent random portal identifier used in every encryption context. Changes to the
+      portal context must lock the client and invalidate in-memory keys.
+  user_id:
+    $ref: ./DocumentsUserID.yaml
+    description: Exact immutable UUID of the currently authenticated local account. Must match the account
+      whose vault the client unlocks; display claims are not ownership identifiers.
+  chunk_size:
+    type: integer
+    const: 1048576
+    description: Maximum plaintext bytes per chunk. Encryption appends a 16-byte GCM tag; empty files
+      still produce one encrypted chunk.
+  max_file_bytes:
+    type: integer
+    minimum: 16
+    description: Maximum ciphertext bytes per file.
+  max_user_bytes:
+    type: integer
+    minimum: 16
+    description: Maximum reserved ciphertext bytes owned by this user.
+  max_user_files:
+    type: integer
+    minimum: 1
+    description: Maximum number of pending and committed files owned by this account. Received shares
+      do not consume owned-file slots.
+  max_recipients:
+    type: integer
+    minimum: 1
+    description: Maximum recipient grants per file, excluding the owner.
+  upload_ttl_seconds:
+    type: integer
+    minimum: 60
+    maximum: 604800
+    description: Seconds from allocation until an unfinished upload expires. Chunk writes do not extend
+      this deadline; committed documents have no upload deadline.

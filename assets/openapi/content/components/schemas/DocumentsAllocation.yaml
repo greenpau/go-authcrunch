@@ -1,0 +1,19 @@
+type: object
+additionalProperties: false
+required:
+- size
+- chunks
+properties:
+  size:
+    type: integer
+    minimum: 16
+    maximum: 4294967296
+    description: Total ciphertext bytes including one 16-byte tag per chunk. Limited further by configured
+      max_file_bytes. Reservation counts against quotas before upload.
+  chunks:
+    type: integer
+    minimum: 1
+    maximum: 4096
+    description: All nonfinal chunks contain 1048576 plaintext bytes plus a 16-byte tag. The last contains
+      1..1048576 plaintext bytes; only an empty single-chunk file has no plaintext. The size/chunks relationship
+      is checked by the runtime.

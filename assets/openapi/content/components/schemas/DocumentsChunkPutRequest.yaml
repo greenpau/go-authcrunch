@@ -1,0 +1,21 @@
+type: object
+additionalProperties: false
+required:
+- ciphertext
+properties:
+  ciphertext:
+    type: string
+    pattern: ^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-][AQgw]|[A-Za-z0-9_-]{2}[AEIMQUYcgkosw048])?$
+    minLength: 22
+    maxLength: 1398123
+    description: Canonical unpadded base64url of 16..1048592 encrypted bytes including the 16-byte GCM
+      tag. Exact chunk length follows the immutable file descriptor; only the last chunk may be short.
+      Clients verify the tag, idx and context before using plaintext.
+title: Upload one encrypted chunk (request)
+description: 'JSON body contains only `ciphertext`. Resource identifiers come from the path and must not
+  be repeated in the body. Path parameters are `id` and zero-based integer `idx`; the JSON body contains
+  only base64url `ciphertext`. `idx` must be below the allocated `chunks` count (absolute maximum 4095).
+  Every nonfinal chunk has 1048592 encrypted bytes; the final chunk has the remaining allocated bytes
+  and is at least 16 bytes. Invalid idx/length returns 400. Owner-only; inaccessible or expired uploads
+  return 404. Encrypt each idx once and retain its ciphertext: exact retries succeed, including after
+  commit, while different bytes return 409. This is JSON ciphertext, not multipart data.'

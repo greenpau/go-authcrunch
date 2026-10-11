@@ -1,0 +1,12 @@
+type: object
+additionalProperties: false
+required:
+- recipients
+properties:
+  recipients:
+    type: array
+    items:
+      $ref: ./DocumentsUserID.yaml
+    maxItems: 1000
+    description: Current recipient local-user UUIDs for this owned file, excluding the owner. An empty
+      array means there are no recipient grants. Only the owner may fetch this list.

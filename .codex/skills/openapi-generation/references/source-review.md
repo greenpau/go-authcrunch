@@ -34,6 +34,7 @@ it inherits the same document server as portal federation and the other APIs.
 | Claims/beacon | `pkg/authn/handle_json_whoami.go`, `handle_json_beacon.go`, `handle_http_whoami.go`, `pkg/util/request_id.go` | Exact Accept negotiation, HTML redirects versus JSON denial, custom/transformed claims, probe precedence, raw `OK` with JSON media type |
 | Public signing keys | `pkg/authn/handle_http_jwks.go`, `pkg/kms/*` | Public GET/HEAD, first eligible signer, HMAC-only absence, no secrets/export dependency, empty errors |
 | Profile | `pkg/authn/handle_api_profile.go`, `api_*.go`, `profile_auth_challenges.go`, `pkg/identity/*` | Stored local browser session and canonical identity, kind discriminator, credential ownership, factor mutations and invalidation |
+| Documents | `pkg/authn/documents*.go`, `pkg/authn/documents/*`, `pkg/authn/documents/client/crypto.mjs` | GET/PUT/POST/DELETE resource paths; path/query parameters and direct JSON write fields; exact local database user IDs; browser-encrypted vault/content, chunk transactions, sharing and key reset |
 | Administration | `pkg/authn/handle_api_{list_realms,list_users,realm_info,reload_realm,crud_user,metadata,private_keys}.go`, `pkg/identity/*` | Feature flags, administrator role, per-operation JSON, status within HTTP 200, key export formats and independent public JWKS |
 | System | `pkg/authn/handle_api_system.go`, `pkg/system/*` | AuthCrunch encrypted wire content and footer key ID, encrypted authenticated success, JSON error envelopes on failure |
 | Portal OpenID Provider | `pkg/oidc/*`, local `caddyfile_oauth_application.go`, `caddyfile_authn_oidc.go` | Discovery versus portal JWKS, Authorization Code/PKCE, client auth, consent, opaque access tokens, rotating OP refresh, revoke, registered redirect trust |
@@ -159,5 +160,8 @@ conformance is separate and opt-in. Schema validation is neither certification
 nor a guarantee that arbitrary transformed claims fit a closed model.
 
 The real Scalar browser test verifies rendering and navigation using the exact
-pinned bundle. It does not send credentials to an external deployment, prove
+pinned bundle. Documents checks send all 16 operation examples through Scalar's
+native request console to synthetic intercepted responses and inspect the actual
+paths/bodies and response display. This tests viewer wiring, not backend authority
+or cryptography; those have native TLS and Web Crypto journeys. It does not send credentials to an external deployment, prove
 that CORS is configured for API calls, or test all Scalar client generators.

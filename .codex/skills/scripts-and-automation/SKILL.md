@@ -128,7 +128,10 @@ may need network access. Node browser tests and Python automation use only their
 standard libraries and need no npm/pip installation.
 
 `test-ui` discovers `pkg/authn/ui/testdata/*_client_test.cjs`; the current files
-cover login/QR state transitions and the refresh client. Keep browser drivers
+cover login/QR state transitions, the refresh client, and Documents Web Crypto
+interoperability/tamper/reuse behavior. The Documents crypto module lives under
+`pkg/authn/documents/client` for bundling in the external React application; it
+is not part of the profile asset refresh. Keep browser drivers
 under their `*_browser_e2e.cjs` names so they are launched by their Go fixtures,
 not the Node unit-test glob. For CSS, responsive layouts, and QR presentation,
 use the [theme validation workflow](../authentication-portal-themes/references/basic-theme.md#validation)

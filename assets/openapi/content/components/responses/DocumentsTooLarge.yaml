@@ -1,0 +1,15 @@
+description: JSON request exceeds its body limit, or chunk ciphertext exceeds its encoded-size limit. Invalid lengths in key, vault, envelope or metadata fields return 400.
+headers:
+  Cache-Control:
+    $ref: ../headers/NoStore.yaml
+  X-Content-Type-Options:
+    $ref: ../headers/NoSniff.yaml
+  Referrer-Policy:
+    $ref: ../headers/OIDCNoReferrer.yaml
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/DocumentsError.yaml
+    example:
+      status: 413
+      message: Request Entity Too Large

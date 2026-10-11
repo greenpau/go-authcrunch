@@ -1,0 +1,12 @@
+type: object
+additionalProperties: false
+required:
+- status
+- message
+properties:
+  status:
+    type: integer
+  message:
+    type: string
+description: Generic HTTP status and reason phrase. Does not expose account identifiers, database paths,
+  SQL, or ciphertext.

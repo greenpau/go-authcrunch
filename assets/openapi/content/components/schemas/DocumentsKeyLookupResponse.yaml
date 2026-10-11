@@ -1,0 +1,4 @@
+$ref: ./DocumentsPublicKey.yaml
+title: Find a recipient public key (response)
+description: The recipient’s immutable user ID, public key and fingerprint. The encrypted private vault
+  is never included, even when looking up yourself.

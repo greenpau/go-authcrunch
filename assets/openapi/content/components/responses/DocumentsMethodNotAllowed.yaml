@@ -1,0 +1,19 @@
+description: Unsupported method; Allow identifies supported methods.
+headers:
+  Cache-Control:
+    $ref: ../headers/NoStore.yaml
+  X-Content-Type-Options:
+    $ref: ../headers/NoSniff.yaml
+  Referrer-Policy:
+    $ref: ../headers/OIDCNoReferrer.yaml
+  Allow:
+    schema:
+      type: string
+      enum: [GET, POST, PUT, DELETE]
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/DocumentsError.yaml
+    example:
+      status: 405
+      message: Method Not Allowed

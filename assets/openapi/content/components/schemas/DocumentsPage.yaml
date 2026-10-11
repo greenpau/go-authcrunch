@@ -1,0 +1,18 @@
+type: object
+additionalProperties: false
+required:
+- files
+properties:
+  files:
+    type: array
+    items:
+      $ref: ./DocumentsFile.yaml
+    maxItems: 100
+    description: Up to 100 document descriptors ordered by ID, including owned pending uploads and committed
+      received shares. An empty page is an empty array, not null. Metadata and envelopes are omitted.
+  next:
+    $ref: ./DocumentsID.yaml
+    description: Exclusive cursor for GET /api/documents/files?after=<next>. Omitted when this snapshot
+      has no further records. Concurrent changes can affect subsequent pages.
+description: Identifier-ordered page. Pass next as the exclusive after cursor. No next means no more records
+  in this snapshot; concurrent changes can affect later pages.

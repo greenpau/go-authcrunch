@@ -27,6 +27,12 @@ import (
 
 func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
 	p.disableClientCache(w)
+	// Keep all Documents children with their owner, including unknown paths
+	// ending in legacy operations such as /api/logout or /api/profile.
+	documentsPath := rr.Upstream.BasePath + "api/documents"
+	if r.URL.Path == documentsPath || strings.HasPrefix(r.URL.Path, documentsPath+"/") {
+		return p.handleAPIDocuments(ctx, w, r, rr)
+	}
 	// Refresh authenticates its own credential, including after access expiry.
 	if strings.HasSuffix(r.URL.Path, "/api/refresh_token") || strings.HasSuffix(r.URL.Path, "/api/refresh_session") || strings.HasSuffix(r.URL.Path, "/api/logout") {
 		return p.handleAPIRefreshToken(ctx, w, r, rr)

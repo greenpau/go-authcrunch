@@ -20,6 +20,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/documents"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/authz/options"
@@ -84,6 +85,8 @@ type PortalConfig struct {
 	guestPortalRoles        []string
 	// API holds the configuration for API endpoints.
 	API *APIConfig `json:"api,omitempty" xml:"api,omitempty" yaml:"api,omitempty"`
+	// Documents holds storage settings; API.DocumentsEnabled separately opts in.
+	Documents *documents.Config `json:"documents,omitempty" xml:"documents,omitempty" yaml:"documents,omitempty"`
 	// RefreshTokens configures optional rotating portal sessions.
 	RefreshTokens *TokenRefreshConfig `json:"refresh_tokens,omitempty" xml:"refresh_tokens,omitempty" yaml:"refresh_tokens,omitempty"`
 	// CrossDeviceLogin configures optional sign-in from another browser/device.
@@ -201,6 +204,11 @@ func (cfg *PortalConfig) Validate() error {
 	}
 	if cfg.Name == "" {
 		return errors.ErrPortalConfigNameNotFound
+	}
+	if cfg.API != nil && cfg.API.DocumentsEnabled {
+		if err := cfg.Documents.Validate(); err != nil {
+			return err
+		}
 	}
 	if err := cfg.RefreshTokens.Validate(); err != nil {
 		return err

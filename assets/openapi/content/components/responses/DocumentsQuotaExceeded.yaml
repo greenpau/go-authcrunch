@@ -1,0 +1,15 @@
+description: Configured bytes, file, recipient, key registration or permanent identity reservation quota exceeded.
+headers:
+  Cache-Control:
+    $ref: ../headers/NoStore.yaml
+  X-Content-Type-Options:
+    $ref: ../headers/NoSniff.yaml
+  Referrer-Policy:
+    $ref: ../headers/OIDCNoReferrer.yaml
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/DocumentsError.yaml
+    example:
+      status: 507
+      message: Insufficient Storage

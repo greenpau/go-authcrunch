@@ -22,6 +22,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/documents"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
@@ -56,6 +57,8 @@ const (
 
 // Portal is an authentication portal.
 type Portal struct {
+	documents         *documents.Store
+	documentsConfig   *documents.Config
 	state             *state.Store
 	closeOnce         sync.Once
 	closed            atomic.Bool
@@ -199,6 +202,9 @@ func (p *Portal) Close() {
 		if p.oidc != nil {
 			p.oidc.Close()
 		}
+		if p.documents != nil {
+			_ = p.documents.Close()
+		}
 		if p.sessions != nil {
 			p.sessions.Stop()
 		}
@@ -246,6 +252,9 @@ func (p *Portal) configure() error {
 		return err
 	}
 	if err := p.configureOIDC(); err != nil {
+		return err
+	}
+	if err := p.configureDocuments(); err != nil {
 		return err
 	}
 

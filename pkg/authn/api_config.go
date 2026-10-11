@@ -18,6 +18,9 @@ package authn
 type APIConfig struct {
 	ProfileEnabled bool `json:"profile_enabled,omitempty" xml:"profile_enabled,omitempty" yaml:"profile_enabled,omitempty"`
 	AdminEnabled   bool `json:"admin_enabled,omitempty" xml:"admin_enabled,omitempty" yaml:"admin_enabled,omitempty"`
+	// DocumentsEnabled explicitly enables encrypted document storage and sharing.
+	// Storage settings alone never enable the API. The default is false.
+	DocumentsEnabled bool `json:"documents_enabled,omitempty" xml:"documents_enabled,omitempty" yaml:"documents_enabled,omitempty"`
 	// AdminFetchPrivateKeysEnabled permits authorized portal admins to export
 	// private signing keys. It also requires AdminEnabled and defaults to false.
 	AdminFetchPrivateKeysEnabled bool `json:"admin_fetch_private_keys_enabled,omitempty" xml:"admin_fetch_private_keys_enabled,omitempty" yaml:"admin_fetch_private_keys_enabled,omitempty"`

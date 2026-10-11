@@ -1,0 +1,13 @@
+type: object
+additionalProperties: false
+required:
+- ciphertext
+properties:
+  ciphertext:
+    type: string
+    pattern: ^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-][AQgw]|[A-Za-z0-9_-]{2}[AEIMQUYcgkosw048])?$
+    minLength: 22
+    maxLength: 1398123
+    description: Canonical unpadded base64url of 16..1048592 encrypted bytes including the 16-byte GCM
+      tag. Exact chunk length follows the immutable file descriptor; only the last chunk may be short.
+      Clients verify the tag, idx and context before using plaintext.

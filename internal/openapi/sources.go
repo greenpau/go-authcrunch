@@ -62,7 +62,7 @@ func Sources(ctx context.Context, repository string) (*ReviewedSources, error) {
 			if walkErr != nil {
 				return walkErr
 			}
-			if entry.IsDir() || !strings.HasSuffix(file, ".go") || strings.HasSuffix(file, "_test.go") {
+			if entry.IsDir() || (!strings.HasSuffix(file, ".go") && filepath.ToSlash(file) != filepath.ToSlash(filepath.Join(repository, "pkg/authn/documents/client/crypto.mjs"))) || strings.HasSuffix(file, "_test.go") {
 				return nil
 			}
 			name, err := filepath.Rel(repository, file)

@@ -1,0 +1,34 @@
+{
+  "bootstrap": {
+    "protocol": "authcrunch-documents",
+    "chunk_size": 1048576,
+    "portal_id": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+    "user_id": "00000000-0000-4000-8000-000000000002"
+  },
+  "registration": {
+    "user_id": "00000000-0000-4000-8000-000000000002",
+    "key_id": "AShEnTlf-I3BhfW8EegVvPQoXpn1BwotIPJ7SZvXvOY",
+    "public_key": "BOjjMf1M6EdkIPf79WKxc5uSnSDA8R9ME7lmfPhGTm8PiRloelUf9o2aV_E2YKhYgVTCj2l015rs9C1QH6J4KlY",
+    "vault": {
+      "salt": "9xYaXSHBzl6fO53DOfbR6Z4YyVRm8Y43CLMnZdR7jow",
+      "nonce": "kIj8BA_xEQpvYt-2",
+      "ciphertext": "02eFOMUPpIxNnR6z9Gi06NUfmrUQGIqhbJXGI8ufxihkfQdRNstiawqp7aPzqMAi"
+    }
+  },
+  "recoveryKey": "G3awAKQwJLYtzCXTPb2Aphset7mhEBzlO6KoOU7GJlw",
+  "file": {
+    "id": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM",
+    "owner": "00000000-0000-4000-8000-000000000002",
+    "chunks": 1,
+    "size": 55,
+    "state": "ready",
+    "metadata": "t0Kc-J-5KocRlQ_fB6PcDpD1dMSh3BdEg5TE0ddIaLwNdU38TZUvp9n2kPMoSteTmrh5yuMISQZDuMYs_thq9ekc2yye2VHIQeJf",
+    "envelope": {
+      "key_id": "AShEnTlf-I3BhfW8EegVvPQoXpn1BwotIPJ7SZvXvOY",
+      "ephemeral_key": "BGWu4SKAQBvPEia_ckSDLf4t1Nw_UTgTzJsk9-Fy1Pc_uF3DP5HTzDfNryGSNGqODLMQwcVDBs7b3XRDzxcYb6o",
+      "ciphertext": "bqiZhm1w-5g-inY8SyTvK5Wb3BNfKIGCEqdWELrsXY2HwzMFKmsIetvYjOPkVyx3"
+    }
+  },
+  "plaintext": "Q29uZmlkZW50aWFsIGRvY3VtZW50IHByb3RvY29sIHRlc3QA4piD",
+  "ciphertext": "Hkzx0EGzuHHrWqoekKKEmwr-LLSBvtb2w8kNlfGQAbInxE60yooVAe_r2z1RNaemkecl4KlJCw"
+}

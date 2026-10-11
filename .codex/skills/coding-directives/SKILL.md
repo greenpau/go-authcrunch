@@ -25,6 +25,10 @@ generated assets, and dependency commands;
 [release-and-versioning](../release-and-versioning/SKILL.md) owns version invariants.
 The root routes select those workflows when their tasks are in scope.
 
+APIs are unversioned. Do not add version segments or suffixes to routes, API
+filenames, operation/schema names, or protocol identifiers. Keep this contract
+consistent across implementation, clients, OpenAPI and skills.
+
 ## Keep Skills Current
 
 Treat relevant repo-local skill maintenance as part of completing every code
@@ -37,6 +41,10 @@ skills with implemented behavior, configuration, ownership, and validation
 changes, including corrected paths or examples after a refactor.
 
 ## Implementation workflows
+
+- Use [authentication-portal-documents](../authentication-portal-documents/SKILL.md) to
+  maintain encrypted document storage, chunk transfers, recipient key envelopes,
+  immutable account ownership and the external Documents React integration.
 
 - Use [plugin-development](../plugin-development/SKILL.md) to design or integrate
   AuthCrunch extension modules, maintain category reference plugins, and apply

@@ -50,11 +50,18 @@ function start(t, command, args) {
   child.stderr.on('data', (data) => { output += data; });
   child.on('error', (error) => { failure = error; });
   t.after(async () => {
-    if (!child.pid) return;
-    const exited = once(child, 'exit').catch(() => {});
-    try { process.kill(-child.pid, 'SIGTERM'); } catch { return; }
-    await Promise.race([exited, delay(3000)]);
-    try { process.kill(-child.pid, 'SIGKILL'); } catch { /* already exited */ }
+    try {
+      if (!child.pid) return;
+      const exited = once(child, 'exit').catch(() => {});
+      try { process.kill(-child.pid, 'SIGTERM'); } catch { return; }
+      await Promise.race([exited, delay(3000)]);
+      try { process.kill(-child.pid, 'SIGKILL'); } catch { /* already exited */ }
+    } finally {
+      // A detached Chrome helper can retain inherited stdio after the browser
+      // exits. Release our captured pipes so it cannot keep Node's test alive.
+      child.stdout.destroy();
+      child.stderr.destroy();
+    }
   });
   return () => {
     if (failure) throw failure;
@@ -120,7 +127,7 @@ test('real Scalar renders every operation under the shared mount and restores de
   const serverOutput = start(t, 'go', ['run', '-mod=readonly', './cmd/openapi', '-listen', '127.0.0.1:0', 'serve']);
   const address = await eventually(() => serverOutput().match(/OpenAPI reference: (http:\/\/[^ ]+)/)?.[1], 'reference server');
   const chromeOutput = start(t, await browserPath(), ['--headless=new', '--disable-gpu', '--no-first-run',
-    '--no-default-browser-check', '--disable-background-networking', '--remote-debugging-port=0',
+    '--no-default-browser-check', '--disable-background-networking', '--disable-breakpad', '--disable-crash-reporter', '--remote-debugging-port=0',
     `--user-data-dir=${profile}`, 'about:blank']);
   t.after(() => rm(profile, { recursive: true, force: true }));
   const endpoint = await eventually(async () => {
@@ -139,9 +146,23 @@ test('real Scalar renders every operation under the shared mount and restores de
   const send = (method, params = {}) => cdp.send(method, params, sessionId);
   const errors = [];
   let intercepted = 0;
+  const documentRequests = [];
+  let documentResponses;
+  const documentResponseRoutes = new Map();
+  const fixtureOrigin = new URL(address.trim()).origin;
   cdp.on('Runtime.exceptionThrown', (message) => errors.push(message.params.exceptionDetails.text));
   cdp.on('Fetch.requestPaused', (message) => {
     if (message.sessionId !== sessionId) return;
+    const { request, requestId } = message.params;
+    if (request.url !== bundleURL) {
+      documentRequests.push(request);
+      let response = { status: false, message: 'Unexpected fixture message' };
+      response = documentResponseRoutes.get(request.method + " " + new URL(request.url).pathname) || response;
+      send('Fetch.fulfillRequest', { requestId, responseCode: 200,
+        responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'Cache-Control', value: 'no-store' }],
+        body: Buffer.from(JSON.stringify(response)).toString('base64') }).catch(error => errors.push(error.message));
+      return;
+    }
     intercepted++;
     send('Fetch.fulfillRequest', { requestId: message.params.requestId, responseCode: 200,
       responseHeaders: [{ name: 'Content-Type', value: 'text/javascript' }, { name: 'Access-Control-Allow-Origin', value: '*' }],
@@ -149,7 +170,8 @@ test('real Scalar renders every operation under the shared mount and restores de
   });
   await send('Page.enable');
   await send('Runtime.enable');
-  await send('Fetch.enable', { patterns: [{ urlPattern: bundleURL, requestStage: 'Request' }] });
+  await send('Fetch.enable', { patterns: [{ urlPattern: bundleURL, requestStage: 'Request' },
+    { urlPattern: `${fixtureOrigin}/*api/documents*`, requestStage: 'Request' }] });
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await send('Page.navigate', { url: address });
   const evaluate = async (expression) => {
@@ -196,18 +218,18 @@ test('real Scalar renders every operation under the shared mount and restores de
     await evaluate(`document.querySelector('[role="option"][id$="-${client}"]').click()`);
     await eventually(async () => snippet.test(await evaluate('document.body.innerText')), `${client} generated snippet`);
   }
-  for (const label of ['AuthCrunch', 'Authentication Portal', 'Cross-Device Sign-In', 'External Authentication', 'Administration', 'OpenID Connect', 'Schemas']) {
+  for (const label of ['AuthCrunch', 'Authentication Portal', 'Cross-Device Sign-In', 'External Authentication', 'Documents', 'Administration', 'OpenID Connect', 'Schemas']) {
     assert.ok(visible.includes(label), `missing reference section: ${label}`);
   }
   const groups = await evaluate(`Array.from(document.querySelectorAll('button[aria-expanded]'), n => n.textContent.trim())`);
   for (const obsolete of ['Authentication', 'Portal sessions', 'Browser', 'Cross-device', 'Federation', 'Direct OAuth']) {
     assert.ok(!groups.includes('Open Group - ' + obsolete) && !groups.includes('Close Group - ' + obsolete), `obsolete navigation group: ${obsolete}`);
   }
-  assert.ok(await evaluate(`document.querySelectorAll('a[href*="tag/"]').length > 5`), 'operation navigation missing');
+  assert.ok(await evaluate(`document.querySelectorAll('[data-sidebar-id] a[href*="tag/"]').length > 5`), 'operation navigation missing');
   assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, 'desktop reference overflows');
   const document = await (await fetch(`${address}generated/openapi.json`)).json();
   const workflowTags = ['Registration', 'Authentication Portal', 'External Authentication',
-    'Cross-Device Sign-In', 'Profile', 'Discovery', 'OpenID Connect', 'Administration', 'System'];
+    'Cross-Device Sign-In', 'Profile', 'Documents', 'Discovery', 'OpenID Connect', 'Administration', 'System'];
   assert.deepEqual(document.tags.map(tag => tag.name), workflowTags, 'categories must follow the account and integration workflows');
   const operations = Object.entries(document.paths).flatMap(([url, item]) => Object.entries(item)
     .filter(([method]) => ['get', 'post', 'head', 'put', 'patch', 'delete', 'options', 'trace'].includes(method))
@@ -224,13 +246,13 @@ test('real Scalar renders every operation under the shared mount and restores de
   assert.deepEqual(navigationGroups, workflowTags, 'Scalar reordered the workflow categories');
   const expectedNavigation = workflowTags.flatMap(tag => operations.filter(op => op.tags[0] === tag)
     .map(op => `${op.method.toUpperCase()}${op.url}`));
-  const navigationOperations = await evaluate(`Array.from(document.querySelectorAll('a[href*="tag/"]'),
+  const navigationOperations = await evaluate(`Array.from(document.querySelectorAll('[data-sidebar-id] a[href*="tag/"]'),
     n => decodeURIComponent(new URL(n.href).hash).match(/\\/(GET|POST|HEAD|PUT|PATCH|DELETE|OPTIONS|TRACE)(\\/.*)$/)?.slice(1).join(''))
     .filter(Boolean)`);
   assert.deepEqual(navigationOperations, expectedNavigation, 'Scalar reordered operations within a workflow');
   // Check the labels users actually see, independently of each link's method
   // and path; URLs alone cannot expose two indistinguishable menu entries.
-  const renderedLabels = await evaluate(`Array.from(document.querySelectorAll('a[href*="tag/"]'))
+  const renderedLabels = await evaluate(`Array.from(document.querySelectorAll('[data-sidebar-id] a[href*="tag/"]'))
     .filter(n => /\\/(GET|POST|HEAD|PUT|PATCH|DELETE|OPTIONS|TRACE)\\//.test(decodeURIComponent(new URL(n.href).hash)))
     .map(n => {
       // Scalar appends an HTTP method badge, including screen-reader text.
@@ -249,7 +271,7 @@ test('real Scalar renders every operation under the shared mount and restores de
   const navigateOperation = async (operation) => {
     await expandNavigation();
     await eventually(() => evaluate(`(() => {
-      const link = [...document.querySelectorAll('a[href*="tag/"]')].find(n =>
+      const link = [...document.querySelectorAll('[data-sidebar-id] a[href*="tag/"]')].find(n =>
         n.textContent.includes(${JSON.stringify(operation.summary)}) &&
         decodeURIComponent(new URL(n.href).hash).endsWith(${JSON.stringify('/' + operation.method.toUpperCase() + operation.url)}));
       if (!link) return false;
@@ -274,6 +296,74 @@ test('real Scalar renders every operation under the shared mount and restores de
   for (const operation of operations) {
     await checkOperationURL(operation, 'https://auth.myfiosgateway.com:8443', '/auth');
   }
+  // Enter the tag directly, as an app developer following /#tag/documents does.
+  // Validate JSON parsed from the rendered guide, not just source descriptions.
+  // Leave the previous SPA first: fragment-only navigation retains its state,
+  // and an immediate reload can race that navigation's hash updates.
+  await send('Page.navigate', { url: 'about:blank' });
+  await send('Page.navigate', { url: `${address.trim()}#tag/documents` });
+  await eventually(() => evaluate(`Array.from(document.querySelectorAll('h2'))
+    .some(n => n.textContent.trim() === 'Operation and message catalogue')`), 'Documents tag message catalogue');
+  try {
+    await eventually(() => evaluate(`(() => {
+      const heading = document.querySelector('section[id$="/tag/documents"] .section-header-label');
+      if (!heading) return false;
+      const rect = heading.getBoundingClientRect();
+      return rect.height > 0 && rect.top >= 0 && rect.bottom <= innerHeight;
+    })()`), 'Documents deep link opens the tag in the viewport');
+  } catch (error) {
+    await writeFile(path.join(work, 'viewer-documents-deep-link.json'), JSON.stringify(await evaluate(`({
+      hash: location.hash, scrollY, height: innerHeight,
+      headings: Array.from(document.querySelectorAll('section[id$="/tag/documents"] h2'),
+        n => ({text: n.textContent, rect: n.getBoundingClientRect().toJSON()}))
+    })`), null, 2));
+    throw error;
+  }
+  const documentsOperations = operations.filter(op => op.tags[0] === 'Documents');
+  // The reference is consumed by JavaScript clients as well as Go validators.
+  // Exercise binary patterns in the browser at their maximum payload lengths.
+  const binaryChecks = [
+    ['DocumentsChunk', 'ciphertext', 1048592], ['DocumentsChunkPutRequest', 'ciphertext', 1048592],
+    ['DocumentsFile', 'metadata', 32768], ['DocumentsManifest', 'metadata', 32768],
+    ['DocumentsKey', 'public_key', 65], ['DocumentsPublicKey', 'public_key', 65],
+    ['DocumentsEnvelope', 'ephemeral_key', 65],
+  ].map(([model, field, maximum]) => ({ model, maximum, pattern: document.components.schemas[model].properties[field].pattern }));
+  const binaryIssues = await evaluate(`(${function (checks) {
+    const failures = [];
+    const encode = value => btoa(value).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+    for (const { model, maximum, pattern } of checks) {
+      const regex = new RegExp(pattern);
+      if (maximum === 65) {
+        for (let prefix = 0; prefix < 256; prefix++) {
+          if (regex.test(encode(String.fromCharCode(prefix) + '\0'.repeat(64))) !== (prefix === 4)) failures.push(model + ' prefix ' + prefix);
+        }
+      } else {
+        for (const size of [16, 17, 18, maximum]) {
+          const value = encode('\0'.repeat(size));
+          if (!regex.test(value)) failures.push(model + ' length ' + size);
+          if (regex.test(value + '\n')) failures.push(model + ' trailing newline');
+        }
+        for (const value of ['A'.repeat(21) + 'B', 'A'.repeat(22) + 'B', 'A'.repeat(25)]) {
+          if (regex.test(value)) failures.push(model + ' noncanonical base64url');
+        }
+      }
+    }
+    return failures;
+  }.toString()})(${JSON.stringify(binaryChecks)})`);
+  assert.deepEqual(binaryIssues, [], 'Documents binary schemas differ in the browser');
+  assert.deepEqual(documentsOperations.map(op => op.operationId), [
+    'documentsBootstrap', 'documentsKeyFetch', 'documentsKeyRegister',
+    'documentsFileAllocate', 'documentsFileManifest', 'documentsChunkPut', 'documentsFileCommit',
+    'documentsFileList', 'documentsFileFetch', 'documentsChunkFetch',
+    'documentsKeyLookup', 'documentsSharePut', 'documentsShareList', 'documentsShareDelete',
+    'documentsFileDelete', 'documentsKeyReset',
+  ], 'Documents operations must follow setup, upload, download, sharing and removal');
+  for (const operation of documentsOperations) {
+    const [name] = Object.keys(operation.responses['200'].content['application/json'].examples);
+    assert.ok(!operation.summary.startsWith(name), 'display the action without a protocol operation prefix');
+  }
+  const operationLinks = await evaluate(`Array.from(document.querySelectorAll('section[id$="/tag/documents"] a[href^="#tag/documents/"]'), n => decodeURIComponent(n.getAttribute('href')))`);
+  assert.deepEqual(operationLinks, documentsOperations.map(op => `#tag/documents/${op.method.toUpperCase()}${op.url}`));
   await navigateOperation(operations.find(op => op.operationId === 'whoami'));
   await eventually(() => evaluate(`(() => {
     const response = Array.from(document.querySelectorAll('button[aria-expanded="false"]'))
@@ -388,7 +478,7 @@ test('real Scalar renders every operation under the shared mount and restores de
   const screenshot = await send('Page.captureScreenshot', { format: 'png' });
   await writeFile(path.join(work, 'viewer.png'), Buffer.from(screenshot.data, 'base64'));
   const destination = await evaluate(`(() => {
-    const link = [...document.querySelectorAll('a[href*="tag/"]')]
+    const link = [...document.querySelectorAll('[data-sidebar-id] a[href*="tag/"]')]
       .find((node) => node.textContent.includes('Authenticate with a challenge or API key'));
     if (!link) return null;
     const hash = new URL(link.href).hash;
@@ -459,5 +549,85 @@ test('real Scalar renders every operation under the shared mount and restores de
   await evaluate(`localStorage.setItem(${JSON.stringify(storageKey)}, '{broken')`);
   await reload('https://auth.myfiosgateway.com:8443', '/auth');
   assert.equal(await evaluate(`!!document.querySelector('.scalar-load-error')`), false);
+  // Test Scalar's real editor/send/response UI against explicitly synthetic
+  // intercepted responses. Backend authorization and cryptography have separate
+  // native TLS and browser journeys; this fixture verifies the reference wiring.
+  documentResponses = Object.assign({}, ...documentsOperations.map(op => op.responses['200'].content['application/json'].examples));
+  const parameterExample = parameter => Object.values(parameter.examples)[0].value;
+  const documentResourcePath = operation => operation.url.replace(/\{([^}]+)\}/g, (_, name) =>
+    encodeURIComponent(parameterExample(operation.parameters.find(p => p.in === 'path' && p.name === name))));
+  for (const operation of documentsOperations) {
+    const [example] = Object.values(operation.responses['200'].content['application/json'].examples);
+    documentResponseRoutes.set(operation.method.toUpperCase() + ' /team/portal' + documentResourcePath(operation), example.value);
+  }
+  await editVariable('origin', fixtureOrigin);
+  await editVariable('portalBasePath', '/team/portal');
+  await reload(fixtureOrigin, '/team/portal');
+  for (const [index, operation] of documentsOperations.entries()) {
+    const requestExamples = operation.requestBody?.content['application/json'].examples;
+    const [name] = Object.keys(operation.responses['200'].content['application/json'].examples);
+    const expected = documentResponses[name].value;
+    const section = `document.querySelector('section[id$="/tag/documents/${operation.method.toUpperCase()}${operation.url}"]')`;
+    await navigateOperation(operation);
+    try {
+      await eventually(() => evaluate(`${section}?.querySelector('.section-header-label')?.textContent.trim() === ${JSON.stringify(operation.summary)}`), `${name} separate operation`);
+      // A scalar field can legitimately render a "Not" constraint (for example
+      // the nil UUID exclusion). Reject a message-union picker, not that rule.
+      assert.equal(await evaluate(`Array.from(${section}.querySelectorAll('.composition-selector'))
+        .some(n => /one of|any of/i.test(n.textContent))`), false,
+      `${name} request must have its own schema`);
+      if (name === 'chunk.fetch') {
+        assert.ok(await evaluate(`${section}.innerText.includes('Zero-based chunk idx') &&
+          ${section}.innerText.includes('Document ID returned by file.allocate')`), 'resource parameters must show their meanings');
+      }
+      await eventually(() => evaluate(`Array.from(${section}.querySelectorAll('pre')).some(n => {
+        try { return JSON.stringify(JSON.parse(n.textContent)) === ${JSON.stringify(JSON.stringify(expected))}; }
+        catch { return false; }
+      })`), `${name} paired expected response`);
+      assert.equal(documentRequests.length, index, 'opening an operation must never send its request');
+      await evaluate(`${section}.querySelector('.show-api-client-button').click()`);
+      await eventually(() => evaluate(`Array.from(document.querySelectorAll('[data-addressbar-action="send"]'))
+        .some(n => n.getBoundingClientRect().width > 0)`), `${name} native request editor`);
+      await evaluate(`Array.from(document.querySelectorAll('[data-addressbar-action="send"]'))
+        .find(n => n.getBoundingClientRect().width > 0).click()`);
+      await eventually(() => documentRequests.length > index, `${name} sent request`);
+      const request = documentRequests[index];
+      assert.equal(request.method, operation.method.toUpperCase());
+      const sentURL = new URL(request.url);
+      assert.equal(sentURL.origin + sentURL.pathname, fixtureOrigin + '/team/portal' + documentResourcePath(operation),
+        'request must select the documented resource path');
+      for (const [key, value] of sentURL.searchParams) {
+        const parameter = operation.parameters?.find(p => p.in === 'query' && p.name === key);
+        assert.ok(parameter, 'request added an undocumented query parameter');
+        assert.equal(value, String(parameterExample(parameter)), 'prefilled query parameter');
+      }
+      if (requestExamples) {
+        const body = JSON.parse(request.postData);
+        assert.deepEqual(body, requestExamples[name].value, `${name} prefilled request body`);
+        assert.equal('operation' in body || 'payload' in body, false, 'request fields must be at the top level');
+        for (const parameter of operation.parameters || []) assert.equal(parameter.name in body, false, 'resource parameters must not be duplicated in the body');
+      } else {
+        assert.ok(!request.postData, `${name} must not send a body`);
+      }
+      await eventually(() => evaluate(`Array.from(document.querySelectorAll('[role="dialog"] pre, [role="dialog"] .cm-content'))
+        .some(n => { try { return JSON.stringify(JSON.parse(n.textContent)) === ${JSON.stringify(JSON.stringify(expected))}; }
+        catch { return false; } })`), `${name} received response in test console`);
+      if (name === 'chunk.fetch') {
+        const capture = await send('Page.captureScreenshot', { format: 'png' });
+        await writeFile(path.join(work, 'viewer-documents-operation-test.png'), Buffer.from(capture.data, 'base64'));
+      }
+      await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+    } catch (error) {
+      await writeFile(path.join(work, 'viewer-documents-operation-failure.html'), await evaluate('document.documentElement.outerHTML'));
+      await writeFile(path.join(work, 'viewer-documents-operation-failure.txt'), await evaluate('document.body.innerText'));
+      throw error;
+    }
+  }
+  assert.equal(documentRequests.length, 16);
+  await editVariable('portalBasePath', '');
+  await reload(fixtureOrigin, '');
+  for (const operation of documentsOperations) await checkOperationURL(operation, fixtureOrigin, '');
+  assert.equal(documentRequests.length, 16, 'reload/navigation must not repeat destructive requests');
   assert.deepEqual(errors, [], 'browser raised runtime errors');
 });

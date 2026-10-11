@@ -1,0 +1,127 @@
+put:
+  operationId: documentsSharePut
+  tags:
+  - Documents
+  summary: Grant a recipient read access
+  description: 'Path parameters identify the owned committed file `id` and a different local `user_id`; the
+    JSON body contains only an `envelope` wrapping that file''s document key for the recipient. Its `key_id`
+    must match the recipient''s current registered key; use a fresh ephemeral key when wrapping. Missing file
+    or recipient registration returns 404; an unfinished file, stale fingerprint or changed existing envelope
+    returns 409; recipient quota exhaustion returns 507. Identical retries succeed. To replace an existing
+    grant, revoke it first. Recipients may read but cannot mutate or reshare through this API.
+
+
+    Disabled by default; requires explicit APIConfig.DocumentsEnabled plus validated storage settings. Admin/Profile
+    flags and storage settings alone do not enable Documents. Require an allowed local identity-store realm,
+    portal user/admin role, valid portal access token AND current stored browser login evidence. Ordinary access-only
+    JSON login, API-key, LDAP and unmapped OAuth/SAML sessions do not establish this authority. Ownership is
+    the exact local database user id. Each operation runs inside transactional current-identity verification;
+    transformed subject/email never select an owner, and administrators have no access override. Persistent
+    source bindings reject UUID collisions across stores and survive reset/restart. MaxKeys bounds both active
+    registrations and permanent admitted identity reservations; renaming an authoritative store/realm requires
+    an explicit migration.
+
+
+    Target the configured HTTPS origin and exact portal mount. Origin, if present, must match exactly; Sec-Fetch-Site
+    must be same-origin or none. No CORS. Content-Encoding is rejected. The HTTP method and resource path select
+    the operation. Path identifiers must not be repeated or overridden in a JSON body. Unknown, encoded or
+    noncanonical paths return 404; malformed resource IDs or chunk numbers return 400. Unsupported methods
+    return 405 with Allow: PUT. Only file.list accepts the optional after query parameter; duplicate, unknown,
+    empty or noncanonical query parameters (including a bare ?) return 400.
+
+
+    Send the described fields directly in a JSON object with Content-Type: application/json. The operation/payload
+    wrappers are rejected as unknown fields. Bodies are read with a 1463659-byte hard limit before identity
+    locks; all bodies except chunk.put are further limited to 65536 bytes. Decoded chunks are at most 1048592
+    bytes. Reject unknown fields, duplicates, case aliases and non-ASCII member names, null required values,
+    trailing JSON and nesting deeper than 16. Binary fields use canonical unpadded base64url.
+
+
+    Every success is a JSON response message with HTTP 200; failures use the generic status/message object.
+    Responses are no-store. Quotas reserve full ciphertext size, not physical disk space. Allocation collects
+    expired unfinished uploads; there is no background janitor.'
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: Explicit confirmation that the requested recipient grant succeeded.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/DocumentsSharePutResponse.yaml
+          examples:
+            share.put:
+              summary: Grant a recipient read access
+              value:
+                success: true
+    '400':
+      $ref: ../components/responses/DocumentsBadRequest.yaml
+    '401':
+      $ref: ../components/responses/DocumentsUnauthorized.yaml
+    '403':
+      $ref: ../components/responses/DocumentsForbidden.yaml
+    '404':
+      $ref: ../components/responses/DocumentsNotFound.yaml
+    '405':
+      $ref: ../components/responses/DocumentsMethodNotAllowed.yaml
+    '409':
+      $ref: ../components/responses/DocumentsConflict.yaml
+    '413':
+      $ref: ../components/responses/DocumentsTooLarge.yaml
+    '415':
+      $ref: ../components/responses/DocumentsUnsupportedMediaType.yaml
+    '507':
+      $ref: ../components/responses/DocumentsQuotaExceeded.yaml
+    '503':
+      $ref: ../components/responses/DocumentsUnavailable.yaml
+  x-source-files:
+  - pkg/authn/documents_http.go
+  - pkg/authn/documents/store.go
+  - pkg/authn/documents/transfer.go
+  - pkg/authn/documents/protocol.go
+  - pkg/authn/documents/config.go
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/DocumentsSharePutRequest.yaml
+        examples:
+          share.put:
+            summary: Grant a recipient read access
+            value:
+              envelope:
+                key_id: cLc0EvQEMHHNSsl7n8o9n_zHPtFmQGhJAhhrISMq3Lc
+                ephemeral_key: BNviE8n5KNtgsEbJcvS_UswTC5ybCd12dohA6XaBq7XlAUM8b0geVGgdUA5CajEDBACFemWGHaGUSoY6qJ6sHeo
+                ciphertext: JcTTl6GfpUfwodQa72QUqyytELgb3ID5RAyYxjpdF07KoVuKBq8ACg5iYI6TXto-
+  parameters:
+  - name: id
+    in: path
+    required: true
+    description: Document ID returned by file.allocate. Use the exact immutable ID; this does not select an
+      owner or bypass access checks.
+    schema:
+      $ref: ../components/schemas/DocumentsID.yaml
+    examples:
+      share.put:
+        summary: Grant a recipient read access
+        value: AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM
+  - name: user_id
+    in: path
+    required: true
+    description: Recipient’s exact local database user UUID. Resolve it from their portal share code; usernames,
+      email addresses and external provider subjects are not accepted.
+    schema:
+      $ref: ../components/schemas/DocumentsUserID.yaml
+    examples:
+      share.put:
+        summary: Grant a recipient read access
+        value: 00000000-0000-4000-8000-000000000004

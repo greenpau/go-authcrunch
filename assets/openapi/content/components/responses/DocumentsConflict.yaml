@@ -1,0 +1,16 @@
+description: Immutable content differs, recipient key changed, upload is incomplete, or reset confirmation
+  names another user or key.
+headers:
+  Cache-Control:
+    $ref: ../headers/NoStore.yaml
+  X-Content-Type-Options:
+    $ref: ../headers/NoSniff.yaml
+  Referrer-Policy:
+    $ref: ../headers/OIDCNoReferrer.yaml
+content:
+  application/json:
+    schema:
+      $ref: ../schemas/DocumentsError.yaml
+    example:
+      status: 409
+      message: Conflict

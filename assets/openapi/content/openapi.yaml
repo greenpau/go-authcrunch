@@ -45,6 +45,113 @@ tags:
   description: Optional explicit browser-to-browser sign-in approval and transfer.
 - name: Profile
   description: User-owned local profile, credential and authentication-policy operations.
+- name: Documents
+  description: |
+    Client-encrypted storage and sharing use separate resource paths beneath `/api/documents/`,
+    relative to the configured portal mount. GET reads resources, PUT installs immutable
+    keys, manifests, chunks and grants, and DELETE removes documents or grants. POST
+    allocates uploads, commits them or resets a vault. Resource IDs are path parameters;
+    only file listing accepts an optional `after` query cursor. `/api/documents` itself is not an endpoint.
+
+    Documents is **disabled by default**. Enable it explicitly with `enable documents api`
+    and valid storage/origin/realm settings. Configure the exact serialized HTTPS origin:
+    lowercase ASCII/punycode host or canonical IP, no path/query/fragment, no default
+    `:443`, and no empty or zero-padded port. Invalid enabled settings fail before
+    creating storage. Requests need a valid portal access token
+    and current stored browser login evidence for an allowed local user. Ownership
+    and grants use the exact local database user `id`; administrators have no override.
+
+    ## Message format
+
+    GET, DELETE and upload commit use no request body. For example, download chunk zero
+    with `GET /api/documents/file/{id}/chunk/0/fetch`; delete an owned file with
+    `DELETE /api/documents/file/{id}/delete`. Other writes send the documented fields
+    directly as JSON with `Content-Type: application/json`. There are no request
+    `operation` or `payload` wrapper fields, and path parameters must not be repeated in bodies. Every success is HTTP 200 with the documented resource fields directly in the
+    response body. There is no `operation` or `result` response wrapper. Mutations
+    without resource data return `{ "success": true }`, with an explicit boolean schema.
+    Unknown fields (including old wrappers), duplicates, null required values and
+    noncanonical member names are rejected.
+
+    User IDs are lowercase non-nil UUIDs. Portal/file IDs and key fingerprints are
+    32 bytes encoded as 43-character unpadded base64url. All ciphertext and public-key
+    fields also use canonical unpadded base64url. Binary content is encrypted before
+    transmission. The message limit is 65536 bytes, except `chunk.put` permits 1463659
+    bytes for the entire JSON request body. Decoded chunks are at most 1048592 bytes.
+
+    Only clients and chosen recipients hold decryption keys. Never transmit recovery
+    secrets, private keys or unwrapped document keys. A URL-only observer can see the operation and resource identifiers, including pagination cursors.
+    A decrypted-TLS observer can also see identifiers, sizes and sharing relationships. File contents and filenames remain encrypted.
+
+    ## Client workflows
+
+    - **Enroll/unlock:** `bootstrap` → `key.fetch`; if absent, generate a keypair and save
+      the recovery secret locally, then `key.register`. Existing vaults unlock locally.
+    - **Upload:** `file.allocate` → encrypt using its immutable descriptor →
+      `file.manifest` → `chunk.put` for every index → `file.commit`.
+    - **Download:** `file.list` → `file.fetch` → unwrap locally → `chunk.fetch` for every
+      index → authenticate all chunks before completing the download.
+    - **Share:** `key.lookup` → verify the recipient fingerprint → wrap the document
+      key locally → `share.put`. Inspect grants with `share.list`; revoke with `share.delete`.
+    - **Remove:** `file.delete` removes one owned document. `key.reset` is a separately
+      confirmed destructive reset of the entire vault and all owned documents.
+
+    ## Operation and message catalogue
+
+    Each operation below has its own method/path, documented parameters or JSON body,
+    expected responses and **Test Request** console. Examples use synthetic identifiers and ciphertext: replace them with
+    current account/upload data before sending. Selecting an operation sends nothing.
+    Browser calls must originate at the configured portal origin; when the reference
+    is hosted elsewhere, use the generated command with current session credentials.
+
+    | Operation | Method | Path |
+    | --- | --- | --- |
+    | [Discover identity and limits](#tag/documents/GET/api/documents/bootstrap) | `GET` | `/api/documents/bootstrap` |
+    | [Read your encrypted recovery vault](#tag/documents/GET/api/documents/keys/fetch) | `GET` | `/api/documents/keys/fetch` |
+    | [Enroll a public key and encrypted vault](#tag/documents/PUT/api/documents/keys/register) | `PUT` | `/api/documents/keys/register` |
+    | [Reserve an encrypted upload](#tag/documents/POST/api/documents/files/allocate) | `POST` | `/api/documents/files/allocate` |
+    | [Store encrypted metadata and the owner envelope](#tag/documents/PUT/api/documents/file/{id}/manifest) | `PUT` | `/api/documents/file/{id}/manifest` |
+    | [Upload one encrypted chunk](#tag/documents/PUT/api/documents/file/{id}/chunk/{idx}/put) | `PUT` | `/api/documents/file/{id}/chunk/{idx}/put` |
+    | [Publish a complete upload](#tag/documents/POST/api/documents/file/{id}/commit) | `POST` | `/api/documents/file/{id}/commit` |
+    | [List owned and received documents](#tag/documents/GET/api/documents/files) | `GET` | `/api/documents/files` |
+    | [Read a document descriptor and your envelope](#tag/documents/GET/api/documents/file/{id}/fetch) | `GET` | `/api/documents/file/{id}/fetch` |
+    | [Download one encrypted chunk](#tag/documents/GET/api/documents/file/{id}/chunk/{idx}/fetch) | `GET` | `/api/documents/file/{id}/chunk/{idx}/fetch` |
+    | [Find a recipient public key](#tag/documents/GET/api/documents/key/{user_id}/lookup) | `GET` | `/api/documents/key/{user_id}/lookup` |
+    | [Grant a recipient read access](#tag/documents/PUT/api/documents/file/{id}/share/{user_id}/put) | `PUT` | `/api/documents/file/{id}/share/{user_id}/put` |
+    | [List a file's recipients](#tag/documents/GET/api/documents/file/{id}/share/list) | `GET` | `/api/documents/file/{id}/share/list` |
+    | [Revoke a recipient grant](#tag/documents/DELETE/api/documents/file/{id}/share/{user_id}/delete) | `DELETE` | `/api/documents/file/{id}/share/{user_id}/delete` |
+    | [Delete an owned document](#tag/documents/DELETE/api/documents/file/{id}/delete) | `DELETE` | `/api/documents/file/{id}/delete` |
+    | [Confirm a destructive vault reset](#tag/documents/POST/api/documents/keys/reset) | `POST` | `/api/documents/keys/reset` |
+
+    ## Error messages and uncertain outcomes
+
+    Errors use the HTTP status and a generic `{ "status": number, "message": "reason" }`
+    body, as the direct error response. For example, HTTP 409 is:
+
+    ```json
+    {"status":409,"message":"Conflict"}
+    ```
+
+    | HTTP status | Meaning |
+    | --- | --- |
+    | 400 | Invalid message, fields, identifiers, query or chunk shape. |
+    | 401 | Missing, expired, revoked or unsupported stored login evidence. |
+    | 403 | Origin, role, realm or immutable identity-source boundary rejected. |
+    | 404 | Disabled API, unknown route, unenrolled key, expired upload or inaccessible resource. |
+    | 405 | Unsupported method; `Allow` names the method required by this endpoint. |
+    | 409 | Immutable data differs, required upload data is missing, recipient key changed or reset confirmation is stale. |
+    | 413 | JSON body or chunk ciphertext exceeds its size limit; invalid key/vault/envelope/metadata lengths return 400. |
+    | 415 | A JSON write lacks application/json Content-Type, or Content-Encoding is present. |
+    | 507 | Configured byte/file/recipient/key/identity-reservation quota exceeded. |
+    | 503 | Storage is unavailable; a write outcome may be uncertain. |
+
+    Authentication/origin/body checks apply to every operation. The operation sections
+    identify additional state-dependent errors. Missing and unauthorized file reads
+    deliberately share 404. Responses are no-store; never log secrets or plaintext.
+    On lost responses or 503, reconcile with read messages before retrying a write.
+    Keep exact encrypted bytes for retries; never reencrypt a chunk under the same
+    document context. Allocation may create a second file if repeated, and reset
+    confirmation must remain bound to the originally confirmed user and fingerprint.
 - name: Discovery
   description: Public signing-key discovery for portal access tokens.
 - name: OpenID Connect
@@ -116,6 +223,38 @@ paths:
     $ref: ./paths/cross-device_cancel.yaml
   /api/profile:
     $ref: ./paths/api_profile.yaml
+  /api/documents/bootstrap:
+    $ref: ./paths/api_documents_bootstrap.yaml
+  /api/documents/keys/fetch:
+    $ref: ./paths/api_documents_keys_fetch.yaml
+  /api/documents/keys/register:
+    $ref: ./paths/api_documents_keys_register.yaml
+  /api/documents/files/allocate:
+    $ref: ./paths/api_documents_files_allocate.yaml
+  /api/documents/file/{id}/manifest:
+    $ref: ./paths/api_documents_file_id_manifest.yaml
+  /api/documents/file/{id}/chunk/{idx}/put:
+    $ref: ./paths/api_documents_file_id_chunk_idx_put.yaml
+  /api/documents/file/{id}/commit:
+    $ref: ./paths/api_documents_file_id_commit.yaml
+  /api/documents/files:
+    $ref: ./paths/api_documents_files.yaml
+  /api/documents/file/{id}/fetch:
+    $ref: ./paths/api_documents_file_id_fetch.yaml
+  /api/documents/file/{id}/chunk/{idx}/fetch:
+    $ref: ./paths/api_documents_file_id_chunk_idx_fetch.yaml
+  /api/documents/key/{user_id}/lookup:
+    $ref: ./paths/api_documents_key_user_id_lookup.yaml
+  /api/documents/file/{id}/share/{user_id}/put:
+    $ref: ./paths/api_documents_file_id_share_user_id_put.yaml
+  /api/documents/file/{id}/share/list:
+    $ref: ./paths/api_documents_file_id_share_list.yaml
+  /api/documents/file/{id}/share/{user_id}/delete:
+    $ref: ./paths/api_documents_file_id_share_user_id_delete.yaml
+  /api/documents/file/{id}/delete:
+    $ref: ./paths/api_documents_file_id_delete.yaml
+  /api/documents/keys/reset:
+    $ref: ./paths/api_documents_keys_reset.yaml
   /.well-known/jwks.json:
     $ref: ./paths/well-known_jwksjson.yaml
   /.well-known/openid-configuration:
@@ -225,6 +364,78 @@ components:
     OIDCResponseCSP:
       $ref: ./components/headers/OIDCResponseCSP.yaml
   schemas:
+    DocumentsUserID:
+      $ref: ./components/schemas/DocumentsUserID.yaml
+    DocumentsChunk:
+      $ref: ./components/schemas/DocumentsChunk.yaml
+    DocumentsBootstrapResponse:
+      $ref: ./components/schemas/DocumentsBootstrapResponse.yaml
+    DocumentsKeyFetchResponse:
+      $ref: ./components/schemas/DocumentsKeyFetchResponse.yaml
+    DocumentsKeyRegisterRequest:
+      $ref: ./components/schemas/DocumentsKeyRegisterRequest.yaml
+    DocumentsKeyRegisterResponse:
+      $ref: ./components/schemas/DocumentsKeyRegisterResponse.yaml
+    DocumentsKeyLookupResponse:
+      $ref: ./components/schemas/DocumentsKeyLookupResponse.yaml
+    DocumentsFileListResponse:
+      $ref: ./components/schemas/DocumentsFileListResponse.yaml
+    DocumentsFileAllocateRequest:
+      $ref: ./components/schemas/DocumentsFileAllocateRequest.yaml
+    DocumentsFileAllocateResponse:
+      $ref: ./components/schemas/DocumentsFileAllocateResponse.yaml
+    DocumentsFileManifestRequest:
+      $ref: ./components/schemas/DocumentsFileManifestRequest.yaml
+    DocumentsFileManifestResponse:
+      $ref: ./components/schemas/DocumentsFileManifestResponse.yaml
+    DocumentsChunkPutRequest:
+      $ref: ./components/schemas/DocumentsChunkPutRequest.yaml
+    DocumentsChunkPutResponse:
+      $ref: ./components/schemas/DocumentsChunkPutResponse.yaml
+    DocumentsFileCommitResponse:
+      $ref: ./components/schemas/DocumentsFileCommitResponse.yaml
+    DocumentsFileFetchResponse:
+      $ref: ./components/schemas/DocumentsFileFetchResponse.yaml
+    DocumentsChunkFetchResponse:
+      $ref: ./components/schemas/DocumentsChunkFetchResponse.yaml
+    DocumentsSharePutRequest:
+      $ref: ./components/schemas/DocumentsSharePutRequest.yaml
+    DocumentsSharePutResponse:
+      $ref: ./components/schemas/DocumentsSharePutResponse.yaml
+    DocumentsShareListResponse:
+      $ref: ./components/schemas/DocumentsShareListResponse.yaml
+    DocumentsShareDeleteResponse:
+      $ref: ./components/schemas/DocumentsShareDeleteResponse.yaml
+    DocumentsFileDeleteResponse:
+      $ref: ./components/schemas/DocumentsFileDeleteResponse.yaml
+    DocumentsKeyResetRequest:
+      $ref: ./components/schemas/DocumentsKeyResetRequest.yaml
+    DocumentsKeyResetResponse:
+      $ref: ./components/schemas/DocumentsKeyResetResponse.yaml
+    DocumentsID:
+      $ref: ./components/schemas/DocumentsID.yaml
+    DocumentsVault:
+      $ref: ./components/schemas/DocumentsVault.yaml
+    DocumentsEnvelope:
+      $ref: ./components/schemas/DocumentsEnvelope.yaml
+    DocumentsKey:
+      $ref: ./components/schemas/DocumentsKey.yaml
+    DocumentsPublicKey:
+      $ref: ./components/schemas/DocumentsPublicKey.yaml
+    DocumentsManifest:
+      $ref: ./components/schemas/DocumentsManifest.yaml
+    DocumentsAllocation:
+      $ref: ./components/schemas/DocumentsAllocation.yaml
+    DocumentsBootstrap:
+      $ref: ./components/schemas/DocumentsBootstrap.yaml
+    DocumentsError:
+      $ref: ./components/schemas/DocumentsError.yaml
+    DocumentsRecipients:
+      $ref: ./components/schemas/DocumentsRecipients.yaml
+    DocumentsFile:
+      $ref: ./components/schemas/DocumentsFile.yaml
+    DocumentsPage:
+      $ref: ./components/schemas/DocumentsPage.yaml
     BcryptHash:
       $ref: ./components/schemas/BcryptHash.yaml
     Argon2Hash:
@@ -510,6 +721,26 @@ components:
     OIDCRequestObjectPayload:
       $ref: ./components/schemas/OIDCRequestObjectPayload.yaml
   responses:
+    DocumentsBadRequest:
+      $ref: ./components/responses/DocumentsBadRequest.yaml
+    DocumentsUnauthorized:
+      $ref: ./components/responses/DocumentsUnauthorized.yaml
+    DocumentsForbidden:
+      $ref: ./components/responses/DocumentsForbidden.yaml
+    DocumentsNotFound:
+      $ref: ./components/responses/DocumentsNotFound.yaml
+    DocumentsMethodNotAllowed:
+      $ref: ./components/responses/DocumentsMethodNotAllowed.yaml
+    DocumentsConflict:
+      $ref: ./components/responses/DocumentsConflict.yaml
+    DocumentsTooLarge:
+      $ref: ./components/responses/DocumentsTooLarge.yaml
+    DocumentsUnsupportedMediaType:
+      $ref: ./components/responses/DocumentsUnsupportedMediaType.yaml
+    DocumentsQuotaExceeded:
+      $ref: ./components/responses/DocumentsQuotaExceeded.yaml
+    DocumentsUnavailable:
+      $ref: ./components/responses/DocumentsUnavailable.yaml
     PortalError:
       $ref: ./components/responses/PortalError.yaml
     OAuthError:

@@ -1,0 +1,57 @@
+type: object
+additionalProperties: false
+required:
+- id
+- owner
+- size
+- chunks
+- state
+- created_at
+properties:
+  id:
+    $ref: ./DocumentsID.yaml
+    description: Immutable random document ID allocated by the portal. Use this exact value as the resource
+      path id and in the encryption context.
+  owner:
+    $ref: ./DocumentsUserID.yaml
+    description: Exact immutable local database user ID of the document owner. Receiving a share never
+      changes ownership.
+  size:
+    type: integer
+    minimum: 16
+    description: Total reserved ciphertext bytes across all chunks, including every 16-byte GCM tag. Immutable
+      after allocation and distinct from the plaintext file size.
+  chunks:
+    type: integer
+    minimum: 1
+    maximum: 4096
+    description: Immutable total chunk count. Valid idx values range from zero to chunks minus one; even
+      an empty plaintext file has one chunk.
+  state:
+    type: string
+    enum:
+    - uploading
+    - ready
+    description: uploading means incomplete and visible only to the owner. ready means committed and readable
+      by the owner and current recipients. The API never exposes pending data to recipients.
+  created_at:
+    type: integer
+    description: Creation time in whole Unix seconds UTC.
+  expires_at:
+    type: integer
+    description: Unfinished-upload deadline in whole Unix seconds UTC; omitted for ready files.
+  metadata:
+    type: string
+    pattern: ^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-][AQgw]|[A-Za-z0-9_-]{2}[AEIMQUYcgkosw048])?$
+    minLength: 22
+    maxLength: 43691
+    description: 'Canonical unpadded base64url of 16..32768 ciphertext bytes: encrypted filename/media
+      metadata plus 16-byte GCM tag. No plaintext filename or media type.'
+  envelope:
+    $ref: ./DocumentsEnvelope.yaml
+    description: Encrypted document key wrapped for the requesting user. Returned by the detail endpoint
+      when installed, omitted from list and allocation responses; never use another user’s envelope.
+description: An unfinished file is visible only to its owner. A detail response includes encrypted metadata
+  and the requesting recipient's envelope once installed. Lists omit metadata/envelope. Received shares
+  never grant ownership. Owner is the immutable id from the local identity database, stored without hashing
+  or claim transformation.

@@ -1,0 +1,17 @@
+type: object
+additionalProperties: false
+required:
+- metadata
+- envelope
+properties:
+  metadata:
+    type: string
+    pattern: ^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-][AQgw]|[A-Za-z0-9_-]{2}[AEIMQUYcgkosw048])?$
+    minLength: 22
+    maxLength: 43691
+    description: 'Canonical unpadded base64url of 16..32768 ciphertext bytes: encrypted filename/media metadata
+      plus 16-byte GCM tag. No plaintext filename or media type.'
+  envelope:
+    $ref: ./DocumentsEnvelope.yaml
+    description: Document key encrypted for the owner’s current registered public key. The client binds it
+      to the portal, owner, document descriptor and key fingerprint.

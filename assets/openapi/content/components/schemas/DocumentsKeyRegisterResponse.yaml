@@ -1,0 +1,12 @@
+type: object
+additionalProperties: false
+required:
+- success
+properties:
+  success:
+    type: boolean
+    const: true
+    description: True when the requested operation completed successfully, including an accepted identical
+      retry or documented no-op. A failed operation returns an HTTP error instead.
+title: Enroll a public key and encrypted vault (response)
+description: Explicit confirmation that the requested key enrollment succeeded.

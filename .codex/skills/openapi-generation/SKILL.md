@@ -46,7 +46,9 @@ ordering, revocation, expiry and consent even when the JSON shape stays stable.
 Generation, ordinary Go tests and CI reject added/changed/removed inputs.
 The inventory also includes the SQLite registration workflow and its private
 SQLite helper: persistence and migration affect confirmation-to-login navigation.
-Keep the CLI E2E isolated checkout and its source-drift cases aligned with new
+The Documents Web Crypto module
+`pkg/authn/documents/client/crypto.mjs` is also fingerprinted: its key schedule
+and encrypted wire encodings are part of the HTTP contract. Keep the CLI E2E isolated checkout and its source-drift cases aligned with new
 owners. This is a review gate, not proof of exhaustive runtime coverage. Expand
 `internal/openapi/sources.go` for new owners. External crypto/parser dependency
 changes also require review even when wrapper hashes stay unchanged.
@@ -86,6 +88,9 @@ full feature prefixes in path names and descriptions.
 
 ## Author precise contracts
 
+Keep APIs unversioned: routes, path filenames, operation/schema names and protocol
+identifiers must not introduce API version segments or suffixes.
+
 Use one path item per file, registered reusable components and local `.yaml`
 references under `content/`. Quote response codes. Reject remote refs, symlinks,
 anchors/aliases, duplicate keys, multiple documents, non-string keys, orphan
@@ -98,6 +103,47 @@ reference resolution, including property names starting with `x-`.
 Paths, Responses and Components extensions follow the same literal-data rule,
 including the initial component-registration pass. Extension-only maps do not
 supply a required path or response.
+
+For Documents, maintain 16 real resource operations beneath `/api/documents/`,
+with unique operation IDs, dedicated response schemas and examples. GET reads,
+PUT installs immutable data, DELETE removes documents/grants, and POST allocates,
+commits or resets. File-specific paths carry `{id}`, with chunks and shares nested
+beneath the file. Use `fetch`, such as `/api/documents/file/{id}/chunk/{idx}/fetch`.
+Document every path parameter and the optional file-list `after` query cursor
+with its schema, requiredness, canonical encoding and example. Name the chunk
+parameter `idx`. Key parameter examples with the same operation example name as
+JSON request examples; verify zero-valued `idx` prefills and sends correctly in
+the native console. GET, DELETE and
+commit have no request body. The remaining writes need dedicated direct JSON
+schemas/examples; no `operation`/`payload` wrappers or repeated path parameters.
+Describe body fields, units, encodings, omission/null rules, ownership and state
+constraints, following shared nested models. Responses expose resource fields
+directly, with no `operation`/`result` wrapper.
+Mutations without resource data have a required boolean `success` constrained to
+true. Give every response a meaningful description and concrete fields, including
+units, encodings, availability and nested models; avoid unstructured object schemas.
+
+Keep the workflow index at `/#tag/documents` in the same order as the actual paths:
+setup (bootstrap, fetch/enroll key), upload (allocate, manifest, chunks, commit),
+download (list, descriptor, chunks), sharing (recipient lookup, grant, list, revoke),
+then file deletion and vault reset. Display plain action summaries without protocol
+name prefixes such as `bootstrap —` or `file.manifest —`; preserve stable IDs.
+Put detailed field/state/retry rules on the actual operations. Reuse common error
+responses, documenting the endpoint-specific `Allow` on method rejection. Do not
+retain a root dispatcher, message union selector or documentation-only views.
+Validate parameter/body examples against their own schemas; reject obsolete
+wrappers and repeated path parameters. Reject response wrappers and validate
+typed mutation confirmations independently.
+Real Scalar tests must verify all 16 native request editors, resource parameters,
+sent methods/URLs/bodies and displayed responses using synthetic fixtures; native
+TLS journeys separately verify real backend responses for every method/path.
+Documents binary schemas must reject noncanonical base64url: invalid encoded
+lengths and nonzero unused bits are invalid even when all characters belong to
+the URL-safe alphabet. Public-point encodings must start with byte `0x04`, not
+merely a base64 `B`; curve membership and fingerprint consistency remain runtime
+checks. Exercise these patterns in both Go schema validation and browser RegExp,
+including maximum-size chunks, and pair malformed-input cases with TLS rejection
+and continued success of valid transfers.
 
 Each operation needs a unique stable ID, one declared tag, summary, description,
 explicit security, responses and repository-relative `x-source-files` evidence.
@@ -129,7 +175,7 @@ Keep `Authentication Portal` for login/navigation/portal sessions,
 OAuth. Grouping does not merge credential boundaries.
 
 Arrange categories by workflow: Registration, Authentication Portal, External
-Authentication, Cross-Device Sign-In, Profile, Discovery, OpenID Connect,
+Authentication, Cross-Device Sign-In, Profile, Documents, Discovery, OpenID Connect,
 Administration, then System. Keep the root `paths` mapping grouped in that order.
 Within a journey, put entry/discovery before authentication or submission,
 continuation before completion, session use before refresh, and logout/revocation
@@ -272,6 +318,11 @@ empty/corrupt storage, exact category/operation navigation order, field semantic
 and desktop/mobile layout. It uses the resource guard with evidence in
 `COVERAGE_DIR/openapi-browser`.
 Verified CDN bytes and screenshots remain in `tmp/openapi`.
+Close captured child stdout/stderr during browser teardown, including when the
+process group already exited. Detached Chrome helpers can retain inherited pipes
+and keep Node alive after every browser assertion passed. Retain the browser's
+crash-reporting disable flags and bounded process-group cleanup; do not force a
+successful test exit to hide incomplete teardown.
 For copied Go consumer/migration sources under that directory, follow
 [Go discovery isolation](../testing-and-ci/SKILL.md#test-lifecycle); Git ignore
 alone does not keep temporary packages out of `go test ./...`.

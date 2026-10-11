@@ -1,0 +1,107 @@
+get:
+  operationId: documentsFileList
+  tags:
+  - Documents
+  summary: List owned and received documents
+  description: 'The optional query parameter `after` is an exclusive document-ID cursor. Omit the query on
+    the first request; when the response contains `next`, send `?after=<returned next>` on the next request.
+    `files` contains at most 100 descriptors in identifier order, including owner-visible unfinished uploads
+    and committed received shares. Lists omit `metadata` and `envelope`; use `file.fetch` for those fields.
+    An empty list is `{"files":[]}`. Omitted `next` ends pagination. Pages are not a snapshot across concurrent
+    changes.
+
+
+    Disabled by default; requires explicit APIConfig.DocumentsEnabled plus validated storage settings. Admin/Profile
+    flags and storage settings alone do not enable Documents. Require an allowed local identity-store realm,
+    portal user/admin role, valid portal access token AND current stored browser login evidence. Ordinary access-only
+    JSON login, API-key, LDAP and unmapped OAuth/SAML sessions do not establish this authority. Ownership is
+    the exact local database user id. Each operation runs inside transactional current-identity verification;
+    transformed subject/email never select an owner, and administrators have no access override. Persistent
+    source bindings reject UUID collisions across stores and survive reset/restart. MaxKeys bounds both active
+    registrations and permanent admitted identity reservations; renaming an authoritative store/realm requires
+    an explicit migration.
+
+
+    Target the configured HTTPS origin and exact portal mount. Origin, if present, must match exactly; Sec-Fetch-Site
+    must be same-origin or none. No CORS. Content-Encoding is rejected. The HTTP method and resource path select
+    the operation. Path identifiers must not be repeated or overridden in a JSON body. Unknown, encoded or
+    noncanonical paths return 404; malformed resource IDs or chunk numbers return 400. Unsupported methods
+    return 405 with Allow: GET. Only file.list accepts the optional after query parameter; duplicate, unknown,
+    empty or noncanonical query parameters (including a bare ?) return 400.
+
+
+    Send no request body, including no empty JSON object. Content-Type is not required. Request parameters
+    are in the documented path or query. Any nonempty body returns 400 and cannot change the selected resource.
+
+
+    Every success is a JSON response message with HTTP 200; failures use the generic status/message object.
+    Responses are no-store. Quotas reserve full ciphertext size, not physical disk space. Allocation collects
+    expired unfinished uploads; there is no background janitor.'
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: A page of visible owned uploads and committed received documents, plus an optional exclusive
+        continuation cursor. Lists omit encrypted metadata and key envelopes.
+      headers:
+        Cache-Control:
+          $ref: ../components/headers/NoStore.yaml
+        X-Content-Type-Options:
+          $ref: ../components/headers/NoSniff.yaml
+        Referrer-Policy:
+          $ref: ../components/headers/OIDCNoReferrer.yaml
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/DocumentsFileListResponse.yaml
+          examples:
+            file.list:
+              summary: List owned and received documents
+              value:
+                files:
+                - id: AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM
+                  owner: 00000000-0000-4000-8000-000000000002
+                  chunks: 1
+                  size: 55
+                  state: ready
+                  created_at: 1791648000
+    '400':
+      $ref: ../components/responses/DocumentsBadRequest.yaml
+    '401':
+      $ref: ../components/responses/DocumentsUnauthorized.yaml
+    '403':
+      $ref: ../components/responses/DocumentsForbidden.yaml
+    '404':
+      $ref: ../components/responses/DocumentsNotFound.yaml
+    '405':
+      $ref: ../components/responses/DocumentsMethodNotAllowed.yaml
+    '409':
+      $ref: ../components/responses/DocumentsConflict.yaml
+    '413':
+      $ref: ../components/responses/DocumentsTooLarge.yaml
+    '415':
+      $ref: ../components/responses/DocumentsUnsupportedMediaType.yaml
+    '507':
+      $ref: ../components/responses/DocumentsQuotaExceeded.yaml
+    '503':
+      $ref: ../components/responses/DocumentsUnavailable.yaml
+  x-source-files:
+  - pkg/authn/documents_http.go
+  - pkg/authn/documents/store.go
+  - pkg/authn/documents/transfer.go
+  - pkg/authn/documents/protocol.go
+  - pkg/authn/documents/config.go
+  parameters:
+  - name: after
+    in: query
+    required: false
+    description: Exclusive cursor copied exactly from the previous result.next. Omit on the first page; empty
+      string and null are invalid. Results contain up to 100 accessible descriptors in ID order; concurrent
+      changes may affect subsequent pages.
+    schema:
+      $ref: ../components/schemas/DocumentsID.yaml
+    examples:
+      file.list:
+        summary: List owned and received documents
+        value: AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM

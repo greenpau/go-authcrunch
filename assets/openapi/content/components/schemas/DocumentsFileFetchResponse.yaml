@@ -1,0 +1,4 @@
+$ref: ./DocumentsFile.yaml
+title: Read a document descriptor and your envelope (response)
+description: The authorized document descriptor, installed encrypted metadata and the requesting user’s
+  key envelope. Ownership and recipient access remain distinct.

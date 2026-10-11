@@ -1,0 +1,27 @@
+type: object
+additionalProperties: false
+required:
+- user_id
+- key_id
+- public_key
+- vault
+properties:
+  user_id:
+    $ref: ./DocumentsUserID.yaml
+    description: Exact current account UUID from bootstrap; registration for another user is rejected.
+  key_id:
+    $ref: ./DocumentsID.yaml
+    description: Canonical unpadded base64url of SHA-256 over the raw 65-byte public_key point; the server
+      recomputes and verifies this fingerprint.
+  public_key:
+    type: string
+    pattern: ^B[A-P][A-Za-z0-9_-]{84}[AEIMQUYcgkosw048]$
+    description: Canonical base64url of the 65-byte SEC1 uncompressed P-256 point. Runtime also validates curve
+      membership. The first byte must be 0x04.
+  vault:
+    $ref: ./DocumentsVault.yaml
+    description: Private scalar encrypted locally under a separate 256-bit recovery secret that never reaches
+      the server. The client must verify public/private key consistency when unlocking.
+description: Immutable owner registration. key_id is SHA-256 of the raw public point. user_id must equal the
+  authenticated bootstrap user_id. The API cannot validate encrypted private-key contents; the client verifies
+  key consistency when unlocking.

@@ -1,0 +1,19 @@
+type: object
+additionalProperties: false
+required:
+- envelope
+properties:
+  envelope:
+    $ref: ./DocumentsEnvelope.yaml
+    description: Document key encrypted for the named recipient’s current public key. Its key_id must
+      match key.lookup after checking the recipient share-code fingerprint. Recipient key changes return
+      409; never send the unwrapped document key.
+title: Grant a recipient read access (request)
+description: JSON body contains only `envelope`. Resource identifiers come from the path and must not
+  be repeated in the body. Path parameters identify the owned committed file `id` and a different local
+  `user_id`; the JSON body contains only an `envelope` wrapping that file's document key for the recipient.
+  Its `key_id` must match the recipient's current registered key; use a fresh ephemeral key when wrapping.
+  Missing file or recipient registration returns 404; an unfinished file, stale fingerprint or changed
+  existing envelope returns 409; recipient quota exhaustion returns 507. Identical retries succeed. To
+  replace an existing grant, revoke it first. Recipients may read but cannot mutate or reshare through
+  this API.

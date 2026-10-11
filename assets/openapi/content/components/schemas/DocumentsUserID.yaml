@@ -1,0 +1,7 @@
+type: string
+pattern: ^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$
+not:
+  const: 00000000-0000-0000-0000-000000000000
+description: 'Canonical lowercase non-nil UUID: the exact immutable id field in the local user database.
+  It is not a username, email, transformed claim, identity-provider subject, or a Documents-specific hash.
+  Unmapped external identities are unsupported.'

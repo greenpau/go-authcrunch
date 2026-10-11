@@ -1,0 +1,4 @@
+$ref: ./DocumentsFile.yaml
+title: Reserve an encrypted upload (response)
+description: The newly allocated upload descriptor. Preserve its ID, owner, ciphertext size and chunk
+  count as the immutable encryption context.

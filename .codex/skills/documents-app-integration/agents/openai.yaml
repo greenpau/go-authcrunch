@@ -1,0 +1,4 @@
+interface:
+  display_name: "Documents React Integration"
+  short_description: "Build a client for encrypted portal documents"
+  default_prompt: "Use $documents-app-integration to implement the Documents React application using the portal encrypted document protocol."

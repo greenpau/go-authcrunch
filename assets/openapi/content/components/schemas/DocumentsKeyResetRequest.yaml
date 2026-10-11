@@ -1,0 +1,22 @@
+type: object
+additionalProperties: false
+required:
+- user_id
+- key_id
+properties:
+  user_id:
+    $ref: ./DocumentsUserID.yaml
+    description: Confirmed current account UUID from bootstrap, not a username or email. A different account
+      returns 409 before deletion.
+  key_id:
+    $ref: ./DocumentsID.yaml
+    description: Confirmed SHA-256 public-key fingerprint from the currently enrolled vault, as canonical
+      unpadded base64url. A stale fingerprint returns 409 and must never be replaced automatically for
+      a retry.
+title: Confirm a destructive vault reset (request)
+description: Both the confirmed local `user_id` and confirmed public-key fingerprint `key_id` are required.
+  Atomically deletes this account's owned files and their grants, incoming grants and key registration.
+  Other owners' files and the permanent identity-source reservation survive. This cannot recover plaintext.
+  A browser account switch or replacement registration returns 409 without deletion. Repeating the same
+  confirmation after the registration is absent succeeds. Preserve the values the user confirmed; never
+  substitute a fresh account or fingerprint into a retry. Fresh enrollment is possible after reset.

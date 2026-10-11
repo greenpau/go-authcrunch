@@ -35,6 +35,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	authncache "github.com/greenpau/go-authcrunch/pkg/authn/cache"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/documents"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
@@ -94,6 +95,17 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test authn.DocumentsAPIConfig struct", entry: &authn.DocumentsAPIConfig{}, opts: &Options{}},
+		{name: "test documents.Config struct", entry: &documents.Config{}, opts: &Options{}},
+		{name: "test documents.Store struct", entry: &documents.Store{}, opts: &Options{}},
+		// Documents wire records deliberately retain required fields, including
+		// empty file lists and required zero values; optional fields stay omitted.
+		{name: "test documents.Key struct", entry: &documents.Key{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"user_id": true, "key_id": true, "public_key": true}}},
+		{name: "test documents.Vault struct", entry: &documents.Vault{}, opts: &Options{DisableTagOnEmpty: true}},
+		{name: "test documents.Envelope struct", entry: &documents.Envelope{}, opts: &Options{DisableTagOnEmpty: true}},
+		{name: "test documents.Manifest struct", entry: &documents.Manifest{}, opts: &Options{DisableTagOnEmpty: true}},
+		{name: "test documents.File struct", entry: &documents.File{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"id": true, "owner": true, "size": true, "chunks": true, "state": true, "created_at": true}}},
+		{name: "test documents.Page struct", entry: &documents.Page{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"files": true}}},
 		// Review records retain both required fields even in an empty inventory.
 		{name: "test openapi.ReviewedSources struct", entry: &openapi.ReviewedSources{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"module": true, "files": true}}},
 		{name: "test acl.FieldConfig struct", entry: &acl.FieldConfig{}, opts: &Options{}},
