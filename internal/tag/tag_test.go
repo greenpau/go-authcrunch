@@ -53,6 +53,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/httpserver"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
@@ -95,6 +96,11 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test attachment.Config struct", entry: &attachment.Config{}, opts: &Options{}},
+		{name: "test identity.ExternalAccount struct", entry: &identity.ExternalAccount{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"provider": true, "kind": true, "issuer": true, "subject": true, "connected_at": true}}},
+		{name: "test identity.ExternalAccountIdentity struct", entry: &identity.ExternalAccountIdentity{}, opts: &Options{}},
+		{name: "test attachment.Attachment struct", entry: &attachment.Attachment{}, opts: &Options{}},
+		{name: "test requests.ExternalIdentity struct", entry: &requests.ExternalIdentity{}, opts: &Options{}},
 		{name: "test authn.DocumentsAPIConfig struct", entry: &authn.DocumentsAPIConfig{}, opts: &Options{}},
 		{name: "test documents.Config struct", entry: &documents.Config{}, opts: &Options{}},
 		{name: "test documents.Store struct", entry: &documents.Store{}, opts: &Options{}},

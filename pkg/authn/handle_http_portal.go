@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -51,7 +52,7 @@ func (p *Portal) handleHTTPPortal(ctx context.Context, w http.ResponseWriter, r 
 		// Keep the destination in this tab's URL, as the portal root does.
 		return p.handleHTTPRedirect(ctx, w, r, rr, p.loginPageRequestLocation(r, rr, false))
 	}
-	usr, err := p.sessions.Get(parsedUser.Claims.ID)
+	usr, err := p.sessions.GetForToken(parsedUser.Claims.ID, parsedUser.Token)
 	if err != nil {
 		p.deleteAuthCookies(w, r)
 		p.logger.Debug(
@@ -89,6 +90,16 @@ func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWrit
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
 	}
 	resp := p.ui.GetArgs()
+	for _, provider := range p.identityProviders {
+		if consumer, ok := provider.(attachment.Consumer); ok && consumer.IdentityAttachment().StoreName() != "" {
+			resp.Data["connected_accounts_enabled"] = true
+		}
+	}
+	for _, backend := range p.identityStores {
+		if consumer, ok := backend.(attachment.Consumer); ok && consumer.IdentityAttachment().StoreName() != "" {
+			resp.Data["connected_accounts_enabled"] = true
+		}
+	}
 	if p.refresh != nil {
 		if sid, ok := usr.AsMap()["sid"].(string); ok {
 			resp.Data["refresh_enabled"] = true

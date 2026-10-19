@@ -22,7 +22,7 @@ import (
 )
 
 func TestRegisteredAuthenticationMethods(t *testing.T) {
-	u := &User{MfaTokens: []*MfaToken{nil, {Type: "totp"}, {Type: "u2f", Disabled: true}, {Type: "totp"}, {Type: "email"}, {Type: "unknown"}}}
+	u := &User{Passwords: []*Password{{Hash: dummyPasswordHash}}, MfaTokens: []*MfaToken{nil, {Type: "totp"}, {Type: "u2f", Disabled: true}, {Type: "totp"}, {Type: "email"}, {Type: "unknown"}}}
 	if got := fmt.Sprint(u.GetRegisteredAuthMethods()); got != "[password totp email]" {
 		t.Fatal(got)
 	}

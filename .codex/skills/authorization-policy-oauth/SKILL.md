@@ -5,6 +5,10 @@ description: Maintain authorization-policy OAuth login without an authentication
 
 # Authorization Policy OAuth
 
+Read [external account attachments](../local-identity-database/references/external-accounts.md)
+when changing local provisioning, connection UI, immutable external keys, or
+attachment binding in this consumer.
+
 ## Ownership and public API
 
 `pkg/authz/oauth_config.go` owns `OAuthAuthorizationConfig`, its defaults and
@@ -73,6 +77,11 @@ checks without caching an authorization decision. An attached
 resource at callback admission and every existing-session request. Service
 failure or denial cannot issue a session or forward a protected request.
 
+The built-in provider resolves its attached local identity before issuing a
+session. Admission and every protected request recheck its current local proof.
+Explicitly required local passwords or MFA deny direct-policy access because no
+portal challenge flow is available. Local roles supplement verified provider roles.
+
 Verified users receive the baseline `authp/user` role, plus provider roles/groups.
 A policy allowing that baseline authorizes every successfully authenticated user
 of its provider; use narrower ACLs when access is restricted. No admin role is
@@ -137,7 +146,11 @@ compliance tests.
 `server_oauth_authorization_e2e_test.go` is an external-package consumer using both
 public parsers, JSON restoration, `NewServer`, local TLS IdP/application listeners,
 independently signed Ed25519 assertions, real nonce/PKCE exchange, cookie jars,
-and downstream observations. It has no portal, local store or live credentials.
+and downstream observations. Its baseline fixture has no portal, configured local
+store or live credentials; the provider owns its implicit memory identity store.
+`server_connected_accounts_e2e_test.go` separately exercises explicit local-store
+attachment, durable sessions, disablement and rejection after replacing a
+provider whose implicit store was lost.
 Keep successful access, target ACL denial, claim/header integrity, cookie stripping,
 provider trust failures, origin/browser/policy isolation, callback replay and
 concurrency, capacity, expiry, logout cancellation, and runtime replacement covered.

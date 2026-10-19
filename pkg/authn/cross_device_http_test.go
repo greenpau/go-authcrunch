@@ -23,6 +23,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
@@ -168,6 +169,102 @@ func TestCrossDeviceCompletionFamilyReference(t *testing.T) {
 			}
 			if confirmed.proof.refreshSessionID != familyID {
 				t.Fatal("family reference did not come exclusively from local issuance")
+			}
+		})
+	}
+}
+
+func TestCrossDeviceExternalSandboxAuthority(t *testing.T) {
+	for _, state := range []string{"completed", "callback snapshot", "missing snapshot", "incomplete factor", "revoked identity", "expired transfer"} {
+		t.Run(state, func(t *testing.T) {
+			p := providerRefreshFixture(t)
+			_, rr := providerCallback(t)
+			rr.Upstream.SessionID = strings.Repeat("a", 40)
+			raw := rr.Response.Payload.(map[string]any)
+			rr.ExternalIdentity = requests.ExternalIdentity{Issuer: "https://upstream.example.test", Subject: "stable-external-id"}
+			a := p.providerIdentityAttachment(p.identityProviders[0])
+			if err := a.Authenticate(t.Context(), rr, "upstream", "oauth"); err != nil {
+				t.Fatal(err)
+			}
+			proof, err := user.NewUser(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// A completed provider login may carry a local authenticator because
+			// its last checkpoint ran against the attached account's factors.
+			proof.Authenticator = user.Authenticator{Name: "local", Realm: "local", Method: "local"}
+			proof.ExternalIdentity, proof.ExternalClaims = rr.ExternalIdentity, raw
+			proof.LoginMethods = []string{"federated", "otp"}
+			proof.Checkpoints = []*user.Checkpoint{{Type: "totp", Method: "otp", Passed: true}}
+			r := httptest.NewRequest(http.MethodPost, refreshTestOrigin+"/auth/cross-device/poll", nil)
+			r.RequestURI = r.URL.RequestURI()
+			r.Header.Set("Origin", refreshTestOrigin)
+			issued, err := p.issueConnectedSandbox(t.Context(), r, rr, proof, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := p.sessions.Add(issued.Claims.ID, issued); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := p.sessions.GetForToken(issued.Claims.ID, issued.Token); err != nil {
+				t.Fatal("approving session fixture is not admissible", err)
+			}
+			switch state {
+			case "incomplete factor":
+				proof.Checkpoints[0].Passed = false
+			case "revoked identity":
+				store, err := a.Store()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := store.(*identity.Database).RevokeUserSessions(t.Context(), proof.ExternalIdentity.Evidence.UserID); err != nil {
+					t.Fatal(err)
+				}
+			}
+			transfer := &crossDeviceProof{user: proof, sessionID: issued.Claims.ID, sessionToken: crossDeviceHash(issued.Token), expires: time.Now().Add(10 * time.Second).Unix()}
+			switch state {
+			case "callback snapshot":
+				transfer.providerClaims, err = encodeProviderSnapshot(raw)
+				if err != nil {
+					t.Fatal(err)
+				}
+				proof.ExternalClaims = nil
+			case "missing snapshot":
+				proof.ExternalClaims = nil
+			case "expired transfer":
+				transfer.expires = time.Now().Add(-time.Second).Unix()
+			}
+			w := httptest.NewRecorder()
+			if err := p.redeemCrossDevice(t.Context(), w, r, rr, transfer); err != nil {
+				t.Fatal(err)
+			}
+			if state != "completed" && state != "callback snapshot" {
+				if w.Code != http.StatusUnauthorized || len(w.Result().Cookies()) != 0 {
+					t.Fatal("invalid external checkpoint evidence produced credentials")
+				}
+				return
+			}
+			if w.Code != http.StatusOK {
+				t.Fatalf("completed external checkpoint transfer: HTTP %d", w.Code)
+			}
+			var access string
+			for _, cookie := range w.Result().Cookies() {
+				if cookie.Name == p.cookie.RefreshTokenCookieName && cookie.Value != "" && cookie.MaxAge >= 0 {
+					t.Error("external checkpoint transfer acquired a refresh credential")
+				}
+				if cookie.Name == p.cookie.AccessTokenCookieName {
+					access = cookie.Value
+				}
+			}
+			cached, err := p.sessions.GetForToken(rr.Upstream.SessionID, access)
+			if err != nil {
+				t.Fatal("requester access token was not cached", err)
+			}
+			if cached.Claims.ExpiresAt > transfer.expires || cached.AsMap()["sid"] != nil {
+				t.Error("external checkpoint transfer exceeded approving authority")
+			}
+			if cached.ExternalIdentity != proof.ExternalIdentity || cached.LoginEvidence.UserID != "" || strings.Join(cached.LoginMethods, " ") != "federated otp" {
+				t.Fatal("external transfer changed the identity or factor provenance")
 			}
 		})
 	}

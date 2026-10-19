@@ -24,6 +24,7 @@ import (
 )
 
 type sessionState struct {
+	ExternalIdentity           requests.ExternalIdentity
 	Version                    int
 	User, Claims               []byte
 	Evidence                   requests.AuthenticationEvidence
@@ -51,7 +52,7 @@ func (u *User) MarshalSession() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("encode session claims")
 	}
-	v := sessionState{Version: 1, User: raw, Claims: claims, Evidence: u.LoginEvidence, Username: u.LoginUsername, Email: u.LoginEmail, Transport: u.RefreshTransport, Methods: u.LoginMethods}
+	v := sessionState{Version: 1, ExternalIdentity: u.ExternalIdentity, User: raw, Claims: claims, Evidence: u.LoginEvidence, Username: u.LoginUsername, Email: u.LoginEmail, Transport: u.RefreshTransport, Methods: u.LoginMethods}
 	var out bytes.Buffer
 	if gob.NewEncoder(&out).Encode(v) != nil {
 		return nil, fmt.Errorf("encode session state")
@@ -77,6 +78,7 @@ func UnmarshalSession(data []byte) (*User, error) {
 	u.Claims, u.mkv, u.tkv, u.rkv = restored.Claims, restored.mkv, restored.tkv, restored.rkv
 	u.LoginEvidence, u.LoginUsername, u.LoginEmail = v.Evidence, v.Username, v.Email
 	u.LoginMethods, u.RefreshTransport = v.Methods, v.Transport
+	u.ExternalIdentity = v.ExternalIdentity
 	u.Cached = false
 	return &u, nil
 }

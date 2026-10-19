@@ -85,6 +85,13 @@ func (p *Portal) handleAPIExtractUserIdentity(ctx context.Context, rr *requests.
 	if slices.Contains(completed, "password") {
 		m["amr"] = []string{"pwd"}
 	}
+	if rr.Authentication.UserID != "" {
+		m["id"] = rr.Authentication.UserID
+	}
+	if rr.ExternalIdentity.Evidence.UserID != "" {
+		m["id"] = rr.ExternalIdentity.Evidence.UserID
+		m["amr"] = []string{"federated"}
+	}
 	injectPortalRoles(m, p.config)
 	delete(m, "challenges")
 	delete(m, "auth_methods")

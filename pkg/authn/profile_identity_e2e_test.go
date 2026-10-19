@@ -26,6 +26,59 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
+func TestE2EProfileRejectsReplacedSessionToken(t *testing.T) {
+	f, store, _ := newLoginIdentityConfiguredE2E(t, false, false, false, "", func(cfg *authn.PortalConfig) {
+		cfg.UserTransformerConfigs = nil
+	})
+	webAuthnEnrollmentLogin(t, f, "alice", tests.TestPwd1)
+	previous := loginIdentityCookie(f, "AUTHP_ACCESS_TOKEN")
+	oidcE2EStatus(t, f.request(t, http.MethodGet, "/login?fresh=1", nil, nil), http.StatusOK)
+	webAuthnEnrollmentLogin(t, f, "bob", tests.TestPwd2)
+	current := loginIdentityCookie(f, "AUTHP_ACCESS_TOKEN")
+	firstBob := current
+	firstClaims := loginIdentityClaims(t, f, firstBob, "bob")
+	bobID, _ := firstClaims["id"].(string)
+	if bobID == "" {
+		t.Fatal("local login did not carry immutable identity")
+	}
+	if err := store.RevokeUserSessions(t.Context(), bobID); err != nil {
+		t.Fatal(err)
+	}
+	oidcE2EStatus(t, f.request(t, http.MethodGet, "/login?fresh=1", nil, nil), http.StatusOK)
+	webAuthnEnrollmentLogin(t, f, "bob", tests.TestPwd2)
+	current = loginIdentityCookie(f, "AUTHP_ACCESS_TOKEN")
+	nextClaims := loginIdentityClaims(t, f, current, "bob")
+	if firstClaims["nonce"] == nil || firstClaims["nonce"] == "" || nextClaims["nonce"] == nil || nextClaims["nonce"] == "" || firstClaims["nonce"] == nextClaims["nonce"] {
+		t.Fatal("fresh local login reused its access nonce")
+	}
+	client := *f.client
+	client.Jar = nil
+	native := &oidcE2EFixture{server: f.server, client: &client, issuer: f.issuer}
+	for _, path := range []string{"/portal", "/apps/mobile-access", "/apps/sso/example/metadata.xml"} {
+		t.Run("replaced token "+path, func(t *testing.T) {
+			oidcE2EStatus(t, native.request(t, http.MethodGet, path, nil, http.Header{"Authorization": {"Bearer " + previous}}), http.StatusFound)
+		})
+	}
+	for _, path := range []string{"/portal", "/apps/mobile-access"} {
+		t.Run("current token "+path, func(t *testing.T) {
+			oidcE2EStatus(t, native.request(t, http.MethodGet, path, nil, http.Header{"Authorization": {"Bearer " + current}}), http.StatusOK)
+		})
+	}
+	body := map[string]any{"kind": "add_user_api_key", "title": "SessionKey", "description": "replaced session regression", "content": strings.Repeat("Abcd5678", 8)}
+	oidcE2EStatus(t, native.jsonRequest(t, "/api/profile", body, previous), http.StatusUnauthorized)
+	oidcE2EStatus(t, native.jsonRequest(t, "/api/profile", body, firstBob), http.StatusUnauthorized)
+	for _, name := range []string{"alice", "bob"} {
+		lookup := &requests.Request{User: requests.User{Username: name, Email: name + "@example.test"}, Key: requests.Key{Usage: "api"}}
+		if err := store.Request(operator.GetAPIKeys, lookup); err != nil {
+			t.Fatal(err)
+		}
+		if len(lookup.Response.Payload.(*identity.APIKeyBundle).Get()) != 0 {
+			t.Fatal("replaced token persisted a credential")
+		}
+	}
+	oidcE2EStatus(t, native.jsonRequest(t, "/api/profile", body, current), http.StatusOK)
+}
+
 func TestE2EProfileCredentialMutationUsesCanonicalIdentity(t *testing.T) {
 	f, store, _ := newLoginIdentityConfiguredE2E(t, false, false, false, "", func(cfg *authn.PortalConfig) {
 		cfg.UserTransformerConfigs[0].Actions = []string{"overwrite sub bob", "overwrite email bob@example.test"}

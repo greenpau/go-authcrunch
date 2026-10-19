@@ -35,7 +35,9 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	tickets "github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite"
@@ -81,7 +83,7 @@ func TestE2ESQLiteTicketPortal(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	cfg, err := parser.NewSQLiteTicketProviderConfigFromDirectives([]string{"name tickets", "realm application", fmt.Sprintf("path %q", filepath.Join(dir, "tickets.db")), "public_origin " + server.URL, "base_path /tenant/auth", "issuer_url " + issuer.URL + "/login", "timeout 750ms", "cookie_name APP_TICKET_BINDING"})
+	cfg, err := parser.NewSQLiteTicketProviderConfigFromDirectives([]string{"name tickets", "realm application", fmt.Sprintf("path %q", filepath.Join(dir, "tickets.db")), "public_origin " + server.URL, "base_path /tenant/auth", "issuer_url " + issuer.URL + "/login", "timeout 750ms", "cookie_name APP_TICKET_BINDING", "attach to local identity store accounts"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,13 +106,21 @@ func TestE2ESQLiteTicketPortal(t *testing.T) {
 		}
 		active.Load().Close()
 	}()
+	accountPath := filepath.Join(dir, "accounts.json")
+	localStore, err := ids.NewIdentityStore(&ids.IdentityStoreConfig{Name: "accounts", Kind: "local", Params: map[string]any{"path": accountPath, "realm": "local"}}, zap.NewNop())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := localStore.Configure(); err != nil {
+		t.Fatal(err)
+	}
 	install := func(requireMFA bool) {
 		t.Helper()
 		actions := []string{"add role app/verified"}
 		if requireMFA {
 			actions = append(actions, "require totp")
 		}
-		p, err := authn.NewPortal(authn.PortalParameters{Config: &authn.PortalConfig{Name: "ticket-portal", IdentityProviders: []string{"tickets"}, RawCryptoKeyStoreConfig: []string{"crypto key sign-verify " + secret}, UserTransformerConfigs: []*transformer.Config{{Matchers: []string{"exact match realm application"}, Actions: actions}}}, Logger: zap.NewNop(), IdentityProviders: []idp.IdentityProvider{active.Load()}})
+		p, err := authn.NewPortal(authn.PortalParameters{Config: &authn.PortalConfig{Name: "ticket-portal", IdentityProviders: []string{"tickets"}, RawCryptoKeyStoreConfig: []string{"crypto key sign-verify " + secret}, UserTransformerConfigs: []*transformer.Config{{Matchers: []string{"exact match realm application"}, Actions: actions}}}, Logger: zap.NewNop(), IdentityProviders: []idp.IdentityProvider{active.Load()}, IdentityStores: []ids.IdentityStore{localStore}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -184,8 +194,21 @@ func TestE2ESQLiteTicketPortal(t *testing.T) {
 			t.Fatal("invalid portal JWT", err)
 		}
 		claims := token.Claims.(jwt.MapClaims)
-		if claims["sub"] != "alice" || claims["origin"] != "application" || claims["email"] != "alice@example.test" {
+		if claims["id"] == nil || claims["id"] == "" || claims["id"] == "alice" || claims["sub"] != "alice" || claims["origin"] != "application" || claims["email"] != "alice@example.test" {
 			t.Fatal("wrong provider identity")
+		}
+		accounts, err := identity.NewDatabase(accountPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		foundAccount := false
+		for _, u := range accounts.Users {
+			if u.ID == claims["id"] {
+				foundAccount = len(u.ExternalAccounts) == 1 && u.ExternalAccounts[0].Provider == "tickets"
+			}
+		}
+		if !foundAccount {
+			t.Fatal("ticket identity was not written to its configured attachment")
 		}
 		methods := claims["amr"].([]any)
 		if len(methods) != 1 || methods[0] != "federated" {

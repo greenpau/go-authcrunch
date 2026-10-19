@@ -446,7 +446,14 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 
 		defer lease.Release()
 		usr := lease.User
-		if usr.Authenticator.Realm != authRequest.Realm || usr.LoginUsername != rr.User.Username || usr.RefreshTransport != authRequest.RefreshTransport {
+		// LDAP continuations retain their original public realm and aliases
+		// while attached local factors use the separately proven local record.
+		connectedLDAP := false
+		if usr.ExternalIdentity.Kind == "ldap" && usr.Authenticator.Method == "local" {
+			_, realm, err := p.externalIdentityAttachment(usr.ExternalIdentity)
+			connectedLDAP = err == nil && realm == authRequest.Realm && usr.ExternalClaims["sub"] == rr.User.Username
+		}
+		if (!connectedLDAP && (usr.Authenticator.Realm != authRequest.Realm || usr.LoginUsername != rr.User.Username)) || usr.RefreshTransport != authRequest.RefreshTransport {
 			return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Invalid authentication context")
 		}
 
@@ -461,6 +468,9 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 			return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 		}
 
+		if connectedLDAP {
+			rr.User.Username, rr.User.Email = usr.LoginUsername, usr.LoginEmail
+		}
 		completedBefore := passedCheckpointCount(usr)
 		if err := p.handleSandboxCheckpointVerification(ctx, r, rr, usr, authRequest); err != nil {
 			p.logger.Warn(

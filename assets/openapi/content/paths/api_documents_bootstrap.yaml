@@ -11,8 +11,10 @@ get:
 
     Disabled by default; requires explicit APIConfig.DocumentsEnabled plus validated storage settings. Admin/Profile
     flags and storage settings alone do not enable Documents. Require an allowed local identity-store realm,
-    portal user/admin role, valid portal access token AND current stored browser login evidence. Ordinary access-only
-    JSON login, API-key, LDAP and unmapped OAuth/SAML sessions do not establish this authority. Ownership is
+    portal user/admin role, valid portal access token AND current stored browser login evidence. The token must
+    exactly match that stored login at admission and inside the identity transaction; a replaced token returns
+    401 even if its JTI still exists. Ordinary access-only JSON login, API-key, LDAP and external OAuth/SAML
+    sessions do not establish this authority, including after local identity attachment. Ownership is
     the exact local database user id. Each operation runs inside transactional current-identity verification;
     transformed subject/email never select an owner, and administrators have no access override. Persistent
     source bindings reject UUID collisions across stores and survive reset/restart. MaxKeys bounds both active

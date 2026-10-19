@@ -30,6 +30,8 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authz/internal/uri"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/state"
@@ -254,7 +256,7 @@ func (g *Gatekeeper) authenticateOAuth(w http.ResponseWriter, r *http.Request, a
 		if exists && session.origin == origin && !o.closed {
 			usr := session.user.Clone()
 			o.mu.Unlock()
-			if err := g.tokenValidator.AuthorizeUser(r.Context(), r, usr); err != nil {
+			if err := g.authorizeOAuthIdentity(r, usr); err != nil {
 				ar.Response.Error = err
 				return g.handleAuthorizeWithForbidden(w, r, ar)
 			}
@@ -423,6 +425,7 @@ func (g *Gatekeeper) completeOAuth(w http.ResponseWriter, r *http.Request, origi
 	if err != nil {
 		return oauthResponse(w, http.StatusUnauthorized)
 	}
+	usr.ExternalIdentity = rr.ExternalIdentity
 	// Authorize the resource that initiated login, not the public callback path.
 	target := r.Clone(r.Context())
 	target.URL, err = url.ParseRequestURI(login.returnURI)
@@ -431,7 +434,7 @@ func (g *Gatekeeper) completeOAuth(w http.ResponseWriter, r *http.Request, origi
 	}
 	target.RequestURI = login.returnURI
 	target.Method = login.method
-	if err := g.tokenValidator.AuthorizeUser(r.Context(), target, usr); err != nil {
+	if err := g.authorizeOAuthIdentity(target, usr); err != nil {
 		return oauthResponse(w, http.StatusForbidden)
 	}
 	credential := oauthCredential()
@@ -560,4 +563,42 @@ func (g *Gatekeeper) logoutOAuth(w http.ResponseWriter, r *http.Request, origin 
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// Current local authority is checked on callback admission and every protected
+// request. A policy without a portal cannot complete additional local factors.
+func (g *Gatekeeper) authorizeOAuthIdentity(r *http.Request, usr *user.User) error {
+	consumer, ok := g.oauth.provider.(attachment.Consumer)
+	if !ok {
+		return g.tokenValidator.AuthorizeUser(r.Context(), r, usr)
+	}
+	proof := usr.ExternalIdentity
+	if proof.Provider != g.oauth.provider.GetName() || proof.Kind != g.oauth.provider.GetKind() || proof.Evidence.UserID == "" {
+		return identity.ErrExternalAccountDenied
+	}
+	store, err := consumer.IdentityAttachment().Store()
+	if err != nil {
+		return err
+	}
+	return store.WithRefreshIdentity(r.Context(), proof.Evidence, func(current identity.RefreshIdentity) error {
+		for _, challenge := range current.Challenges {
+			if challenge != "password" || current.AuthChallengePolicy {
+				return identity.ErrExternalAccountDenied
+			}
+		}
+		claims := usr.AsMap()
+		claims["id"] = proof.Evidence.UserID
+		claims["roles"] = append(slices.Clone(usr.Claims.Roles), current.Roles...)
+		claims["amr"] = []string{"federated"}
+		updated, err := user.NewUser(claims)
+		if err != nil {
+			return err
+		}
+		updated.ExternalIdentity, updated.Authenticator = proof, usr.Authenticator
+		if err := g.tokenValidator.AuthorizeUser(r.Context(), r, updated); err != nil {
+			return err
+		}
+		*usr = *updated
+		return nil
+	})
 }

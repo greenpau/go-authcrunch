@@ -73,7 +73,7 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 
-	usr, err := p.sessions.Get(parsedUser.Claims.ID)
+	usr, err := p.sessions.GetForToken(parsedUser.Claims.ID, parsedUser.Token)
 	if err != nil {
 		p.logger.Warn(
 			"jti session not found",

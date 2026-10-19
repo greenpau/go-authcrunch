@@ -47,7 +47,9 @@ type UserMetadataBundle struct {
 
 // User is a user identity.
 type User struct {
-	Profile *Profile `json:"profile,omitempty" xml:"profile,omitempty" yaml:"profile,omitempty"`
+	ExternalAccounts      []ExternalAccount `json:"external_accounts,omitempty" xml:"external_accounts,omitempty" yaml:"external_accounts,omitempty"`
+	ExternallyProvisioned bool              `json:"externally_provisioned,omitempty" xml:"externally_provisioned,omitempty" yaml:"externally_provisioned,omitempty"`
+	Profile               *Profile          `json:"profile,omitempty" xml:"profile,omitempty" yaml:"profile,omitempty"`
 	// CredentialVersion invalidates refresh sessions after security changes.
 	// Legacy records start at version zero; the next change persists version one.
 	CredentialVersion    uint64          `json:"credential_version,omitempty" xml:"credential_version,omitempty" yaml:"credential_version,omitempty"`
@@ -152,7 +154,7 @@ func (user *User) Valid() error {
 	if user.Username == "" {
 		return errors.ErrUsernameEmpty
 	}
-	if len(user.Passwords) < 1 {
+	if len(user.Passwords) < 1 && !user.ExternallyProvisioned {
 		return errors.ErrUserPasswordNotFound
 	}
 	return nil
@@ -637,7 +639,13 @@ func (user *User) GetMetadata() *UserMetadata {
 // GetRegisteredAuthMethods returns enabled credential types without collapsing
 // multiple factors into mfa. It describes availability, never successful login.
 func (user *User) GetRegisteredAuthMethods() []string {
-	methods := []string{authchal.PasswordKeyword}
+	var methods []string
+	for _, password := range user.Passwords {
+		if password != nil && !password.Disabled && !password.Expired {
+			methods = append(methods, authchal.PasswordKeyword)
+			break
+		}
+	}
 	seen := map[string]bool{}
 	for _, token := range user.MfaTokens {
 		if token == nil || token.Disabled {
@@ -680,7 +688,13 @@ func (user *User) GetChallenges() ([]string, error) {
 		}
 	}
 
-	challenges := []string{authchal.PasswordKeyword}
+	var challenges []string
+	// An unavailable password is not an implicit passwordless policy. Only
+	// automatically provisioned identities with no local password history
+	// omit the default password checkpoint; explicit rules are resolved above.
+	if !user.ExternallyProvisioned || len(user.Passwords) > 0 {
+		challenges = append(challenges, authchal.PasswordKeyword)
+	}
 	switch len(mfaTypes) {
 	case 0:
 		// password only

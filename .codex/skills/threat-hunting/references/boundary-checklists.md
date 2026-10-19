@@ -95,6 +95,11 @@ when changing injected identity headers, token stripping or credential caches.
 - Multiple token sources with ambiguous or undefined precedence
 - Bearer/header validation that fails open when API-key or basic auth paths err
 - Cached users bypassing newer ACL, path, source-address, or token checks
+- Cached login proof selected only by JWT `jti`, allowing an older token to
+  borrow a newer account's evidence after a browser switches accounts. Reproduce
+  with two real logins, then replay the first token against connection, profile,
+  Documents and portal/app routes. Compare the exact validated token to the
+  cached token and verify that rejected mutations persist no account changes.
 - JWT algorithm confusion: `RS256` public key accepted as `HS256` HMAC secret
 - `alg: none` acceptance or missing algorithm allowlist
 - Missing `kid` validation allowing key-set confusion

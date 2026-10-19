@@ -83,13 +83,14 @@ func portalReservedWords(t *testing.T) map[string]reservedPortalWord {
 func TestPortalReservedRouteWords(t *testing.T) {
 	words := portalReservedWords(t)
 	sources := map[string][]string{
-		"extract_base_path.go":     {"extractBasePath", "extractBaseURLPath", "extractBasePathPrefix"},
-		"serve_http.go":            {"ServeHTTP"},
-		"respond_http.go":          {"handleHTTP", "authorizeRequest"},
-		"respond_json.go":          {"handleJSON"},
-		"respond_api.go":           {"handleAPI"},
-		"cross_device_http.go":     {"crossDeviceRouteIndex"},
-		"handle_provider_login.go": {"providerLoginRouteIndex"},
+		"extract_base_path.go":       {"extractBasePath", "extractBaseURLPath", "extractBasePathPrefix"},
+		"serve_http.go":              {"ServeHTTP"},
+		"respond_http.go":            {"handleHTTP", "authorizeRequest"},
+		"respond_json.go":            {"handleJSON"},
+		"respond_api.go":             {"handleAPI"},
+		"cross_device_http.go":       {"crossDeviceRouteIndex"},
+		"handle_provider_login.go":   {"providerLoginRouteIndex"},
+		"connected_accounts_http.go": {"connectedAccountsRouteIndex"},
 	}
 	for filename, functions := range sources {
 		t.Run(filename, func(t *testing.T) {

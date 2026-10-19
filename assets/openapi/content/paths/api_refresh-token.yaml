@@ -44,8 +44,11 @@ post:
     Recognized provider role contributions are normalized before policy; signing cannot restore
     roles removed by current portal transforms.
     Issuer/address-dependent factor requirements must already be satisfied; snapshot provider evidence
-    supplies no local factors. Upstream role changes, disablement and logout
-    remain unseen until fresh login. Original sub, sid, auth_time and federated amr remain fixed.
+    alone supplies no local factors. Built-in provider families also revalidate their attached local ID,
+    epoch, credential generation, current roles and required factors within the signing transaction.
+    Actually completed local factors remain separate evidence alongside federated authentication.
+    A disabled or changed local account denies renewal. Upstream role changes, disablement and logout
+    remain unseen until fresh login. Original sub, sid, auth_time and verified amr remain fixed.
     Successful refresh extends idle expiry within the original absolute deadline; protected application
     requests alone do not. Provider browser callbacks issue only cookie-transport families.'
   security:

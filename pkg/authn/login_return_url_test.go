@@ -321,6 +321,7 @@ func newSignedInUser(t *testing.T, p *Portal, withSession bool) *user.User {
 	t.Helper()
 	usr := newRefererCleanupUser(t)
 	usr.Claims.ID = "signed-in-session-0123456789abcdef0123"
+	usr.Token = "signed-in-test-token"
 	if withSession {
 		if err := p.sessions.Add(usr.Claims.ID, usr); err != nil {
 			t.Fatal(err)

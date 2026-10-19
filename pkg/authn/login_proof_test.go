@@ -77,3 +77,29 @@ func TestDirectAuthenticationPolicy(t *testing.T) {
 		}
 	}
 }
+
+func TestDirectConnectedAuthenticationPolicy(t *testing.T) {
+	for _, tc := range []struct {
+		name                 string
+		required, additional []string
+		selected, deny       bool
+	}{
+		{name: "external alone"},
+		{name: "registered MFA", required: []string{"totp"}, deny: true},
+		{name: "explicit local password", required: []string{"password"}, selected: true, deny: true},
+		{name: "additional local password", additional: []string{"password"}, deny: true},
+		{name: "additional MFA", additional: []string{"u2f"}, deny: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &Portal{}
+			rr := &requests.Request{User: requests.User{Challenges: tc.required, AuthChallengePolicy: tc.selected}, ExternalIdentity: requests.ExternalIdentity{Evidence: requests.AuthenticationEvidence{UserID: "attached-account"}}}
+			claims := map[string]any{}
+			if tc.additional != nil {
+				claims["challenges"] = tc.additional
+			}
+			if err := p.checkDirectAuthenticationPolicy(rr, claims, []string{"password"}); (err != nil) != tc.deny {
+				t.Fatalf("unexpected attached policy decision: %v", err)
+			}
+		})
+	}
+}

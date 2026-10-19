@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="{{ .LanguageCode }}" dir="{{ .Direction }}">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ .MetaTitle }} - {{ .Translate "connected_accounts_title" }}</title>
+<link rel="icon" href="{{ pathjoin .ActionEndpoint "/assets/images/favicon.svg" }}" type="image/svg+xml">
+<link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/basic.css" }}">
+<link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/connected_accounts.css" }}">
+{{ if .CustomCSSEnabled }}<link rel="stylesheet" href="{{ pathjoin .ActionEndpoint "/assets/css/custom.css" }}">{{ end }}
+</head>
+<body class="basic-theme">
+<main class="connection-card">
+{{ if .LogoURL }}<img class="connection-logo" src="{{ .LogoURL }}" alt="{{ .LogoDescription }}">{{ end }}
+<h1>{{ .Translate "connected_accounts_title" }}</h1>
+{{ if eq .Data.view "start" }}
+<p>{{ .Translate "connected_accounts_automatic" }}</p><p dir="auto"><strong>{{ .Data.provider }}</strong></p>
+<p>{{ .Translate "connected_accounts_instruction" }}</p>
+<form method="post" action="{{ pathjoin .ActionEndpoint "/connected-accounts/" .Data.ticket }}">
+<input type="hidden" name="csrf" value="{{ .Data.csrf }}"><input type="hidden" name="action" value="start">
+<button type="submit">{{ .Translate "connected_accounts_connect" }}</button>
+</form>
+{{ else if eq .Data.view "confirm" }}
+<h2>{{ .Translate "connected_accounts_confirm" }}</h2>
+<p>{{ .Translate "connected_accounts_target" }}</p><p><strong dir="auto">{{ .Data.provider }} → {{ .Data.username }}</strong></p>
+<p>{{ .Translate "connected_accounts_no_merge" }}</p>
+<form method="post" action="{{ pathjoin .ActionEndpoint "/connected-accounts/" .Data.ticket }}">
+<input type="hidden" name="csrf" value="{{ .Data.csrf }}">
+<button type="submit" name="action" value="connect">{{ .Translate "connected_accounts_confirm" }}</button>
+<button type="submit" name="action" value="cancel" class="secondary">{{ .Translate "cancel_action" }}</button>
+</form>
+{{ else if eq .Data.view "connected" }}
+<p role="status">{{ .Translate "connected_accounts_done" }}</p>
+<a href="{{ pathjoin .ActionEndpoint "/login" }}?fresh=1">{{ .Translate "sign_in" }}</a>
+{{ else if eq .Data.view "reauthenticate" }}
+<p>{{ .Translate "connected_accounts_reauthenticate" }}</p>
+<a href="{{ pathjoin .ActionEndpoint "/login" }}?fresh=1">{{ .Translate "session_sign_in_again" }}</a>
+{{ else }}
+<p>{{ .Translate "account_id_label" }}: <strong dir="auto">{{ .Data.username }}</strong></p>
+<ul>{{ range .Data.accounts }}<li dir="auto">{{ .Provider }}{{ if .Name }} — {{ .Name }}{{ end }}</li>{{ else }}<li>{{ .Translate "connected_accounts_empty" }}</li>{{ end }}</ul>
+<p>{{ .Translate "connected_accounts_add" }}</p>
+<a href="{{ pathjoin .ActionEndpoint "/login" }}?fresh=1">{{ .Translate "sign_in" }}</a>
+{{ end }}
+<p class="connection-footer"><a href="{{ pathjoin .ActionEndpoint "/portal" }}">{{ .Translate "portal_label" }}</a></p>
+</main>
+</body></html>

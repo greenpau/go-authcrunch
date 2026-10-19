@@ -120,7 +120,9 @@ lifetimes remain provider-owned. The common cookie factory rejects collisions
 with the effective token refresh cookie as well as the other portal cookie roles.
 Duplicate cookies are rejected. Successful interactive
 login replaces the previous provider session; external/LDAP portal login clears
-it without making that external identity eligible. Logout clears provider
+it without making that external identity eligible. This also applies when an
+external login completes MFA in its attached local store: `ExternalIdentity`
+keeps that proof distinct from a local login. Logout clears provider
 sessions and pending interaction. When a refresh cookie is present, GET logout
 only displays confirmation; the protected browser POST clears provider state
 after refresh revocation succeeds. Native logout must not touch browser state.

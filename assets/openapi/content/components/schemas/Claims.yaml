@@ -1,5 +1,8 @@
 type: object
 properties:
+  id:
+    type: string
+    description: Immutable local identity-store account ID for built-in local, LDAP and external authentication, including Basic/API-key tokens and encrypted system assertions. Verified backend evidence pins this value after claim transforms. It is distinct from the transformed sub and per-session jti. External connections in the same local record share this ID. Implicit in-memory provider stores lose identities on provider replacement.
   sub:
     type: string
     description: Subject identifying the authenticated principal, usually the local username or mapped
@@ -43,8 +46,15 @@ properties:
       a Unix timestamp, not milliseconds or an ISO date string.
   jti:
     type: string
-    description: Identifier of this issued access token. Stored browser sessions use it for lookup; token
-      refresh rotates it while retaining the separate refresh session_id.
+    description: Stored portal-session lookup identifier. Access-only logins can reuse the browser session
+      identifier; consumers of private login evidence also require the exact cached token. Token refresh
+      rotates jti while retaining the separate refresh session_id.
+  nonce:
+    type: string
+    description: Fresh opaque per-issuance value on cached portal access-only session tokens, including external login
+      and cross-device issuance. It distinguishes logins with otherwise identical claims and timestamps.
+      The portal sets it after transforms; it is not the upstream OIDC nonce and conveys no account or
+      authentication-method authority. Renewable issuance instead uses a fresh jti and can omit nonce.
   amr:
     type: array
     items:
@@ -107,6 +117,11 @@ x-source-files:
 - pkg/user/user.go
 - pkg/authn/handle_json_whoami.go
 - pkg/authn/token_issuer.go
+- pkg/authn/connected_accounts.go
+- pkg/authn/cross_device_http.go
+- pkg/authn/handle_http_login.go
+- pkg/authn/direct_authentication_identity.go
+- pkg/authn/handle_api_system.go
 examples:
 - sub: alice
   email: alice@example.test

@@ -104,6 +104,7 @@ func TestE2EOpenAPIContractNativeJourneys(t *testing.T) {
 		{"oidc_claims_refresh", TestE2EOIDCClaimsAndRefresh},
 		{"oidc_revocation", TestE2EOIDCRefreshRevocation},
 		{"oidc_cors", TestE2EOIDCBrowserClientCORS},
+		{"connected_accounts", TestE2EConnectedAccountsAutomaticAndExplicit},
 		{"cross_device", TestE2ECrossDeviceLogin},
 		{"cross_device_rejections", TestE2ECrossDeviceHTTPBoundaries},
 		{"cross_device_oauth", TestE2ECrossDeviceOAuth},

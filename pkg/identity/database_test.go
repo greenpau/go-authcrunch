@@ -15,7 +15,9 @@
 package identity
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -27,6 +29,81 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
+
+func TestNewMemoryDatabaseIgnoresFilesystem(t *testing.T) {
+	for _, kind := range []string{"absent", "database", "invalid", "directory", "symlink"} {
+		t.Run(kind, func(t *testing.T) {
+			dir := t.TempDir()
+			t.Chdir(dir)
+			name := filepath.Join(dir, ":memory:")
+			var before []byte
+			switch kind {
+			case "database", "symlink":
+				file := name
+				if kind == "symlink" {
+					file = filepath.Join(dir, "existing.json")
+				}
+				persisted, err := NewDatabase(file)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := persisted.AddUser(&requests.Request{User: requests.User{Username: "diskuser", Email: "disk@example.test", Password: tests.TestPwd1Hash(t), Roles: []string{"admin"}}}); err != nil {
+					t.Fatal(err)
+				}
+				if kind == "symlink" {
+					if err := os.Symlink(file, name); err != nil {
+						t.Fatal(err)
+					}
+				}
+			case "invalid":
+				if err := os.WriteFile(name, []byte("not a database"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			case "directory":
+				if err := os.Mkdir(name, 0700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if kind == "database" || kind == "invalid" || kind == "symlink" {
+				var err error
+				before, err = os.ReadFile(name)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			db, err := NewDatabase(":memory:")
+			if err != nil {
+				t.Fatal("filesystem entry affected memory construction", err)
+			}
+			if len(db.Users) != 0 {
+				t.Fatal("memory database imported persisted identities")
+			}
+			account := ExternalAccount{Provider: "provider", Kind: "oauth", Issuer: "https://issuer.test", Subject: "subject"}
+			first, err := db.ResolveExternalAccount(t.Context(), account, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			other, err := NewDatabase(":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			second, err := other.ResolveExternalAccount(t.Context(), account, true)
+			if err != nil || first.Evidence.UserID == second.Evidence.UserID {
+				t.Fatal("independent memory stores shared an identity", err)
+			}
+			if before != nil {
+				after, err := os.ReadFile(name)
+				if err != nil || !bytes.Equal(before, after) {
+					t.Fatal("memory operations changed the filesystem entry", err)
+				}
+			} else if kind == "absent" {
+				if _, err := os.Stat(name); !os.IsNotExist(err) {
+					t.Fatal("memory operations created a file", err)
+				}
+			}
+		})
+	}
+}
 
 var (
 	testUser1     = "jsmith"

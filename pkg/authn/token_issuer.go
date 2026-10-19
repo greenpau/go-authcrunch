@@ -32,6 +32,9 @@ import (
 
 // issueSandboxTokens is shared by browser and JSON login after atomic redemption.
 func (p *Portal) issueSandboxTokens(ctx context.Context, r *http.Request, rr *requests.Request, proof *user.User) (*user.User, *tokenrefresh.Result, error) {
+	if proof.ExternalIdentity.Evidence.UserID != "" {
+		return p.issueConnectedSandboxTokens(ctx, r, rr, proof)
+	}
 	backend := p.getIdentityStoreByRealm(proof.Authenticator.Realm)
 	if backend == nil {
 		return nil, nil, fmt.Errorf("authentication realm not found")
@@ -132,6 +135,11 @@ func (p *Portal) issueSandboxAccessToken(ctx context.Context, r *http.Request, r
 			return nil, tokenrefresh.ErrDenied
 		}
 	}
+	m["id"] = proof.LoginEvidence.UserID
+	// Access-only logins retain the browser session ID. Distinguish each
+	// issuance even with identical claims and deterministic signing within
+	// one second, so an older token cannot acquire a newer cached proof.
+	m["nonce"] = util.GetRandomString(32)
 	delete(m, "amr")
 	if len(proof.LoginMethods) > 0 {
 		m["amr"] = append([]string(nil), proof.LoginMethods...)

@@ -1,0 +1,144 @@
+get:
+  operationId: reviewAccountConnection
+  summary: Review an external account connection
+  description: >-
+    Shows the provider and target local account after a fresh local login started by this
+    operation. Requires exactly one original browser session cookie and one access cookie,
+    the exact token stored with the current login, a live ticket, current local identity
+    evidence and the token issued by the fresh local HTML login sandbox bound to this operation.
+    Whole-second authentication time alone does not establish this binding. An API-key or JSON
+    login, renewal, earlier or unrelated session, or superseded sandbox cannot confirm a connection.
+    Unknown, expired,
+    consumed or wrong-browser/mount tickets return 410. No account is selected by URL input.
+  tags:
+  - External Authentication
+  security:
+  - PortalCookie: []
+  x-source-files:
+  - pkg/authn/connected_accounts_http.go
+  - pkg/authn/connected_accounts.go
+  - pkg/identity/external_account.go
+  parameters:
+  - name: ticket
+    in: path
+    required: true
+    description: Opaque server-generated 48-character operation identifier, bound to this browser and portal mount. It does not authenticate either account.
+    schema:
+      type: string
+      minLength: 48
+      maxLength: 48
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '401':
+      $ref: ../components/responses/HTML.yaml
+    '403':
+      $ref: ../components/responses/HTML.yaml
+    '404':
+      $ref: ../components/responses/HTML.yaml
+    '405':
+      $ref: ../components/responses/HTML.yaml
+    '409':
+      $ref: ../components/responses/HTML.yaml
+    '410':
+      $ref: ../components/responses/HTML.yaml
+    '413':
+      $ref: ../components/responses/HTML.yaml
+    '415':
+      $ref: ../components/responses/HTML.yaml
+    '429':
+      $ref: ../components/responses/HTML.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+    '503':
+      $ref: ../components/responses/HTML.yaml
+post:
+  operationId: decideAccountConnection
+  summary: Start, confirm or cancel an account connection
+  description: >-
+    Requires HTTPS with exactly one same-origin Origin, application/x-www-form-urlencoded
+    encoding, and a body of at most 4096 bytes containing exactly csrf and action once each.
+    Requires exactly one browser session cookie and one current access cookie. Bearer/query
+    credentials and earlier JWTs sharing a newer login session ID cannot authorize a decision.
+    The page supplies the CSRF value. Action start checks fresh external session evidence and
+    redirects to a fresh local HTML login, preserving a server-bound return URL. Only the sandbox
+    started through that fresh login and its successfully issued access token authorize confirmation;
+    starting another eligible sandbox replaces the pending binding. After that login,
+    action connect consumes the ticket and atomically rechecks both identities, ownership,
+    credential versions and five-minute proof freshness. Only an automatically provisioned
+    source with one external connection and no passwords, MFA, API keys or public keys can
+    be moved. The target retains its immutable local ID. No email matching, role merging,
+    credential merging or profile/document migration occurs. The source remains disabled;
+    both credential versions advance. Success displays a new-sign-in instruction. A failed
+    commit returns 409 and requires a new operation. Action cancel consumes the ticket and
+    redirects to the list. Logout invalidates pending operations for this browser.
+  tags:
+  - External Authentication
+  security:
+  - PortalCookie: []
+  x-source-files:
+  - pkg/authn/connected_accounts_http.go
+  - pkg/authn/connected_accounts.go
+  - pkg/identity/external_account.go
+  parameters:
+  - name: ticket
+    in: path
+    required: true
+    description: Opaque server-generated 48-character operation identifier, bound to this browser and portal mount. It does not authenticate either account.
+    schema:
+      type: string
+      minLength: 48
+      maxLength: 48
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          additionalProperties: false
+          required: [csrf, action]
+          properties:
+            csrf:
+              type: string
+              description: Opaque CSRF value supplied by the rendered connection form.
+            action:
+              type: string
+              enum: [start, connect, cancel]
+              description: Requested transition; permitted values depend on the operation state.
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '401':
+      $ref: ../components/responses/HTML.yaml
+    '403':
+      $ref: ../components/responses/HTML.yaml
+    '404':
+      $ref: ../components/responses/HTML.yaml
+    '405':
+      $ref: ../components/responses/HTML.yaml
+    '409':
+      $ref: ../components/responses/HTML.yaml
+    '410':
+      $ref: ../components/responses/HTML.yaml
+    '413':
+      $ref: ../components/responses/HTML.yaml
+    '415':
+      $ref: ../components/responses/HTML.yaml
+    '429':
+      $ref: ../components/responses/HTML.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+    '503':
+      $ref: ../components/responses/HTML.yaml

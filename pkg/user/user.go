@@ -42,6 +42,8 @@ var reservedFields = map[string]interface{}{
 
 // User is a user with claims and status.
 type User struct {
+	ExternalClaims   map[string]any            `json:"-" xml:"-" yaml:"-"`
+	ExternalIdentity requests.ExternalIdentity `json:"-" xml:"-" yaml:"-"`
 	// CacheDisabled requires fresh backend verification for each protected request.
 	CacheDisabled bool `json:"-" xml:"-" yaml:"-"`
 	// LoginEvidence and RefreshTransport are server-only sandbox state.
@@ -99,6 +101,7 @@ func (u *User) Clone() *User {
 	}
 
 	clone := *u
+	clone.ExternalClaims = cloneInterfaceMap(u.ExternalClaims)
 	clone.LoginMethods = cloneStringSlice(u.LoginMethods)
 
 	if u.Claims != nil {

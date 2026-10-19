@@ -225,7 +225,7 @@ func TestE2EServerLogging(t *testing.T) {
 }
 
 func TestE2EServerLoggingPersistentSessions(t *testing.T) {
-	f := newDirectOAuthFixtureWithRoot(t, nil, func(c *authcrunch.Config) { c.State = persistentTestConfig(t) })
+	f := newDirectOAuthFixtureWithRoot(t, nil, func(c *authcrunch.Config) { c.State = persistentTestConfig(t); attachPersistentOAuthIdentity(t, c) })
 	callback := f.callback(t, f.client, "/private")
 	directOAuthStatus(t, f.request(t, f.client, "GET", callback, nil), http.StatusSeeOther)
 	directOAuthStatus(t, f.request(t, f.client, "POST", "/private", nil), http.StatusOK)

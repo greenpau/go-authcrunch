@@ -23,9 +23,140 @@ import (
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
+
+func TestDirectAuthenticationIdentityClaims(t *testing.T) {
+	f := newRefreshPortal(t, false, false)
+	var err error
+	f.portal.transformer, err = transformer.NewFactory([]*transformer.Config{{Matchers: []string{"exact match realm local"}, Actions: []string{"add id transformed-id as string"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := &requests.Request{User: requests.User{Username: tests.TestUser1, Password: tests.TestPwd1}, Upstream: requests.Upstream{Realm: "local", Method: "local"}}
+	if err := f.store.Request(operator.IdentifyUser, rr); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.store.Request(operator.Authenticate, rr); err != nil {
+		t.Fatal(err)
+	}
+	wantID := rr.Authentication.UserID
+	if wantID == "" {
+		t.Fatal("local authentication omitted immutable identity evidence")
+	}
+	t.Run("access token", func(t *testing.T) {
+		issued, err := f.portal.issueDirectAuthenticationToken(t.Context(), rr, refreshTestOrigin, "127.0.0.1", []string{"password"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if issued.AsMap()["id"] != wantID {
+			t.Fatal("direct access token did not retain the authenticated immutable ID")
+		}
+	})
+	t.Run("system assertion", func(t *testing.T) {
+		claims := map[string]any{}
+		if err := f.portal.handleAPIExtractUserIdentity(t.Context(), rr, claims, []string{"password"}); err != nil {
+			t.Fatal(err)
+		}
+		if claims["id"] != wantID {
+			t.Fatal("system assertion did not retain the authenticated immutable ID")
+		}
+	})
+}
+
+type directConnectedStore struct {
+	ids.IdentityStore
+	attachment *attachment.Attachment
+}
+
+func (*directConnectedStore) GetName() string                              { return "directory" }
+func (*directConnectedStore) GetRealm() string                             { return "directory" }
+func (*directConnectedStore) GetKind() string                              { return "ldap" }
+func (s *directConnectedStore) IdentityAttachment() *attachment.Attachment { return s.attachment }
+
+func TestDirectConnectedIdentity(t *testing.T) {
+	for _, name := range []string{"current", "missing proof", "wrong provider", "wrong kind", "nil attachment", "unbound attachment", "revoked", "cancelled", "callback failure"} {
+		t.Run(name, func(t *testing.T) {
+			f := newRefreshPortal(t, false, false)
+			a, err := attachment.New(attachment.Config{LocalIdentityStore: "local"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := attachment.BindStore(a, f.store); err != nil {
+				t.Fatal(err)
+			}
+			backend := &directConnectedStore{IdentityStore: f.store, attachment: a}
+			f.portal.identityStores = append(f.portal.identityStores, backend)
+			rr := &requests.Request{Upstream: requests.Upstream{Realm: "directory"}, User: requests.User{Username: "directory-user", Roles: []string{"upstream-role"}}, ExternalIdentity: requests.ExternalIdentity{Issuer: "directory", Subject: "uid=directory-user"}}
+			if err := a.Authenticate(t.Context(), rr, "directory", "ldap"); err != nil {
+				t.Fatal(err)
+			}
+			rr.User.AuthMethods, rr.User.Challenges, rr.User.AuthChallengePolicy = []string{"u2f"}, []string{"totp"}, true
+			ctx := t.Context()
+			switch name {
+			case "missing proof":
+				rr.ExternalIdentity.Evidence = requests.AuthenticationEvidence{}
+			case "wrong provider":
+				rr.ExternalIdentity.Provider = "other"
+			case "wrong kind":
+				rr.ExternalIdentity.Kind = "oauth2"
+			case "nil attachment":
+				backend.attachment = nil
+			case "unbound attachment":
+				backend.attachment, err = attachment.New(attachment.Config{LocalIdentityStore: "missing"})
+				if err != nil {
+					t.Fatal(err)
+				}
+			case "revoked":
+				if err := f.store.RevokeUserSessions(ctx, rr.ExternalIdentity.Evidence.UserID); err != nil {
+					t.Fatal(err)
+				}
+			case "cancelled":
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithCancel(ctx)
+				cancel()
+			}
+			called := false
+			callbackErr := errors.New("issuance rejected")
+			err = f.portal.withDirectAuthenticationIdentity(ctx, rr, func() error {
+				called = true
+				if rr.User.Username != "directory-user" || !slices.Contains(rr.User.Roles, "upstream-role") || len(rr.User.AuthMethods) != 0 || len(rr.User.Challenges) != 0 || rr.User.AuthChallengePolicy {
+					t.Fatal("direct external issuance retained stale policy or changed upstream identity")
+				}
+				if name == "callback failure" {
+					return callbackErr
+				}
+				return nil
+			})
+			switch name {
+			case "current":
+				if err != nil || !called {
+					t.Fatal("current external proof denied", err)
+				}
+			case "callback failure":
+				if !called || !errors.Is(err, callbackErr) || rr.Response.Code != http.StatusInternalServerError {
+					t.Fatal("callback failure lost", err)
+				}
+			case "cancelled":
+				if called || !errors.Is(err, context.Canceled) {
+					t.Fatal("cancelled request reached issuer", err)
+				}
+			case "unbound attachment":
+				if called || err == nil || rr.Response.Code != http.StatusServiceUnavailable {
+					t.Fatal("unbound attachment reached issuer", err)
+				}
+			default:
+				if called || err == nil || rr.Response.Code != http.StatusUnauthorized {
+					t.Fatal("invalid external proof reached issuer", err)
+				}
+			}
+		})
+	}
+}
 
 func TestDirectAuthenticationIdentity(t *testing.T) {
 	for _, name := range []string{"current", "explicit policy", "identification only", "changed username", "changed email", "revoked", "cancelled", "callback failure"} {

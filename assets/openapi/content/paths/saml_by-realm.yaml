@@ -9,6 +9,14 @@ get:
     with Path=/ and a 300-second lifetime. It creates an AuthnRequest and a separate unpredictable RelayState,
     both bound to the exact configured ACS URL and this login's validated destination. Cookie names append an underscore and the canonical RelayState to the configured SAML cookie base. An initiation already carrying 16 transaction cookies receives 429; concurrent requests can arrive before their cookies are visible, so this is not an atomic browser quota. Provider state capacity is bounded separately. Completing one transaction does not replace or delete another transaction's proof. Unsolicited IdP-initiated responses are not accepted;
     configured metadata and a pinned signing certificate establish trust.
+    Verified external authentication resolves or automatically provisions an identity in its
+    attached local store before portal issuance. Without an explicit attachment the provider
+    uses a private in-memory local store. The signed id claim is the local immutable ID;
+    provider sub remains available for existing policies. Current local roles and factor rules
+    apply; an external login alone cannot satisfy required local MFA. Use /connected-accounts
+    to explicitly connect to an existing local account. Provider email never selects an account.
+    A nonempty non-transient NameID is required; configure a persistent NameID.
+    Its format and qualifiers are included in the external identity key.
   security: []
   responses:
     '200':

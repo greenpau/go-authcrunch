@@ -31,6 +31,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	fileutil "github.com/greenpau/go-authcrunch/pkg/util/file"
 )
@@ -41,6 +42,7 @@ const (
 
 // IdentityProvider represents SAML-based identity provider.
 type IdentityProvider struct {
+	attachment       *attachment.Attachment
 	config           *Config
 	serviceProviders map[string]*samllib.ServiceProvider
 	idpMetadataURL   *url.URL
@@ -59,10 +61,23 @@ func NewIdentityProvider(cfg *Config, logger *zap.Logger) (*IdentityProvider, er
 		return nil, errors.ErrIdentityProviderConfigureLoggerNotFound
 	}
 
+	if cfg == nil {
+		return nil, fmt.Errorf("missing backend configuration")
+	}
+	attachmentConfig := attachment.Config{}
+	if cfg.Attachment != nil {
+		attachmentConfig = *cfg.Attachment
+	}
+	accountAttachment, err := attachment.New(attachmentConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &IdentityProvider{
-		config: cfg,
-		logger: logger,
-		state:  newStateManager(),
+		attachment: accountAttachment,
+		config:     cfg,
+		logger:     logger,
+		state:      newStateManager(),
 	}
 
 	if err := b.config.Validate(); err != nil {
@@ -237,3 +252,6 @@ func (b *IdentityProvider) GetDriver() string {
 func (b *IdentityProvider) GetIdentityTokenCookieName() string {
 	return ""
 }
+
+// IdentityAttachment returns the provider-owned local identity binding.
+func (b *IdentityProvider) IdentityAttachment() *attachment.Attachment { return b.attachment }

@@ -21,11 +21,14 @@ import (
 	"errors"
 	"maps"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	tokenrefresh "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/state"
@@ -74,7 +77,8 @@ func (p *Portal) issueProviderRefresh(ctx context.Context, r *http.Request, rr *
 		return nil, nil, tokenrefresh.ErrUnavailable
 	}
 	principal := tokenrefresh.Principal{
-		Source: tokenrefresh.ProviderSnapshotSource, Backend: provider.GetName(), BackendKind: provider.GetKind(),
+		ExternalIdentity: rr.ExternalIdentity,
+		Source:           tokenrefresh.ProviderSnapshotSource, Backend: provider.GetName(), BackendKind: provider.GetKind(),
 		Realm: provider.GetRealm(), Subject: subject, UserID: subject, BackendVersion: providerBinding,
 		AuthTime: time.Now().Unix(), Methods: []string{"federated"}, ProviderSnapshot: snapshot,
 	}
@@ -118,12 +122,12 @@ func providerSnapshotBinding(provider idp.IdentityProvider) (string, error) {
 	return state.Binding(map[string]any{"config": provider.GetConfig(), "driver": provider.GetDriver()})
 }
 
-func (p *Portal) refreshProviderClaims(ctx context.Context, principal tokenrefresh.Principal) (map[string]any, error) {
+func (p *Portal) refreshProviderClaimsCurrent(ctx context.Context, principal tokenrefresh.Principal, current *identity.RefreshIdentity) (map[string]any, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	provider := p.getIdentityProviderByRealm(principal.Realm)
-	if !p.refreshRealm(principal.Realm) || p.refreshProviderMode(principal.Realm) != TokenRefreshProviderSnapshot || provider == nil || !provider.Configured() || provider.GetName() != principal.Backend || provider.GetKind() != principal.BackendKind || principal.BackendKind != "oauth" || principal.Source != tokenrefresh.ProviderSnapshotSource || principal.UserID != principal.Subject || principal.CredentialVersion != 0 || len(principal.Challenges) != 0 || len(principal.Methods) != 1 || principal.Methods[0] != "federated" {
+	if !p.refreshRealm(principal.Realm) || p.refreshProviderMode(principal.Realm) != TokenRefreshProviderSnapshot || provider == nil || !provider.Configured() || provider.GetName() != principal.Backend || provider.GetKind() != principal.BackendKind || principal.BackendKind != "oauth" || principal.Source != tokenrefresh.ProviderSnapshotSource || principal.UserID != principal.Subject || principal.CredentialVersion != 0 || !slices.Contains(principal.Methods, "federated") {
 		return nil, tokenrefresh.ErrDenied
 	}
 	providerBinding, err := providerSnapshotBinding(provider)
@@ -145,6 +149,20 @@ func (p *Portal) refreshProviderClaims(ctx context.Context, principal tokenrefre
 	}
 	rr := requests.NewRequest()
 	rr.Upstream.Realm, rr.Upstream.Method = principal.Realm, "oauth2"
+	if current != nil {
+		rr.User.AuthMethods = append([]string(nil), current.AuthMethods...)
+		rr.User.Challenges = append([]string(nil), current.Challenges...)
+		rr.User.AuthChallengePolicy = current.AuthChallengePolicy
+		if !rr.User.AuthChallengePolicy {
+			rr.User.Challenges = slices.DeleteFunc(rr.User.Challenges, func(c string) bool { return c == "password" })
+		}
+		if len(rr.User.Challenges) > 0 {
+			rr.User.AuthChallengePolicy = true
+		}
+		if len(current.Roles) > 0 {
+			mergeProviderRoles(claims, current.Roles)
+		}
+	}
 	if err := p.transformUser(ctx, rr, claims); err != nil {
 		if rr.Response.Code == http.StatusForbidden {
 			return nil, tokenrefresh.ErrDenied
@@ -153,8 +171,26 @@ func (p *Portal) refreshProviderClaims(ctx context.Context, principal tokenrefre
 	}
 	// Provider AMR/ACR cannot satisfy local factor requirements. Explicit
 	// challenge policies must be satisfied by a separate supported login flow.
-	if err := p.checkDirectAuthenticationPolicy(rr, claims, nil); err != nil {
-		return nil, tokenrefresh.ErrDenied
+	if current == nil {
+		if len(principal.Challenges) != 0 || len(principal.Methods) != 1 {
+			return nil, tokenrefresh.ErrDenied
+		}
+		if err := p.checkDirectAuthenticationPolicy(rr, claims, nil); err != nil {
+			return nil, tokenrefresh.ErrDenied
+		}
+	} else if len(rr.User.Challenges) > 0 || claims["challenges"] != nil {
+		candidate := &user.User{}
+		if err := p.injectUserChallenges(candidate, claims, rr.User.Challenges); err != nil {
+			return nil, tokenrefresh.ErrDenied
+		}
+		for _, required := range candidate.Checkpoints {
+			if !satisfiedRefreshChallenge(required, principal.Challenges) {
+				return nil, tokenrefresh.ErrDenied
+			}
+		}
+	}
+	if current != nil {
+		claims["id"] = principal.ExternalIdentity.Evidence.UserID
 	}
 	// The current roles are authoritative. User canonicalization also consumes
 	// these legacy nested carriers, which must not restore roles after policy.
@@ -175,7 +211,9 @@ func (p *Portal) userFromProviderRefresh(ctx context.Context, tokens *tokenrefre
 	}
 	u.Token, u.TokenName, u.Authorized = tokens.AccessToken, p.cookie.AccessTokenCookieName, true
 	u.Authenticator = user.Authenticator{Name: tokens.Principal.Backend, Realm: tokens.Principal.Realm, Method: tokens.Principal.BackendKind}
-	// Leave all local identity/credential evidence empty.
+	// Keep provider proof separate from local password/profile authority.
+	u.ExternalIdentity = tokens.Principal.ExternalIdentity
+	u.LoginMethods = append([]string(nil), tokens.Principal.Methods...)
 	if links, exists := claims["frontend_links"]; exists {
 		if err := u.AddFrontendLinks(links); err != nil {
 			return nil, err
@@ -373,4 +411,45 @@ func (p *Portal) authorizeProviderRefresh(ctx context.Context, w http.ResponseWr
 		p.completeCrossDeviceLogin(w, r, rr, u, u, tokens.Principal.ProviderSnapshot, tokens)
 	}
 	return nil
+}
+
+func (p *Portal) withProviderRefreshClaims(ctx context.Context, principal tokenrefresh.Principal, apply func(map[string]any) error) error {
+	provider := p.getIdentityProviderByRealm(principal.Realm)
+	if principal.ExternalIdentity.Evidence.UserID == "" {
+		// Legacy injected test/embedding providers have no attachment capability.
+		// Built-in providers must never renew a pre-attachment family.
+		if _, ok := provider.(interface{ IdentityAttachment() *attachment.Attachment }); ok {
+			return tokenrefresh.ErrDenied
+		}
+		claims, err := p.refreshProviderClaimsCurrent(ctx, principal, nil)
+		if err != nil {
+			return err
+		}
+		return apply(claims)
+	}
+	a, realm, err := p.externalIdentityAttachment(principal.ExternalIdentity)
+	if err != nil || realm != principal.Realm {
+		return tokenrefresh.ErrDenied
+	}
+	store, err := a.Store()
+	if err != nil {
+		return tokenrefresh.ErrUnavailable
+	}
+	err = store.WithRefreshIdentity(ctx, principal.ExternalIdentity.Evidence, func(current identity.RefreshIdentity) error {
+		claims, err := p.refreshProviderClaimsCurrent(ctx, principal, &current)
+		if err != nil {
+			return err
+		}
+		return apply(claims)
+	})
+	if errors.Is(err, identity.ErrRefreshIdentityDenied) {
+		return tokenrefresh.ErrDenied
+	}
+	return err
+}
+
+func (p *Portal) refreshProviderClaims(ctx context.Context, principal tokenrefresh.Principal) (map[string]any, error) {
+	var claims map[string]any
+	err := p.withProviderRefreshClaims(ctx, principal, func(current map[string]any) error { claims = current; return nil })
+	return claims, err
 }

@@ -49,6 +49,12 @@ portal template overrides do not rebuild or restyle it automatically.
 For language settings, translated templates/scripts, RTL layout and multilingual
 acceptance tests, read [internationalization](references/internationalization.md).
 
+The `connected_accounts` template presents optional external-account connection,
+fresh local login and confirmation. Its `connected_accounts.css` uses shared brand
+variables; both inputs are server-owned and HTML-escaped. See the
+[connection contract](../local-identity-database/references/external-accounts.md)
+for protocol and lifecycle requirements.
+
 ## Build the Theme
 
 1. Inspect the application's AuthCrunch version, current UI configuration,

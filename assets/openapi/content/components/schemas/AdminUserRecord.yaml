@@ -6,6 +6,38 @@ properties:
   id:
     type: string
     description: Persistent backend account identifier; local stores use a UUID.
+  externally_provisioned:
+    type: boolean
+    description: True for an automatically created passwordless external identity, including its disabled record after connection to another account.
+  external_accounts:
+    type: array
+    description: Provider-scoped connections. The combination of provider, kind, issuer and subject is unique within this store. Display email is not a local login or recovery alias.
+    items:
+      type: object
+      required: [provider, kind, issuer, subject]
+      properties:
+        provider:
+          type: string
+          description: Configured provider or LDAP store name.
+        kind:
+          type: string
+          description: Backend kind, such as oauth, saml, ldap or sqlite-ticket.
+        issuer:
+          type: string
+          description: Verified issuer namespace or trusted directory realm.
+        subject:
+          type: string
+          description: Opaque stable upstream subject. GitHub uses its numeric ID, LDAP the verified DN, and SAML a JSON array of NameID format, qualifiers and value.
+        email:
+          type: string
+          description: Informational provider email; not evidence for account matching.
+        name:
+          type: string
+          description: Informational provider display name.
+        connected_at:
+          type: string
+          format: date-time
+          description: Time the connection was created or explicitly moved, in RFC 3339 UTC.
   username:
     type: string
     description: Canonical account login handle.

@@ -47,7 +47,7 @@ func crossDeviceRouteIndex(path string) int {
 		return -1
 	}
 	prefix := path[:i] + "/"
-	for _, namespace := range []string{"/provider/", "/api/", "/qrcode/", "/profile/", "/sandbox/", "/register/", "/apps/sso", "/apps/mobile-access", "/barcode/mfa/", "/saml/", "/oauth2/", "/basic/login", "/assets/", "/favicon"} {
+	for _, namespace := range []string{"/connected-accounts/", "/provider/", "/api/", "/qrcode/", "/profile/", "/sandbox/", "/register/", "/apps/sso", "/apps/mobile-access", "/barcode/mfa/", "/saml/", "/oauth2/", "/basic/login", "/assets/", "/favicon"} {
 		if strings.Contains(prefix, namespace) {
 			return -1
 		}
@@ -315,7 +315,10 @@ func (p *Portal) redeemCrossDevice(ctx context.Context, w http.ResponseWriter, r
 	var issued *user.User
 	var tokens *tokenrefresh.Result
 	var err error
-	if len(proof.providerClaims) > 0 {
+	// Local checkpoints do not turn an external login into local authority.
+	// Such proofs carry their upstream claims on the redeemed sandbox instead
+	// of the separate callback snapshot, but remain access-only transfers.
+	if len(proof.providerClaims) > 0 || proof.user.ExternalIdentity.Evidence.UserID != "" {
 		rr.Upstream.Method = proof.providerMethod
 		issued, err = p.issueCrossDeviceProvider(ctx, r, rr, proof)
 	} else {
@@ -328,7 +331,7 @@ func (p *Portal) redeemCrossDevice(ctx context.Context, w http.ResponseWriter, r
 		err = p.grantAccess(ctx, w, r, rr, issued)
 		granted = err == nil
 	}
-	if err == nil && len(proof.providerClaims) == 0 {
+	if err == nil && len(proof.providerClaims) == 0 && proof.user.ExternalIdentity.Evidence.UserID == "" {
 		err = p.finishOIDCLogin(ctx, w, r, proof.user)
 	}
 	if err != nil {
@@ -361,6 +364,17 @@ func (p *Portal) redeemCrossDevice(ctx context.Context, w http.ResponseWriter, r
 }
 
 func (p *Portal) issueCrossDeviceProvider(ctx context.Context, r *http.Request, rr *requests.Request, proof *crossDeviceProof) (*user.User, error) {
+	if proof.user.ExternalIdentity.Evidence.UserID != "" {
+		candidate := proof.user.Clone()
+		if len(proof.providerClaims) > 0 {
+			var err error
+			candidate.ExternalClaims, err = decodeProviderSnapshot(proof.providerClaims)
+			if err != nil {
+				return nil, errCrossDeviceDenied
+			}
+		}
+		return p.issueConnectedSandbox(ctx, r, rr, candidate, proof.expires)
+	}
 	provider := p.getIdentityProviderByRealm(proof.user.Authenticator.Realm)
 	if provider == nil || provider.GetName() != proof.user.Authenticator.Name {
 		return nil, errCrossDeviceDenied
@@ -407,6 +421,7 @@ func (p *Portal) issueCrossDeviceProvider(ctx context.Context, r *http.Request, 
 	// Keep transfers bounded by the completed login's lifetime, even if a
 	// transform tries to extend expiry or replace the new session identifier.
 	m["exp"], m["jti"] = min(proof.expires, now+int64(p.keystore.GetTokenLifetime(nil, nil))), rr.Upstream.SessionID
+	m["nonce"] = util.GetRandomString(32)
 	injectPortalRoles(m, p.config)
 	issued, err := user.NewUser(m)
 	if err != nil {
@@ -425,6 +440,7 @@ func (p *Portal) issueCrossDeviceProvider(ctx context.Context, r *http.Request, 
 }
 
 func (p *Portal) revokeCrossDeviceLogin(ctx context.Context, r *http.Request) {
+	p.revokeConnectedAccounts(r)
 	if p.crossDevice == nil {
 		return
 	}

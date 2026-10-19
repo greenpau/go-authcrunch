@@ -45,6 +45,9 @@
                 </a>
               </div>
             {{ end }}
+            {{ if .Data.connected_accounts_enabled }}
+            <div><a href="{{ pathjoin .ActionEndpoint "/connected-accounts/" }}"><div class="app-portal-btn-box"><div class="app-portal-btn-img"><i class="las la-link"></i></div><div class="app-portal-btn-txt"><span>{{ .Translate "connected_accounts_title" }}</span></div></div></a></div>
+            {{ end }}
             <div>
               <a href="{{ pathjoin .ActionEndpoint "/logout" }}">
                 <div class="app-portal-btn-box">

@@ -388,6 +388,15 @@ func (sa *Authenticator) AuthenticateUser(r *requests.Request) error {
 			return errors.ErrIdentityStoreLdapAuthFailed.WithArgs(err)
 		}
 
+		// Read the current directory attributes under the service binding, while
+		// requiring the same DN whose password was just verified.
+		if err := ldapConnection.Bind(sa.username, sa.password); err != nil {
+			return err
+		}
+		if err := sa.findUser(ldapConnection, server, r, user.DN); err != nil {
+			return err
+		}
+		r.ExternalIdentity.Subject = user.DN
 		sa.logger.Debug(
 			"LDAP auth succeeded",
 			zap.String("server", server.Address),
@@ -604,7 +613,7 @@ func (sa *Authenticator) dial(server *AuthServer) (*ldap.Conn, error) {
 	return ldapConnection, nil
 }
 
-func (sa *Authenticator) findUser(ldapConnection *ldap.Conn, server *AuthServer, r *requests.Request) error {
+func (sa *Authenticator) findUser(ldapConnection *ldap.Conn, server *AuthServer, r *requests.Request, expectedDN ...string) error {
 	searchUserFilter := strings.ReplaceAll(sa.searchUserFilter, "%s", ldap.EscapeFilter(r.User.Username))
 
 	req := ldap.NewSearchRequest(
@@ -665,6 +674,10 @@ func (sa *Authenticator) findUser(ldapConnection *ldap.Conn, server *AuthServer,
 	}
 
 	user := resp.Entries[0]
+	if len(expectedDN) > 0 && user.DN != expectedDN[0] {
+		return fmt.Errorf("LDAP identity changed during authentication")
+	}
+	r.User.Roles = nil
 	var userFullName, userLastName, userFirstName, userAccountName, userMail string
 	userRoles := make(map[string]bool)
 

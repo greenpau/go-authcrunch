@@ -21,9 +21,10 @@ import (
 
 	jwtlib "github.com/golang-jwt/jwt/v5"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
-func (b *IdentityProvider) validateAccessToken(ctx context.Context, state string, data map[string]interface{}) (map[string]interface{}, error) {
+func (b *IdentityProvider) validateAccessToken(ctx context.Context, state string, data map[string]any, proofs ...*requests.ExternalIdentity) (map[string]any, error) {
 	if data == nil {
 		return nil, errors.ErrIdentityProviderOAuthClaimsParserClaimsNotFound
 	}
@@ -106,6 +107,12 @@ func (b *IdentityProvider) validateAccessToken(ctx context.Context, state string
 			}
 		}
 
+		if !isNonIdentityAccessToken {
+			for _, proof := range proofs {
+				proof.Subject, _ = claims["sub"].(string)
+				proof.Issuer, _ = claims["iss"].(string)
+			}
+		}
 		if err := b.parseTokenClaims(tokenName, claims, parsedData); err != nil {
 			return nil, err
 		}

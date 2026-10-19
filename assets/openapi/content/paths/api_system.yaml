@@ -9,7 +9,12 @@ post:
     with authenticated=true. Credential or policy failures return a non-200 JSON error. Maximum encrypted
     body is 1 MiB. Existing invalid portal credentials and disallowed browser origins can fail before
     message handling. The inner request has no expiry or replay-ID field; the random encryption nonce
-    is not an application expiry check.
+    is not an application expiry check. Local password/API-key assertions include the authenticated
+    immutable account id, pinned after claim transforms. LDAP credentials also resolve their attached local identity.
+    Current local roles and policy are checked within its identity transaction; successful assertions
+    include the immutable local id and federated AMR while retaining the directory subject.
+    An explicitly required local password or MFA cannot be satisfied by the directory password and
+    returns 403. Disabled or revoked attached identities return 401.
   security: []
   responses:
     '200':
@@ -96,6 +101,9 @@ post:
           description: Do not store credentials or protocol responses.
   x-source-files:
   - pkg/authn/handle_api_system.go
+  - pkg/authn/direct_authentication_identity.go
+  - pkg/authn/authentication_challenges.go
+  - pkg/authn/connected_accounts.go
   - pkg/system/message.go
   - pkg/authn/respond_api.go
   - pkg/authn/api_origin.go

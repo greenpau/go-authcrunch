@@ -48,6 +48,28 @@ from the server-only cloned `tokenrefresh.Result.Principal` and current backend
 identity, never transformed access claims. Profile self-service consumes this
 metadata through [its bound adapter](../authentication-portal-profile/SKILL.md).
 
+When consuming cached login evidence, first validate the presented access JWT,
+then use `SessionCache.GetForToken(jti, token)` to require the exact token stored
+with that evidence. A browser can reuse its session ID across logins; the ID is
+only a lookup key and cannot bind a JWT to a later account's proof. Apply this
+to portal/app pages, signed-in login navigation, profile, Documents and account
+connections. Internal proof flows may use `Get` only with their independent
+token binding, as cross-device approval does with a captured token hash.
+Preserve rejection after cache deletion/replacement and successful use of the
+current token. TLS tests must switch accounts within one browser, replay the
+earlier token and verify that rejected mutations changed neither account.
+
+Cached access-only session issuers add a fresh opaque `nonce` after claim transforms, including
+external login and cross-device issuance. Keep the browser's existing `jti`
+lookup contract, but distinguish separately issued tokens even for the same
+account within one second. HMAC, RSA PKCS#1 and Ed25519 signatures are deterministic;
+signature bytes alone cannot supply that distinction. The nonce is not an
+upstream OIDC challenge and conveys no identity or factor evidence. Uncached
+Basic/API-key proxy tokens do not select private session proof. Renewable
+issuance already generates an independent `jti`. Test access-only session uniqueness
+with a frozen clock and deterministic signer, and keep real TLS reauthentication
+after credential revocation in scope.
+
 ## Ownership and Evidence
 
 `pkg/authn/login_proof.go`, `sandbox_user.go`, `handle_http_sandbox.go`, and
@@ -115,10 +137,14 @@ a valid refresh credential.
 
 [Cross-device browser login](../authentication-portal-cross-device/SKILL.md)
 snapshots the completed HTML sandbox proof only after successful normal login.
-Requester redemption reuses `issueSandboxTokens` and `finishOIDCLogin` with the
+Local requester redemption reuses `issueSandboxTokens` and `finishOIDCLogin` with the
 requester's HTTP context, preserving canonical identity, verified AMR, current
 challenge selection and credential-version checks. Each device gets its own
 family/session; neither an API key nor a client claim can supply this proof.
+An external login completing attached local MFA retains the external transfer
+contract: access-only requester credentials, expiry bounded by the approving
+login, and no local OIDC session. Dispatch by its separate external proof,
+not by the last checkpoint's authenticator or presence of a callback snapshot.
 
 ## Validation
 

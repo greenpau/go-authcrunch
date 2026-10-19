@@ -24,6 +24,8 @@ import (
 
 // Request hold the data associated with identity database
 type Request struct {
+	// ExternalIdentity is produced only after upstream credential verification.
+	ExternalIdentity ExternalIdentity `json:"-" xml:"-" yaml:"-"`
 	// Authentication is backend-produced evidence, never decoded from a client.
 	Authentication AuthenticationEvidence `json:"-" xml:"-" yaml:"-"`
 
@@ -38,6 +40,13 @@ type Request struct {
 	Flags    Flags       `json:"flags,omitempty" xml:"flags,omitempty" yaml:"flags,omitempty"`
 	Response Response    `json:"response,omitempty" xml:"response,omitempty" yaml:"response,omitempty"`
 	Logger   *zap.Logger `json:"-"`
+}
+
+// ExternalIdentity binds a verified provider subject to a local immutable ID.
+// It is server-only state, never accepted from an HTTP payload or token claims.
+type ExternalIdentity struct {
+	Provider, Kind, Issuer, Subject string                 `json:"-" xml:"-" yaml:"-"`
+	Evidence                        AuthenticationEvidence `json:"-" xml:"-" yaml:"-"`
 }
 
 // AuthenticationEvidence binds a checkpoint to a backend record and its security

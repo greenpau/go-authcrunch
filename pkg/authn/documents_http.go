@@ -256,7 +256,7 @@ func (p *Portal) handleAPIDocuments(ctx context.Context, w http.ResponseWriter, 
 	if err != nil || parsed == nil || !rr.Response.Authenticated {
 		return fail(http.StatusUnauthorized)
 	}
-	usr, err := p.sessions.Get(parsed.Claims.ID)
+	usr, err := p.sessions.GetForToken(parsed.Claims.ID, parsed.Token)
 	if err != nil || usr == nil || usr.LoginEvidence.UserID == "" || usr.LoginEvidence.BackendVersion == "" || usr.LoginUsername == "" {
 		return fail(http.StatusUnauthorized)
 	}
@@ -307,7 +307,7 @@ func (p *Portal) handleAPIDocuments(ctx context.Context, w http.ResponseWriter, 
 		if current.Username != usr.LoginUsername {
 			return identity.ErrRefreshIdentityDenied
 		}
-		if _, err := p.sessions.Get(parsed.Claims.ID); err != nil {
+		if _, err := p.sessions.GetForToken(parsed.Claims.ID, parsed.Token); err != nil {
 			return identity.ErrRefreshIdentityDenied
 		}
 		if err := p.documents.BindIdentity(ctx, userID, store.GetName(), store.GetRealm()); err != nil {

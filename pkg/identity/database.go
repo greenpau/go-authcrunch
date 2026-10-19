@@ -110,20 +110,21 @@ type UserPolicy struct {
 
 // Database is user identity database.
 type Database struct {
-	state           *state.Record
-	mu              *sync.RWMutex
-	Version         string    `json:"version,omitempty" xml:"version,omitempty" yaml:"version,omitempty"`
-	Policy          Policy    `json:"policy,omitempty" xml:"policy,omitempty" yaml:"policy,omitempty"`
-	Revision        uint64    `json:"revision,omitempty" xml:"revision,omitempty" yaml:"revision,omitempty"`
-	LastModified    time.Time `json:"last_modified,omitempty" xml:"last_modified,omitempty" yaml:"last_modified,omitempty"`
-	LoadedAt        time.Time `json:"loaded_at,omitempty" xml:"loaded_at,omitempty" yaml:"loaded_at,omitempty"`
-	Users           []*User   `json:"users,omitempty" xml:"users,omitempty" yaml:"users,omitempty"`
-	refEmailAddress map[string]*User
-	refUsername     map[string]*User
-	refID           map[string]*User
-	refAPIKey       map[string]*User
-	path            string
-	inMemory        bool
+	state              *state.Record
+	mu                 *sync.RWMutex
+	Version            string    `json:"version,omitempty" xml:"version,omitempty" yaml:"version,omitempty"`
+	Policy             Policy    `json:"policy,omitempty" xml:"policy,omitempty" yaml:"policy,omitempty"`
+	Revision           uint64    `json:"revision,omitempty" xml:"revision,omitempty" yaml:"revision,omitempty"`
+	LastModified       time.Time `json:"last_modified,omitempty" xml:"last_modified,omitempty" yaml:"last_modified,omitempty"`
+	LoadedAt           time.Time `json:"loaded_at,omitempty" xml:"loaded_at,omitempty" yaml:"loaded_at,omitempty"`
+	Users              []*User   `json:"users,omitempty" xml:"users,omitempty" yaml:"users,omitempty"`
+	refEmailAddress    map[string]*User
+	refUsername        map[string]*User
+	refID              map[string]*User
+	refAPIKey          map[string]*User
+	refExternalAccount map[externalAccountKey]*User
+	path               string
+	inMemory           bool
 }
 
 // NewDatabase return an instance of Database.
@@ -141,12 +142,18 @@ func NewDatabase(fp string) (*Database, error) {
 		refAPIKey:       make(map[string]*User),
 		inMemory:        fp == ":memory:",
 	}
-	fileInfo, err := os.Stat(fp)
-	if err != nil {
+	// The memory sentinel is a storage mode, never a filesystem path. A file,
+	// directory or symlink with that name must not seed a private identity store.
+	var fileInfo os.FileInfo
+	var err error
+	if !db.inMemory {
+		fileInfo, err = os.Stat(fp)
+		if err != nil && !os.IsNotExist(err) {
+			return nil, errors.ErrNewDatabase.WithArgs(fp, err)
+		}
+	}
+	if db.inMemory || os.IsNotExist(err) {
 		if !db.inMemory {
-			if !os.IsNotExist(err) {
-				return nil, errors.ErrNewDatabase.WithArgs(fp, err)
-			}
 			if err := os.MkdirAll(filepath.Dir(fp), 0700); err != nil {
 				return nil, errors.ErrNewDatabase.WithArgs(fp, err)
 			}
@@ -209,6 +216,9 @@ func NewDatabase(fp string) (*Database, error) {
 			}
 			db.refAPIKey[apiKey.Prefix] = user
 		}
+	}
+	if err := db.indexExternalAccounts(); err != nil {
+		return nil, err
 	}
 	db.LoadedAt = time.Now().UTC()
 	return db, nil
@@ -524,6 +534,9 @@ func (db *Database) DeleteUser(r *requests.Request) error {
 		return errors.ErrDeleteUser.WithArgs(r.User.Username, err)
 	}
 
+	for _, account := range user.ExternalAccounts {
+		delete(db.refExternalAccount, account.key())
+	}
 	delete(db.refID, user.ID)
 	delete(db.refUsername, strings.ToLower(user.Username))
 	for _, email := range user.EmailAddresses {
@@ -554,6 +567,9 @@ func (db *Database) DisableUser(r *requests.Request) error {
 		return errors.ErrUpdateUser.WithArgs(r.User.Username, err)
 	}
 
+	for _, account := range user.ExternalAccounts {
+		delete(db.refExternalAccount, account.key())
+	}
 	delete(db.refID, user.ID)
 	delete(db.refUsername, strings.ToLower(user.Username))
 	for _, email := range user.EmailAddresses {
@@ -575,7 +591,7 @@ func (db *Database) DisableUser(r *requests.Request) error {
 	return nil
 }
 
-// EnableUser disables a user by user id.
+// EnableUser enables a disabled user selected by its stored username and email.
 func (db *Database) EnableUser(r *requests.Request) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -586,7 +602,9 @@ func (db *Database) EnableUser(r *requests.Request) error {
 		if u.Username != r.User.Username {
 			continue
 		}
-		matchedEmail := false
+		// Automatically provisioned accounts have no local email aliases.
+		// Upstream display email is never a local account selector.
+		matchedEmail := u.ExternallyProvisioned && len(u.EmailAddresses) == 0 && r.User.Email == ""
 		for _, addr := range u.EmailAddresses {
 			if addr.Address != r.User.Email {
 				continue
@@ -1051,6 +1069,9 @@ func (db *Database) validateUserIdentity(username, email string) (*User, error) 
 	user1, err := db.getUserByUsername(username)
 	if err != nil {
 		return nil, err
+	}
+	if user1.ExternallyProvisioned && email == "" && len(user1.EmailAddresses) == 0 {
+		return user1, nil
 	}
 	user2, err := db.getUserByEmailAddress(email)
 	if err != nil {
@@ -1590,7 +1611,7 @@ func (db *Database) indexMfaMutationSnapshot() error {
 			db.refAPIKey[key.Prefix] = user
 		}
 	}
-	return nil
+	return db.indexExternalAccounts()
 }
 
 func (db *Database) adoptMfaMutationSnapshot(target *Database) {
@@ -1603,6 +1624,7 @@ func (db *Database) adoptMfaMutationSnapshot(target *Database) {
 	db.refID = target.refID
 	db.refEmailAddress = target.refEmailAddress
 	db.refAPIKey = target.refAPIKey
+	db.refExternalAccount = target.refExternalAccount
 }
 
 func (db *Database) validateMfaTokenMutationEvidence(proof requests.AuthenticationEvidence, user *User) (bool, error) {

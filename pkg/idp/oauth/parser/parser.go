@@ -23,6 +23,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
+	attachmentparser "github.com/greenpau/go-authcrunch/pkg/identity/attachment/parser"
 	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
@@ -72,6 +73,18 @@ func NewOAuthIdentityProviderConfigFromDirectives(name string, statements []stri
 		args, err := cfgutil.DecodeArgs(statement)
 		if err != nil || len(args) == 0 || slices.Contains(args, "") {
 			return nil, fmt.Errorf("invalid OAuth identity provider directive at line %d", line)
+		}
+		if args[0] == "attach" {
+			if seen["attachment"] {
+				return nil, fmt.Errorf("duplicate OAuth identity attachment")
+			}
+			attachment, err := attachmentparser.NewIdentityAttachmentConfigFromDirectives([]string{statement})
+			if err != nil {
+				return nil, err
+			}
+			config.Attachment = attachment
+			seen["attachment"] = true
+			continue
 		}
 		if args[0] == "jwks" {
 			if len(args) != 4 || args[1] != "key" || strings.TrimSpace(args[2]) == "" || strings.TrimSpace(args[3]) == "" {

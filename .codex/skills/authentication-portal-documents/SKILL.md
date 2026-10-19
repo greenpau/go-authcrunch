@@ -45,7 +45,10 @@ forward secrecy. Revocation cannot erase plaintext or keys already copied.
 
 An access JWT alone is insufficient. Require a valid portal JWT, current stored
 browser login session, configured realm, portal user/admin role and immutable
-login evidence. The store must implement `WithRefreshIdentity`; operations run
+login evidence. Require the exact validated token in the cached session, both
+at admission and again inside the identity callback. `jti` alone can identify
+a newer account's login after the same browser switches accounts; reject an
+earlier token with 401. The store must implement `WithRefreshIdentity`; operations run
 inside that callback so credential revocation and identity changes cannot race
 the database operation. Body reads happen before the identity lock. Responses
 are published only after both identity callback and document transaction return.
@@ -71,10 +74,11 @@ UUID gets 403, even after reset or restart. This immutable reservation prevents
 cross-store collisions and check/use races. `MaxKeys` separately bounds active
 key registrations and permanent identity reservations (including admitted users
 who have not enrolled keys). Reset does not free reservations. Store consumers
-must authenticate/revalidate and bind the identity before any operation. Future
-OAuth/SAML-to-local account linking belongs to a separate change; it must resolve
-the authoritative local record and reuse its ID and source, not create another
-Documents identity namespace.
+must authenticate/revalidate and bind the identity before any operation.
+External-account attachment now resolves an authoritative local record, but
+external login alone still does not grant Documents authority. A completed
+local login supplies the canonical ID and source; never create a separate
+Documents namespace from provider claims.
 
 All Documents descendants stay with this handler before legacy suffix dispatch,
 including unknown children ending in `/api/logout` or `/api/profile`. Exact

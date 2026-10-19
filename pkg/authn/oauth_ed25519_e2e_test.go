@@ -265,16 +265,18 @@ func (f *oidcE2EIssuer) serve(t *testing.T, w http.ResponseWriter, r *http.Reque
 }
 
 type oidcE2EPortal struct {
-	server *httptest.Server
-	client *http.Client
-	base   string
-	realm  string
-	issuer *oidcE2EIssuer
+	databasePath string
+	server       *httptest.Server
+	client       *http.Client
+	base         string
+	realm        string
+	issuer       *oidcE2EIssuer
 }
 
 type oidcE2ETrustConfig struct {
 	issuer, audience, identityCookie, realm, sandboxCookie string
 	nonceDisabled                                          bool
+	attached                                               bool
 	configurePortal                                        func(*authn.PortalConfig)
 	loginRedirects                                         []*redirects.RedirectURIMatchConfig
 }
@@ -336,6 +338,9 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 		settings.realm = "upstream"
 	}
 	add("realm", settings.realm)
+	if settings.attached {
+		add("attach", "to", "local", "identity", "store", "local")
+	}
 	if settings.issuer != "" {
 		add("issuer", settings.issuer)
 	}
@@ -414,6 +419,7 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 	if err != nil {
 		t.Fatal("construct OAuth E2E gatekeeper", err)
 	}
+	t.Cleanup(gatekeeper.Close)
 	server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/protected" {
 			ar := requests.NewAuthorizationRequest()
@@ -451,7 +457,7 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 	transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}}
 	t.Cleanup(transport.CloseIdleConnections)
 	client := &http.Client{Transport: transport, Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return &oidcE2EPortal{server: server, client: client, base: base, realm: settings.realm, issuer: issuer}
+	return &oidcE2EPortal{databasePath: db, server: server, client: client, base: base, realm: settings.realm, issuer: issuer}
 }
 
 func (p *oidcE2EPortal) login(t *testing.T, want int) (string, http.Header) {

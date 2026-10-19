@@ -90,6 +90,10 @@ func profileAuthChallengeTestPortal(t *testing.T, actions []string) *Portal {
 }
 
 func TestProfileAuthChallengePolicy(t *testing.T) {
+	password, err := identity.NewPassword("profile-policy-fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, tc := range []struct {
 		name, source                          string
 		rules, actions, effective, additional []string
@@ -109,7 +113,7 @@ func TestProfileAuthChallengePolicy(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p := profileAuthChallengeTestPortal(t, tc.actions)
-			current := &identity.User{Username: "alice", AuthChallengeRules: tc.rules, MfaTokens: tc.tokens, EmailAddresses: []*identity.EmailAddress{{Address: "alice@example.test"}}}
+			current := &identity.User{Username: "alice", Passwords: []*identity.Password{password}, AuthChallengeRules: tc.rules, MfaTokens: tc.tokens, EmailAddresses: []*identity.EmailAddress{{Address: "alice@example.test"}}}
 			usr := &user.User{Authenticator: user.Authenticator{Name: "database", Realm: "local", Method: "local"}}
 			rr := requests.NewRequest()
 			rr.Upstream.BasePath = "/auth"
@@ -158,6 +162,10 @@ func (s *profileAuthChallengeTestStore) Request(op operator.Type, rr *requests.R
 }
 
 func TestProfileAuthChallengeHandlers(t *testing.T) {
+	password, err := identity.NewPassword("profile-handler-fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, tc := range []struct {
 		name              string
 		fetch             bool
@@ -183,6 +191,9 @@ func TestProfileAuthChallengeHandlers(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p := profileAuthChallengeTestPortal(t, nil)
 			store := &profileAuthChallengeTestStore{current: tc.current, readErr: tc.readErr, writeErr: tc.writeErr}
+			if current, ok := tc.current.(*identity.User); ok && current != nil {
+				current.Passwords = []*identity.Password{password}
+			}
 			before, _ := json.Marshal(tc.current)
 			usr := &user.User{Authenticator: user.Authenticator{Name: "database", Realm: "local", Method: "local"}}
 			r := httptest.NewRequest(http.MethodPost, "https://portal.example.test/auth/api/profile", nil)

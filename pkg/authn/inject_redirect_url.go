@@ -42,7 +42,7 @@ func (p *Portal) loginReturnURL(r *http.Request, rr *requests.Request) string {
 	if !present {
 		return ""
 	}
-	returnURL := p.trustedLoginReturnURL(value)
+	returnURL := p.trustedLoginFlowReturnURL(r, value)
 	if returnURL == "" {
 		p.logger.Debug(
 			"login flow destination is not trusted, ignoring",
@@ -109,7 +109,10 @@ func loginPageLocation(returnURL string, fresh bool) string {
 // hasPortalSession reports whether usr holds this portal's session, which the
 // portal pages require of a signed-in browser.
 func (p *Portal) hasPortalSession(usr *user.User) bool {
-	_, err := p.sessions.Get(usr.Claims.ID)
+	if usr == nil || usr.Claims == nil {
+		return false
+	}
+	_, err := p.sessions.GetForToken(usr.Claims.ID, usr.Token)
 	return err == nil
 }
 

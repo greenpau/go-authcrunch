@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
@@ -32,6 +34,9 @@ import (
 // callers must deliver tokens and modify sessions only after the callback ends.
 func (p *Portal) withDirectAuthenticationIdentity(ctx context.Context, rr *requests.Request, apply func() error) error {
 	backend := p.getIdentityStoreByRealm(rr.Upstream.Realm)
+	if consumer, ok := backend.(attachment.Consumer); ok {
+		return p.withDirectConnectedIdentity(ctx, rr, backend, consumer.IdentityAttachment(), apply)
+	}
 	store, ok := backend.(refreshIdentityStore)
 	if !ok {
 		// Other stores retain their existing authentication contract.
@@ -51,6 +56,32 @@ func (p *Portal) withDirectAuthenticationIdentity(ctx context.Context, rr *reque
 		rr.User.Challenges = append([]string(nil), current.Challenges...)
 		rr.User.AuthMethods = append([]string(nil), current.AuthMethods...)
 		rr.User.AuthChallengePolicy = current.AuthChallengePolicy
+		return apply()
+	})
+	if errors.Is(err, identity.ErrRefreshIdentityDenied) {
+		rr.Response.Code = http.StatusUnauthorized
+	} else if err != nil && rr.Response.Code < http.StatusBadRequest {
+		rr.Response.Code = http.StatusInternalServerError
+	}
+	return err
+}
+
+// A directory password proves its upstream account, not any local factor on
+// the attached identity. Keep the current local policy and signing atomic.
+func (p *Portal) withDirectConnectedIdentity(ctx context.Context, rr *requests.Request, backend ids.IdentityStore, a *attachment.Attachment, apply func() error) error {
+	proof := rr.ExternalIdentity
+	if a == nil || proof.Provider != backend.GetName() || proof.Kind != backend.GetKind() || proof.Evidence.UserID == "" {
+		rr.Response.Code = http.StatusUnauthorized
+		return identity.ErrExternalAccountDenied
+	}
+	store, err := a.Store()
+	if err != nil {
+		rr.Response.Code = http.StatusServiceUnavailable
+		return err
+	}
+	err = store.WithRefreshIdentity(ctx, proof.Evidence, func(current identity.RefreshIdentity) error {
+		rr.User.Roles = append(slices.Clone(rr.User.Roles), current.Roles...)
+		applyExternalAccountPolicy(rr, current)
 		return apply()
 	})
 	if errors.Is(err, identity.ErrRefreshIdentityDenied) {
@@ -87,6 +118,13 @@ func (p *Portal) issueDirectAuthenticationToken(ctx context.Context, rr *request
 		delete(claims, "amr")
 		if slices.Contains(completed, "password") {
 			claims["amr"] = []string{"pwd"}
+		}
+		if rr.Authentication.UserID != "" {
+			claims["id"] = rr.Authentication.UserID
+		}
+		if rr.ExternalIdentity.Evidence.UserID != "" {
+			claims["id"] = rr.ExternalIdentity.Evidence.UserID
+			claims["amr"] = []string{"federated"}
 		}
 		injectPortalRoles(claims, p.config)
 		var err error

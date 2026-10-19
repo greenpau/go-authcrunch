@@ -9,7 +9,8 @@ get:
     provider, registration and cross-device links carry it; password forms retain fresh=1, and the continuation page returns to it after a refresh, removing
     the shared cookie only when it holds the same destination. Except on a fresh login, the page script
     polls whoami with probe=login while visible and then leaves for that destination, or the portal. A
-    signed-in GET with a trusted redirect_url, without fresh=1 and with a stored portal session receives
+    signed-in GET with a trusted redirect_url, without fresh=1 and with a stored portal session matching
+    the exact validated access token receives
     303 to that destination without the shared cookie; any other signed-in GET redirects to the portal,
     which consumes the cookie only when no explicit flow destination was supplied. Empty or rejected redirect_url values explicitly select the portal.
     Filesystem themes can preserve GET navigation, including submit-button method overrides,
@@ -54,6 +55,11 @@ post:
     challenge with the latest sandbox secret. Access-only success returns a bearer token but does not
     establish the stored browser session required by profile operations.
 
+    Disabled or expired local passwords remain required by the default login policy and cannot authenticate.
+    Their unavailability does not turn password-plus-MFA into MFA-only login. A stored or configured explicit
+    passwordless policy can select another registered factor. Automatically provisioned external identities
+    with no local password history have no default local password requirement.
+
 
     Refresh requires an enabled participating local realm. The default browser transport delivers credentials
     in HttpOnly cookies. Native clients explicitly send refresh_transport: body at EVERY checkpoint, require
@@ -67,6 +73,12 @@ post:
     to that destination instead of a new login. Sandbox creation/policy errors can render HTML even when JSON was requested. Check response
     Content-Type before decoding. MFA selection uses a TOTP code directly or the literal webauthn, followed
     by its signed assertion; see LoginWebAuthnOptions.
+
+
+    LDAP verifies the directory password before resolving or automatically creating the attached local
+    identity. Its token id is the local account ID. Registered MFA and explicit challenge policies on a
+    connected local account apply after the directory password; JSON clients keep their directory realm
+    and username while submitting the next returned challenge. Email equality never connects accounts.
 
 
     JSON routing is selected by the exact Accept value application/json or format=json. Once selected,

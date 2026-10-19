@@ -30,6 +30,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
@@ -57,6 +58,14 @@ func TestE2EAuthenticationChallengeDirectTransaction(t *testing.T) {
 		for _, mutation := range []string{"unchanged", "policy after identification", "policy after verification", "roles after identification", "credential revoked after verification", "account disabled after verification", "account replaced after verification"} {
 			t.Run(flow+"/"+mutation, func(t *testing.T) {
 				f, backend, _ := newLoginIdentityE2E(t, false, false, false, "")
+				identified := &requests.Request{User: requests.User{Username: "alice"}}
+				if err := backend.Request(operator.IdentifyUser, identified); err != nil {
+					t.Fatal(err)
+				}
+				wantID := identified.Authentication.UserID
+				if wantID == "" {
+					t.Fatal("fixture did not identify the local account")
+				}
 				const apiKey = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzAB"
 				key := &requests.Request{User: requests.User{Username: "alice", Email: "alice@example.test"}, Key: requests.Key{Payload: apiKey, Usage: "api", Comment: "transaction regression"}}
 				if err := backend.Request(operator.AddAPIKey, key); err != nil {
@@ -118,6 +127,7 @@ func TestE2EAuthenticationChallengeDirectTransaction(t *testing.T) {
 				}
 				cfg := &authn.PortalConfig{Name: "direct-transaction", IdentityStores: []string{store.GetName()}, RawCryptoKeyStoreConfig: []string{e2eRSAKey}}
 				challengeSystemConfig(cfg)
+				cfg.UserTransformerConfigs = append(cfg.UserTransformerConfigs, &transformer.Config{Matchers: []string{"exact match realm local"}, Actions: []string{"add id transformed-id as string"}})
 				authenticationChallengeConfig(t, []string{"match role stepup", "require totp"})(cfg)
 				portal, err := authn.NewPortal(authn.PortalParameters{Config: cfg, Logger: zap.NewNop(), IdentityStores: []ids.IdentityStore{store}})
 				if err != nil {
@@ -203,7 +213,9 @@ func TestE2EAuthenticationChallengeDirectTransaction(t *testing.T) {
 				var token string
 				switch flow {
 				case "system basic", "system API key":
-					challengeSystemClaims(t, payload)
+					if challengeSystemClaims(t, payload)["id"] != wantID {
+						t.Fatal("system authentication did not preserve the local immutable ID")
+					}
 					return
 				case "HTTP basic":
 					token = strings.TrimPrefix(response.Header.Get("Authorization"), "Bearer ")
@@ -217,6 +229,9 @@ func TestE2EAuthenticationChallengeDirectTransaction(t *testing.T) {
 					token = string(payload)
 				}
 				claims := loginIdentityClaims(t, f, token, "alice")
+				if claims["id"] != wantID {
+					t.Fatal("direct authentication did not preserve the local immutable ID")
+				}
 				if isKey && claims["amr"] != nil {
 					t.Fatal("API key acquired password or MFA evidence")
 				}

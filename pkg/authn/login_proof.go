@@ -47,7 +47,14 @@ func (p *Portal) recordLoginEvidence(u *user.User, rr *requests.Request, before 
 	if passedCheckpointCount(u) <= before {
 		return nil
 	}
+	if rr.ExternalIdentity.Evidence.UserID != "" {
+		u.ExternalIdentity = rr.ExternalIdentity
+		u.ExternalClaims = map[string]any{"sub": u.LoginUsername, "email": u.LoginEmail, "name": rr.User.FullName, "roles": append([]string(nil), rr.User.Roles...)}
+	}
 	var methods []string
+	if u.ExternalIdentity.Evidence.UserID != "" {
+		methods = append(methods, "federated")
+	}
 	for _, c := range u.Checkpoints {
 		if !c.Passed {
 			continue
@@ -75,5 +82,8 @@ func (p *Portal) recordLoginEvidence(u *user.User, rr *requests.Request, before 
 		}
 	}
 	u.LoginMethods = methods
+	if rr.ExternalIdentity.Kind == "ldap" && u.Authenticator.Method == "ldap" {
+		return p.advanceConnectedLDAP(u, rr)
+	}
 	return nil
 }

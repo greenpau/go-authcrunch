@@ -17,6 +17,7 @@ package idp
 import (
 	"context"
 	"fmt"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -59,9 +60,10 @@ func (i *LoginIdentity) Validate() error {
 // exact callback path, Secure, HttpOnly, host-only scope, and SameSite Lax or
 // Strict. All fields are runtime-only.
 type HTTPLoginResult struct {
-	RedirectURL string         `json:"-" xml:"-" yaml:"-"`
-	Identity    *LoginIdentity `json:"-" xml:"-" yaml:"-"`
-	Cookie      *http.Cookie   `json:"-" xml:"-" yaml:"-"`
+	ExternalIdentity requests.ExternalIdentity `json:"-" xml:"-" yaml:"-"`
+	RedirectURL      string                    `json:"-" xml:"-" yaml:"-"`
+	Identity         *LoginIdentity            `json:"-" xml:"-" yaml:"-"`
+	Cookie           *http.Cookie              `json:"-" xml:"-" yaml:"-"`
 }
 
 // HTTPLoginProvider optionally authenticates an injected IdentityProvider at

@@ -3504,5 +3504,159 @@
             "ar": "تعذر إكمال الطلب",
             "ru": "Не удалось выполнить запрос"
         }
+    },
+    {
+        "id": "connected_accounts_title",
+        "description": "connected accounts title.",
+        "other": {
+            "en": "Connected accounts",
+            "de": "Verknüpfte Konten",
+            "fr": "Comptes associés",
+            "ja": "連携アカウント",
+            "zh": "关联账户",
+            "he": "חשבונות מקושרים",
+            "ar": "الحسابات المرتبطة",
+            "ru": "Связанные учётные записи"
+        }
+    },
+    {
+        "id": "connected_accounts_automatic",
+        "description": "connected accounts automatic.",
+        "other": {
+            "en": "Your external sign-in already has a local identity.",
+            "de": "Ihre externe Anmeldung hat bereits eine lokale Identität.",
+            "fr": "Votre connexion externe possède déjà une identité locale.",
+            "ja": "外部アカウントでのサインインには、すでにローカルIDが作成されています。",
+            "zh": "您的外部登录已拥有本地身份。",
+            "he": "לכניסה החיצונית שלך כבר יש זהות מקומית.",
+            "ar": "تم إنشاء هوية محلية لتسجيل دخولك الخارجي.",
+            "ru": "Для вашего внешнего входа уже создана локальная учётная запись."
+        }
+    },
+    {
+        "id": "connected_accounts_connect",
+        "description": "connected accounts connect.",
+        "other": {
+            "en": "Connect to an existing account",
+            "de": "Mit einem bestehenden Konto verknüpfen",
+            "fr": "Associer à un compte existant",
+            "ja": "既存のアカウントに連携",
+            "zh": "关联到现有账户",
+            "he": "קישור לחשבון קיים",
+            "ar": "الربط بحساب موجود",
+            "ru": "Связать с существующей учётной записью"
+        }
+    },
+    {
+        "id": "connected_accounts_instruction",
+        "description": "connected accounts instruction.",
+        "other": {
+            "en": "Sign in to the local account, then confirm the connection.",
+            "de": "Melden Sie sich beim lokalen Konto an und bestätigen Sie dann die Verknüpfung.",
+            "fr": "Connectez-vous au compte local, puis confirmez l’association.",
+            "ja": "ローカルアカウントにサインインしてから、連携を確認してください。",
+            "zh": "请登录本地账户，然后确认关联。",
+            "he": "יש להיכנס לחשבון המקומי ואז לאשר את הקישור.",
+            "ar": "سجّل الدخول إلى الحساب المحلي، ثم أكّد الربط.",
+            "ru": "Войдите в локальную учётную запись и подтвердите связь."
+        }
+    },
+    {
+        "id": "connected_accounts_confirm",
+        "description": "connected accounts confirm.",
+        "other": {
+            "en": "Confirm connection",
+            "de": "Verknüpfung bestätigen",
+            "fr": "Confirmer l’association",
+            "ja": "連携を確認",
+            "zh": "确认关联",
+            "he": "אישור הקישור",
+            "ar": "تأكيد الربط",
+            "ru": "Подтвердить связь"
+        }
+    },
+    {
+        "id": "connected_accounts_target",
+        "description": "connected accounts target.",
+        "other": {
+            "en": "Connect this external sign-in to the following local account:",
+            "de": "Diese externe Anmeldung mit folgendem lokalen Konto verknüpfen:",
+            "fr": "Associer cette connexion externe au compte local suivant :",
+            "ja": "この外部サインインを次のローカルアカウントに連携します：",
+            "zh": "将此外部登录关联到以下本地账户：",
+            "he": "קישור הכניסה החיצונית לחשבון המקומי הבא:",
+            "ar": "ربط تسجيل الدخول الخارجي بالحساب المحلي التالي:",
+            "ru": "Связать этот внешний вход со следующей локальной учётной записью:"
+        }
+    },
+    {
+        "id": "connected_accounts_no_merge",
+        "description": "connected accounts no merge.",
+        "other": {
+            "en": "Future sign-ins will use this local identity. Profile data and files from the automatically created identity stay with that identity.",
+            "de": "Künftige Anmeldungen verwenden diese lokale Identität. Profildaten und Dateien der automatisch erstellten Identität bleiben bei dieser Identität.",
+            "fr": "Les prochaines connexions utiliseront cette identité locale. Les données de profil et les fichiers de l’identité créée automatiquement restent associés à celle-ci.",
+            "ja": "今後のサインインではこのローカルIDを使用します。自動作成されたIDのプロフィールデータとファイルは、元のIDに残ります。",
+            "zh": "今后的登录将使用此本地身份。自动创建的身份中的个人资料和文件仍保留在原身份中。",
+            "he": "כניסות עתידיות ישתמשו בזהות המקומית הזו. נתוני הפרופיל והקבצים של הזהות שנוצרה אוטומטית יישארו משויכים אליה.",
+            "ar": "ستستخدم عمليات تسجيل الدخول القادمة هذه الهوية المحلية. ستبقى بيانات الملف الشخصي وملفات الهوية المنشأة تلقائيًا مرتبطة بتلك الهوية.",
+            "ru": "При следующих входах будет использоваться эта локальная учётная запись. Данные профиля и файлы автоматически созданной записи останутся в ней."
+        }
+    },
+    {
+        "id": "connected_accounts_done",
+        "description": "connected accounts done.",
+        "other": {
+            "en": "Account connected. Sign in again to use the updated account.",
+            "de": "Konto verknüpft. Melden Sie sich erneut an, um das aktualisierte Konto zu verwenden.",
+            "fr": "Compte associé. Reconnectez-vous pour utiliser le compte mis à jour.",
+            "ja": "アカウントを連携しました。更新されたアカウントを使用するには、再度サインインしてください。",
+            "zh": "账户已关联。请重新登录以使用更新后的账户。",
+            "he": "החשבון קושר. יש להיכנס שוב כדי להשתמש בחשבון המעודכן.",
+            "ar": "تم ربط الحساب. سجّل الدخول مجددًا لاستخدام الحساب المحدّث.",
+            "ru": "Учётная запись связана. Войдите снова, чтобы использовать обновлённую запись."
+        }
+    },
+    {
+        "id": "connected_accounts_reauthenticate",
+        "description": "connected accounts reauthenticate.",
+        "other": {
+            "en": "Sign in with your external account again before making a connection.",
+            "de": "Melden Sie sich vor der Verknüpfung erneut mit Ihrem externen Konto an.",
+            "fr": "Reconnectez-vous avec votre compte externe avant de créer une association.",
+            "ja": "連携する前に、外部アカウントで再度サインインしてください。",
+            "zh": "请先使用外部账户重新登录，再进行关联。",
+            "he": "לפני יצירת קישור יש להיכנס שוב עם החשבון החיצוני.",
+            "ar": "سجّل الدخول مجددًا بحسابك الخارجي قبل إنشاء الربط.",
+            "ru": "Перед созданием связи снова войдите через внешнюю учётную запись."
+        }
+    },
+    {
+        "id": "connected_accounts_empty",
+        "description": "connected accounts empty.",
+        "other": {
+            "en": "No external accounts connected yet.",
+            "de": "Noch keine externen Konten verknüpft.",
+            "fr": "Aucun compte externe associé pour le moment.",
+            "ja": "外部アカウントはまだ連携されていません。",
+            "zh": "尚未关联外部账户。",
+            "he": "עדיין לא קושרו חשבונות חיצוניים.",
+            "ar": "لا توجد حسابات خارجية مرتبطة بعد.",
+            "ru": "Внешние учётные записи пока не связаны."
+        }
+    },
+    {
+        "id": "connected_accounts_add",
+        "description": "connected accounts add.",
+        "other": {
+            "en": "To add another account, sign in with that provider and open Connected accounts.",
+            "de": "Um ein weiteres Konto hinzuzufügen, melden Sie sich bei diesem Anbieter an und öffnen Sie Verknüpfte Konten.",
+            "fr": "Pour ajouter un autre compte, connectez-vous avec ce fournisseur et ouvrez Comptes associés.",
+            "ja": "別のアカウントを追加するには、そのプロバイダーでサインインし、「連携アカウント」を開いてください。",
+            "zh": "要添加其他账户，请使用相应提供方登录，然后打开“关联账户”。",
+            "he": "כדי להוסיף חשבון נוסף, יש להיכנס דרך הספק שלו ולפתוח את החשבונות המקושרים.",
+            "ar": "لإضافة حساب آخر، سجّل الدخول عبر موفّره وافتح الحسابات المرتبطة.",
+            "ru": "Чтобы добавить другую учётную запись, войдите через её провайдера и откройте «Связанные учётные записи»."
+        }
     }
 ]

@@ -31,7 +31,7 @@ func TestNewStaticAssetLibrary(t *testing.T) {
 		t.Fatal("Expected StaticAssetLibrary instance, got nil")
 	}
 
-	wantCount := 92
+	wantCount := 93
 	gotCount := sal.GetAssetCount()
 	if gotCount != wantCount {
 		t.Errorf("Expected asset count %d, got %d", wantCount, gotCount)
@@ -42,6 +42,7 @@ func TestNewStaticAssetLibrary(t *testing.T) {
 		"assets/css/apps_mobile_access.css",
 		"assets/css/apps_sso.css",
 		"assets/css/basic.css",
+		"assets/css/connected_accounts.css",
 		"assets/css/generic.css",
 		"assets/css/login.css",
 		"assets/css/mfa_app.css",
@@ -173,6 +174,7 @@ func TestNewStaticAssetLibrary(t *testing.T) {
 		"assets/css/apps_mobile_access.css":                               "text/css",
 		"assets/css/apps_sso.css":                                         "text/css",
 		"assets/css/basic.css":                                            "text/css",
+		"assets/css/connected_accounts.css":                               "text/css",
 		"assets/css/generic.css":                                          "text/css",
 		"assets/css/login.css":                                            "text/css",
 		"assets/css/oidc.css":                                             "text/css",

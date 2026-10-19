@@ -41,7 +41,20 @@ const maxOAuthResponseSize = 1 << 20
 // Authenticate performs authentication. The embedding application must supply
 // Upstream.SessionID from a protected, distinct per-browser cookie on both the
 // initiating request and the callback; a shared correlation ID is insufficient.
-func (b *IdentityProvider) Authenticate(r *requests.Request) error {
+func (b *IdentityProvider) Authenticate(r *requests.Request) (err error) {
+	r.ExternalIdentity = requests.ExternalIdentity{}
+	defer func() {
+		if err == nil && r.Response.Code == http.StatusOK {
+			if r.ExternalIdentity.Issuer == "" {
+				r.ExternalIdentity.Issuer = b.authorizationURL
+			}
+			err = b.attachment.Authenticate(r.Upstream.Request.Context(), r, b.GetName(), providerKind)
+		}
+		if err != nil {
+			r.ExternalIdentity = requests.ExternalIdentity{}
+		}
+	}()
+
 	// Delayed discovery publishes endpoints and issuer together. Do not read
 	// partially configured metadata while its background initialization runs.
 	if b.closed.Load() || (b.configured.Load() && !b.ready.Load()) {
@@ -120,12 +133,12 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 
 			switch b.config.Driver {
 			case "github", "gitlab", "facebook", "discord", "linkedin":
-				m, err = b.fetchClaims(accessToken)
+				m, err = b.fetchClaims(accessToken, &r.ExternalIdentity)
 				if err != nil {
 					return errors.ErrIdentityProviderOauthFetchClaimsFailed.WithArgs(err)
 				}
 			default:
-				m, err = b.validateAccessToken(r.Upstream.Request.Context(), reqParams.state, accessToken)
+				m, err = b.validateAccessToken(r.Upstream.Request.Context(), reqParams.state, accessToken, &r.ExternalIdentity)
 				if err != nil {
 					return errors.ErrIdentityProviderOauthValidateAccessTokenFailed.WithArgs(err)
 				}
@@ -172,7 +185,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 				"access_token": reqParams.accessToken,
 				"id_token":     reqParams.idToken,
 			}
-			m, err := b.validateAccessToken(r.Upstream.Request.Context(), reqParams.state, accessToken)
+			m, err := b.validateAccessToken(r.Upstream.Request.Context(), reqParams.state, accessToken, &r.ExternalIdentity)
 			if err != nil {
 				return errors.ErrIdentityProviderOauthValidateAccessTokenFailed.WithArgs(err)
 			}

@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -35,11 +36,83 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	transformerparser "github.com/greenpau/go-authcrunch/pkg/authn/transformer/parser"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
 )
 
 var authenticationChallengeChain = []string{"require auth challenges u2f", "require auth challenges password totp if u2f not available", "require auth challenges password if u2f and totp not available"}
+
+func TestE2EDefaultChallengesKeepUnavailablePassword(t *testing.T) {
+	for _, state := range []string{"disabled", "expired"} {
+		t.Run(state, func(t *testing.T) {
+			f, store, _ := newLoginIdentityConfiguredE2E(t, false, false, true, "", func(cfg *authn.PortalConfig) {
+				cfg.UserTransformerConfigs = nil
+			})
+			// Load a supported persisted credential state, without changing its
+			// challenge policy or accessing the portal's private session state.
+			path := store.GetConfig()["path"].(string)
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var snapshot identity.Database
+			if err := json.Unmarshal(data, &snapshot); err != nil {
+				t.Fatal(err)
+			}
+			for _, u := range snapshot.Users {
+				if u.Username == "alice" {
+					for _, password := range u.Passwords {
+						password.Disabled, password.Expired = state == "disabled", state == "expired"
+					}
+					u.CredentialVersion++
+				}
+			}
+			snapshot.Revision++
+			data, err = json.Marshal(snapshot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, data, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := store.Reload(); err != nil {
+				t.Fatal(err)
+			}
+			origin := http.Header{"Origin": {f.server.URL}}
+			req := apiauth.AuthRequest{Username: "alice", Realm: "local"}
+			start := loginIdentityResponse(t, f.jsonRequest(t, "/login", req, "", origin))
+			if start.NextChallenge == "totp" {
+				token := authenticationChallengeLogin(t, f, "json", []string{"totp"}, nil, "")
+				loginIdentityClaims(t, f, token, "alice")
+				t.Fatal("unavailable password allowed a signed TOTP-only login without an explicit policy")
+			}
+			if start.Authenticated || start.NextChallenge != "password" {
+				t.Fatal("unavailable password removed its default checkpoint")
+			}
+			req.SandboxID, req.SandboxSecret = start.SandboxID, start.SandboxSecret
+			req.ChallengeKind, req.ChallengeResponse = "password", tests.TestPwd1
+			denied := f.jsonRequest(t, "/login", req, "", origin)
+			if denied.status < 400 || loginIdentityCookie(f, "AUTHP_ACCESS_TOKEN") != "" {
+				t.Fatalf("unavailable password authenticated: HTTP %d", denied.status)
+			}
+			// An explicit passwordless policy remains supported; credential
+			// availability by itself must never make this policy decision.
+			policy, err := challengeparser.NewAuthenticationChallengeConfigFromDirectives([]string{"totp"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := store.OverwriteUserAuthChallengeRules("alice", "alice@example.test", policy.Statements); err != nil {
+				t.Fatal(err)
+			}
+			token := authenticationChallengeLogin(t, f, "json", []string{"totp"}, nil, "")
+			claims := loginIdentityClaims(t, f, token, "alice")
+			if methods, _ := claims["amr"].([]any); len(methods) != 1 || methods[0] != "otp" {
+				t.Fatal("explicit TOTP policy claimed an unverified password")
+			}
+		})
+	}
+}
 
 func authenticationChallengeConfig(t *testing.T, rules []string) func(*authn.PortalConfig) {
 	t.Helper()

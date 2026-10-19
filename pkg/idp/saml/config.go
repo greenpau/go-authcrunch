@@ -16,12 +16,15 @@ package saml
 
 import (
 	"fmt"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 )
 
 // Config holds the configuration for the IdentityProvider.
 type Config struct {
+	Attachment *attachment.Config `json:"attachment,omitempty" xml:"attachment,omitempty" yaml:"attachment,omitempty"`
 	// Name is the unique name associated with the IdentityProvider.
 	Name string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	// Realm the authentication realm associated with the IdentityProvider.
@@ -59,6 +62,11 @@ type Config struct {
 
 // Validate validates identity store configuration.
 func (cfg *Config) Validate() error {
+	if cfg.Attachment != nil {
+		if err := cfg.Attachment.Validate(); err != nil {
+			return err
+		}
+	}
 	if cfg.Name == "" {
 		return errors.ErrIdentityProviderConfigureNameEmpty
 	}

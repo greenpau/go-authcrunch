@@ -16,14 +16,48 @@ package identity
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
 	"github.com/greenpau/go-authcrunch/pkg/authchal"
 )
 
+func TestGetRegisteredAuthMethodsPasswordAvailability(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		passwords []*Password
+		want      []string
+	}{
+		{name: "passwordless"},
+		{name: "nil entry", passwords: []*Password{nil}},
+		{name: "disabled", passwords: []*Password{{Hash: dummyPasswordHash, Disabled: true}}},
+		{name: "expired", passwords: []*Password{{Hash: dummyPasswordHash, Expired: true}}},
+		{name: "active", passwords: []*Password{nil, {Hash: dummyPasswordHash, Disabled: true}, {Hash: dummyPasswordHash}}, want: []string{authchal.PasswordKeyword}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			user := &User{Passwords: tc.passwords}
+			if got := user.GetRegisteredAuthMethods(); !slices.Equal(got, tc.want) {
+				t.Fatalf("registered methods %v; want %v", got, tc.want)
+			}
+			for _, external := range []bool{false, true} {
+				user.ExternallyProvisioned = external
+				want := []string{authchal.PasswordKeyword}
+				if external && len(tc.passwords) == 0 {
+					want = nil
+				}
+				got, err := user.GetChallenges()
+				if err != nil || !slices.Equal(got, want) {
+					t.Fatalf("default challenges %v, error %v; want %v (external=%t)", got, err, want, external)
+				}
+			}
+		})
+	}
+}
+
 func TestGetChallengesDisabledToken(t *testing.T) {
 	user := &User{
+		Passwords: []*Password{{Hash: dummyPasswordHash}},
 		MfaTokens: []*MfaToken{
 			{Type: "totp", Disabled: true},
 			{Type: "u2f"},
@@ -38,8 +72,39 @@ func TestGetChallengesDisabledToken(t *testing.T) {
 	tests.EvalObjectsWithLog(t, "challenges", want, got, msgs)
 }
 
+func TestDefaultChallengesKeepUnavailablePassword(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		password *Password
+	}{
+		{"disabled", &Password{Hash: dummyPasswordHash, Disabled: true}},
+		{"expired", &Password{Hash: dummyPasswordHash, Expired: true}},
+	} {
+		for _, external := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/external=%t", tc.name, external), func(t *testing.T) {
+				u := &User{ExternallyProvisioned: external, Passwords: []*Password{tc.password}, MfaTokens: []*MfaToken{{Type: "totp"}}}
+				if slices.Contains(u.GetRegisteredAuthMethods(), authchal.PasswordKeyword) {
+					t.Fatal("unavailable password counted as usable")
+				}
+				got, err := u.GetChallenges()
+				if err != nil || !slices.Equal(got, []string{"password", "totp"}) {
+					t.Fatalf("password removal weakened default challenges: %v, error %v", got, err)
+				}
+				if err := u.OverwriteAuthChallengeRules([]string{"totp"}); err != nil {
+					t.Fatal(err)
+				}
+				got, err = u.GetChallenges()
+				if err != nil || !slices.Equal(got, []string{"totp"}) {
+					t.Fatalf("explicit passwordless policy lost: %v, error %v", got, err)
+				}
+			})
+		}
+	}
+}
+
 func TestGetChallengesAllDisabled(t *testing.T) {
 	user := &User{
+		Passwords: []*Password{{Hash: dummyPasswordHash}},
 		MfaTokens: []*MfaToken{
 			{Type: "totp", Disabled: true},
 			{Type: "u2f", Disabled: true},
@@ -56,6 +121,7 @@ func TestGetChallengesAllDisabled(t *testing.T) {
 
 func TestGetChallengesWithRules(t *testing.T) {
 	user := &User{
+		Passwords: []*Password{{Hash: dummyPasswordHash}},
 		MfaTokens: []*MfaToken{
 			{Type: "u2f"},
 		},
@@ -89,6 +155,7 @@ func TestGetChallengesCorruptRuleReturnsError(t *testing.T) {
 
 func TestOverwriteAuthChallengeRules(t *testing.T) {
 	user := &User{
+		Passwords: []*Password{{Hash: dummyPasswordHash}},
 		MfaTokens: []*MfaToken{{Type: "u2f"}},
 	}
 	if err := user.OverwriteAuthChallengeRules([]string{"u2f", "password if u2f not available"}); err != nil {
@@ -147,7 +214,7 @@ func TestGetChallengesEmail(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			msgs := []string{fmt.Sprintf("test name: %s", tc.name)}
-			user := &User{MfaTokens: tc.tokens}
+			user := &User{Passwords: []*Password{{Hash: dummyPasswordHash}}, MfaTokens: tc.tokens}
 			for _, rule := range tc.rules {
 				if err := user.AddAuthChallengeRule(rule); err != nil {
 					t.Fatalf("failed to add rule: %v", err)

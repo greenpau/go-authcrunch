@@ -17,21 +17,22 @@ properties:
     type: object
     required:
     - username
-    - email
     properties:
       username:
         type: string
         description: Existing local account username. Lookup is case-insensitive but does not trim whitespace,
-          and rejects fewer than two UTF-8 bytes. Must select the same account as email.
+          and rejects fewer than two UTF-8 bytes. Must select the same account as email when one is required.
         minLength: 1
       email:
         type: string
         description: Existing local account email selector. Case-insensitive lookup without whitespace
           trimming; fewer than six UTF-8 bytes fail even if the address passed creation syntax. Any indexed
           address may select the account, but username and email must resolve to the same account.
-        minLength: 1
-    description: Account selector and operation inputs. username and email must identify the same local
-      account for existing-account actions.
+          Omit or send an empty string only for an automatically provisioned account with no local
+          email aliases. Provider display email is never a local selector. Other accounts still require
+          their matching local email. Null and non-string email values return HTTP 400.
+    description: Account selector and operation inputs. username and any required local email must identify the
+      same account; automatically provisioned accounts without local email aliases use username alone.
 x-source-files:
 - pkg/authn/handle_api_crud_user.go
 - pkg/ids/local/store.go

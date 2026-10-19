@@ -146,11 +146,7 @@ func (a *portalRefreshAdapter) Sign(ctx context.Context, claims map[string]any) 
 func (a *portalRefreshAdapter) WithIdentity(ctx context.Context, principal tokenrefresh.Principal, apply func(map[string]any) error) error {
 	p := a.portal
 	if principal.Source == tokenrefresh.ProviderSnapshotSource {
-		claims, err := p.refreshProviderClaims(ctx, principal)
-		if err != nil {
-			return err
-		}
-		return apply(claims)
+		return p.withProviderRefreshClaims(ctx, principal, apply)
 	}
 	if principal.Source != "" && principal.Source != tokenrefresh.IdentityStoreSource || len(principal.ProviderSnapshot) != 0 || principal.BackendKind != "" {
 		return tokenrefresh.ErrDenied
@@ -169,7 +165,7 @@ func (a *portalRefreshAdapter) WithIdentity(ctx context.Context, principal token
 		rr.Upstream.Realm = principal.Realm
 		rr.User.Challenges = append([]string(nil), current.Challenges...)
 		rr.User.AuthMethods = append([]string(nil), current.AuthMethods...)
-		claims := map[string]any{"sub": current.Username, "email": current.Email, "name": current.Name, "roles": current.Roles, "origin": principal.Realm}
+		claims := map[string]any{"id": principal.UserID, "sub": current.Username, "email": current.Email, "name": current.Name, "roles": current.Roles, "origin": principal.Realm}
 		if r, ok := ctx.Value(refreshRequestContextKey{}).(*http.Request); ok {
 			claims["addr"] = addrutil.GetSourceAddress(r)
 			claims["iss"] = util.GetIssuerURL(r)
@@ -181,6 +177,7 @@ func (a *portalRefreshAdapter) WithIdentity(ctx context.Context, principal token
 			}
 			return err
 		}
+		claims["id"] = principal.UserID
 		injectPortalRoles(claims, p.config)
 		candidate := &user.User{}
 		if err := p.injectUserChallenges(candidate, claims, rr.User.Challenges); err != nil {

@@ -72,6 +72,7 @@ func (cfg *IdentityStoreConfig) Validate() error {
 			"servers",
 		}
 		optionalFields = []string{
+			"attachment",
 			"groups",
 			"bind_username",
 			"bind_password",

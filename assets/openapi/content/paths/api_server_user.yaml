@@ -10,7 +10,12 @@ post:
     to 1 MiB; an oversized first JSON value returns 413.
 
 
-    The operation field selects CRUD/password/role/policy actions. username and email are required together.
+    The operation field selects CRUD/password/role/policy actions. username is required. For existing
+    accounts in the concrete local store, email may be omitted or empty only when the account was automatically
+    provisioned and has no local email aliases. Provider display email does not select a local account.
+    Other accounts still require their matching local email; supplying no email to an ordinary local
+    account fails in the backend. Add and other backend kinds always require a nonempty email. Supplied
+    null or non-string email values return HTTP 400.
     Add/reset returns a generated password. Application failures may be HTTP 200 with status=failure.
     Unknown operation names return 400; backend failures are generally status=failure with HTTP 200; info
     lookup failures use HTTP 500. Unknown realms return JSON null with HTTP 200. Unlike the profile replacement
@@ -24,7 +29,11 @@ post:
 
 
     Ordinary local selectors are case-insensitive and are not trimmed; both must identify the same account.
-    Enable instead requires the exact stored username/email spelling and a disabled record. Disable removes
+    Enable instead requires the exact stored username/email spelling and a disabled record; the same
+    no-local-email exception applies to automatically provisioned accounts. Re-enabling preserves its ID
+    and connections, and advances credential_version without reviving old authentication proof. Deleting
+    an external account allows its next verified login to provision a new identity; disable it to prevent
+    further logins. Disable removes
     lookup indexes while retaining the account in user listings; info and ordinary mutations cannot find
     that disabled account until it is enabled or the database is reloaded. Creation syntax is distinct
     from registration. A provided user.password is ignored by add/reset_password: save the generated response

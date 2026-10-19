@@ -3,7 +3,8 @@ get:
   tags:
   - External Authentication
   summary: Read portal SAML SSO metadata
-  description: Requires a valid token AND its stored portal session, plus a configured SSO application
+  description: Requires a valid token AND its stored portal session with the exact same token,
+    plus a configured SSO application
     provider. Returns XML metadata from that provider. The current handler does not add a separate admin-role
     check. Missing login/session redirects to login; unknown provider fails rendering. This route is distinct
     from external SAML login.

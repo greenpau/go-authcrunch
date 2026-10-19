@@ -16,6 +16,7 @@ package saml
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"path"
@@ -35,6 +36,7 @@ import (
 // protected, distinct SAML cookie. RelayState is a separate, unpredictable
 // transaction identifier and never acts as a callback destination.
 func (b *IdentityProvider) Authenticate(r *requests.Request) error {
+	r.ExternalIdentity = requests.ExternalIdentity{}
 	r.Response.Code = http.StatusBadRequest
 	returnURL := r.Response.ReturnURL
 	// A callback can release only the destination captured on initiation, and
@@ -176,9 +178,23 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) error {
 		m["metadata"] = metadata
 	}
 
+	if samlAssertions.Subject == nil || samlAssertions.Subject.NameID == nil {
+		return fmt.Errorf("SAML assertion has no subject identifier")
+	}
+	nameID := samlAssertions.Subject.NameID
+	if strings.HasSuffix(nameID.Format, ":transient") {
+		return fmt.Errorf("transient SAML subjects cannot identify a local account")
+	}
+	if nameID.Value == "" {
+		return fmt.Errorf("SAML subject is empty")
+	}
+	// NameID qualifiers and format are part of the opaque subject namespace.
+	subject, _ := json.Marshal([]string{nameID.Format, nameID.NameQualifier, nameID.SPNameQualifier, nameID.Value})
+	r.ExternalIdentity.Subject = string(subject)
+	r.ExternalIdentity.Issuer = samlAssertions.Issuer.Value
 	r.Response.Code = 200
 	r.Response.Payload = m
 	r.Response.ReturnURL = binding.returnURL
 	r.Response.ReturnURLBound = true
-	return nil
+	return b.attachment.Authenticate(r.Upstream.Request.Context(), r, b.GetName(), providerKind)
 }

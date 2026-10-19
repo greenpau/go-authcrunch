@@ -1,11 +1,23 @@
 ---
 name: local-identity-database
-description: Maintain local identity database transactions, file locking and atomic persistence, cross-instance credential revocation, authenticated self-service operations, and TOTP replay/lockout state.
+description: Maintain local identity database transactions, file locking and atomic persistence, cross-instance credential revocation, authenticated self-service operations, TOTP replay/lockout state, and external-account attachments.
 ---
 
 # Local Identity Database
 
+Read [external account attachments](references/external-accounts.md) when changing
+automatic external/LDAP provisioning, stable identity keys, connection transactions,
+portal confirmation, administration without local email aliases, attachment
+configuration, or embedding integration.
+
 ## Ownership and transaction boundary
+
+The exact `:memory:` constructor argument selects private memory storage before
+any filesystem lookup. A file, directory or symlink with that literal name in
+the working directory must neither seed identities/policy nor prevent startup.
+Memory mutations leave such entries untouched; an explicit filesystem path
+whose basename is `:memory:` still selects normal file storage. Keep constructor
+boundary tests and the attached-provider TLS isolation journey for this rule.
 
 `pkg/identity/database.go`, `database_atomic_write.go`, `database_file_lock*.go`,
 `identity_request.go`, and `refresh.go` own persistence and security transactions.

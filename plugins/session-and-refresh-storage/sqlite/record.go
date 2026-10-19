@@ -20,12 +20,15 @@ import (
 	"io"
 
 	tokenrefresh "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 // Private persistence DTOs deliberately retain evidence excluded by the public
 // Session's serialization tags. Conversions of Principal/Binding fail to compile
 // if the engine's data shape changes, requiring an explicit format review.
 type principalRecord struct {
+	ExternalIdentity                requests.ExternalIdentity `json:"-"`
 	Backend, Realm, UserID, Subject string
 	BackendVersion                  string
 	CredentialVersion               uint64
@@ -39,8 +42,35 @@ type principalRecord struct {
 
 type bindingRecord struct{ Portal, Origin, BasePath, Transport string }
 
+type externalIdentityRecord struct {
+	Provider, Kind, Issuer, Subject string
+	UserID, BackendVersion          string
+	CredentialVersion               uint64
+	AuthenticatedAt                 int64
+	Method, APIKeyID                string
+}
+
+func externalRecord(proof requests.ExternalIdentity) *externalIdentityRecord {
+	if proof == (requests.ExternalIdentity{}) {
+		return nil
+	}
+	return &externalIdentityRecord{proof.Provider, proof.Kind, proof.Issuer, proof.Subject,
+		proof.Evidence.UserID, proof.Evidence.BackendVersion, proof.Evidence.CredentialVersion,
+		proof.Evidence.AuthenticatedAt, proof.Evidence.Method, proof.Evidence.APIKeyID}
+}
+
+func (record *externalIdentityRecord) proof() requests.ExternalIdentity {
+	if record == nil {
+		return requests.ExternalIdentity{}
+	}
+	return requests.ExternalIdentity{Provider: record.Provider, Kind: record.Kind, Issuer: record.Issuer, Subject: record.Subject,
+		Evidence: requests.AuthenticationEvidence{UserID: record.UserID, BackendVersion: record.BackendVersion,
+			CredentialVersion: record.CredentialVersion, AuthenticatedAt: record.AuthenticatedAt, Method: record.Method, APIKeyID: record.APIKeyID}}
+}
+
 type sessionRecord struct {
 	ID                               string
+	ExternalIdentity                 *externalIdentityRecord `json:",omitempty"`
 	Principal                        principalRecord
 	Binding                          bindingRecord
 	Current                          [32]byte
@@ -53,7 +83,7 @@ func encodeSession(s tokenrefresh.Session) ([]byte, error) {
 		return nil, tokenrefresh.ErrInvalid
 	}
 	data, err := json.Marshal(sessionRecord{
-		ID: s.ID, Principal: principalRecord(s.Principal), Binding: bindingRecord(s.Binding),
+		ID: s.ID, ExternalIdentity: externalRecord(s.Principal.ExternalIdentity), Principal: principalRecord(s.Principal), Binding: bindingRecord(s.Binding),
 		Current: s.Current, Revision: s.Revision, IdleExpiresAt: s.IdleExpiresAt, AbsoluteExpiresAt: s.AbsoluteExpiresAt,
 	})
 	if err != nil || len(data) > 65536 {
@@ -77,6 +107,7 @@ func decodeSession(data []byte) (tokenrefresh.Session, error) {
 		return invalid, tokenrefresh.ErrUnavailable
 	}
 	s := tokenrefresh.Session{ID: record.ID, Principal: tokenrefresh.Principal(record.Principal), Binding: tokenrefresh.Binding(record.Binding), Current: record.Current, Revision: record.Revision, IdleExpiresAt: record.IdleExpiresAt, AbsoluteExpiresAt: record.AbsoluteExpiresAt}
+	s.Principal.ExternalIdentity = record.ExternalIdentity.proof()
 	if !validSession(s) {
 		return invalid, tokenrefresh.ErrUnavailable
 	}
@@ -90,6 +121,11 @@ func decodeSession(data []byte) (tokenrefresh.Session, error) {
 }
 
 func validSession(s tokenrefresh.Session) bool {
+	if proof := s.Principal.ExternalIdentity; proof != (requests.ExternalIdentity{}) {
+		if s.Principal.Source != tokenrefresh.ProviderSnapshotSource || proof.Provider != s.Principal.Backend || proof.Kind != s.Principal.BackendKind || attachment.ExternalAccount(proof).Validate() != nil || !validText(proof.Evidence.UserID, 4096) || !validText(proof.Evidence.BackendVersion, 4096) || proof.Evidence.AuthenticatedAt <= 0 || proof.Evidence.Method != "federated" || proof.Evidence.APIKeyID != "" {
+			return false
+		}
+	}
 	if len(s.Principal.ProviderSnapshot) > tokenrefresh.MaxProviderSnapshotSize {
 		return false
 	}

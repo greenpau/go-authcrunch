@@ -131,7 +131,7 @@ func (cfg *Config) Validate() error {
 				}
 			}
 			switch segment {
-			case "api", "qrcode", "sandbox", "apps", "barcode", "saml", "oauth2", "basic", "assets", "provider", "cross-device", "oidc", ".well-known":
+			case "connected-accounts", "api", "qrcode", "sandbox", "apps", "barcode", "saml", "oauth2", "basic", "assets", "provider", "cross-device", "oidc", ".well-known":
 				return fmt.Errorf("portal route %d uses a reserved endpoint segment", i+1)
 			}
 		}

@@ -164,6 +164,17 @@ func NewServer(config *Config, logger *zap.Logger) (_ *Server, err error) {
 		srv.identityStores = append(srv.identityStores, store)
 	}
 
+	for _, provider := range srv.identityProviders {
+		if err := ids.BindIdentityAttachment(provider, srv.identityStores); err != nil {
+			return nil, err
+		}
+	}
+	for _, store := range srv.identityStores {
+		if err := ids.BindIdentityAttachment(store, srv.identityStores); err != nil {
+			return nil, err
+		}
+	}
+
 	for _, cfg := range config.SingleSignOnProviders {
 		provider, err := sso.NewSingleSignOnProvider(cfg, logger)
 		if err != nil {

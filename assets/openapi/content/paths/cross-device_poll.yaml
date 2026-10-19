@@ -20,7 +20,11 @@ post:
     federated AMR and original authentication time from the approving login. Current requesting-device
     policy evaluates normalized provider roles; signing preserves transformed roles. The requester
     receives neither the approving family SID nor its refresh credential. Healthy approving-family
-    rotation keeps approval live; replay, logout or expiry invalidate it.'
+    rotation keeps approval live; replay, logout or expiry invalidate it.
+    External logins remain access-only transfers after completing attached local MFA. The requester
+    retains the immutable local ID and verified factors, receives no new refresh family or local OIDC
+    session, and cannot extend the approving login expiry. Current local identity and factor checks,
+    the expiry bound and signing occur in one identity transaction.'
   security: []
   responses:
     '200':
@@ -162,6 +166,7 @@ post:
           description: Do not store credentials or protocol responses.
   x-source-files:
   - pkg/authn/cross_device_http.go
+  - pkg/authn/connected_accounts.go
   - pkg/authn/token_refresh_provider.go
   requestBody:
     required: true

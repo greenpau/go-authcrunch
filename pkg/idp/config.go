@@ -57,6 +57,7 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			"driver",
 		}
 		optionalFields = []string{
+			"attachment",
 			"tenant_id",
 			"domain_name",
 			"client_id",
@@ -112,6 +113,7 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			"acs_urls",
 		}
 		optionalFields = []string{
+			"attachment",
 			"idp_metadata_location",
 			"idp_sign_cert_location",
 			"idp_login_url",

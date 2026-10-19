@@ -115,7 +115,14 @@ unknown sources, mixed local/provider evidence, invalid JSON, unsupported kinds
 and oversized snapshots before publishing detached state. Current provider
 trust and canonical claim checks still run at renewal. Keep provider configuration
 in custom portal bindings; persistence does not turn captured claims into live
-upstream revalidation. Provider cached users retain no local credential proof.
+upstream revalidation. Provider cached users retain no local password/profile authority. Their separate
+server-only `ExternalIdentity` proof binds the attached local ID, epoch and
+credential generation. Durable external sessions require a named file-backed
+attachment; omitted attachments are provider-lifetime memory databases and lose
+their identities on provider recreation. Keep persistent OAuth consumer fixtures
+explicitly attached, and retain the real restart test that rejects implicit-memory
+sessions. Use [local-identity-database](../local-identity-database/SKILL.md) to
+maintain external account provisioning and connection transactions.
 `TestPersistentProviderEvidenceRejection` and the provider portal TLS restart
 journey cover these boundaries alongside existing local identity epochs.
 The portal response guard strips staged headers/cookies when a later composite

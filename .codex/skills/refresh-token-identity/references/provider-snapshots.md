@@ -39,12 +39,14 @@ compatible optional navigation Fetch Metadata after state redemption. Ordinary
 refresh POSTs retain their strict same-origin protections.
 
 `tokenrefresh.Principal.Source` is `ProviderSnapshotSource`; pin provider name,
-kind, realm, original nonempty subject, actual authentication time and exactly
-`["federated"]` methods. `BackendVersion` contains a digest of the normalized
+kind, realm, original nonempty subject, actual authentication time and
+`federated` plus any actually completed attached-local checkpoint methods. `BackendVersion` contains a digest of the normalized
 provider configuration and driver; secrets themselves do not enter that field.
 Changing the provider's trust configuration invalidates captured evidence even
 if name and realm are reused. `UserID` equals the pinned provider subject and
-does not select a local account. CredentialVersion and local challenges are empty.
+does not select a local account. The provider CredentialVersion remains zero; separate `ExternalIdentity` holds
+the attached local immutable ID, epoch and credential version. Challenges record
+actual completed local factors when the callback required them.
 
 Capture verified claims before transformations into independent canonical JSON
 bytes. Preserve custom claims needed by policy, including exact JSON numbers.
@@ -58,7 +60,7 @@ bounded server-held evidence; it is never a public serialization or HTTP input.
 On renewal, verify source, provider identity, configuration digest and pinned
 subject, then reapply current group/role mapping, transformations, challenge
 policy and portal roles to a new decoded copy. The engine pins subject, original
-authentication time, federated AMR, issuer and SID; each JWT gets fresh timing
+authentication time, verified AMR, issuer and SID; each JWT gets fresh timing
 and JTI. Captured upstream AMR/ACR cannot satisfy local password, TOTP or WebAuthn
 requirements. A definitive policy denial revokes the family. Signing/service
 failures leave the current credential usable for a known unsuccessful exchange.
@@ -77,14 +79,17 @@ never captured upstream metadata or the original login address. Preserve this
 same request context through signing and cached-user reconstruction. Transform
 time uses the existing portal issuer helper: OAuth callback issuers use the
 provider route ending in `/`, while renewal uses the refresh endpoint URL.
-The signed JWT issuer remains the fixed family origin/mount. A newly matching
-factor rule must deny snapshot renewal; provider evidence cannot satisfy it.
+The signed JWT issuer remains the fixed family origin/mount. A newly matching factor rule must deny snapshot renewal unless already satisfied
+by actual recorded local checkpoints; provider evidence cannot satisfy it.
+Attached local verification holds its identity transaction through signing and
+refresh commit. Local disablement, credential generation or epoch changes deny
+renewal even while the upstream snapshot remains valid.
 
 Initial provider callbacks issue cookies only and remove bearer Authorization
 delivery. Native upstream token exchange is unavailable. Cross-device provider
 requesters remain access-only; the approving browser's actual family is retained
-for approval invalidation. Cached initial and renewed users have no local
-LoginEvidence, LoginUsername, LoginEmail or LoginMethods. A matching local account
+for approval invalidation. Cached initial and renewed users retain separate ExternalIdentity and LoginMethods
+without fabricating local password/profile LoginEvidence or lookup aliases. A matching local account
 name or email and portal profile roles cannot supply local credential-management
 authority.
 Snapshot cross-device redemption applies the same role normalization and

@@ -207,6 +207,10 @@ paths:
     $ref: ./paths/oauth2_authorization-code-callback.yaml
   /oauth2/logout:
     $ref: ./paths/oauth2_logout.yaml
+  /connected-accounts:
+    $ref: ./paths/connected-accounts.yaml
+  /connected-accounts/{ticket}:
+    $ref: ./paths/connected-accounts_by-ticket.yaml
   /cross-device:
     $ref: ./paths/cross-device.yaml
   /cross-device/start:

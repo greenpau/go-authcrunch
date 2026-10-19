@@ -27,6 +27,8 @@ import (
 	"strings"
 
 	"go.uber.org/zap"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 const (
@@ -159,7 +161,7 @@ func (b *IdentityProvider) fetchGithubUserInfo(params map[string]interface{}) (*
 	return data, nil
 }
 
-func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[string]interface{}, error) {
+func (b *IdentityProvider) fetchClaims(tokenData map[string]any, proofs ...*requests.ExternalIdentity) (map[string]any, error) {
 	var userURL string
 	var req *http.Request
 	var err error
@@ -257,6 +259,22 @@ func (b *IdentityProvider) fetchClaims(tokenData map[string]interface{}) (map[st
 	m := make(map[string]interface{})
 	var userGroups []string
 	m["origin"] = userURL
+	for _, proof := range proofs {
+		proof.Issuer = userURL
+		switch b.config.Driver {
+		case "github":
+			id, err := githubIDFromProfile(respBody)
+			if err != nil {
+				return nil, err
+			}
+			proof.Subject = id
+		case "gitlab", "linkedin":
+			proof.Subject, _ = data["sub"].(string)
+		case "discord", "facebook":
+			proof.Subject, _ = data["id"].(string)
+		}
+	}
+
 	switch b.config.Driver {
 	case "github":
 		if _, exists := data["login"]; exists {

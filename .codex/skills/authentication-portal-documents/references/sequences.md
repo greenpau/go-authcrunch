@@ -55,13 +55,13 @@ sequenceDiagram
     participant S as Documents store
     B->>A: Document request<br/>with portal session cookie
     A->>A: Require enabled API, canonical path,<br/>method, query and HTTPS origin
-    A->>A: Verify JWT and stored browser login,<br/>allowed realm, role and local backend
+    A->>A: Verify JWT and exact token in stored browser login,<br/>allowed realm, role and local backend
     A->>A: Read bounded body and validate fields<br/>before taking the identity lock
     A->>I: WithRefreshIdentity<br/>(login evidence, callback)
     activate I
     I->>I: Revalidate immutable user ID<br/>and current credential evidence
     I->>A: Run callback<br/>under identity protection
-    A->>A: Check current username<br/>and session still present
+    A->>A: Check current username<br/>and exact token still in session
     A->>S: BindIdentity<br/>(user ID, backend name, realm)
     S-->>A: Permanent source reservation verified<br/>or inserted in its own transaction
     A->>S: Execute selected operation as that user ID
@@ -90,6 +90,13 @@ operation fails. A complete upload also spans many independent requests.
 
 Initial authentication can become stale while the body arrives. The subsequent
 identity/session check must reject that request without storing its chunk.
+Session lookup must compare the validated token with the cached token, not just
+its `jti`; replaying a previous account's token after a browser account switch
+cannot borrow the new login's proof. `TestE2EDocumentsRejectsReplacedSessionToken`
+covers rejection while the current login continues to work.
+It also pauses a chunk upload at HTTP 100 Continue, switches the browser account,
+then sends the body. The old request must fail without writing a chunk; a fresh
+owner login can upload different ciphertext, commit and read it back.
 The [in-flight TLS tests](../../../../pkg/authn/documents_concurrency_e2e_test.go)
 hold a body after HTTP 100 Continue, complete credential revocation, then verify
 both rejection and the absence of an immutable chunk left by the denied write.

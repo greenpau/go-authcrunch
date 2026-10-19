@@ -20,6 +20,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	attachmentparser "github.com/greenpau/go-authcrunch/pkg/identity/attachment/parser"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 	"github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite"
 )
@@ -36,6 +37,17 @@ func NewSQLiteTicketProviderConfigFromDirectives(statements []string) (*sqlite.C
 			return invalid()
 		}
 		args, err := cfgutil.DecodeArgs(statement)
+		if err == nil && len(args) > 0 && args[0] == "attach" {
+			if seen["attach"] {
+				return invalid()
+			}
+			seen["attach"] = true
+			c.Attachment, err = attachmentparser.NewIdentityAttachmentConfigFromDirectives([]string{statement})
+			if err != nil {
+				return invalid()
+			}
+			continue
+		}
 		if err != nil || len(args) != 2 || args[1] == "" || seen[args[0]] {
 			return invalid()
 		}

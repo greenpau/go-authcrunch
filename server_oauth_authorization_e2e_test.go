@@ -239,8 +239,8 @@ func newDirectOAuthFixtureWithRoot(t *testing.T, configure func(*authz.PolicyCon
 	if err = json.Unmarshal(f.config, &restored); err != nil {
 		t.Fatal(err)
 	}
-	if len(restored.AuthenticationPortals) != 0 || len(restored.IdentityStores) != 0 {
-		t.Fatal("fixture must have no portal or identity store")
+	if len(restored.AuthenticationPortals) != 0 || configureRoot == nil && len(restored.IdentityStores) != 0 {
+		t.Fatal("fixture must have no portal or unexpected identity store")
 	}
 	f.runtime, err = authcrunch.NewServer(&restored, zap.NewNop())
 	if err != nil {

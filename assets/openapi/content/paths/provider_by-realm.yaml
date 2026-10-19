@@ -21,6 +21,12 @@ get:
     Login page links to this route carry no redirect_url, because a provider may
     reject any query on initiation; a completed login returns through the shared
     redirect cookie, which the login page request records.
+    Verified external authentication resolves or automatically provisions an identity in its
+    attached local store before portal issuance. Without an explicit attachment the provider
+    uses a private in-memory local store. The signed id claim is the local immutable ID;
+    provider sub remains available for existing policies. Current local roles and factor rules
+    apply; an external login alone cannot satisfy required local MFA. Use /connected-accounts
+    to explicitly connect to an existing local account. Provider email never selects an account.
   security: []
   parameters:
   - name: realm

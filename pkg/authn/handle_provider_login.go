@@ -32,7 +32,7 @@ func providerLoginRouteIndex(path string) int {
 		return -1
 	}
 	prefix := path[:i] + "/"
-	for _, namespace := range []string{"/api/", "/qrcode/", "/profile/", "/sandbox/", "/register/", "/apps/sso", "/apps/mobile-access", "/barcode/mfa/", "/saml/", "/oauth2/", "/basic/login", "/assets/", "/favicon", "/cross-device/"} {
+	for _, namespace := range []string{"/connected-accounts/", "/api/", "/qrcode/", "/profile/", "/sandbox/", "/register/", "/apps/sso", "/apps/mobile-access", "/barcode/mfa/", "/saml/", "/oauth2/", "/basic/login", "/assets/", "/favicon", "/cross-device/"} {
 		if strings.Contains(prefix, namespace) {
 			return -1
 		}
@@ -74,6 +74,7 @@ func (p *Portal) handleHTTPProviderLogin(ctx context.Context, w http.ResponseWri
 	rr.Response = requests.Response{}
 	rr.User = requests.User{}
 	rr.Authentication = requests.AuthenticationEvidence{}
+	rr.ExternalIdentity = requests.ExternalIdentity{}
 	rr.Upstream.Method = "provider"
 	rr.Upstream.Realm = realm
 	rr.Flags.Enabled = true
@@ -104,7 +105,14 @@ func (p *Portal) handleHTTPProviderLogin(ctx context.Context, w http.ResponseWri
 		return nil
 	}
 	identity := result.Identity
+	rr.ExternalIdentity = result.ExternalIdentity
 	rr.Response.Payload = map[string]any{"sub": identity.Subject, "email": identity.Email, "name": identity.Name, "roles": append([]string(nil), identity.Roles...), "origin": realm}
+	if rr.ExternalIdentity.Evidence.UserID == "" {
+		rr.ExternalIdentity = requests.ExternalIdentity{Issuer: provider.GetRealm(), Subject: identity.Subject}
+		if err := p.providerIdentityAttachment(provider).Authenticate(ctx, rr, provider.GetName(), provider.GetKind()); err != nil {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
+		}
+	}
 	if err := p.authorizeLoginRequest(ctx, w, r, rr); err != nil {
 		code := rr.Response.Code
 		if code < 400 || code > 599 {

@@ -57,32 +57,34 @@ const (
 
 // Portal is an authentication portal.
 type Portal struct {
-	documents         *documents.Store
-	documentsConfig   *documents.Config
-	state             *state.Store
-	closeOnce         sync.Once
-	closed            atomic.Bool
-	oidc              oidc.OpenIDProvider
-	refresh           *tokenrefresh.Manager
-	refreshStore      *tokenrefresh.MemoryStore
-	id                string
-	config            *PortalConfig
-	userRegistries    map[string]registry.Provider
-	validator         *validator.TokenValidator
-	keystore          *kms.CryptoKeyStore
-	identityStores    []ids.IdentityStore
-	identityProviders []idp.IdentityProvider
-	ssoProviders      []sso.SingleSignOnProvider
-	cookie            *cookie.Factory
-	transformer       *transformer.Factory
-	ui                *ui.Factory
-	startedAt         time.Time
-	sessions          *cache.SessionCache
-	sandboxes         *cache.SandboxCache
-	passwordAttempts  *passwordAttemptLimiter
-	loginOptions      map[string]interface{}
-	baseURL           string
-	logger            *zap.Logger
+	accountConnections  accountConnectionStore
+	documents           *documents.Store
+	documentsConfig     *documents.Config
+	state               *state.Store
+	closeOnce           sync.Once
+	closed              atomic.Bool
+	oidc                oidc.OpenIDProvider
+	refresh             *tokenrefresh.Manager
+	refreshStore        *tokenrefresh.MemoryStore
+	id                  string
+	config              *PortalConfig
+	userRegistries      map[string]registry.Provider
+	validator           *validator.TokenValidator
+	keystore            *kms.CryptoKeyStore
+	identityStores      []ids.IdentityStore
+	identityProviders   []idp.IdentityProvider
+	externalAttachments sync.Map
+	ssoProviders        []sso.SingleSignOnProvider
+	cookie              *cookie.Factory
+	transformer         *transformer.Factory
+	ui                  *ui.Factory
+	startedAt           time.Time
+	sessions            *cache.SessionCache
+	sandboxes           *cache.SandboxCache
+	passwordAttempts    *passwordAttemptLimiter
+	loginOptions        map[string]interface{}
+	baseURL             string
+	logger              *zap.Logger
 
 	webAuthnEnrollments *webAuthnEnrollmentStore
 	crossDevice         *crossDeviceStore
@@ -182,6 +184,17 @@ func NewPortal(params PortalParameters) (*Portal, error) {
 		return nil, errors.ErrNewPortal.WithArgs(errors.ErrPortalConfigBackendsNotFound)
 	}
 
+	for _, provider := range p.identityProviders {
+		if err := ids.BindIdentityAttachment(provider, params.IdentityStores); err != nil {
+			return nil, err
+		}
+	}
+	for _, store := range p.identityStores {
+		if err := ids.BindIdentityAttachment(store, params.IdentityStores); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := p.configure(); err != nil {
 		p.Close()
 		return nil, err
@@ -199,6 +212,9 @@ func (p *Portal) Close() {
 	}
 	p.closeOnce.Do(func() {
 		p.closed.Store(true)
+		p.accountConnections.mu.Lock()
+		clear(p.accountConnections.pending)
+		p.accountConnections.mu.Unlock()
 		if p.oidc != nil {
 			p.oidc.Close()
 		}

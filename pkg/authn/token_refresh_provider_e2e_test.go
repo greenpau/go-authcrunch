@@ -41,6 +41,7 @@ import (
 	refreshparser "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh/parser"
 	transformparser "github.com/greenpau/go-authcrunch/pkg/authn/transformer/parser"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
 	idpparser "github.com/greenpau/go-authcrunch/pkg/idp/parser"
@@ -54,6 +55,7 @@ type providerRefreshE2EOptions struct {
 	access, idle, absolute int
 	unselected, persistent bool
 	excludeLocal           bool
+	attached               bool
 	transforms             []string
 	edit                   func(*authn.PortalConfig)
 	wrapProvider           func(idp.IdentityProvider) idp.IdentityProvider
@@ -61,11 +63,12 @@ type providerRefreshE2EOptions struct {
 }
 
 type providerRefreshE2E struct {
-	server     *httptest.Server
-	client     *http.Client
-	issuer     *oidcE2EIssuer
-	restart    func()
-	closeState func() error
+	databasePath string
+	server       *httptest.Server
+	client       *http.Client
+	issuer       *oidcE2EIssuer
+	restart      func()
+	closeState   func() error
 }
 
 func newProviderRefreshE2E(t *testing.T, options providerRefreshE2EOptions) *providerRefreshE2E {
@@ -93,11 +96,15 @@ func newProviderRefreshE2E(t *testing.T, options providerRefreshE2EOptions) *pro
 		}
 	}))
 	t.Cleanup(server.Close)
-	providerConfig, err := idpparser.NewOAuthIdentityProviderConfigFromDirectives("upstream", []string{
+	providerLines := []string{
 		"driver generic", "realm upstream", "client_id " + oidcE2EClientID, "client_secret " + oidcE2EClientSecret,
 		"base_auth_url " + issuer.server.URL, "metadata_url " + issuer.server.URL + "/.well-known/openid-configuration",
 		"tls verification disabled", "user_info_fields all",
-	})
+	}
+	if options.attached {
+		providerLines = append(providerLines, "attach to local identity store local")
+	}
+	providerConfig, err := idpparser.NewOAuthIdentityProviderConfigFromDirectives("upstream", providerLines)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +119,8 @@ func newProviderRefreshE2E(t *testing.T, options providerRefreshE2EOptions) *pro
 	if options.wrapProvider != nil {
 		provider = options.wrapProvider(provider)
 	}
-	store, err := ids.NewIdentityStore(&ids.IdentityStoreConfig{Name: "local", Kind: "local", Params: map[string]any{"path": newJWKSE2EDatabase(t), "realm": "local"}}, zap.NewNop())
+	databasePath := newJWKSE2EDatabase(t)
+	store, err := ids.NewIdentityStore(&ids.IdentityStoreConfig{Name: "local", Kind: "local", Params: map[string]any{"path": databasePath, "realm": "local"}}, zap.NewNop())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +229,7 @@ func newProviderRefreshE2E(t *testing.T, options providerRefreshE2EOptions) *pro
 		t.Fatal(err)
 	}
 	client := &http.Client{Transport: transport, Jar: jar, Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	f := &providerRefreshE2E{server: server, client: client, issuer: issuer}
+	f := &providerRefreshE2E{databasePath: databasePath, server: server, client: client, issuer: issuer}
 	if storage != nil {
 		f.closeState = func() error { return storage.Close() }
 	}
@@ -1002,4 +1010,12 @@ func TestE2EOpenAPIContractProviderRefresh(t *testing.T) {
 	validate(t, "/api/refresh_token", "POST", status, headers, body)
 	status, headers, body = f.send(t, http.MethodPost, "/auth/api/logout", "{}", nil)
 	validate(t, "/api/logout", "POST", status, headers, body)
+}
+
+func (p *providerNestedRoleAdapter) IdentityAttachment() *attachment.Attachment {
+	return p.IdentityProvider.(attachment.Consumer).IdentityAttachment()
+}
+
+func (p *providerCompletionProbe) IdentityAttachment() *attachment.Attachment {
+	return p.IdentityProvider.(attachment.Consumer).IdentityAttachment()
 }

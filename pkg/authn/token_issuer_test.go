@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
@@ -27,6 +28,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
@@ -75,6 +77,63 @@ func TestSandboxCanonicalIdentity(t *testing.T) {
 	if len(u.LoginMethods) != 1 || u.LoginMethods[0] != "pwd" {
 		t.Fatal("issued session did not retain independent authentication methods")
 	}
+}
+
+func TestAccessOnlySessionTokensAreDistinct(t *testing.T) {
+	f := newRefreshPortal(t, false, false)
+	config, err := kms.NewCryptoKeyStoreConfig([]string{"crypto key sign-verify synthetic-token-collision-regression-key"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.portal.keystore, err = kms.NewCryptoKeyStore(config, f.portal.logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proof, rr := completedIdentityProof(t, f)
+	rr.Upstream.SessionID = "sameBrowserSessionIdentifier123456789"
+	proof.LoginMethods = []string{"pwd"}
+	current := identity.RefreshIdentity{Username: proof.LoginUsername, Email: proof.LoginEmail, Roles: []string{"authp/user"}, Challenges: []string{"password"}}
+	r := httptest.NewRequest(http.MethodGet, refreshTestOrigin+"/auth", nil)
+	// Freeze the issuer clock. Separate successful logins can have identical
+	// public claims even though their private credential generations differ.
+	synctest.Test(t, func(t *testing.T) {
+		first, err := f.portal.issueSandboxAccessToken(t.Context(), r, rr, proof, current)
+		if err != nil {
+			t.Fatal(err)
+		}
+		proof.LoginEvidence.CredentialVersion++
+		second, err := f.portal.issueSandboxAccessToken(t.Context(), r, rr, proof, current)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if first.Token == second.Token {
+			t.Fatal("distinct local login proofs produced the same access token")
+		}
+		claims := map[string]any{"sub": "upstream-subject", "id": proof.LoginEvidence.UserID, "jti": rr.Upstream.SessionID, "iat": time.Now().Unix(), "exp": time.Now().Add(time.Minute).Unix()}
+		externalFirst, err := f.portal.signConnectedUser(rr, claims, []string{"federated"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		rr.ExternalIdentity.Evidence.CredentialVersion++
+		externalSecond, err := f.portal.signConnectedUser(rr, claims, []string{"federated"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if externalFirst.Token == externalSecond.Token {
+			t.Fatal("distinct external login proofs produced the same access token")
+		}
+		directFirst, err := f.portal.authorizeLoginUser(t.Context(), r, rr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		directSecond, err := f.portal.authorizeLoginUser(t.Context(), r, rr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if directFirst.Token == directSecond.Token {
+			t.Fatal("separate direct logins produced the same access token")
+		}
+	})
 }
 
 func TestRenewedSessionCanonicalIdentity(t *testing.T) {

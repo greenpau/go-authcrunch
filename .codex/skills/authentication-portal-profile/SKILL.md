@@ -15,7 +15,10 @@ the implemented challenge-rule parser used by the flow-selection operations.
 ## Canonical identity and mutations
 
 `pkg/authn/handle_api_profile.go` dispatches local self-service operations after
-JWT authorization and lookup of the server-cached login. `profile_identity.go`
+JWT authorization and exact-token lookup of the server-cached login through
+`SessionCache.GetForToken`. Matching `jti` alone must not allow an earlier JWT
+to borrow a later account's canonical identity or credential-management proof.
+`profile_identity.go`
 wraps the selected backend with `ids.IdentityRequestStore`; each delegated
 operation carries a snapshot of canonical username/email and immutable login
 evidence. Never select a profile account from transformed token `sub` or `email`,
@@ -84,6 +87,8 @@ rejection without credential or refresh revocation, followed by a successful
 plaintext change and real TLS login checks. Flow selection adds `profile_auth_challenges_test.go` and
 `profile_auth_challenges_e2e_test.go`. Preserve real TLS login, two accounts
 with different credentials,
+replay of the old JWT after a same-browser account switch with unchanged backend
+credentials (`TestE2EProfileRejectsReplacedSessionToken`),
 subject/email transformations naming the other account, revoked/deleted/recreated
 identities, role removal, refresh renewal, cross-origin cookie submissions,
 and persistence checks showing rejected operations changed no credentials.

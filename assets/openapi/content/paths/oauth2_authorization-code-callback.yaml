@@ -10,6 +10,11 @@ get:
     and its browser login cookie; duplicate/empty protocol parameters and token-bearing callback parameters
     are rejected. Query is limited to 16384 bytes. Successful login sets the policy session cookie and
     redirects to the original allowed resource; it never calls the protected upstream for the callback.
+    Built-in providers resolve or automatically create a local identity in their configured attachment,
+    using a private memory store when omitted. Callback authorization and every subsequent opaque-session
+    request recheck the local account status, credential generation and roles. Local factor requirements
+    deny access because this gatekeeper flow cannot display portal challenges. No email-based connection
+    is performed; the local id is separate from the upstream subject.
   security: []
   responses:
     '303':

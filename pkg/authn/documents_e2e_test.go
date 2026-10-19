@@ -62,6 +62,40 @@ type documentsE2E struct {
 	newPortal      func() *authn.Portal
 }
 
+func TestE2EDocumentsRejectsReplacedSessionToken(t *testing.T) {
+	f := newDocumentsE2E(t, "/auth", true)
+	client := *f.client
+	var err error
+	client.Jar, err = cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	browser := &oidcE2EFixture{server: f.server, client: &client, issuer: f.server.URL + f.base}
+	webAuthnEnrollmentLogin(t, browser, "alice", tests.TestPwd1)
+	previous := loginIdentityCookie(browser, "AUTHP_ACCESS_TOKEN")
+	f.message(t, previous, "bootstrap", nil, http.StatusOK)
+	key := f.enroll(t, previous)
+	file := documentsDecode[documents.File](t, f.message(t, previous, "file.allocate", map[string]any{"size": 32, "chunks": 1}, http.StatusOK))
+	f.message(t, previous, "file.manifest", map[string]any{"id": file.ID, "manifest": documents.Manifest{Metadata: base64.RawURLEncoding.EncodeToString(make([]byte, 32)), Envelope: documentsEnvelope(key)}}, http.StatusOK)
+	// Switch accounts after initial admission, while the server waits for the
+	// body. The second session check must reject without persisting a chunk.
+	documentsDelayedRequest(t, f, previous, "chunk.put", map[string]any{"id": file.ID, "idx": 0, "ciphertext": base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{1}, 32))}, func() {
+		oidcE2EStatus(t, browser.request(t, http.MethodGet, "/login?fresh=1", nil, nil), http.StatusOK)
+		webAuthnEnrollmentLogin(t, browser, "bob", tests.TestPwd2)
+	}, http.StatusUnauthorized)
+	f.message(t, previous, "bootstrap", nil, http.StatusUnauthorized)
+	f.message(t, loginIdentityCookie(browser, "AUTHP_ACCESS_TOKEN"), "bootstrap", nil, http.StatusOK)
+	fresh := f.login(t, "alice")
+	ciphertext := base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{2}, 32))
+	f.message(t, fresh, "chunk.put", map[string]any{"id": file.ID, "idx": 0, "ciphertext": ciphertext}, http.StatusOK)
+	f.message(t, fresh, "file.commit", map[string]any{"id": file.ID}, http.StatusOK)
+	chunk := documentsDecode[map[string]string](t, f.message(t, fresh, "chunk.fetch", map[string]any{"id": file.ID, "idx": 0}, http.StatusOK))
+	if chunk["ciphertext"] != ciphertext {
+		t.Fatal("replaced session wrote a chunk while the body was in flight")
+	}
+}
+
 func newDocumentsE2E(t *testing.T, base string, enabled bool, customize ...func(*authn.PortalConfig)) *documentsE2E {
 	t.Helper()
 	dir := t.TempDir()

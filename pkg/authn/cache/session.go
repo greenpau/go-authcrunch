@@ -15,6 +15,7 @@
 package cache
 
 import (
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"sync"
@@ -219,6 +220,24 @@ func (c *SessionCache) Get(sessionID string) (*user.User, error) {
 		return nil, fmt.Errorf("cached session id error: %s", err)
 	}
 	return entry.user, nil
+}
+
+// GetForToken returns completed login evidence only for the exact validated
+// token stored with it. A browser can retain its session ID across logins;
+// knowing that ID must not let an older token borrow a later account's proof.
+// Callers must authenticate the token before invoking this method.
+func (c *SessionCache) GetForToken(sessionID, token string) (*user.User, error) {
+	if token == "" {
+		return nil, errors.New("missing portal session token")
+	}
+	u, err := c.Get(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if subtle.ConstantTimeCompare([]byte(u.Token), []byte(token)) != 1 {
+		return nil, errors.New("portal session token replaced")
+	}
+	return u, nil
 }
 
 func (c *SessionCache) deleteEntry(sessionID string, entry *SessionCacheEntry) {

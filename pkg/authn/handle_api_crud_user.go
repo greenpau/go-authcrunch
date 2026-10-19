@@ -21,6 +21,7 @@ import (
 
 	"net/http"
 
+	"github.com/greenpau/go-authcrunch/pkg/ids/local"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	"go.uber.org/zap"
@@ -97,18 +98,26 @@ func (p *Portal) handleAPICrudUser(ctx context.Context, w http.ResponseWriter, r
 		if v, ok := req.User["username"].(string); ok {
 			username = v
 		}
-		if v, ok := req.User["email"].(string); ok {
-			emailAddress = v
+		if value, exists := req.User["email"]; exists {
+			var ok bool
+			emailAddress, ok = value.(string)
+			if !ok {
+				return p.handleJSONError(ctx, w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			}
 		}
 	}
 
-	if username == "" || emailAddress == "" {
+	// Only the concrete local store understands accounts without local email.
+	// Its transaction still requires either both selectors or an automatically
+	// provisioned account with no aliases. Creation always requires an email.
+	_, localStore := p.getIdentityStoreByRealm(req.Realm).(*local.IdentityStore)
+	if username == "" || emailAddress == "" && (!localStore || req.Operation == "add") {
 		p.logger.Warn(
 			"malformed request",
 			zap.String("session_id", rr.Upstream.SessionID),
 			zap.String("request_id", rr.ID),
 			zap.String("api_endpoint", "server/user"),
-			zap.String("error", "either username or email address are missing"),
+			zap.String("error", "missing account selector"),
 		)
 		return p.handleJSONError(ctx, w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 	}

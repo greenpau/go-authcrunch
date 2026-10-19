@@ -5,7 +5,9 @@ post:
   summary: Manage the signed-in local profile
   description: 'Requires profile API enabled (normally enabled), a current stored local browser login
     session, and an authorized portal user/admin role. A bearer JWT from ordinary access-only JSON login
-    alone is insufficient: missing stored JTI sessions return 401. Foreign identity fields and transformed
+    alone is insufficient: missing stored sessions return 401. The validated access token must exactly
+    match the stored login token; an earlier JWT sharing the same JTI after an account switch returns 401.
+    Foreign identity fields and transformed
     subject/email claims do not change the profile owner.
 
 

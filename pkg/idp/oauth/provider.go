@@ -29,6 +29,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
 )
@@ -39,10 +40,11 @@ const (
 
 // IdentityProvider represents OAuth-based identity provider.
 type IdentityProvider struct {
-	setupMu  sync.RWMutex
-	ready    atomic.Bool
-	config   *Config
-	metadata map[string]interface{}
+	attachment *attachment.Attachment
+	setupMu    sync.RWMutex
+	ready      atomic.Bool
+	config     *Config
+	metadata   map[string]interface{}
 	// Published key sets are immutable; readers never observe partial refreshes.
 	keyMu            sync.RWMutex
 	keys             oauthJwksSet
@@ -107,12 +109,25 @@ func NewIdentityProvider(cfg *Config, logger *zap.Logger) (*IdentityProvider, er
 		return nil, errors.ErrIdentityProviderConfigureLoggerNotFound
 	}
 
+	if cfg == nil {
+		return nil, fmt.Errorf("missing backend configuration")
+	}
+	attachmentConfig := attachment.Config{}
+	if cfg.Attachment != nil {
+		attachmentConfig = *cfg.Attachment
+	}
+	accountAttachment, err := attachment.New(attachmentConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &IdentityProvider{
-		config:    cfg,
-		state:     newStateManager(),
-		stop:      make(chan struct{}),
-		stateDone: make(chan struct{}),
-		logger:    logger,
+		attachment: accountAttachment,
+		config:     cfg,
+		state:      newStateManager(),
+		stop:       make(chan struct{}),
+		stateDone:  make(chan struct{}),
+		logger:     logger,
 	}
 
 	if b.config == nil {
@@ -607,3 +622,6 @@ func (b *IdentityProvider) waitForSetup(delay time.Duration) error {
 		return nil
 	}
 }
+
+// IdentityAttachment returns the provider-owned local identity binding.
+func (b *IdentityProvider) IdentityAttachment() *attachment.Attachment { return b.attachment }

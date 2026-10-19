@@ -50,6 +50,7 @@ func TestOIDCCookieConfiguration(t *testing.T) {
 		name, mount, sessionName, requestName, wantError string
 		refresh                                          bool
 	}{
+		{name: "reserved connection mount", mount: "/tenant/connected-accounts", wantError: "reserved portal route"},
 		{name: "custom names", mount: "/auth", sessionName: "PORTAL_LOGIN", requestName: "PORTAL_REQUEST"},
 		{name: "invalid session name", mount: "/auth", sessionName: "invalid name", wantError: "invalid cookie name"},
 		{name: "invalid request name", mount: "/auth", requestName: "invalid;name", wantError: "invalid cookie name"},

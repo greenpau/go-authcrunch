@@ -112,12 +112,12 @@ the requesting device belongs to them.
 
 The store snapshots completed sandbox proof or authenticated upstream attributes
 before portal transforms. It also binds the proof to the issued session token.
-Only local/LDAP proofs go through `issueSandboxTokens`; local identity/version
+Only local proofs go through `issueSandboxTokens`; local identity/version
 checks and current challenge policy run again for the requesting address and
 issuer. AMR comes from verified checkpoints. Refresh and OIDC, when configured,
 create independent browser credentials using the normal issuer/completion APIs.
 
-OAuth/SAML transfer rechecks the configured backend, uses the captured upstream
+OAuth/SAML/LDAP transfer rechecks the configured backend, uses the captured upstream
 attributes, reruns transforms for the requesting device, and checks additional
 local-factor requirements. Retain the original protocol method (`oauth2` versus
 the provider kind `oauth`) so GitHub claim ownership remains correct. Decode
@@ -125,6 +125,20 @@ snapshots with JSON-number preservation. Provider transfer expiry cannot exceed
 the original portal login; upstream ID/refresh tokens are not copied. Upstream
 revocation cannot be detected beyond the provider's existing login/session
 contract; this feature does not add introspection.
+
+Attached external proofs also revalidate the canonical local account and its
+credential generation. They retain verified completed local factors and the
+local immutable ID, without gaining local profile or downstream OIDC authority.
+Select this external transfer contract from the original external proof even
+when its final checkpoint used a local authenticator. Both a callback snapshot
+and a completed external sandbox produce access-only requester credentials;
+local MFA must never enable a new requester refresh family. Cap expiry at the
+approving login before signing, inside the local identity transaction. Do not
+sign a second token outside that transaction to apply the cap.
+Access-only transfer issuance generates a fresh signed nonce after transforms;
+never copy the approving token's nonce or depend on signing randomness to make
+separate credentials distinct. The shared issuer contract is in
+[refresh-token identity](../refresh-token-identity/SKILL.md).
 
 For a selected OAuth snapshot realm, the approving browser has an opaque portal
 family while the requester remains access-only. Decode the bounded canonical

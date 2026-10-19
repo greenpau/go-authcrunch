@@ -44,7 +44,7 @@ func validateOIDCPortalConfig(config *oidc.Config) error {
 	issuer, _ := url.Parse(config.Issuer)
 	// Portal routes inspect segments before login/sandbox dispatch. This is a
 	// portal restriction; standalone providers can use other canonical mounts.
-	for _, marker := range []string{"/api/", "/qrcode/", "/profile/", "/assets/", "/favicon", "/portal", "/register/", "/apps/sso", "/apps/mobile-access", "/saml/", "/oauth2/", "/basic/login/", "/barcode/mfa/", "/sandbox/"} {
+	for _, marker := range []string{"/connected-accounts/", "/api/", "/qrcode/", "/profile/", "/assets/", "/favicon", "/portal", "/register/", "/apps/sso", "/apps/mobile-access", "/saml/", "/oauth2/", "/basic/login/", "/barcode/mfa/", "/sandbox/"} {
 		if strings.Contains(issuer.Path+"/", marker) {
 			return fmt.Errorf("oidc issuer mount contains a reserved portal route")
 		}
@@ -150,6 +150,11 @@ func (p *Portal) oidcRealm(realm string) bool {
 func (p *Portal) finishOIDCLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, proof *user.User) error {
 	if p.oidc == nil || proof.RefreshTransport == tokenrefresh.BodyTransport {
 		return nil
+	}
+	if proof.ExternalIdentity.Evidence.UserID != "" {
+		// Local checkpoints on an attached account do not turn an external
+		// login into the local authentication supported by this adapter.
+		return p.replaceOIDCBrowserSession(w, r)
 	}
 	authentication := oidc.Authentication{Realm: proof.Authenticator.Realm, Backend: proof.Authenticator.Name, Username: proof.LoginUsername, Evidence: proof.LoginEvidence, Methods: proof.LoginMethods}
 	for _, checkpoint := range proof.Checkpoints {

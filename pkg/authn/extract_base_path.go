@@ -62,6 +62,12 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 	case r.URL.Path == "/auth":
 		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
 		rr.Upstream.BasePath = "/auth/"
+	case connectedAccountsRouteIndex(r.URL.Path) >= 0:
+		request := *r
+		requestURL := *r.URL
+		requestURL.Path += "/"
+		request.URL = &requestURL
+		extractBaseURLPath(ctx, &request, rr, "/connected-accounts/")
 	case providerLoginRouteIndex(r.URL.Path) >= 0:
 		extractBaseURLPath(ctx, r, rr, "/provider/")
 	case crossDeviceIndex >= 0:

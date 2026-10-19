@@ -15,6 +15,7 @@
 package ldap
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -24,6 +25,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
 )
@@ -39,17 +41,18 @@ var (
 
 // Config holds the configuration for the IdentityStore.
 type Config struct {
-	Name               string         `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	Realm              string         `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
-	Servers            []AuthServer   `json:"servers,omitempty" xml:"servers,omitempty" yaml:"servers,omitempty"`
-	BindUsername       string         `json:"bind_username,omitempty" xml:"bind_username,omitempty" yaml:"bind_username,omitempty"`
-	BindPassword       string         `json:"bind_password,omitempty" xml:"bind_password,omitempty" yaml:"bind_password,omitempty"`
-	Attributes         UserAttributes `json:"attributes,omitempty" xml:"attributes,omitempty" yaml:"attributes,omitempty"`
-	SearchBaseDN       string         `json:"search_base_dn,omitempty" xml:"search_base_dn,omitempty" yaml:"search_base_dn,omitempty"`
-	SearchUserFilter   string         `json:"search_user_filter,omitempty" xml:"search_user_filter,omitempty" yaml:"search_user_filter,omitempty"`
-	SearchGroupFilter  string         `json:"search_group_filter,omitempty" xml:"search_group_filter,omitempty" yaml:"search_group_filter,omitempty"`
-	Groups             []UserGroup    `json:"groups,omitempty" xml:"groups,omitempty" yaml:"groups,omitempty"`
-	TrustedAuthorities []string       `json:"trusted_authorities,omitempty" xml:"trusted_authorities,omitempty" yaml:"trusted_authorities,omitempty"`
+	Attachment         *attachment.Config `json:"attachment,omitempty" xml:"attachment,omitempty" yaml:"attachment,omitempty"`
+	Name               string             `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Realm              string             `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
+	Servers            []AuthServer       `json:"servers,omitempty" xml:"servers,omitempty" yaml:"servers,omitempty"`
+	BindUsername       string             `json:"bind_username,omitempty" xml:"bind_username,omitempty" yaml:"bind_username,omitempty"`
+	BindPassword       string             `json:"bind_password,omitempty" xml:"bind_password,omitempty" yaml:"bind_password,omitempty"`
+	Attributes         UserAttributes     `json:"attributes,omitempty" xml:"attributes,omitempty" yaml:"attributes,omitempty"`
+	SearchBaseDN       string             `json:"search_base_dn,omitempty" xml:"search_base_dn,omitempty" yaml:"search_base_dn,omitempty"`
+	SearchUserFilter   string             `json:"search_user_filter,omitempty" xml:"search_user_filter,omitempty" yaml:"search_user_filter,omitempty"`
+	SearchGroupFilter  string             `json:"search_group_filter,omitempty" xml:"search_group_filter,omitempty" yaml:"search_group_filter,omitempty"`
+	Groups             []UserGroup        `json:"groups,omitempty" xml:"groups,omitempty" yaml:"groups,omitempty"`
+	TrustedAuthorities []string           `json:"trusted_authorities,omitempty" xml:"trusted_authorities,omitempty" yaml:"trusted_authorities,omitempty"`
 
 	// LoginIcon is the UI login icon attributes.
 	LoginIcon *icons.LoginIcon `json:"login_icon,omitempty" xml:"login_icon,omitempty" yaml:"login_icon,omitempty"`
@@ -108,6 +111,7 @@ type UserAttributes struct {
 
 // IdentityStore represents authentication provider with LDAP identity store.
 type IdentityStore struct {
+	attachment    *attachment.Attachment
 	config        *Config        `json:"-"`
 	authenticator *Authenticator `json:"-"`
 	logger        *zap.Logger
@@ -120,7 +124,20 @@ func NewIdentityStore(cfg *Config, logger *zap.Logger) (*IdentityStore, error) {
 		return nil, errors.ErrIdentityStoreConfigureLoggerNotFound
 	}
 
+	if cfg == nil {
+		return nil, fmt.Errorf("missing backend configuration")
+	}
+	attachmentConfig := attachment.Config{}
+	if cfg.Attachment != nil {
+		attachmentConfig = *cfg.Attachment
+	}
+	accountAttachment, err := attachment.New(attachmentConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &IdentityStore{
+		attachment:    accountAttachment,
 		config:        cfg,
 		authenticator: NewAuthenticator(),
 		logger:        logger,
@@ -170,6 +187,7 @@ func (b *IdentityStore) Request(op operator.Type, r *requests.Request) error {
 
 // Authenticate performs authentication.
 func (b *IdentityStore) Authenticate(r *requests.Request) error {
+	r.ExternalIdentity = requests.ExternalIdentity{}
 	if strings.Contains(r.User.Username, "@") {
 		if !emailRegexPattern.MatchString(r.User.Username) {
 			return errors.ErrIdentityStoreLdapAuthenticateInvalidUserEmail
@@ -182,7 +200,15 @@ func (b *IdentityStore) Authenticate(r *requests.Request) error {
 	if len(r.User.Password) < 3 {
 		return errors.ErrIdentityStoreLdapAuthenticateInvalidPassword
 	}
-	return b.authenticator.AuthenticateUser(r)
+	if err := b.authenticator.AuthenticateUser(r); err != nil {
+		return err
+	}
+	r.ExternalIdentity.Issuer = b.config.Realm
+	ctx := context.Background()
+	if r.Upstream.Request != nil {
+		ctx = r.Upstream.Request.Context()
+	}
+	return b.attachment.Authenticate(ctx, r, b.GetName(), storeKind)
 }
 
 // IdentifyUser  performs user identification.
@@ -280,6 +306,11 @@ func (b *IdentityStore) GetConfig() map[string]interface{} {
 
 // Validate validates identity store configuration.
 func (cfg *Config) Validate() error {
+	if cfg.Attachment != nil {
+		if err := cfg.Attachment.Validate(); err != nil {
+			return err
+		}
+	}
 	if cfg.Name == "" {
 		return errors.ErrIdentityStoreConfigureNameEmpty
 	}
@@ -353,3 +384,6 @@ func (b *IdentityStore) OverwriteUserAuthChallengeRules(_ string, _ string, _ []
 func (b *IdentityStore) ResetUserPassword(_ string, _ string) (map[string]any, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+
+// IdentityAttachment returns the provider-owned local identity binding.
+func (b *IdentityStore) IdentityAttachment() *attachment.Attachment { return b.attachment }

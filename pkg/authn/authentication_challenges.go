@@ -29,7 +29,14 @@ import (
 // when neither an explicit policy nor an additive requirement applies.
 func (p *Portal) checkDirectAuthenticationPolicy(rr *requests.Request, claims map[string]any, completed []string) error {
 	_, additional := claims["challenges"]
-	if len(completed) == 0 && !rr.User.AuthChallengePolicy && !additional {
+	if rr.ExternalIdentity.Evidence.UserID != "" {
+		// Upstream password verification never completes an attached account's
+		// local password or MFA checkpoint.
+		completed = nil
+		if len(rr.User.Challenges) == 0 && !additional {
+			return nil
+		}
+	} else if len(completed) == 0 && !rr.User.AuthChallengePolicy && !additional {
 		return nil
 	}
 	candidate := &user.User{}

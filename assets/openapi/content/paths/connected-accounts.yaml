@@ -1,0 +1,58 @@
+get:
+  operationId: connectedAccounts
+  summary: View connected external accounts
+  description: >-
+    Browser page requiring exactly one browser session cookie and one access-token cookie.
+    The validated access cookie must exactly match the token stored with the current portal
+    login; a matching session ID alone is insufficient after account switching. Bearer/query
+    credentials and duplicate access cookies cannot authorize this page.
+    Local sign-ins list their connections. An external sign-in explicitly attached to a local
+    store can start connecting its automatically provisioned identity to an existing local account.
+    The local realm must be enabled in this portal. An implicit memory attachment cannot connect.
+    First verified external sign-in automatically creates a passwordless local identity;
+    email equality never connects accounts. Existing connected identities are listed.
+    Stale external evidence prompts a fresh external sign-in. Pending operations expire after
+    five minutes and are bounded to 4096 per portal. All responses disable caching; the page
+    sets strict-origin referrer policy, same-origin form-action and frame-ancestors none. HTML negotiation is
+    fixed even with Accept application/json. Missing, ambiguous, replaced or unauthenticated
+    access credentials redirect to login;
+    a missing or ambiguous session cookie returns 401. The trailing slash is also accepted.
+  tags:
+  - External Authentication
+  security:
+  - PortalCookie: []
+  x-source-files:
+  - pkg/authn/connected_accounts_http.go
+  - pkg/authn/connected_accounts.go
+  - pkg/identity/external_account.go
+  responses:
+    '200':
+      $ref: ../components/responses/HTML.yaml
+    '302':
+      $ref: ../components/responses/Redirect.yaml
+    '303':
+      $ref: ../components/responses/Redirect.yaml
+    '400':
+      $ref: ../components/responses/HTML.yaml
+    '401':
+      $ref: ../components/responses/HTML.yaml
+    '403':
+      $ref: ../components/responses/HTML.yaml
+    '404':
+      $ref: ../components/responses/HTML.yaml
+    '405':
+      $ref: ../components/responses/HTML.yaml
+    '409':
+      $ref: ../components/responses/HTML.yaml
+    '410':
+      $ref: ../components/responses/HTML.yaml
+    '413':
+      $ref: ../components/responses/HTML.yaml
+    '415':
+      $ref: ../components/responses/HTML.yaml
+    '429':
+      $ref: ../components/responses/HTML.yaml
+    '500':
+      $ref: ../components/responses/HTML.yaml
+    '503':
+      $ref: ../components/responses/HTML.yaml

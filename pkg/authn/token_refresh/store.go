@@ -17,6 +17,8 @@ package tokenrefresh
 import (
 	"bytes"
 	"context"
+
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 // PrincipalSource identifies the server-owned origin of authentication evidence.
@@ -42,15 +44,16 @@ const (
 // Principal is server-only evidence of a completed authentication. Issue callers
 // must redeem that evidence once; possession of an access JWT is insufficient.
 type Principal struct {
-	Backend, Realm, UserID, Subject string          `json:"-" xml:"-" yaml:"-"`
-	BackendVersion                  string          `json:"-" xml:"-" yaml:"-"`
-	CredentialVersion               uint64          `json:"-" xml:"-" yaml:"-"`
-	AuthTime                        int64           `json:"-" xml:"-" yaml:"-"`
-	Methods, Challenges             []string        `json:"-" xml:"-" yaml:"-"`
-	Audience, Scopes                []string        `json:"-" xml:"-" yaml:"-"`
-	Source                          PrincipalSource `json:"-" xml:"-" yaml:"-"`
-	BackendKind                     string          `json:"-" xml:"-" yaml:"-"`
-	ProviderSnapshot                []byte          `json:"-" xml:"-" yaml:"-"`
+	ExternalIdentity                requests.ExternalIdentity `json:"-" xml:"-" yaml:"-"`
+	Backend, Realm, UserID, Subject string                    `json:"-" xml:"-" yaml:"-"`
+	BackendVersion                  string                    `json:"-" xml:"-" yaml:"-"`
+	CredentialVersion               uint64                    `json:"-" xml:"-" yaml:"-"`
+	AuthTime                        int64                     `json:"-" xml:"-" yaml:"-"`
+	Methods, Challenges             []string                  `json:"-" xml:"-" yaml:"-"`
+	Audience, Scopes                []string                  `json:"-" xml:"-" yaml:"-"`
+	Source                          PrincipalSource           `json:"-" xml:"-" yaml:"-"`
+	BackendKind                     string                    `json:"-" xml:"-" yaml:"-"`
+	ProviderSnapshot                []byte                    `json:"-" xml:"-" yaml:"-"`
 }
 
 // Binding is stable across compatible portal instances and fixes transport.

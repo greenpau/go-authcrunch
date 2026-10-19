@@ -96,7 +96,8 @@ func TestI18NArgs(t *testing.T) {
 // every built-in branch must render in all supported languages and mounts.
 func TestI18NTemplates(t *testing.T) {
 	cases := map[string][]string{
-		"login": {"single", "multiple", "external"}, "portal": {"portal"}, "generic": {"generic"}, "whoami": {"whoami"},
+		"connected_accounts": {"start", "confirm", "connected", "reauthenticate", "accounts"},
+		"login":              {"single", "multiple", "external"}, "portal": {"portal"}, "generic": {"generic"}, "whoami": {"whoami"},
 		"apps_sso": {"roles", "empty"}, "apps_mobile_access": {"mobile"},
 		"session": {"continue", "logout"}, "cross_device": {"request", "activate", "confirm", "approve", "deny"},
 		"oidc": {"consent", "form_post", "error"}, "register": {"register", "registered", "ack", "ackfail", "acked"},
@@ -144,6 +145,9 @@ func TestI18NTemplates(t *testing.T) {
 						args.Data["display"] = "CONE-IGXV"
 						args.Data["account"] = "alice@example.test"
 						args.Data["csrf"] = "fixture-csrf"
+						args.Data["ticket"] = strings.Repeat("a", 48)
+						args.Data["provider"] = "Example"
+						args.Data["username"] = "alice"
 						args.Data["oidc"] = oidc.Page{Kind: view, Language: lang, Title: args.Translate("oidc_consent_title"), Message: args.Translate("oidc_invalid_request"), ClientName: "Example", Username: "alice@example.test", Permissions: []oidc.PagePermission{{Title: args.Translate("oidc_account_identifier"), Description: args.Translate("oidc_account_description")}}}
 						asset, _ := PageTemplates.GetAsset("basic/" + alias)
 						for _, match := range regexp.MustCompile(`\.Data\.i18n_([a-z_]+)`).FindAllStringSubmatch(asset.Content, -1) {

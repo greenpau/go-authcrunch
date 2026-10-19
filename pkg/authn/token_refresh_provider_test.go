@@ -126,8 +126,11 @@ func TestTokenRefreshProviderIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if u.Authenticator.Method != "oauth" || u.LoginEvidence != (requests.AuthenticationEvidence{}) || u.LoginUsername != "" || len(u.LoginMethods) != 0 {
+	if u.Authenticator.Method != "oauth" || u.LoginEvidence != (requests.AuthenticationEvidence{}) || u.LoginUsername != "" {
 		t.Fatal("provider acquired local proof")
+	}
+	if !slices.Equal(u.LoginMethods, []string{"federated"}) {
+		t.Fatal("provider lost verified federated login method")
 	}
 	u2, next, err := p.issueProviderRefresh(t.Context(), r, rr)
 	if !errors.Is(err, tokenrefresh.ErrUnavailable) || u2 != nil || next != nil {
@@ -503,6 +506,13 @@ func TestTokenRefreshProviderCrossDevice(t *testing.T) {
 			}
 			if !issued.HasRole("mapped") || issued.HasRole("privileged") || issued.AsMap()["sid"] != nil || issued.LoginEvidence.UserID != "" {
 				t.Fatal("requester bypassed current policy or gained renewable/local proof")
+			}
+			again, err := p.issueCrossDeviceProvider(t.Context(), r, rr, proof)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if issued.AsMap()["nonce"] == nil || issued.AsMap()["nonce"] == "" || issued.AsMap()["nonce"] == again.AsMap()["nonce"] || issued.Token == again.Token {
+				t.Fatal("transferred access tokens did not get independent nonces")
 			}
 		})
 	}

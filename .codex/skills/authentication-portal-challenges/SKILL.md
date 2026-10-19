@@ -120,8 +120,9 @@ A rule lists a required sequence (`password totp`) or ordered alternatives
 (`u2f or totp`). Alternatives select the **first available single method**;
 they must not become multiple required checkpoints. An optional suffix
 `if u2f and totp not available` requires every condition method to be absent.
-Do not accept partial suffixes or mixed sequences/alternatives. Password is
-available under the local/LDAP account contract. Generic `mfa` selects an MFA
+Do not accept partial suffixes or mixed sequences/alternatives. LDAP reports
+its directory password; local accounts report only enabled, unexpired local
+passwords as available. Generic `mfa` selects an MFA
 checkpoint; the portal supports TOTP and WebAuthn, not email checkpoints.
 The reusable authchal model retains email for existing identity configurations;
 transformer policies reject explicit email methods/conditions and do not count
@@ -144,6 +145,17 @@ types without collapsing them to generic MFA. `requests.User.AuthMethods` and
 `identity.RefreshIdentity.AuthMethods` are server-only inventory, not completed
 authentication. Carry fresh inventory through identification and transactional
 issuance snapshots. Never derive it from a transformed/JWT/client claim.
+
+Keep factor availability separate from the default authentication policy.
+Disabling or expiring a password removes it from registered usable methods;
+it must not silently change password-plus-TOTP into TOTP-only login. Ordinary
+local accounts retain the default password checkpoint, including when no
+usable password remains. Only automatically provisioned external identities
+with no local password history omit it. Stored or portal replacement rules
+can still explicitly select passwordless authentication. Cover both disabled
+and expired passwords in `TestDefaultChallengesKeepUnavailablePassword` and
+the corresponding TLS E2E, including explicit TOTP-only policy as a positive
+control and independent verification of the issued AMR.
 
 Portal code uses `Factory.TransformWithAuthMethods(claims, inventory)`, whose
 return value is the optional replacement sequence; legacy requirements remain
@@ -174,8 +186,9 @@ Selected OAuth/OIDC snapshot renewal follows the same current-request contract
 through cached-user reconstruction. OAuth callback `iss` uses the established
 provider route ending in `/`; refresh evaluation uses its endpoint URL. Neither
 is the snapshot's upstream issuer. The final signed JWT retains the fixed family
-issuer. Provider snapshots have no local factor inventory and cannot satisfy a
-newly matching requirement. Preserve issuer/address policy denial and request
+issuer. Legacy snapshots without attachment have no local factor inventory and
+cannot satisfy a newly matching requirement. Attached snapshots revalidate the
+local identity and only retain factors actually completed at login. Preserve issuer/address policy denial and request
 claim transformations in `TestTokenRefreshProviderRequestPolicy`,
 `TestTokenRefreshProviderRequestClaims` and their public TLS E2E counterparts.
 
@@ -185,7 +198,9 @@ and distinguish stored rules from backend defaults. Basic authentication checks
 the entire effective sequence **after** transforms, including additive legacy
 requirements. A valid password cannot satisfy TOTP or WebAuthn. Both the public
 `BasicAuth` embedding API and `/basic/login/<realm>` must enforce this decision;
-denied HTTP Basic policy checks return 403, never a successful status.
+denied local HTTP Basic policy checks return 403, never a successful status.
+Attached LDAP's browser Basic route can redirect to the local-factor sandbox;
+that redirect must not issue access before the required checkpoints complete.
 
 API keys retain their separate legacy login behavior only when there is no
 explicit stored/portal policy and no additive requirement. Any explicit
@@ -215,8 +230,25 @@ and update sessions after the callback releases the identity lock. Injected
 identity stores whose kind matches the direct login method receive
 these checks too; transaction-capable stores such as SQLite hold their own
 identity transaction. Stores without the capability retain their existing
-authentication contract. Exact API-key binding and
+authentication contract. Attachment-capable directory stores instead use the
+attached local identity transaction, even though the directory backend itself
+does not implement local refresh transactions. Recheck its current proof, roles,
+factor inventory and stored policy before transformation and signing. Keep the
+upstream username/email; pin the local `id` and `federated` AMR after transforms.
+A directory password replaces only the default local password, never an explicit
+local password requirement or MFA. The public Basic API and encrypted system
+assertions cannot complete those local factors and must deny issuance. Cover
+both with real LDAPS, including implicit/explicit attachments, account connection,
+local roles, explicit password-only policy, TOTP and disablement. Exact API-key binding and
 revocation are owned by [local identity transactions](../local-identity-database/SKILL.md).
+
+Pin the immutable `id` from the verified backend evidence after transforms for
+local Basic/API-key tokens and encrypted system assertions too. These paths
+must agree with interactive login and attached external authentication; a
+transformed `id` cannot select another account. API-key success still supplies
+no password/MFA AMR. `TestDirectAuthenticationIdentityClaims` and the TLS
+`TestE2EAuthenticationChallengeDirectTransaction` matrix cover the returned ID
+and transform resistance across all six direct entry points, alongside revocation.
 
 Remote gatekeepers consume `system.AuthResponseMessage.UserData` as authenticated
 identity data. Apply the same direct policy and authoritative AMR before encrypting
@@ -299,9 +331,10 @@ make test TEST_DIR='./pkg/authchal/... ./pkg/authn/transformer/... ./pkg/user ./
 ## Optional HTTP provider evidence
 
 Use [sqlite-ticket-provider](../sqlite-ticket-provider/SKILL.md) to maintain the
-HTTP login capability's browser-bound federation. It supplies no local registered
-factor inventory. The normal transform path selects policy, then direct-policy
-validation rejects every unsatisfied checkpoint before signing. Core pins AMR to
+HTTP login capability's browser-bound federation. Attached providers load current
+local factor inventory and enter local checkpoints when needed; legacy adapters
+without attached proof cannot claim any local factor. The normal transform path
+selects policy and issuance rejects every unsatisfied checkpoint. Core pins AMR to
 `federated` and origin to the selected realm after transforms. A consumed ticket
 is not restored after policy rejection; retry requires a fresh login. Do not infer
 password/MFA evidence from issuer-supplied roles or display attributes.

@@ -29,10 +29,17 @@ func TestSQLiteTicketParser(t *testing.T) {
 	if err != nil || c.BasePath != "/auth" || c.Timeout != "1s" || c.CookieName != "AUTHP_PROVIDER_SESSION_ID" || !slices.Equal(valid, original) {
 		t.Fatal(c, err)
 	}
-	for _, extra := range []string{"name duplicate", "cookie_name bad;name", "cookie_name __Host-TICKET", "unknown value", "base_path /api/auth", "base_path /favicon-team", "base_path //auth", "base_path /../auth", "base_path /auth/", "timeout 0s", "timeout 31s", "timeout x y", "timeout \"\"", "timeout \"", "timeout 1s\n", "timeout \x00", "timeout \xff"} {
+	for _, extra := range []string{"name duplicate", "cookie_name bad;name", "cookie_name __Host-TICKET", "unknown value", "base_path /api/auth", "base_path /favicon-team", "base_path //auth", "base_path /../auth", "base_path /auth/", "timeout 0s", "timeout 31s", "timeout x y", "timeout \"\"", "timeout \"", "timeout 1s\n", "timeout \x00", "timeout \xff", "attach to local identity store :memory:", "attach localdb", "base_path /connected-accounts"} {
 		if got, err := parser.NewSQLiteTicketProviderConfigFromDirectives(append(slices.Clone(valid), extra)); got != nil || err == nil {
 			t.Fatal("bad directive accepted", extra)
 		}
+	}
+	attached, err := parser.NewSQLiteTicketProviderConfigFromDirectives(append(slices.Clone(valid), "attach to local identity store localdb"))
+	if err != nil || attached.Attachment == nil || attached.Attachment.LocalIdentityStore != "localdb" {
+		t.Fatal("attachment not parsed", err)
+	}
+	if _, err := parser.NewSQLiteTicketProviderConfigFromDirectives(append(slices.Clone(valid), "attach to local identity store one", "attach to local identity store two")); err == nil {
+		t.Fatal("duplicate attachment accepted")
 	}
 	for i := range valid {
 		if got, err := parser.NewSQLiteTicketProviderConfigFromDirectives(append(slices.Clone(valid[:i]), valid[i+1:]...)); got != nil || err == nil {

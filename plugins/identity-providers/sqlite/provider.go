@@ -31,6 +31,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/sqlitedb"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
@@ -52,6 +53,7 @@ var ErrCommitUncertain = sqlitedb.ErrCommitUncertain
 
 // Provider owns ticket storage; it starts no issuer HTTP service or workers.
 type Provider struct {
+	attachment   *attachment.Attachment
 	config       Config
 	db           *sqlitedb.Database
 	binding      [32]byte
@@ -70,6 +72,15 @@ func New(ctx context.Context, config *Config) (*Provider, error) {
 	if err := c.Validate(); err != nil {
 		return nil, err
 	}
+	attachmentConfig := attachment.Config{}
+	if c.Attachment != nil {
+		attachmentConfig = *c.Attachment
+		c.Attachment = &attachmentConfig
+	}
+	accountAttachment, err := attachment.New(attachmentConfig)
+	if err != nil {
+		return nil, err
+	}
 	data, _ := json.Marshal([]string{c.Name, c.Realm, c.PublicOrigin, c.BasePath, c.IssuerURL, c.CookieName})
 	binding := sha256.Sum256(data)
 	db, err := sqlitedb.Open(ctx, c.Path, c.Timeout, 1094931288, map[string]string{"tickets": "CREATE TABLE tickets (request BLOB PRIMARY KEY, binding BLOB NOT NULL, browser BLOB NOT NULL, expires INTEGER NOT NULL, ticket BLOB, ticket_expires INTEGER NOT NULL, identity BLOB)"})
@@ -78,7 +89,7 @@ func New(ctx context.Context, config *Config) (*Provider, error) {
 	}
 	origin, _ := url.Parse(c.PublicOrigin)
 	callbackPath := strings.TrimSuffix(c.BasePath, "/") + "/provider/" + c.Realm
-	return &Provider{config: c, db: db, binding: binding, callback: c.PublicOrigin + callbackPath, callbackPath: callbackPath, host: origin.Host, cookieName: c.CookieName}, nil
+	return &Provider{attachment: accountAttachment, config: c, db: db, binding: binding, callback: c.PublicOrigin + callbackPath, callbackPath: callbackPath, host: origin.Host, cookieName: c.CookieName}, nil
 }
 func secret() string {
 	var b [32]byte
@@ -160,7 +171,13 @@ func (p *Provider) Login(ctx context.Context, r *http.Request) (*idp.HTTPLoginRe
 	if err != nil {
 		return nil, err
 	}
-	return &idp.HTTPLoginResult{Identity: &identity, Cookie: p.cookie("", true)}, nil
+	rr := requests.NewRequest()
+	rr.ExternalIdentity = requests.ExternalIdentity{Issuer: p.config.IssuerURL, Subject: identity.Subject}
+	rr.Response.Payload = map[string]any{"email": identity.Email, "name": identity.Name}
+	if err := p.attachment.Authenticate(ctx, rr, p.GetName(), p.GetKind()); err != nil {
+		return nil, err
+	}
+	return &idp.HTTPLoginResult{Identity: &identity, ExternalIdentity: rr.ExternalIdentity, Cookie: p.cookie("", true)}, nil
 }
 func (p *Provider) begin(ctx context.Context) (*idp.HTTPLoginResult, error) {
 	request, browser := secret(), secret()
@@ -293,3 +310,6 @@ func (p *Provider) Close() error {
 
 var _ idp.IdentityProvider = (*Provider)(nil)
 var _ idp.HTTPLoginProvider = (*Provider)(nil)
+
+// IdentityAttachment returns the provider-owned local identity binding.
+func (p *Provider) IdentityAttachment() *attachment.Attachment { return p.attachment }

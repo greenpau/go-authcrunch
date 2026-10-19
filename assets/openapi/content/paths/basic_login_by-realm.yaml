@@ -5,7 +5,8 @@ get:
   summary: Authenticate using HTTP Basic
   description: 'Browser-oriented Basic login for an enabled identity store. Missing credentials return
     a Basic challenge; malformed credentials return 400. Direct authentication must satisfy the account
-    challenge policy; Basic cannot complete an MFA checkpoint. Does not create OIDC browser login evidence.
+    challenge policy; Basic cannot complete an MFA checkpoint. Attached LDAP authentication may redirect
+    to a local-factor sandbox before access is granted. Does not create OIDC browser login evidence.
     Send Accept: text/html to retain this route, rather than JSON negotiation.
 
 
@@ -66,6 +67,7 @@ get:
   - pkg/authn/handle_basic_login.go
   - pkg/authn/handle_authenticate_basic_auth_request.go
   - pkg/authn/handle_http_login.go
+  - pkg/authn/connected_accounts.go
   parameters:
   - name: realm
     in: path

@@ -32,6 +32,8 @@ import (
 
 	"github.com/greenpau/go-authcrunch"
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	attachmentparser "github.com/greenpau/go-authcrunch/pkg/identity/attachment/parser"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/state"
 	stateparser "github.com/greenpau/go-authcrunch/pkg/state/parser"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
@@ -45,6 +47,17 @@ func persistentTestConfig(t *testing.T) *state.Config {
 		t.Fatal(err)
 	}
 	return c
+}
+
+// Persistence consumers explicitly choose a durable identity authority.
+func attachPersistentOAuthIdentity(t *testing.T, c *authcrunch.Config) {
+	t.Helper()
+	config, err := attachmentparser.NewIdentityAttachmentConfigFromDirectives([]string{"attach to local identity store accounts"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.IdentityStores = []*ids.IdentityStoreConfig{{Name: "accounts", Kind: "local", Params: map[string]any{"path": filepath.Join(t.TempDir(), "users.json"), "realm": "local"}}}
+	c.IdentityProviders[0].Params["attachment"] = config
 }
 
 func restartDirectOAuth(t *testing.T, f *directOAuthFixture) {
@@ -72,7 +85,7 @@ func restartDirectOAuth(t *testing.T, f *directOAuthFixture) {
 
 func TestE2EServerPersistentOAuthWithoutPortal(t *testing.T) {
 	stateConfig := persistentTestConfig(t)
-	f := newDirectOAuthFixtureWithRoot(t, nil, func(c *authcrunch.Config) { c.State = stateConfig })
+	f := newDirectOAuthFixtureWithRoot(t, nil, func(c *authcrunch.Config) { c.State = stateConfig; attachPersistentOAuthIdentity(t, c) })
 	callback := f.callback(t, f.client, "/private?preserved=yes")
 	directOAuthStatus(t, f.request(t, f.client, "GET", callback, nil), 303)
 	directOAuthStatus(t, f.request(t, f.client, "GET", "/private", nil), 200)
@@ -157,7 +170,7 @@ func TestE2EServerPersistentPortalRefreshAndOIDC(t *testing.T) {
 }
 
 func TestE2EServerPersistentOAuthConfigurationEpoch(t *testing.T) {
-	f := newDirectOAuthFixtureWithRoot(t, nil, func(c *authcrunch.Config) { c.State = persistentTestConfig(t) })
+	f := newDirectOAuthFixtureWithRoot(t, nil, func(c *authcrunch.Config) { c.State = persistentTestConfig(t); attachPersistentOAuthIdentity(t, c) })
 	callback := f.callback(t, f.client, "/private")
 	directOAuthStatus(t, f.request(t, f.client, "GET", callback, nil), 303)
 	original := append([]byte(nil), f.config...)
@@ -184,7 +197,7 @@ func TestE2EServerPersistentOAuthConfigurationEpoch(t *testing.T) {
 
 func TestE2EServerPersistentOAuthInterruptedCommit(t *testing.T) {
 	stateConfig := persistentTestConfig(t)
-	f := newDirectOAuthFixtureWithRoot(t, nil, func(c *authcrunch.Config) { c.State = stateConfig })
+	f := newDirectOAuthFixtureWithRoot(t, nil, func(c *authcrunch.Config) { c.State = stateConfig; attachPersistentOAuthIdentity(t, c) })
 	callback := f.callback(t, f.client, "/private")
 	directOAuthStatus(t, f.request(t, f.client, "GET", callback, nil), 303)
 	directOAuthStatus(t, f.request(t, f.client, "POST", "/private", nil), 200)
@@ -311,7 +324,7 @@ func TestE2EServerPersistentLoginCommitFailure(t *testing.T) {
 
 func TestE2EServerPersistentStorageOwnershipAndFailure(t *testing.T) {
 	stateConfig := persistentTestConfig(t)
-	f := newDirectOAuthFixtureWithRoot(t, nil, func(c *authcrunch.Config) { c.State = stateConfig })
+	f := newDirectOAuthFixtureWithRoot(t, nil, func(c *authcrunch.Config) { c.State = stateConfig; attachPersistentOAuthIdentity(t, c) })
 	var cfg authcrunch.Config
 	if err := json.Unmarshal(f.config, &cfg); err != nil {
 		t.Fatal(err)

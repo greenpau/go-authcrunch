@@ -5,6 +5,10 @@ description: Maintain upstream OAuth identity-provider directive parsers, shared
 
 # OAuth Identity Provider
 
+Read [external account attachments](../local-identity-database/references/external-accounts.md)
+when changing local provisioning, connection UI, immutable external keys, or
+attachment binding in this consumer.
+
 [authorization-policy-oauth](../authorization-policy-oauth/SKILL.md) owns
 policy-selected login without a portal, its parser, callbacks, and opaque sessions.
 That peer consumer reuses this provider's authentication protocol and trust checks.
@@ -51,8 +55,7 @@ successful authenticated `/user` response. Decode that value losslessly from
 the original JSON as a positive unsigned 64-bit integer and emit a canonical
 decimal string; a float64 conversion can authorize the wrong large ID. Preserve
 `metadata.id` as a JSON number and the existing `sub = github.com/<login>`.
-An absent ID remains compatible with older profile fixtures but emits no
-`github_id`. Reject a supplied null, string, zero, negative, fraction, exponent
+An absent ID cannot provision a stable local identity and fails authentication. Reject a supplied null, string, zero, negative, fraction, exponent
 or overflow. Never accept an upstream field already named `github_id` as proof.
 
 When `user_org_filters` enables the existing GitHub organization lookup,

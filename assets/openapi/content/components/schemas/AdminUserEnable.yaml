@@ -17,7 +17,6 @@ properties:
     type: object
     required:
     - username
-    - email
     properties:
       username:
         type: string
@@ -30,7 +29,9 @@ properties:
         description: Exact stored email of that disabled account. Case-sensitive comparison and no whitespace
           trimming; at least one stored address must match. An already enabled account or mismatched spelling
           returns status=failure.
-        minLength: 1
+          Omit or send an empty string only for an automatically provisioned account with no local
+          email aliases. Provider display email is never a local selector. Other accounts still require
+          their matching local email. Null and non-string email values return HTTP 400.
     description: Disabled local account selector. Enable is the case-sensitive exception to ordinary case-insensitive
       lookup.
 x-source-files:

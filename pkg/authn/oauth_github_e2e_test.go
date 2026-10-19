@@ -178,7 +178,7 @@ func runE2EOAuthGithubTransforms(t *testing.T) {
 		{name: "large integer", id: "9007199254740993", matcher: "match github id exact 9007199254740993", wantID: "9007199254740993", allow: true},
 		{name: "large neighbor", id: "9007199254740992", matcher: "match github id exact 9007199254740993", wantID: "9007199254740992"},
 		{name: "maximum integer", id: "18446744073709551615", matcher: "match github id exact 18446744073709551615", wantID: "18446744073709551615", allow: true},
-		{name: "missing ID cannot use spoofed claim", matcher: "match github id regex .*"},
+		{name: "missing ID cannot use spoofed claim", reject: true, matcher: "match github id regex .*"},
 		{name: "zero", id: "0", reject: true},
 		{name: "negative", id: "-1", reject: true},
 		{name: "null", id: "null", reject: true},
@@ -203,6 +203,9 @@ func runE2EOAuthGithubTransforms(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.id == "" && tc.name != "missing ID cannot use spoofed claim" && tc.driver != "linkedin" {
+				tc.id, tc.wantID = "123", "123"
+			}
 			if tc.login == "" {
 				tc.login = "alice"
 			}

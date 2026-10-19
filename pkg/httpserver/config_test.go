@@ -80,7 +80,7 @@ func TestConfig(t *testing.T) {
 			}
 		})
 	}
-	for _, mount := range []string{"", "auth", "/auth/", "/auth/../other", "/auth//other", "/a%2fb", "/a?b", "/a#b", "/a\\b", "/a\nb", "/a b", "/{name}", "/login", "/tenant/api", "/assets/sub", "/login-service", "/tenant/profile-ui", "/auth\x00", "/auth\x1f", "/auth\x7f", "/auth\u0085"} {
+	for _, mount := range []string{"", "auth", "/auth/", "/auth/../other", "/auth//other", "/a%2fb", "/a?b", "/a#b", "/a\\b", "/a\nb", "/a b", "/{name}", "/login", "/tenant/api", "/tenant/connected-accounts", "/assets/sub", "/login-service", "/tenant/profile-ui", "/auth\x00", "/auth\x1f", "/auth\x7f", "/auth\u0085"} {
 		t.Run("mount "+mount, func(t *testing.T) {
 			cfg := validConfig()
 			cfg.Portals[0].Path = mount

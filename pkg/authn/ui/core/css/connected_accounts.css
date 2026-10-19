@@ -1,0 +1,11 @@
+.connection-card { box-sizing: border-box; width: min(100% - 2rem, 36rem); margin: 5vh auto; padding: clamp(1.5rem, 5vw, 3rem); border-radius: 1rem; background: var(--brand-surface); color: var(--brand-ink); box-shadow: var(--brand-shadow); font-family: system-ui, sans-serif; line-height: 1.6; overflow-wrap: anywhere; }
+.connection-logo { max-width: 12rem; max-height: 5rem; }
+.connection-card h1 { font-size: 1.8rem; line-height: 1.2; }
+.connection-card h2 { font-size: 1.3rem; }
+.connection-card button { display: inline-block; margin: .5rem .5rem .5rem 0; padding: .8rem 1rem; border: 2px solid var(--brand-primary); border-radius: .5rem; background: var(--brand-primary); color: var(--brand-on-primary); font: inherit; cursor: pointer; }
+.connection-card button.secondary { background: var(--brand-surface); color: var(--brand-primary); }
+.connection-card a { color: var(--brand-primary); text-decoration: underline; }
+.connection-card :focus-visible { outline: 3px solid var(--brand-focus); outline-offset: 3px; }
+.connection-footer { margin-top: 2rem; }
+
+.connection-card button:hover { background: var(--brand-primary-hover); color: var(--brand-on-primary); }

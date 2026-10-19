@@ -1,4 +1,5 @@
 {
+  "connected-accounts": {"kind":"namespace", "owner":"External account connections", "mount":"deny_segment"},
   ".well-known": {
     "kind": "early_namespace",
     "owner": "Discovery: portal signing JWKS and OIDC metadata",

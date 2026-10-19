@@ -49,8 +49,11 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
 	cookieparser "github.com/greenpau/go-authcrunch/pkg/authn/cookie/parser"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
+	attachmentparser "github.com/greenpau/go-authcrunch/pkg/identity/attachment/parser"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	upstreamsaml "github.com/greenpau/go-authcrunch/pkg/idp/saml"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/redirects"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
@@ -64,9 +67,9 @@ func (p samlE2ESPProvider) GetServiceProvider(_ *http.Request, entityID string) 
 	return nil, os.ErrNotExist
 }
 
-type samlE2ESessionProvider struct{}
+type samlE2ESessionProvider struct{ format string }
 
-func (samlE2ESessionProvider) GetSession(_ http.ResponseWriter, _ *http.Request, _ *samllib.IdpAuthnRequest) *samllib.Session {
+func (provider samlE2ESessionProvider) GetSession(_ http.ResponseWriter, _ *http.Request, _ *samllib.IdpAuthnRequest) *samllib.Session {
 	now := time.Now()
 	return &samllib.Session{
 		ID:             "saml-e2e-session",
@@ -74,6 +77,7 @@ func (samlE2ESessionProvider) GetSession(_ http.ResponseWriter, _ *http.Request,
 		CreateTime:     now,
 		ExpireTime:     now.Add(time.Hour),
 		NameID:         "saml-user@example.test",
+		NameIDFormat:   provider.format,
 		UserName:       "saml-user",
 		UserEmail:      "saml-user@example.test",
 		UserCommonName: "SAML User",
@@ -86,10 +90,11 @@ func (samlE2ESessionProvider) GetSession(_ http.ResponseWriter, _ *http.Request,
 }
 
 type samlE2EFixture struct {
-	portal    *httptest.Server
-	portalURL string
-	idp       *httptest.Server
-	client    *http.Client
+	databasePath string
+	portal       *httptest.Server
+	portalURL    string
+	idp          *httptest.Server
+	client       *http.Client
 }
 
 func newSAMLE2ESigningKey(t *testing.T, serial int64) (*rsa.PrivateKey, *x509.Certificate) {
@@ -118,6 +123,11 @@ func newSAMLE2ESigningKey(t *testing.T, serial int64) (*rsa.PrivateKey, *x509.Ce
 
 func newSAMLE2EFixture(t *testing.T, configure ...func(*authn.PortalConfig)) *samlE2EFixture {
 	t.Helper()
+	return newSAMLE2EFixtureWithSubject(t, "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent", configure...)
+}
+
+func newSAMLE2EFixtureWithSubject(t *testing.T, format string, configure ...func(*authn.PortalConfig)) *samlE2EFixture {
+	t.Helper()
 	key, cert := newSAMLE2ESigningKey(t, 1)
 	rogueKey, rogueCert := newSAMLE2ESigningKey(t, 2)
 
@@ -141,12 +151,12 @@ func newSAMLE2EFixture(t *testing.T, configure ...func(*authn.PortalConfig)) *sa
 		MetadataURL:             mustSAMLE2EURL(t, idpURL+"/metadata"),
 		SSOURL:                  mustSAMLE2EURL(t, idpURL+"/sso"),
 		ServiceProviderProvider: spProvider,
-		SessionProvider:         samlE2ESessionProvider{},
+		SessionProvider:         samlE2ESessionProvider{format: format},
 		Logger:                  log.New(io.Discard, "", 0),
 	}
 	rogueRuntime := &samllib.IdentityProvider{
 		Key: rogueKey, Certificate: rogueCert, MetadataURL: idpRuntime.MetadataURL, SSOURL: idpRuntime.SSOURL,
-		ServiceProviderProvider: spProvider, SessionProvider: samlE2ESessionProvider{}, Logger: log.New(io.Discard, "", 0),
+		ServiceProviderProvider: spProvider, SessionProvider: samlE2ESessionProvider{format: format}, Logger: log.New(io.Discard, "", 0),
 	}
 	idpServer.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -183,8 +193,21 @@ func newSAMLE2EFixture(t *testing.T, configure ...func(*authn.PortalConfig)) *sa
 	if err := os.WriteFile(metadataPath, metadata, 0600); err != nil {
 		t.Fatal(err)
 	}
+	attached, err := attachmentparser.NewIdentityAttachmentConfigFromDirectives([]string{"attach to local identity store accounts"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	databasePath := filepath.Join(tmp, "users.json")
+	localStore, err := ids.NewIdentityStore(&ids.IdentityStoreConfig{Name: "accounts", Kind: "local", Params: map[string]any{"path": databasePath, "realm": "local"}}, zap.NewNop())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := localStore.Configure(); err != nil {
+		t.Fatal(err)
+	}
 	provider, err := upstreamsaml.NewIdentityProvider(&upstreamsaml.Config{
-		Name: "upstream", Realm: "upstream", Driver: "generic",
+		Attachment: attached,
+		Name:       "upstream", Realm: "upstream", Driver: "generic",
 		IdpMetadataLocation: metadataPath, IdpSignCertLocation: certPath,
 		IdpLoginURL: idpURL + "/sso", EntityID: sp.EntityID,
 		AssertionConsumerServiceURLs: []string{portalURL + "/auth/saml/upstream", portalURL + "/other/saml/upstream"},
@@ -217,7 +240,7 @@ func newSAMLE2EFixture(t *testing.T, configure ...func(*authn.PortalConfig)) *sa
 		t.Fatal("serialized cookie configuration lost custom SAML name")
 	}
 	config := &authn.PortalConfig{
-		Name: "saml-e2e", IdentityProviders: []string{"upstream"},
+		Name: "saml-e2e", IdentityStores: []string{"accounts"}, IdentityProviders: []string{"upstream"},
 		RawCryptoKeyStoreConfig: []string{"crypto default autogenerate tag saml-e2e", "crypto default token name saml_e2e_token"},
 		CookieConfig:            &reloadedCookies,
 	}
@@ -228,6 +251,7 @@ func newSAMLE2EFixture(t *testing.T, configure ...func(*authn.PortalConfig)) *sa
 		Config:            config,
 		Logger:            zap.NewNop(),
 		IdentityProviders: []idp.IdentityProvider{provider},
+		IdentityStores:    []ids.IdentityStore{localStore},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -253,7 +277,7 @@ func newSAMLE2EFixture(t *testing.T, configure ...func(*authn.PortalConfig)) *sa
 		t.Fatal(err)
 	}
 	client := &http.Client{Transport: transport, Jar: jar, Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return &samlE2EFixture{portal: portalServer, portalURL: portalURL, idp: idpServer, client: client}
+	return &samlE2EFixture{databasePath: databasePath, portal: portalServer, portalURL: portalURL, idp: idpServer, client: client}
 }
 
 func mustSAMLE2EURL(t *testing.T, raw string) url.URL {
@@ -534,5 +558,53 @@ func TestE2ESAMLCallbackIgnoresDestinationOnItsURL(t *testing.T) {
 	}
 	if got := resp.Header.Get("Location"); got == injected {
 		t.Fatalf("callback URL chose the post-login destination %q", got)
+	}
+}
+
+func TestE2ESAMLRejectsTransientLocalIdentity(t *testing.T) {
+	f := newSAMLE2EFixtureWithSubject(t, "urn:oasis:names:tc:SAML:2.0:nameid-format:transient")
+	form := f.begin(t)
+	response := samlE2EPost(t, f.client, f.portalURL+"/auth/saml/upstream", form)
+	if response.StatusCode != http.StatusUnauthorized || response.Header.Get("Authorization") != "" {
+		t.Fatal("transient SAML subject provisioned an identity", response.StatusCode)
+	}
+}
+
+func TestE2ESAMLAttachedIdentity(t *testing.T) {
+	f := newSAMLE2EFixture(t)
+	var id, username string
+	for range 2 {
+		response := samlE2EPost(t, f.client, f.portalURL+"/auth/saml/upstream", f.begin(t))
+		if response.StatusCode != http.StatusSeeOther {
+			t.Fatal("SAML attached login", response.StatusCode)
+		}
+		db, err := identity.NewDatabase(f.databasePath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		count := 0
+		for _, u := range db.Users {
+			if len(u.ExternalAccounts) > 0 {
+				count++
+				if id != "" && u.ID != id {
+					t.Fatal("SAML login changed local ID")
+				}
+				id, username = u.ID, u.Username
+			}
+		}
+		if count != 1 || id == "" {
+			t.Fatal("SAML did not provision exactly one identity")
+		}
+	}
+	db, err := identity.NewDatabase(f.databasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.DisableUser(&requests.Request{User: requests.User{Username: username}}); err != nil {
+		t.Fatal(err)
+	}
+	response := samlE2EPost(t, f.client, f.portalURL+"/auth/saml/upstream", f.begin(t))
+	if response.StatusCode != http.StatusUnauthorized || response.Header.Get("Authorization") != "" {
+		t.Fatal("disabled SAML identity authenticated", response.StatusCode)
 	}
 }

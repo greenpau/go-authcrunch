@@ -44,7 +44,7 @@ func (p *Portal) handleHTTPAppsSingleSignOn(ctx context.Context, w http.Response
 		return p.handleHTTPRedirect(ctx, w, r, rr, "/login")
 	}
 
-	usr, err := p.sessions.Get(parsedUser.Claims.ID)
+	usr, err := p.sessions.GetForToken(parsedUser.Claims.ID, parsedUser.Token)
 	if err != nil {
 		p.deleteAuthCookies(w, r)
 		p.logger.Debug(

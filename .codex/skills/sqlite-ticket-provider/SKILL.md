@@ -5,6 +5,10 @@ description: Maintain the pure-Go SQLite single-use ticket identity provider, pu
 
 # SQLite Ticket Identity Provider
 
+Read [external account attachments](../local-identity-database/references/external-accounts.md)
+when changing local provisioning, connection UI, immutable external keys, or
+attachment binding in this consumer.
+
 `plugins/identity-providers/sqlite` supplies kind `sqlite-ticket`, driver `ticket`.
 A trusted application authenticates its user and calls Issue; a browser redeems
 the issued ticket through a bound portal request. There is no anonymous issuance
@@ -97,8 +101,8 @@ redirect cookie, as described under
 
 The normal portal applies transforms, current challenge requirements and signing.
 Origin is pinned back to the selected realm after transforms. AMR is server-owned
-`federated`, never `pwd`, TOTP or WebAuthn. Ticket identity cannot satisfy a local
-factor requirement. Provider/store realm collisions and duplicate provider realms
+`federated`, never `pwd`, TOTP or WebAuthn. Ticket identity cannot by itself satisfy a local factor requirement. An explicit
+attachment with an enabled local realm can run actual local checkpoints. Provider/store realm collisions and duplicate provider realms
 fail at portal construction. The core owns JWT/session issuance; the plugin does
 not sign tokens or reuse a supplied access token.
 

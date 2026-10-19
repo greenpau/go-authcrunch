@@ -71,6 +71,9 @@ func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.R
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return nil
 	}
+	if connectedAccountsRouteIndex(r.URL.Path) >= 0 {
+		return p.handleConnectedAccounts(ctx, w, r, rr)
+	}
 	if r.URL.Path == rr.Upstream.BasePath+"cross-device" || strings.HasPrefix(r.URL.Path, rr.Upstream.BasePath+"cross-device/") {
 		return p.handleCrossDevice(ctx, w, r, rr)
 	}

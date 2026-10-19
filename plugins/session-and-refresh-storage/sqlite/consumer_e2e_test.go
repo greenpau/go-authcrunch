@@ -442,6 +442,7 @@ func TestE2ESQLiteProviderSnapshotRestart(t *testing.T) {
 		}
 	})
 	principal := tokenrefresh.Principal{Source: tokenrefresh.ProviderSnapshotSource, Backend: "upstream", BackendKind: "oauth", Realm: "upstream", UserID: "immutable-provider-sub", Subject: "immutable-provider-sub", AuthTime: time.Now().Unix(), Methods: []string{"federated"}, ProviderSnapshot: []byte(`{"sub":"immutable-provider-sub","roles":["viewer"],"provider_name":"Captured User"}`)}
+	principal.ExternalIdentity = requests.ExternalIdentity{Provider: "upstream", Kind: "oauth", Issuer: "https://issuer.test", Subject: "immutable-provider-sub", Evidence: requests.AuthenticationEvidence{UserID: "local-account", BackendVersion: "local-epoch", CredentialVersion: 7, AuthenticatedAt: principal.AuthTime, Method: "federated"}}
 	first, err := manager.Issue(t.Context(), principal, tokenrefresh.BodyTransport)
 	if err != nil {
 		t.Fatal(err)
@@ -476,6 +477,9 @@ func TestE2ESQLiteProviderSnapshotRestart(t *testing.T) {
 			}
 			http.Error(w, "refresh failed", status)
 			return
+		}
+		if result.Principal.ExternalIdentity != principal.ExternalIdentity {
+			t.Error("attached local identity evidence lost after SQLite reopen")
 		}
 		_ = json.NewEncoder(w).Encode(credentials{Access: result.AccessToken, Refresh: result.RefreshToken, SessionID: result.SessionID})
 	}))

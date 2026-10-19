@@ -203,6 +203,7 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 		rr.Response.Code = http.StatusInternalServerError
 		return p.handleHTTPErrorWithLog(ctx, w, r, rr, http.StatusInternalServerError, err.Error())
 	}
+	p.bindConnectedAccountLogin(r, usr)
 
 	redirectLocation := fmt.Sprintf("%s%s/%s",
 		rr.Upstream.BaseURL,
@@ -297,6 +298,9 @@ func (p *Portal) identifyUserRequest(rr *requests.Request, identity map[string]s
 }
 
 func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
+	if rr.ExternalIdentity.Evidence.UserID != "" {
+		return p.authorizeConnectedLogin(ctx, w, r, rr)
+	}
 	if rr.Upstream.Method == "oauth2" && p.refreshRealm(rr.Upstream.Realm) && p.refreshProviderMode(rr.Upstream.Realm) == TokenRefreshProviderSnapshot {
 		return p.authorizeProviderRefresh(ctx, w, r, rr)
 	}
@@ -381,6 +385,9 @@ func (p *Portal) authorizeLoginUser(ctx context.Context, r *http.Request, rr *re
 			return nil, err
 		}
 		m["amr"] = []string{"pwd"}
+		if rr.Authentication.UserID != "" {
+			m["id"] = rr.Authentication.UserID
+		}
 	}
 	if rr.Upstream.Method == "provider" {
 		if err := p.checkDirectAuthenticationPolicy(rr, m, nil); err != nil {
@@ -390,6 +397,7 @@ func (p *Portal) authorizeLoginUser(ctx context.Context, r *http.Request, rr *re
 		m["origin"] = rr.Upstream.Realm
 	}
 	injectPortalRoles(m, p.config)
+	m["nonce"] = util.GetRandomString(32)
 	usr, err := user.NewUser(m)
 	if err != nil {
 		rr.Response.Code = http.StatusUnauthorized
@@ -481,7 +489,7 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	// The destination carried by this login flow wins over the redirect cookie,
 	// which every tab of the browser shares and the last one to arrive wrote.
 	if rr.Response.ReturnURL != "" {
-		if returnURL := p.trustedLoginReturnURL(rr.Response.ReturnURL); returnURL != "" {
+		if returnURL := p.trustedLoginFlowReturnURL(r, rr.Response.ReturnURL); returnURL != "" {
 			redirectLocation = returnURL
 		} else {
 			p.logger.Warn(

@@ -5,6 +5,10 @@ description: Maintain upstream SAML identity-provider authentication, request/re
 
 # SAML Identity Provider
 
+Read [external account attachments](../local-identity-database/references/external-accounts.md)
+when changing local provisioning, connection UI, immutable external keys, or
+attachment binding in this consumer.
+
 `pkg/idp/saml` owns provider configuration, metadata, service providers and
 request state. `pkg/authn` supplies the browser transport. Use shared provider
 construction and public portal consumers in tests; do not conflate downstream
@@ -18,7 +22,8 @@ IdP login URL, ACS URLs, TLS settings, and login-icon configuration. Its
 behavior; `saml.NewIdentityProvider` constructs the runtime. Shared
 `idp.IdentityProviderConfig` dispatches SAML parameters through `idp.NewIdentityProvider`.
 
-There is no dedicated SAML directive-parser package or SAML constructor in
+The new attachment field uses `identity/attachment/parser`, with shared dispatcher
+and consumer coverage. There is no dedicated full SAML directive-parser package or SAML constructor in
 `pkg/idp/parser`; that package currently adapts only OAuth. This is an existing
 configuration-parser conformance gap. Do not invent a supported SAML directive
 API, or infer one from an embedding server's configuration syntax. A change to

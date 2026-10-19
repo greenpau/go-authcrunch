@@ -87,6 +87,11 @@ identity data. Do not restore stale live snapshots that revive spent credentials
 or revoked families; require fresh authentication after recovery that loses
 acknowledged history.
 
+An optional private external-identity record preserves the attached local ID,
+backend epoch, credential generation and verified provider key across restart.
+Its omission preserves legacy local canonical records; public evidence still
+serializes to no fields. Older readers reject records containing this extension.
+
 Private principal records also retain typed provider source, backend kind and
 bounded canonical ProviderSnapshot bytes for opt-in upstream snapshot families.
 Limit the snapshot to 32 KiB and reject mixed local/provider or unknown source

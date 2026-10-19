@@ -16,6 +16,7 @@
 package sqlite
 
 import (
+	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -28,14 +29,15 @@ import (
 
 // Config binds a private ticket database to a canonical portal and trusted issuer.
 type Config struct {
-	Name         string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
-	Realm        string `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
-	Path         string `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
-	Timeout      string `json:"timeout,omitempty" xml:"timeout,omitempty" yaml:"timeout,omitempty"`
-	PublicOrigin string `json:"public_origin,omitempty" xml:"public_origin,omitempty" yaml:"public_origin,omitempty"`
-	BasePath     string `json:"base_path,omitempty" xml:"base_path,omitempty" yaml:"base_path,omitempty"`
-	CookieName   string `json:"cookie_name,omitempty" xml:"cookie_name,omitempty" yaml:"cookie_name,omitempty"`
-	IssuerURL    string `json:"issuer_url,omitempty" xml:"issuer_url,omitempty" yaml:"issuer_url,omitempty"`
+	Attachment   *attachment.Config `json:"attachment,omitempty" xml:"attachment,omitempty" yaml:"attachment,omitempty"`
+	Name         string             `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	Realm        string             `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
+	Path         string             `json:"path,omitempty" xml:"path,omitempty" yaml:"path,omitempty"`
+	Timeout      string             `json:"timeout,omitempty" xml:"timeout,omitempty" yaml:"timeout,omitempty"`
+	PublicOrigin string             `json:"public_origin,omitempty" xml:"public_origin,omitempty" yaml:"public_origin,omitempty"`
+	BasePath     string             `json:"base_path,omitempty" xml:"base_path,omitempty" yaml:"base_path,omitempty"`
+	CookieName   string             `json:"cookie_name,omitempty" xml:"cookie_name,omitempty" yaml:"cookie_name,omitempty"`
+	IssuerURL    string             `json:"issuer_url,omitempty" xml:"issuer_url,omitempty" yaml:"issuer_url,omitempty"`
 }
 
 func matches(pattern, value string) bool {
@@ -64,6 +66,11 @@ func (c *Config) Validate() error {
 	if c == nil || !sqlitedb.ValidText(c.Name, 128) || !matches(`^[A-Za-z0-9_-]{1,64}$`, c.Realm) {
 		return ErrInvalid
 	}
+	if c.Attachment != nil {
+		if err := c.Attachment.Validate(); err != nil {
+			return err
+		}
+	}
 	origin, err := secureURL(c.PublicOrigin)
 	if err != nil || origin.Path != "" {
 		return ErrInvalid
@@ -83,7 +90,7 @@ func (c *Config) Validate() error {
 			return ErrInvalid
 		}
 		switch segment {
-		case "provider", "api", "profile", "sandbox", "register", "apps", "barcode", "saml", "oauth2", "basic", "assets", "favicon", "cross-device", "qrcode", "portal":
+		case "connected-accounts", "provider", "api", "profile", "sandbox", "register", "apps", "barcode", "saml", "oauth2", "basic", "assets", "favicon", "cross-device", "qrcode", "portal":
 			return ErrInvalid
 		}
 	}

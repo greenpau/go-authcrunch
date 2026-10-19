@@ -43,6 +43,36 @@ func TestSessionCacheGetRemovesNilUserEntry(t *testing.T) {
 	}
 }
 
+func TestSessionCacheGetForToken(t *testing.T) {
+	c := NewSessionCache()
+	id := strings.Repeat("a", 32)
+	first := &user.User{Token: "first-token", Claims: &user.Claims{ID: id, ExpiresAt: time.Now().Add(time.Hour).Unix()}}
+	second := &user.User{Token: "second-token", Claims: &user.Claims{ID: id, ExpiresAt: first.Claims.ExpiresAt}}
+	if err := c.Add(id, first); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := c.GetForToken(id, first.Token); err != nil || got != first {
+		t.Fatal("current token rejected", err)
+	}
+	if err := c.Add(id, second); err != nil {
+		t.Fatal(err)
+	}
+	for _, token := range []string{"", first.Token, "unknown-token"} {
+		if got, err := c.GetForToken(id, token); err == nil || got != nil {
+			t.Fatal("replaced or missing token acquired newer login evidence")
+		}
+	}
+	if got, err := c.GetForToken(id, second.Token); err != nil || got != second {
+		t.Fatal("replay attempt disturbed the current session", err)
+	}
+	if err := c.Delete(id); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := c.GetForToken(id, second.Token); err == nil || got != nil {
+		t.Fatal("deleted session accepted")
+	}
+}
+
 func TestSessionCacheGetRemovesExpiredEntriesConcurrently(t *testing.T) {
 	c := NewSessionCache()
 	now := time.Now().UTC()
