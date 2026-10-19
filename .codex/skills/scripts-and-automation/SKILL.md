@@ -234,3 +234,48 @@ the owning skill and its linked references, with README links for onboarding.
 
 Local release-toolchain qualification and snapshot isolation are defined in
 [release validation](../release-and-versioning/SKILL.md#validation).
+
+## GitHub Actions Retention
+
+Keep this repository's Actions retention at 14 days and give every artifact
+upload an explicit `retention-days` of 14 or less. The repository setting covers
+all workflows, including reusable and GitHub-generated workflows. On github.com,
+it governs checks, workflow runs, commit statuses, artifacts and logs; it is
+not a workflow-level YAML key or an editable `GITHUB_RETENTION_DAYS` variable.
+
+Read or verify the live setting with
+`gh api repos/greenpau/go-authcrunch/actions/permissions/artifact-and-log-retention`.
+To configure it, use the same endpoint with `--method PUT -F days=14`, then
+read it back. Confirm the repository in the user's links before selecting the
+API endpoint; changing one repository does not configure another. Changing
+repository settings requires administrator access;
+ordinary workflow tokens should not receive administration credentials for this.
+Keep the setting aligned with explicit upload retention when adding workflows.
+
+GitHub applies retention changes to new objects; existing objects retain their
+previous policy. Verify both the live setting and existing history before
+reporting that old runs are gone. Existing recent runs also retain their old
+expiration policy; a one-time cleanup does not change those expiration dates.
+The native setting governs new runs without a scheduled deletion workflow.
+See [GitHub's retention documentation](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#configuring-the-retention-period-for-checks-workflow-runs-commit-statuses-artifacts-and-logs-in-your-repository).
+
+When the user requests historical cleanup, inventory the authorized repositories
+and workflow paths through the API, including every pagination page. For large
+histories, list unfiltered runs and apply age/status checks locally: REST search
+filters such as `created` and `status` limit results to 1,000 runs. For all-run
+cleanup, use the repository run endpoint so history from deleted workflows is
+included; listing active workflow definitions alone misses that history. Resolve
+named workflows by path and ID because generated and checked-in CodeQL workflows
+can share a display name. Save a fixed UTC cutoff and the candidate run IDs in
+ignored `tmp/` before deletion; never delete while paginating a mutable list.
+
+Recheck each candidate before deletion and preserve active or recently executed
+runs. Creation and last-update timestamps both older than the cutoff establish
+an old completed run. A recent `updated_at` alone does not establish a recent
+execution: older runs can receive metadata updates without rerunning. Inspect
+`run_started_at`, `run_attempt`, and the latest attempt's job completion times
+before deciding to preserve those records. Record successful deletions, stop on
+unexpected API failures, and respect GitHub rate limits. After deletion, enumerate
+all pages again and verify that eligible old runs are absent and preserved run
+IDs remain. Report verified deletion counts separately from the repository
+retention setting.
