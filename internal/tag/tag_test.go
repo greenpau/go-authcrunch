@@ -83,6 +83,7 @@ import (
 	ticketsqlite "github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite"
 	identitiessqlite "github.com/greenpau/go-authcrunch/plugins/identity-stores/sqlite"
 	messagingsqlite "github.com/greenpau/go-authcrunch/plugins/messaging/sqlite"
+	loginsqlite "github.com/greenpau/go-authcrunch/plugins/oauth-login-storage/sqlite"
 	registrationsqlite "github.com/greenpau/go-authcrunch/plugins/registration-workflows/sqlite"
 	secretssqlite "github.com/greenpau/go-authcrunch/plugins/secrets/sqlite"
 	"github.com/greenpau/go-authcrunch/plugins/session-and-refresh-storage/sqlite"
@@ -96,6 +97,13 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test oauth.LoginStoreConfig struct", entry: &oauth.LoginStoreConfig{}, opts: &Options{}},
+		{name: "test oauth.LoginBinding struct", entry: &oauth.LoginBinding{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"browser": true}}},
+		{name: "test oauth.LoginTransaction struct", entry: &oauth.LoginTransaction{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"binding": true}}},
+		{name: "test oauth.MemoryLoginStore struct", entry: &oauth.MemoryLoginStore{}, opts: &Options{}},
+		{name: "test authcrunch.ServerOptions struct", entry: &authcrunch.ServerOptions{}, opts: &Options{}},
+		{name: "test oauth login sqlite.Config struct", entry: &loginsqlite.Config{}, opts: &Options{}},
+		{name: "test oauth login sqlite.Store struct", entry: &loginsqlite.Store{}, opts: &Options{}},
 		{name: "test attachment.Config struct", entry: &attachment.Config{}, opts: &Options{}},
 		{name: "test identity.ExternalAccount struct", entry: &identity.ExternalAccount{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"provider": true, "kind": true, "issuer": true, "subject": true, "connected_at": true}}},
 		{name: "test identity.ExternalAccountIdentity struct", entry: &identity.ExternalAccountIdentity{}, opts: &Options{}},

@@ -15,229 +15,160 @@
 package oauth
 
 import (
-	"crypto/sha256"
-	"crypto/subtle"
-	"fmt"
+	"context"
 	"sync"
 	"time"
 )
 
 const defaultMaxStates = 10000
-
 const oauthLoginLifetime = 5 * time.Minute
 
-type loginBinding struct {
-	sessionID     string
-	callback      string
-	nonceRequired bool
-	claimed       bool
-	// returnURL is the embedding application's post-login destination for
-	// this login, opaque to the provider.
-	returnURL string
-}
+type loginKey struct{ namespace, state string }
 
-type stateManager struct {
+// MemoryLoginStore is bounded, process-local OAuth transaction storage. Sharing
+// this object coordinates consumers in one process only; it is not durable HA.
+// The zero value is usable with the default capacity.
+type MemoryLoginStore struct {
 	mux       sync.Mutex
 	maxStates int
-	nonces    map[string]string
-	states    map[string]time.Time
-	codes     map[string]string
-	status    map[string]interface{}
-	verifiers map[string]string
-	bindings  map[string]loginBinding
+	entries   map[loginKey]LoginTransaction
 }
 
+type stateManager = MemoryLoginStore
+
+// NewMemoryLoginStore returns a private in-memory store with a 10,000-record cap.
+func NewMemoryLoginStore() *MemoryLoginStore { return newStateManager() }
 func newStateManager() *stateManager {
-	return &stateManager{
-		maxStates: defaultMaxStates,
-		nonces:    make(map[string]string),
-		states:    make(map[string]time.Time),
-		codes:     make(map[string]string),
-		status:    make(map[string]interface{}),
-		verifiers: make(map[string]string),
-		bindings:  make(map[string]loginBinding),
-	}
+	return &stateManager{maxStates: defaultMaxStates, entries: make(map[loginKey]LoginTransaction)}
 }
 
-func (sm *stateManager) add(state, nonce string) error {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	if len(sm.states) >= sm.maxStates {
-		return fmt.Errorf("OAuth state manager at capacity (%d)", sm.maxStates)
+// Create atomically publishes a fresh, bounded transaction.
+func (s *MemoryLoginStore) Create(ctx context.Context, namespace string, tx LoginTransaction) error {
+	if s == nil || ctx == nil {
+		return ErrLoginUnavailable
 	}
-	sm.nonces[state] = nonce
-	sm.states[state] = time.Now()
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	now := time.Now()
+	if tx.Validate(now) != nil || tx.Claim != "" {
+		return ErrLoginInvalid
+	}
+	s.prune(now)
+	key := loginKey{namespace, tx.State}
+	if _, exists := s.entries[key]; exists {
+		return ErrLoginInvalid
+	}
+	capacity := s.maxStates
+	if capacity == 0 {
+		capacity = defaultMaxStates
+	}
+	if len(s.entries) >= capacity {
+		return ErrLoginCapacity
+	}
+	if s.entries == nil {
+		s.entries = make(map[loginKey]LoginTransaction)
+	}
+	s.entries[key] = tx
 	return nil
 }
 
-// addLogin publishes the nonce, verifier and browser binding together before
-// the authorization redirect is returned. SessionID is supplied by the
-// embedding application from its protected per-browser cookie, never a query.
-// ReturnURL is the embedding application's destination for this login, if any.
-func (sm *stateManager) addLogin(state, nonce, verifier, sessionID, callback, returnURL string) error {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	if sessionID == "" || callback == "" {
-		return fmt.Errorf("OAuth browser binding is missing")
+// Claim admits at most one matching callback.
+func (s *MemoryLoginStore) Claim(ctx context.Context, namespace, state string, binding LoginBinding, claim string) (LoginTransaction, error) {
+	if s == nil || ctx == nil {
+		return LoginTransaction{}, ErrLoginUnavailable
 	}
-	if len(sm.states) >= sm.maxStates {
-		return fmt.Errorf("OAuth state manager at capacity (%d)", sm.maxStates)
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if err := ctx.Err(); err != nil {
+		return LoginTransaction{}, err
 	}
-	sm.states[state] = time.Now()
-	sm.nonces[state] = nonce
-	sm.verifiers[state] = verifier
-	sm.bindings[state] = loginBinding{sessionID: sessionID, callback: callback, nonceRequired: nonce != "", returnURL: returnURL}
+	key := loginKey{namespace, state}
+	tx, exists := s.entries[key]
+	if !exists || tx.Validate(time.Now()) != nil || tx.Claim != "" || !tx.Binding.Matches(binding) || !loginText(claim, 128) {
+		return LoginTransaction{}, ErrLoginInvalid
+	}
+	tx.Claim = claim
+	s.entries[key] = tx
+	return tx, nil
+}
+
+// Get returns independent evidence, rejecting missing or expired records.
+func (s *MemoryLoginStore) Get(ctx context.Context, namespace, state string) (LoginTransaction, error) {
+	if s == nil || ctx == nil {
+		return LoginTransaction{}, ErrLoginUnavailable
+	}
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if err := ctx.Err(); err != nil {
+		return LoginTransaction{}, err
+	}
+	tx, exists := s.entries[loginKey{namespace, state}]
+	if !exists || tx.Validate(time.Now()) != nil {
+		return LoginTransaction{}, ErrLoginInvalid
+	}
+	return tx, nil
+}
+
+// Complete consumes only the admitted callback, rechecking expiry and claim.
+func (s *MemoryLoginStore) Complete(ctx context.Context, namespace, state, claim string) error {
+	if s == nil || ctx == nil {
+		return ErrLoginUnavailable
+	}
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	key := loginKey{namespace, state}
+	tx, exists := s.entries[key]
+	if !exists || tx.Validate(time.Now()) != nil || claim == "" || tx.Claim != claim {
+		return ErrLoginInvalid
+	}
+	delete(s.entries, key)
 	return nil
 }
 
-// getReturnURL returns the post-login destination recorded for a login.
-func (sm *stateManager) getReturnURL(state string) string {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	return sm.bindings[state].returnURL
+// Cancel removes only the exact owner's pending or claimed transaction.
+func (s *MemoryLoginStore) Cancel(ctx context.Context, namespace, state string, binding LoginBinding) (bool, error) {
+	if s == nil || ctx == nil {
+		return false, ErrLoginUnavailable
+	}
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	key := loginKey{namespace, state}
+	tx, exists := s.entries[key]
+	if !exists || tx.ExpiresAt <= time.Now().Unix() || !tx.Binding.Matches(binding) {
+		return false, nil
+	}
+	delete(s.entries, key)
+	return true, nil
 }
 
-// beginCallback admits only one response from the initiating browser, at the
-// initiating callback, within the transaction lifetime. Mismatched browsers
-// cannot consume a legitimate pending transaction. Nonce and verifier stay
-// available until the admitted request finishes and calls del.
-func (sm *stateManager) beginCallback(state, sessionID, callback string) bool {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	binding, exists := sm.bindings[state]
-	created, active := sm.states[state]
-	if !exists || !active || binding.claimed || sessionID == "" || binding.callback != callback || time.Since(created) >= oauthLoginLifetime || subtle.ConstantTimeCompare([]byte(binding.sessionID), []byte(sessionID)) != 1 {
-		return false
+func (s *MemoryLoginStore) prune(now time.Time) {
+	for key, tx := range s.entries {
+		if tx.ExpiresAt <= now.Unix() {
+			delete(s.entries, key)
+		}
 	}
-	binding.claimed = true
-	sm.bindings[state] = binding
-	return true
-}
-
-// cancelLogin deletes a login only when every browser-binding component
-// matches. It is safe after a callback is claimed: later transaction reads fail
-// closed, and the callback's deferred deletion remains idempotent.
-func (sm *stateManager) cancelLogin(state string, sessionIDHash [32]byte, callback string) bool {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	if state == "" || callback == "" {
-		return false
-	}
-	binding, exists := sm.bindings[state]
-	if !exists || binding.callback != callback {
-		return false
-	}
-	storedHash := sha256.Sum256([]byte(binding.sessionID))
-	if subtle.ConstantTimeCompare(storedHash[:], sessionIDHash[:]) != 1 {
-		return false
-	}
-	delete(sm.nonces, state)
-	delete(sm.states, state)
-	delete(sm.codes, state)
-	delete(sm.status, state)
-	delete(sm.verifiers, state)
-	delete(sm.bindings, state)
-	return true
-}
-
-func (sm *stateManager) del(state string) {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	delete(sm.nonces, state)
-	delete(sm.states, state)
-	delete(sm.codes, state)
-	delete(sm.status, state)
-	delete(sm.verifiers, state)
-	delete(sm.bindings, state)
-}
-
-func (sm *stateManager) addVerifier(state, verifier string) {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	sm.verifiers[state] = verifier
-}
-
-func (sm *stateManager) getVerifier(state string) (string, bool) {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	v, exists := sm.verifiers[state]
-	return v, exists
-}
-
-func (sm *stateManager) exists(state string) bool {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	if _, exists := sm.states[state]; exists {
-		return true
-	}
-	return false
-}
-
-func (sm *stateManager) validateNonce(state, nonce string) error {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	v, exists := sm.nonces[state]
-	if !exists {
-		return fmt.Errorf("no nonce found for %s", state)
-	}
-	if subtle.ConstantTimeCompare([]byte(v), []byte(nonce)) != 1 {
-		return fmt.Errorf("nonce mismatch for state %s", state)
-	}
-	return nil
-}
-
-// requiresNonce returns the policy captured when the login transaction was
-// created. Legacy state entries created outside the browser login flow retain
-// the historical required-nonce behavior.
-func (sm *stateManager) requiresNonce(state string) (bool, error) {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	if binding, exists := sm.bindings[state]; exists {
-		return binding.nonceRequired, nil
-	}
-	if _, exists := sm.states[state]; exists {
-		return true, nil
-	}
-	return false, fmt.Errorf("no nonce policy found for %s", state)
-}
-
-func (sm *stateManager) addCode(state, code string) {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	sm.codes[state] = code
 }
 
 func manageStateManager(sm *stateManager, stop <-chan struct{}) {
-	intervals := time.NewTicker(time.Minute * time.Duration(2))
-	defer intervals.Stop()
+	timer := time.NewTicker(2 * time.Minute)
+	defer timer.Stop()
 	for {
 		select {
 		case <-stop:
 			return
-		case <-intervals.C:
+		case now := <-timer.C:
+			sm.mux.Lock()
+			sm.prune(now)
+			sm.mux.Unlock()
 		}
-		now := time.Now()
-		sm.mux.Lock()
-		for state, ts := range sm.states {
-			deleteState := false
-			if _, exists := sm.status[state]; !exists {
-				if now.Sub(ts).Minutes() > 5 {
-					deleteState = true
-				}
-			} else {
-				if now.Sub(ts).Hours() > 12 {
-					deleteState = true
-				}
-			}
-			if deleteState {
-				delete(sm.nonces, state)
-				delete(sm.states, state)
-				delete(sm.codes, state)
-				delete(sm.status, state)
-				delete(sm.verifiers, state)
-				delete(sm.bindings, state)
-			}
-		}
-		sm.mux.Unlock()
 	}
 }

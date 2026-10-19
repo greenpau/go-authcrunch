@@ -44,11 +44,12 @@ var ErrConfig = errors.New("invalid SQLite backend configuration")
 
 // Database owns a single private connection pool. Callers own Close.
 type Database struct {
-	db      *sql.DB
-	path    string
-	file    os.FileInfo
-	timeout time.Duration
-	closed  atomic.Bool
+	db        *sql.DB
+	path      string
+	file      os.FileInfo
+	timeout   time.Duration
+	closed    atomic.Bool
+	exclusive bool
 }
 
 // ValidText checks bounded, nonempty identifiers and configuration text.
@@ -75,7 +76,16 @@ func Normalize(path, timeout *string) error {
 // Open initializes a dedicated application/version-1 schema. Definitions are
 // trusted SQL constants supplied by plugin code, never user configuration.
 func Open(ctx context.Context, path, timeout string, application int, schema map[string]string) (*Database, error) {
-	return open(ctx, path, timeout, application, 1, schema, nil, nil)
+	return open(ctx, path, timeout, "immediate", application, 1, schema, nil, nil)
+}
+
+// OpenExclusive acquires an exclusive transaction lock before invoking either
+// callback. In rollback-journal mode this avoids commit-time lock upgrades and
+// reads becoming busy after admission. Reads and writes serialize across clients;
+// contention is retried only before the callback, under the operation deadline.
+// Schema, durability and uncertain-commit handling match Open.
+func OpenExclusive(ctx context.Context, path, timeout string, application int, schema map[string]string) (*Database, error) {
+	return open(ctx, path, timeout, "exclusive", application, 1, schema, nil, nil)
 }
 
 // OpenMigrated initializes version 2 or atomically upgrades an exactly matching
@@ -86,10 +96,10 @@ func OpenMigrated(ctx context.Context, path, timeout string, application int, sc
 	if len(previous) == 0 || len(migration) == 0 {
 		return nil, ErrUnavailable
 	}
-	return open(ctx, path, timeout, application, 2, schema, previous, migration)
+	return open(ctx, path, timeout, "immediate", application, 2, schema, previous, migration)
 }
 
-func open(ctx context.Context, path, timeout string, application, target int, schema, previous map[string]string, migration []string) (*Database, error) {
+func open(ctx context.Context, path, timeout, writeLock string, application, target int, schema, previous map[string]string, migration []string) (*Database, error) {
 	if ctx == nil || Normalize(&path, &timeout) != nil || application <= 0 || len(schema) == 0 || runtime.GOOS == "windows" {
 		return nil, ErrUnavailable
 	}
@@ -100,7 +110,7 @@ func open(ctx context.Context, path, timeout string, application, target int, sc
 	if err != nil {
 		return nil, ErrUnavailable
 	}
-	q := url.Values{"mode": {"rw"}, "_txlock": {"immediate"}, "_pragma": {"busy_timeout(0)", "foreign_keys(1)", "synchronous(EXTRA)", "fullfsync(1)", "secure_delete(1)"}}
+	q := url.Values{"mode": {"rw"}, "_txlock": {writeLock}, "_pragma": {"busy_timeout(0)", "foreign_keys(1)", "synchronous(EXTRA)", "fullfsync(1)", "secure_delete(1)"}}
 	uri := url.URL{Scheme: "file", Path: filepath.ToSlash(path), RawQuery: q.Encode()}
 	connector, err := driver.NewConnector(uri.String())
 	if err != nil {
@@ -110,7 +120,7 @@ func open(ctx context.Context, path, timeout string, application, target int, sc
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 	d, _ := time.ParseDuration(timeout)
-	store := &Database{db: db, path: path, file: info, timeout: d}
+	store := &Database{db: db, path: path, file: info, timeout: d, exclusive: writeLock == "exclusive"}
 	err = store.Write(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		var mode string
 		if err := tx.QueryRowContext(ctx, "PRAGMA journal_mode").Scan(&mode); err != nil || mode != "delete" {
@@ -262,7 +272,7 @@ func (s *Database) run(ctx context.Context, write bool, apply func(context.Conte
 	var tx *sql.Tx
 	for {
 		var err error
-		tx, err = s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: !write})
+		tx, err = s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: !write && !s.exclusive})
 		if err == nil {
 			break
 		}

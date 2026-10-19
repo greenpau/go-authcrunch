@@ -27,6 +27,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
+	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/logging"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
@@ -73,11 +74,26 @@ func newRefMap() refMap {
 	}
 }
 
+// ServerOptions contains runtime dependencies excluded from declarative JSON.
+// The host owns injected stores and closes them only after all runtimes drain.
+// Supply fresh bindings after decoding configuration; NewServer never falls
+// back to memory for a configured but missing OAuth store.
+type ServerOptions struct {
+	OAuthLoginStores map[string]oauth.LoginStore `json:"-" xml:"-" yaml:"-"`
+}
+
 // NewServer constructs a runtime and owns its providers, stores, registries,
 // portals, and gatekeepers. On failure it disposes completed and partially
 // configured components in reverse construction order. Supply a fresh config
 // graph for each runtime; do not mutate it while the runtime is in use.
-func NewServer(config *Config, logger *zap.Logger) (_ *Server, err error) {
+func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
+	return NewServerWithOptions(config, logger, ServerOptions{})
+}
+
+// NewServerWithOptions constructs a runtime with host-owned dependencies.
+// Its component lifecycle and validation match NewServer. It does not close
+// injected dependencies on failure or shutdown, including when shared by peers.
+func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOptions) (_ *Server, err error) {
 	if logger == nil {
 		return nil, fmt.Errorf("server logger is nil")
 	}
@@ -126,7 +142,7 @@ func NewServer(config *Config, logger *zap.Logger) (_ *Server, err error) {
 	}
 
 	for _, cfg := range config.IdentityProviders {
-		provider, err := idp.NewIdentityProvider(cfg, logger)
+		provider, err := idp.NewIdentityProviderWithLoginStores(cfg, logger, options.OAuthLoginStores)
 		if err != nil {
 			return nil, errors.ErrNewServer.WithArgs("failed initializing identity provider", err)
 		}

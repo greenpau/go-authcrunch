@@ -1,6 +1,6 @@
 ---
 name: oauth-identity-provider
-description: Maintain upstream OAuth identity-provider directive parsers, shared configuration dispatch, OAuth/OIDC discovery, GitHub identity claims, JWKS and static public PEM verification, EdDSA/Ed25519 token validation, key refresh, and real portal OAuth E2E tests. Excludes portal signing-key publication and gatekeeper-owned direct OAuth sessions.
+description: Maintain upstream OAuth identity-provider directive parsers, shared configuration dispatch, injectable OAuth login storage, OAuth/OIDC discovery, GitHub identity claims, JWKS and static public PEM verification, EdDSA/Ed25519 token validation, key refresh, and real portal OAuth E2E tests. Excludes portal signing-key publication and gatekeeper-owned direct OAuth sessions.
 ---
 
 # OAuth Identity Provider
@@ -205,15 +205,24 @@ do not own their lifetime. Direct provider consumers call Close themselves.
 
 ## Browser State and Nonce Policy
 
-`state.go` atomically publishes nonce, PKCE verifier and login binding. Bind a
+Read [login transaction storage](references/login-storage.md) when changing the
+public `oauth.LoginStore` contract, named runtime injection, SQLite reference,
+replica switching, backend errors, or callback completion/cancellation.
+
+`login_store.go` owns the transaction contract; `state.go` implements bounded
+private memory. Publish nonce, PKCE verifier and login binding together. Bind a
 five-minute, single-use callback to the initiating protected browser SessionID
 and exact callback URL. Claim it atomically before processing any code or direct
-token; delete it on every completion/error path. State is distinct from the
+token; consume the exact claim on completion/error. An unavailable backend can
+retain a claimed record until expiry, but it must never make it redeemable again. State is distinct from the
 browser cookie, and a supplied state must never create its own browser binding.
 
 `IdentityProvider.CancelLogin(state, sessionIDHash, callback)` atomically removes
 state only for the exact callback and SHA-256 of its initiating SessionID. It is
-idempotent and supports pending or claimed transactions. Keep this optional
+idempotent and supports pending or claimed transactions. Remote consumers use
+`CancelLoginContext` to distinguish unconfirmed cancellation from a missing
+transaction. The compatibility bool method uses a five-second deadline and
+returns false on storage failure. Keep this optional
 provider capability separate from the shared `idp.IdentityProvider` interface;
 direct authorization consumers require it to release canceled transactions.
 Consumers must still prevent session issuance after their own logout or closure;
@@ -222,8 +231,9 @@ removing state does not promise to interrupt an already-running HTTP exchange.
 Capture nonce policy when login starts. `NonceDisabled` omits nonce from the
 authorization URL (including a preconfigured nonce parameter) and skips only the
 nonce-claim check for that transaction. An enabled transaction requires its exact
-stored nonce. Later config changes cannot weaken an existing transaction; legacy
-state entries fail closed to nonce-required behavior. Missing state still fails.
+stored nonce. Later config changes cannot weaken an existing transaction;
+shared namespaces include the normalized provider configuration digest.
+Missing state still fails.
 Signature, issuer, audience, browser state, expiry, replay and PKCE validation
 remain active when nonce compatibility is disabled.
 
@@ -235,16 +245,16 @@ destination, so the portal cannot fall back to another tab's cookie. The portal
 revalidates the destination at grant and uses the shared 16384-byte bound.
 Every callback request clears any `ReturnURL` it carried before the state is
 claimed, and sets the bound value only on success, so neither a callback URL nor a
-failed or unadmitted callback can choose a destination. The value is read before
-the claim; it never changes once published. The destination shares the binding's
+failed or unadmitted callback can choose a destination. The value is returned
+with the atomic claim; it never changes once published. The destination shares the binding's
 capacity, lifetime, single use and removal on completion, cancellation and expiry.
 The embedding portal validates it before login and again before use. `RedirectURL`
 stays reserved for the authorization endpoint.
 
-Keep `nonce_policy_test.go`, `state_binding_test.go`, parser round-trip OAuth TLS
+Keep `nonce_policy_test.go`, `state_test.go`, parser round-trip OAuth TLS
 coverage and `oauth_state_e2e_test.go` for both settings, wrong/missing nonce,
 wrong browser/callback, replay and malformed signed identity tokens.
-`TestStateBindingReturnURL` and `TestE2EOAuthTokenCallbackReturnsBoundDestination`
+`TestLoginStoreLifecycle` and `TestE2EOAuthTokenCallbackReturnsBoundDestination`
 cover the bound destination's lifecycle, interleaved callbacks, callback-carried
 destinations, failed callbacks and unknown states.
 

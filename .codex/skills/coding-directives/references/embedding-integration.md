@@ -26,6 +26,14 @@ that a downstream configuration language already recognizes a directive.
 | Upstream OAuth provider body | `pkg/idp/parser.NewOAuthIdentityProviderConfigFromDirectives(name, statements)` | `Config.IdentityProviders`; this adapter delegates grammar to `pkg/idp/oauth/parser` |
 | Native login client body | `pkg/authclient/parser.NewAuthenticationClientConfigFromDirectives(statements)` | `authclient.NewClient` with explicit refresh body transport |
 
+For an upstream provider's `login store NAME namespace NAMESPACE` setting,
+construct host-owned `oauth.LoginStore` clients after restoring configuration and
+pass them through `NewServerWithOptions` / `ServerOptions.OAuthLoginStores`.
+Missing bindings fail closed. Draining/closing a root never closes these borrowed
+clients; the host must close them after every consumer drains. The provider's
+[login storage contract](../../oauth-identity-provider/references/login-storage.md)
+defines atomicity, errors and the separate boundaries of full portal HA.
+
 Read the feature's owning skill for its exact grammar, defaults, and exclusions.
 Keep downstream handlers thin; do not copy field allowlists or parse the same
 settings independently. Do not route upstream OAuth settings into `pkg/oidc`.

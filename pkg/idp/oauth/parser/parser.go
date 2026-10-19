@@ -74,6 +74,17 @@ func NewOAuthIdentityProviderConfigFromDirectives(name string, statements []stri
 		if err != nil || len(args) == 0 || slices.Contains(args, "") {
 			return nil, fmt.Errorf("invalid OAuth identity provider directive at line %d", line)
 		}
+		if len(args) >= 2 && args[0] == "login" && args[1] == "store" {
+			if seen["login store"] || len(args) != 5 || args[3] != "namespace" {
+				return nil, fmt.Errorf("expected one login store NAME namespace NAMESPACE directive")
+			}
+			config.LoginStore = &oauth.LoginStoreConfig{Name: args[2], Namespace: args[4]}
+			if err := config.LoginStore.Validate(); err != nil {
+				return nil, err
+			}
+			seen["login store"] = true
+			continue
+		}
 		if args[0] == "attach" {
 			if seen["attachment"] {
 				return nil, fmt.Errorf("duplicate OAuth identity attachment")

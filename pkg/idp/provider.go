@@ -16,7 +16,8 @@ package idp
 
 import (
 	"encoding/json"
-	// "fmt"
+	"fmt"
+
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/icons"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -43,6 +44,13 @@ type IdentityProvider interface {
 
 // NewIdentityProvider returns IdentityProvider instance.
 func NewIdentityProvider(cfg *IdentityProviderConfig, logger *zap.Logger) (IdentityProvider, error) {
+	return NewIdentityProviderWithLoginStores(cfg, logger, nil)
+}
+
+// NewIdentityProviderWithLoginStores resolves a provider's optional named OAuth
+// transaction backend. The caller owns the stores and must not mutate bindings
+// during construction. Missing named stores fail closed; SAML is unaffected.
+func NewIdentityProviderWithLoginStores(cfg *IdentityProviderConfig, logger *zap.Logger, stores map[string]oauth.LoginStore) (IdentityProvider, error) {
 	var p IdentityProvider
 	var err error
 
@@ -63,7 +71,14 @@ func NewIdentityProvider(cfg *IdentityProviderConfig, logger *zap.Logger) (Ident
 			return nil, errors.ErrIdentityProviderNewConfig.WithArgs(cfg.Params, err)
 		}
 		config.Name = cfg.Name
-		p, err = oauth.NewIdentityProvider(config, logger)
+		var store oauth.LoginStore
+		if config.LoginStore != nil {
+			store = stores[config.LoginStore.Name]
+			if store == nil {
+				return nil, fmt.Errorf("configured OAuth login store is not bound")
+			}
+		}
+		p, err = oauth.NewIdentityProviderWithLoginStore(config, logger, store)
 	case "saml":
 		config := &saml.Config{}
 		if err := json.Unmarshal(b, config); err != nil {

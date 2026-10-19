@@ -16,6 +16,7 @@ package oauth
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -86,25 +87,35 @@ type IdentityProvider struct {
 	userInfoFields         map[string]interface{}
 	userInfoRolesFieldName string
 	// state stores cached state IDs
-	state         *stateManager
-	logger        *zap.Logger
-	browserConfig *browserConfig
-	configured    atomic.Bool
-	configureMu   sync.Mutex
-	lifecycleMu   sync.Mutex
-	setupWG       sync.WaitGroup
-	closed        atomic.Bool
-	setupContext  context.Context
-	cancelSetup   context.CancelFunc
-	stop          chan struct{}
-	stateDone     chan struct{}
-	stopOnce      sync.Once
+	state          *stateManager
+	loginStore     LoginStore
+	loginNamespace string
+	logger         *zap.Logger
+	browserConfig  *browserConfig
+	configured     atomic.Bool
+	configureMu    sync.Mutex
+	lifecycleMu    sync.Mutex
+	setupWG        sync.WaitGroup
+	closed         atomic.Bool
+	setupContext   context.Context
+	cancelSetup    context.CancelFunc
+	stop           chan struct{}
+	stateDone      chan struct{}
+	stopOnce       sync.Once
 	// Disabled the check for the presence of email field in a token.
 	disableEmailClaimCheck bool
 }
 
 // NewIdentityProvider returns an instance of IdentityProvider.
 func NewIdentityProvider(cfg *Config, logger *zap.Logger) (*IdentityProvider, error) {
+	return NewIdentityProviderWithLoginStore(cfg, logger, nil)
+}
+
+// NewIdentityProviderWithLoginStore binds a host-owned transaction store before
+// publication. A configured LoginStore requires an injected implementation;
+// omission requires nil and retains private memory. The host drains consumers
+// before closing the injected store; provider shutdown never closes that store.
+func NewIdentityProviderWithLoginStore(cfg *Config, logger *zap.Logger, store LoginStore) (*IdentityProvider, error) {
 	if logger == nil {
 		return nil, errors.ErrIdentityProviderConfigureLoggerNotFound
 	}
@@ -149,6 +160,21 @@ func NewIdentityProvider(cfg *Config, logger *zap.Logger) (*IdentityProvider, er
 		}
 	}
 
+	if (cfg.LoginStore == nil) != (store == nil) {
+		return nil, fmt.Errorf("OAuth login store configuration and runtime binding must both be present")
+	}
+	b.loginStore = b.state
+	if store != nil {
+		// Bind all normalized provider/trust settings, including compatibility flags
+		// and secrets, without publishing their plaintext to the backend namespace.
+		encoded, err := json.Marshal(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("invalid OAuth login store binding")
+		}
+		digest := sha256.Sum256(encoded)
+		b.loginNamespace = fmt.Sprintf("%s/%x", cfg.LoginStore.Namespace, digest)
+		b.loginStore = store
+	}
 	b.setupContext, b.cancelSetup = context.WithCancel(context.Background())
 	go func() { defer close(b.stateDone); manageStateManager(b.state, b.stop) }()
 
@@ -216,7 +242,23 @@ func (b *IdentityProvider) GetConfig() map[string]interface{} {
 // authentication began. The method is idempotent and cannot consume another
 // browser's or callback endpoint's transaction.
 func (b *IdentityProvider) CancelLogin(state string, sessionIDHash [32]byte, callback string) bool {
-	return b.state.cancelLogin(state, sessionIDHash, callback)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	canceled, _ := b.CancelLoginContext(ctx, state, sessionIDHash, callback)
+	return canceled
+}
+
+// CancelLoginContext is the error-aware cancellation API for shared storage.
+// Callers must treat an error as unconfirmed cancellation, never as success.
+func (b *IdentityProvider) CancelLoginContext(ctx context.Context, state string, sessionIDHash [32]byte, callback string) (bool, error) {
+	if b == nil || b.loginStore == nil {
+		return false, ErrLoginUnavailable
+	}
+	canceled, err := b.loginStore.Cancel(ctx, b.loginNamespace, state, LoginBinding{Browser: sessionIDHash, Callback: callback})
+	if err != nil {
+		return false, ErrLoginUnavailable
+	}
+	return canceled, nil
 }
 
 // ScopeExists returns true if any of the provided scopes exist.

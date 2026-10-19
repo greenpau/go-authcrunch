@@ -4,7 +4,7 @@ files:
     config.go: 515cfb1446a474cf892819526e6f8bb3239db12abef7454c740bbbb52e537d8c
     config_oauth_applications.go: c3d105f8cb5eab55866d97259bd990d3b0da25eb68412f6069b293e21c20491d
     config_oauth_authorization.go: 19e0d80bce0f703c65752ade6259436bd033bc258a420a76b83a1edb0ab6de62
-    internal/sqlitedb/database.go: 27a6ec74e19241fea34f5e25e9e87a0b9155dcaab0c615d1dbe1857df70989ba
+    internal/sqlitedb/database.go: 2960aa0fc3f1307e133c8a68e95bf12313e11913ab63359512b7b1c606fc86bb
     pkg/apiauth/auth_error_response.go: 15887895577cd296d58d59e5feda3db37732348547dd488c9fcd5bfe1b8434a0
     pkg/apiauth/auth_request.go: 033621ff07d821fb87bd1e18287ca99cb82bcdacc387d455ccc86ffd244e4dc9
     pkg/apiauth/auth_response.go: 485363e7e285da38ab07a463b30e540744f168a18558e54a9123f619db909b9e
@@ -100,7 +100,7 @@ files:
     pkg/authn/handle_authenticate_basic_auth_request.go: 52e93e1f01067cf016a47326abdd114e75f96d076ef3f4dc10810deb466ad002
     pkg/authn/handle_basic_login.go: 776a4cab72ce30511232983af36c5fe7bbe191c3378d09053f833ba79873dab2
     pkg/authn/handle_external_http_logout.go: f53443cef20c3d5356058e6c55f8061a14726134176029ed3636e5e1f5ab12cb
-    pkg/authn/handle_external_login.go: 55e6850c773c71c124be3e1c350bd42b654cd2df39f9ee83f9865c33bb704eb3
+    pkg/authn/handle_external_login.go: ff05fdbc34266151dbc13e6512a74ff4ef018b9ee026c71352628aed96fcd189
     pkg/authn/handle_http_apps.go: 324445332d0b34151752570fe903ca735bd0c2f7b4958fbe7c3ab85d3c52db04
     pkg/authn/handle_http_apps_mobile_access.go: 31a1836d567ecc292a7aa6654393b6c3f63a06fd1ffc070a9450dafc0d5bdcb5
     pkg/authn/handle_http_apps_sso.go: 1c7239fa4bf201a7d93b68b93f7ed7f46ecb1ecf3e55d388429ff20ec281b77c
@@ -239,29 +239,30 @@ files:
     pkg/identity/version.go: df39a593e29ed33ffc6388cc1c46f7bcd26cf3d84c656087127c715008d5e168
     pkg/identity/webauthn.go: 2a4de706f345a19a0ad2eeefd748a433638e8a5e5d6132ace12dc9772498dd75
     pkg/identity/webauthn_registration.go: 1834687586845126446f605bfff0a50349636f462bb0e6a47f36cefbd5cb73f6
-    pkg/idp/config.go: 64f216a2edd2cdc0e031c798a96beb68652b20b87d0502e911a620afd41ede5e
+    pkg/idp/config.go: 56106e4dd8463e5e8490751c9b991dc5b3af0fef17c17501b836bcf82a326f7c
     pkg/idp/http_login.go: 7df093922ca3f1cc75e0e1b156c1ded198fb49f540b014fbba41664309d0e57a
     pkg/idp/method.go: 534e2a5518aa774a073476334e0109af40abdfc00a15494c1115eba9f1d99a36
-    pkg/idp/oauth/authenticate.go: 729f082ee3a6e9caebdbd88ec7bc2c27650ab129bdafbcf6fb120dbaa52c06a9
+    pkg/idp/oauth/authenticate.go: f8c0f1f9fdc0287b30c76fe2dd330b39b6b47927d21a37f43d4cb757ae4c3f5d
     pkg/idp/oauth/authenticate_setup.go: 45ab885b2a2b0ffaba95778476ad3ba43f9d2f81f5420336bd9dcb4f5f5a6b00
     pkg/idp/oauth/browser.go: fce0759058a6aa77f0c5988d47a4b5ce264e85a0026c47c6590024fb305a7c35
     pkg/idp/oauth/claim_parser.go: 5e3358c13287e806a8057f81e7be87401670a59b2652f33534d4d83f14716db7
-    pkg/idp/oauth/config.go: 6a8e6a2aec2aef7f0d29f18ac0ee262ca1f03e1e14ddfd68f7d3bfc3a8352af5
+    pkg/idp/oauth/config.go: 889c5d5452d7c879c5d5afe49d9285dadb89de33d535b1c9467271fefd1be62d
     pkg/idp/oauth/github_email.go: c66214c25289f9ca6777acca99aafc7d899af98973a6d9a541360915cb917902
     pkg/idp/oauth/github_id.go: fd0976390961ee121238c5cb6e9261aad220f258d6272e64355b285a1d505651
     pkg/idp/oauth/jwks.go: d3d3da026e4ff2b34a6e4db05da34aa079fc1aa0ff988896ef2bd5885b6965a6
     pkg/idp/oauth/jwks_store.go: 4d3ae1f8bb64f3404de0c3697ebfd17c57c9d096b81675e45e533f1cc726d894
     pkg/idp/oauth/jwt.go: b38b80a63227b465f4554e95af971130622f24ea1084c50c402dc98dc53f62e7
+    pkg/idp/oauth/login_store.go: 5bcf1819716b919b4d4e5cfea0dbac071e75523b481f18b5088aac53a9653abb
     pkg/idp/oauth/parser/fields.go: cab888b83bcb982f683de1f81a00ec472b9297ad26830845e3e2c45ecf6d1c47
-    pkg/idp/oauth/parser/parser.go: 7f1af2979fe06f869b6010c2ae67be535b928764388656592b634a07b5d1c7fe
-    pkg/idp/oauth/provider.go: 2792ae810a0edc330617e359d4d4f1b8b2aa4b8bd890c29f86ec6eadce2685ce
-    pkg/idp/oauth/state.go: 61e2943b2fcd9ea1a1af38c288e9578b053c540d1179a1f532b903166b3b8164
+    pkg/idp/oauth/parser/parser.go: 83b1e2a5d92eb78a9ad2d034f1110df9ff3be344bc4e66d07ab2d84f173968aa
+    pkg/idp/oauth/provider.go: 3c0cf90489a6f8e344c77edd16ccebb6a444e6da071da6fd3fb45b4b36031310
+    pkg/idp/oauth/state.go: 26eecfe18fb44e6e723a846cb7228f4e803cd31b5a5e5a072c4bbce338eee76a
     pkg/idp/oauth/user.go: 607b25403424edf439b56887d4056748f30ff57b3f1796e7b7981d1f76441964
     pkg/idp/oauth/user_groups.go: 23d0011538457675fab16c56ac4072a4409f3b42119e77f8e7ba23bece1ba059
     pkg/idp/oauth/user_info.go: 427a82c1a6ee25756b88b7848154b16dbce20b84330acb0b72bd3680f16aa17d
-    pkg/idp/oauth/validator.go: 4753d7822d08426d79f7f0e75da6413c15809abe4a529cda8ad73697834413dd
+    pkg/idp/oauth/validator.go: 7841119f2876fab4cfc7d13614f7278c0d7842daf1cad948546e6e69e1a26958
     pkg/idp/parser/oauth.go: 0479066e24aa51b7e6315b667e8ce2e32fcfd64f7700fb0a0dc65d55fff492e9
-    pkg/idp/provider.go: a5ce0f62eda79707e06c8317857bd260890e983612846b40ce35ea9be0bf578f
+    pkg/idp/provider.go: 891bd1c0dc6cb82a2ade4e2dcc965d6ae0236e0c7a908e3ec280530622433fd4
     pkg/idp/saml/authenticate.go: d213ff832e51cd48a694ab1323eb10c61c718c9bc4c245a557c5d93a30806945
     pkg/idp/saml/config.go: a02a76a045067423295f5eee034221fe5b2159c4e8a485375270020769d72c5f
     pkg/idp/saml/provider.go: 4b7fdd7ef95892d5894200f436fad6b1a1ea3c9892685a6886124d14184fea6a
@@ -353,8 +354,11 @@ files:
     pkg/util/validate/additional_scopes.go: 0343fc55b0e850cc0c49ae12f28c1aa597232a88c8c626671f9c728d1e051ebb
     pkg/util/validate/login_hint.go: 0f415460fec2fdb3047635b8d8b6d703790fad279fc171fc67f8614c27e199eb
     pkg/waf/malformed_input_check.go: eaf3b3f2b24f741257709fa61f09f192efbb43b785b51e72b5ee26c597663785
+    plugins/oauth-login-storage/sqlite/config.go: 98209c1750171fd425144fff4e928fd53391ffa294a3815c5953eccef43f1626
+    plugins/oauth-login-storage/sqlite/parser/parser.go: 35534e0835a0b160f111033e6afc7d489372e4ae451087631ceaa4abcb2e8ffb
+    plugins/oauth-login-storage/sqlite/store.go: 93a5fa57f10de9d62794be6711ab6bb7e96cc616d825f39dca5cc710dccfddb8
     plugins/registration-workflows/sqlite/config.go: 17c42cd759d1092d178e1eb983d134cbfc03d1123e222e9a91505970b95554b5
     plugins/registration-workflows/sqlite/parser/parser.go: 757678ff613256309f3a9a536ff968ed87cde46c3ee691300193d98a031fbd04
     plugins/registration-workflows/sqlite/workflow.go: 4ddedd74461407312ebd4b0b4839eb28c0044dddbab3d945c859e5a3a45419a7
-    server.go: 2fe0d8306d9e40660aeae28bb1b9dc0d9485dcee52f99377d55c21ddf003b746
+    server.go: 48e69579c476b638f1e82b8fa6b46f047b6af68c4c651201edde4c8b27a9abba
     server_persistent_state.go: 706d1920510d914041ee78a43143068a11b7294028eadb234b363073065cd371

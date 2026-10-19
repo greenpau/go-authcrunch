@@ -69,6 +69,7 @@ func oauthEdClaims() jwtlib.MapClaims {
 func oauthEdProvider(t *testing.T, keys ...*JwksKey) *IdentityProvider {
 	t.Helper()
 	b := &IdentityProvider{config: &Config{ClientID: oauthValidatorTestClientID, Issuer: oauthValidatorTestIssuer, Driver: "generic", IdentityTokenFieldName: "id_token"}, keys: newOAuthJwksSet(keys), state: newStateManager()}
+	b.loginStore = b.state
 	if err := b.state.add("ed-state", "ed-nonce"); err != nil {
 		t.Fatal(err)
 	}

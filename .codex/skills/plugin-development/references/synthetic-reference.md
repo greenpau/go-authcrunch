@@ -35,6 +35,10 @@ The SQLite enrollment workflow at `plugins/registration-workflows/sqlite` is
 owned by [sqlite-registration](../../sqlite-registration/SKILL.md).
 The SQLite ticket identity provider at `plugins/identity-providers/sqlite` is
 owned by [sqlite-ticket-provider](../../sqlite-ticket-provider/SKILL.md).
+The SQLite OAuth login store at `plugins/oauth-login-storage/sqlite` implements
+`oauth.LoginStore` and root injection; the
+[OAuth owner](../../oauth-identity-provider/references/login-storage.md) specifies
+atomic claims, the local-filesystem limit and public two-runtime acceptance.
 Other category paths remain layout contracts
 until implemented. A path in this guide is
 not proof that a plugin, constructor, parser, or category integration is present.

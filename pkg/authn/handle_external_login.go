@@ -16,10 +16,12 @@ package authn
 
 import (
 	"context"
+	stderrors "errors"
 	"net/http"
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"go.uber.org/zap"
 )
@@ -105,7 +107,11 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 			zap.String("request_id", rr.ID),
 			zap.Error(err),
 		)
-		return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
+		status := http.StatusUnauthorized
+		if stderrors.Is(err, oauth.ErrLoginUnavailable) {
+			status = http.StatusServiceUnavailable
+		}
+		return p.handleHTTPError(ctx, w, r, rr, status)
 	}
 	switch rr.Response.Code {
 	case http.StatusBadRequest:

@@ -16,8 +16,10 @@ package oauth
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 	"strings"
+	"time"
 
 	jwtlib "github.com/golang-jwt/jwt/v5"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -83,11 +85,14 @@ func (b *IdentityProvider) validateAccessToken(ctx context.Context, state string
 			return nil, err
 		}
 		if tokenName == b.config.IdentityTokenFieldName || tokenName == "id_token" {
-			nonceRequired, err := b.state.requiresNonce(state)
+			transaction, err := b.loginStore.Get(ctx, b.loginNamespace, state)
 			if err != nil {
-				return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, err)
+				return nil, loginStoreError(err)
 			}
-			if nonceRequired {
+			if transaction.State != state || transaction.Validate(time.Now()) != nil {
+				return nil, ErrLoginUnavailable
+			}
+			if transaction.NonceRequired {
 				nonce, exists, nonceErr := getOAuthStringClaim(claims, "nonce")
 				if nonceErr != nil {
 					return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, nonceErr)
@@ -95,8 +100,8 @@ func (b *IdentityProvider) validateAccessToken(ctx context.Context, state string
 				if !exists {
 					return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, "nonce not found")
 				}
-				if err := b.state.validateNonce(state, nonce); err != nil {
-					return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, err)
+				if subtle.ConstantTimeCompare([]byte(transaction.Nonce), []byte(nonce)) != 1 {
+					return nil, errors.ErrIdentityProviderOAuthNonceValidationFailed.WithArgs(tokenName, "nonce mismatch")
 				}
 			}
 

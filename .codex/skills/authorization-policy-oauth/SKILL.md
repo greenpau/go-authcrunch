@@ -25,7 +25,11 @@ persistence for completed sessions; unfinished upstream transactions stay volati
 `authz.NewGatekeeperWithIdentityProviders(config, providers, logger)` selects a
 configured shared OAuth provider. `NewGatekeeper` remains compatible for ordinary
 JWT policies and rejects OAuth configuration without a provider. The root
-`NewServer` passes its shared providers; no portal or identity store is needed.
+`NewServer` passes its shared providers; `NewServerWithOptions` can inject their
+[upstream login store](../oauth-identity-provider/references/login-storage.md).
+That injection does not share this policy's pending logins or opaque sessions;
+affinity is still required for direct-policy journeys. No portal or configured
+identity store is needed.
 Direct providers must also expose `CancelLogin(string, [32]byte, string) bool`;
 the built-in OAuth provider implements it without changing `idp.IdentityProvider`.
 Root validation rejects missing, disabled, wrong-kind and ambiguous references,

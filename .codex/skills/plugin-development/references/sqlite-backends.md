@@ -33,12 +33,22 @@ per-process record locks can be dropped underneath another SQLite connection.
 
 Reads use a consistent read transaction and discard it. Writes acquire an
 immediate transaction with bounded BUSY retries before invoking the callback.
+`OpenExclusive` instead acquires an exclusive transaction before either a read
+or write callback. The OAuth login reference uses this entry point so competing
+clients cannot cause a later commit-time lock upgrade or read query to fail with
+BUSY. Reads and writes serialize across clients. Contention remains bounded at admission; a
+timeout before admission does not invoke the callback or quarantine the handle.
+Keep `Open` and `OpenMigrated` on their established immediate-write behavior.
+The [SQLite transaction contract](https://www.sqlite.org/lang_transaction.html)
+describes the read/write locking distinction.
 Callbacks use bound SQL values, must not reenter the database, and must not
 publish results before successful completion. Preserve domain errors while
 redacting SQL/paths/values. Competing BEGIN attempts can briefly hold shared locks
 and cause a busy COMMIT even without a long-lived reader. Single-use concurrency
 tests require at most one successful publication; verify recovery separately for
 uncertain outcomes.
+Exclusive-admission tests additionally require one winner and ordinary conflict
+rejections across independent clients, without avoidable commit-time BUSY errors.
 Never retry COMMIT. A real COMMIT error quarantines
 the handle as `ErrCommitUncertain`; drain, reconcile through a fresh handle, and
 only then decide whether retry is safe. Cancellation before driver commit rolls

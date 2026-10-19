@@ -20,6 +20,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -90,6 +92,99 @@ func TestDatabaseTransactions(t *testing.T) {
 	}
 	if candidate, err := Open(t.Context(), path, "1s", 71, map[string]string{"records": "CREATE TABLE records (id INTEGER PRIMARY KEY, value TEXT)"}); err == nil || candidate != nil {
 		t.Fatal("accepted foreign schema")
+	}
+}
+
+func TestDatabaseExclusiveTransactions(t *testing.T) {
+	readerDB, path := openTest(t)
+	schema := map[string]string{"records": "CREATE TABLE records (id INTEGER PRIMARY KEY, value TEXT)"}
+	a, err := OpenExclusive(t.Context(), path, "1s", 71, schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Close()
+	b, err := OpenExclusive(t.Context(), path, "1s", 71, schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	reader, err := readerDB.db.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Rollback()
+	var count int
+	if err := reader.QueryRowContext(t.Context(), "SELECT count(*) FROM records").Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	called := false
+	if err := a.Write(ctx, func(context.Context, *sql.Tx) error { called = true; return nil }); !errors.Is(err, context.DeadlineExceeded) || called || a.closed.Load() {
+		t.Fatal("reader contention reached mutation or poisoned the handle", err)
+	}
+	if err := reader.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.Write(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+		_, err := tx.ExecContext(ctx, "INSERT INTO records VALUES(1,'pending')")
+		return err
+	}); err != nil {
+		t.Fatal("bounded admission did not recover", err)
+	}
+	writer, err := b.db.BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer.Rollback()
+	readCtx, cancelRead := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancelRead()
+	called = false
+	if err := a.Read(readCtx, func(context.Context, *sql.Tx) error { called = true; return nil }); !errors.Is(err, context.DeadlineExceeded) || called || a.closed.Load() {
+		t.Fatal("writer contention reached a read callback or poisoned the handle", err)
+	}
+	if err := writer.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	rejected := errors.New("already claimed")
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	var winners atomic.Int32
+	for i := range 32 {
+		client := a
+		if i%2 == 1 {
+			client = b
+		}
+		wg.Go(func() {
+			<-start
+			err := client.Write(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+				var state string
+				if err := tx.QueryRowContext(ctx, "SELECT value FROM records WHERE id=1").Scan(&state); err != nil {
+					return err
+				}
+				if state != "pending" {
+					return rejected
+				}
+				_, err := tx.ExecContext(ctx, "UPDATE records SET value='claimed' WHERE id=1")
+				return err
+			})
+			if err == nil {
+				winners.Add(1)
+			} else if !errors.Is(err, rejected) {
+				t.Error("concurrent claim failed", err)
+			}
+		})
+	}
+	close(start)
+	wg.Wait()
+	if winners.Load() != 1 {
+		t.Fatal("claims did not publish exactly one winner")
+	}
+	var state string
+	if err := b.Read(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+		return tx.QueryRowContext(ctx, "SELECT value FROM records WHERE id=1").Scan(&state)
+	}); err != nil || state != "claimed" {
+		t.Fatal("committed claim was not readable", err)
 	}
 }
 func TestDatabaseFilesystemAndConfig(t *testing.T) {

@@ -28,6 +28,7 @@ import (
 
 // Config holds the configuration for the IdentityProvider.
 type Config struct {
+	LoginStore   *LoginStoreConfig  `json:"login_store,omitempty" xml:"login_store,omitempty" yaml:"login_store,omitempty"`
 	Attachment   *attachment.Config `json:"attachment,omitempty" xml:"attachment,omitempty" yaml:"attachment,omitempty"`
 	Name         string             `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	Realm        string             `json:"realm,omitempty" xml:"realm,omitempty" yaml:"realm,omitempty"`
@@ -128,6 +129,11 @@ type Config struct {
 
 // Validate validates identity store configuration.
 func (cfg *Config) Validate() error {
+	if cfg.LoginStore != nil {
+		if err := cfg.LoginStore.Validate(); err != nil {
+			return err
+		}
+	}
 	if cfg.Attachment != nil {
 		if err := cfg.Attachment.Validate(); err != nil {
 			return err

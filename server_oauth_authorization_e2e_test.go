@@ -81,6 +81,10 @@ func newDirectOAuthFixtureWithPolicy(t *testing.T, configure func(*authz.PolicyC
 }
 
 func newDirectOAuthFixtureWithRoot(t *testing.T, configure func(*authz.PolicyConfig), configureRoot func(*authcrunch.Config), settings ...[]string) *directOAuthFixture {
+	return newDirectOAuthFixtureWithOptions(t, configure, configureRoot, authcrunch.ServerOptions{}, settings...)
+}
+
+func newDirectOAuthFixtureWithOptions(t *testing.T, configure func(*authz.PolicyConfig), configureRoot func(*authcrunch.Config), options authcrunch.ServerOptions, settings ...[]string) *directOAuthFixture {
 	t.Helper()
 	f := &directOAuthFixture{codes: make(map[string]url.Values), gatekeepers: make(map[string]*authz.Gatekeeper)}
 	pub, private, err := ed25519.GenerateKey(rand.Reader)
@@ -242,7 +246,7 @@ func newDirectOAuthFixtureWithRoot(t *testing.T, configure func(*authz.PolicyCon
 	if len(restored.AuthenticationPortals) != 0 || configureRoot == nil && len(restored.IdentityStores) != 0 {
 		t.Fatal("fixture must have no portal or unexpected identity store")
 	}
-	f.runtime, err = authcrunch.NewServer(&restored, zap.NewNop())
+	f.runtime, err = authcrunch.NewServerWithOptions(&restored, zap.NewNop(), options)
 	if err != nil {
 		t.Fatal(err)
 	}

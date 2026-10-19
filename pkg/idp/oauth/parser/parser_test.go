@@ -372,3 +372,24 @@ func ExampleNewOAuthIdentityProviderConfigFromDirectives() {
 	fmt.Println(config.Realm, config.Issuer, config.AccessTokenAudience)
 	// Output: employees https://idp.example resource-api
 }
+
+func TestOAuthLoginStoreDirectives(t *testing.T) {
+	for _, extra := range [][]string{{"login store shared"}, {"login store shared namespace"}, {"login store shared namespace deployment extra"}, {"login store shared namespace deployment", "login store other namespace deployment"}, {"login store shared prefix deployment"}} {
+		got, err := oauthparser.NewOAuthIdentityProviderConfigFromDirectives("upstream", oauthDirectives(extra...))
+		if err == nil || got != nil {
+			t.Fatal("invalid login store accepted")
+		}
+	}
+	got, err := oauthparser.NewOAuthIdentityProviderConfigFromDirectives("upstream", oauthDirectives("login store shared namespace deployment"))
+	if err != nil || got.LoginStore.Name != "shared" || got.LoginStore.Namespace != "deployment" {
+		t.Fatal("login store not parsed")
+	}
+	data, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var restored oauth.Config
+	if json.Unmarshal(data, &restored) != nil || restored.Validate() != nil || *restored.LoginStore != *got.LoginStore {
+		t.Fatal("lost login store in JSON")
+	}
+}

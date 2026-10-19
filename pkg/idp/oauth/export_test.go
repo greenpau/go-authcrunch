@@ -25,7 +25,7 @@ func (b *IdentityProvider) SetStateCapacityForTesting(capacity int) {
 func (b *IdentityProvider) StateCountForTesting() int {
 	b.state.mux.Lock()
 	defer b.state.mux.Unlock()
-	return len(b.state.states)
+	return len(b.state.entries)
 }
 
 // FetchClaimsForTesting exercises the named-driver UserInfo claim path.

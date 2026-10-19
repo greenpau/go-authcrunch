@@ -6,7 +6,10 @@ get:
   description: 'Complete the upstream OAuth/OIDC browser transaction. Exactly one state value must match
     the initiating browser session and callback and be younger than five minutes. A matching callback
     claims state once and removes it on completion, including provider errors; wrong-browser attempts
-    do not consume the legitimate transaction. For code flow, send code with state. Presence of error
+    do not consume the legitimate transaction. Configured shared storage atomically coordinates
+    claims across compatible replicas. Completion rechecks expiry and cancellation before returning
+    identity evidence; storage unavailability returns HTML 503 without credentials. Sharing OAuth
+    transactions does not share portal sessions, MFA or local identity evidence. For code flow, send code with state. Presence of error
     takes precedence over code; error_description is only explanatory. The selected portal provider uses
     the first value of non-state query fields, unlike the stricter Direct OAuth policy. It also supports
     the configured fragment-token bridge through id_token plus access_token and state. The iss query hint
@@ -67,6 +70,7 @@ get:
   - pkg/idp/oauth/authenticate.go
   - pkg/idp/oauth/authenticate_setup.go
   - pkg/idp/oauth/state.go
+  - pkg/idp/oauth/login_store.go
   parameters:
   - name: realm
     in: path

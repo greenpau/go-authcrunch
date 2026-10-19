@@ -114,6 +114,11 @@ one value; quote labels with spaces. This nested appearance configuration is
 part of the OAuth grammar. `ServerName` is derived; unused `AppSecret` and
 `UserRoleMapList` fields are not operator settings.
 
+`login store NAME namespace NAMESPACE` selects a named runtime OAuth transaction
+backend. It occurs once and survives shared-dispatch JSON conversion. Omission
+retains private memory; an empty or unresolved reference must fail. Read
+[login storage](login-storage.md) for exact injection APIs, ownership and HA limits.
+
 ## Issuer and Audience
 
 Both of these are single-value directives:

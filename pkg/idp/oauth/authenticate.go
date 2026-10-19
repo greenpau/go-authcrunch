@@ -15,10 +15,12 @@
 package oauth
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -52,6 +54,18 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) (err error) {
 		}
 		if err != nil {
 			r.ExternalIdentity = requests.ExternalIdentity{}
+			r.Response.Payload = nil
+			r.Response.RedirectURL = ""
+			if r.Response.Code < 400 {
+				r.Response.Code = http.StatusUnauthorized
+			}
+			r.Response.IdentityTokenCookie.Enabled = false
+			r.Response.IdentityTokenCookie.Payload = ""
+			r.Response.ReturnURL = ""
+			r.Response.ReturnURLBound = false
+			if stderrors.Is(err, ErrLoginUnavailable) {
+				r.Response.Code = http.StatusServiceUnavailable
+			}
 		}
 	}()
 
@@ -68,15 +82,38 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) (err error) {
 	reqParams := parseOAuthAuthenticateRequestParams(r.Upstream.Request.URL.Query())
 
 	if reqParams.isOAuthResponse() {
-		// Only the destination bound when this login started may come back, and
-		// only from a successful callback. The binding never changes once
-		// published, so it is read before the claim that deletion may follow.
-		r.Response.ReturnURL = ""
-		returnURL := b.state.getReturnURL(reqParams.state)
-		if len(reqParams.values["state"]) != 1 || !b.state.beginCallback(reqParams.state, r.Upstream.SessionID, reqPath+"/authorization-code-callback") {
+		if len(reqParams.values["state"]) != 1 {
 			return errors.ErrIdentityProviderOauthAuthorizationStateNotFound
 		}
-		defer b.state.del(reqParams.state)
+		binding := LoginBinding{Browser: sha256.Sum256([]byte(r.Upstream.SessionID)), Callback: reqPath + "/authorization-code-callback"}
+		if r.Upstream.SessionID == "" {
+			return errors.ErrIdentityProviderOauthAuthorizationStateNotFound
+		}
+		claim := uuid.NewString()
+		tx, storeErr := b.loginStore.Claim(r.Upstream.Request.Context(), b.loginNamespace, reqParams.state, binding, claim)
+		if storeErr != nil {
+			return loginStoreError(storeErr)
+		}
+		// Validate backend evidence before trusting a redirect, PKCE verifier or
+		// policy. The backend remains responsible for atomicity and confidentiality.
+		if tx.State != reqParams.state || tx.Claim != claim || !tx.Binding.Matches(binding) || tx.Validate(time.Now()) != nil {
+			return ErrLoginUnavailable
+		}
+		returnURL := tx.ReturnURL
+		defer func() {
+			// Completion rechecks cancellation and expiry before outer authentication
+			// attachment can issue identity proof. Cleanup must also run after a
+			// canceled browser request, with a bounded independent context.
+			ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Upstream.Request.Context()), 5*time.Second)
+			defer cancel()
+			completeErr := b.loginStore.Complete(ctx, b.loginNamespace, reqParams.state, claim)
+			if completeErr != nil && (err == nil || !stderrors.Is(completeErr, ErrLoginInvalid)) {
+				err = loginStoreError(completeErr)
+			}
+			if err == nil && (r.Upstream.Request.Context().Err() != nil || b.closed.Load()) {
+				err = ErrLoginUnavailable
+			}
+		}()
 		b.logger.Debug(
 			"received OAuth 2.0 response",
 			zap.String("session_id", r.Upstream.SessionID),
@@ -92,7 +129,6 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) (err error) {
 		switch {
 		case reqParams.codeExists && reqParams.stateExists:
 			// Received Authorization Code
-			b.state.addCode(reqParams.state, reqParams.code)
 			b.logger.Debug(
 				"received OAuth 2.0 code and state from the authorization server",
 				zap.String("session_id", r.Upstream.SessionID),
@@ -104,7 +140,7 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) (err error) {
 			reqRedirectURI := reqPath + "/authorization-code-callback"
 			var codeVerifier string
 			if !b.disablePKCE {
-				codeVerifier, _ = b.state.getVerifier(reqParams.state)
+				codeVerifier = tx.Verifier
 			}
 			var accessToken map[string]interface{}
 			var err error
@@ -140,6 +176,9 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) (err error) {
 			default:
 				m, err = b.validateAccessToken(r.Upstream.Request.Context(), reqParams.state, accessToken, &r.ExternalIdentity)
 				if err != nil {
+					if stderrors.Is(err, ErrLoginUnavailable) {
+						return err
+					}
 					return errors.ErrIdentityProviderOauthValidateAccessTokenFailed.WithArgs(err)
 				}
 			}
@@ -187,6 +226,9 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) (err error) {
 			}
 			m, err := b.validateAccessToken(r.Upstream.Request.Context(), reqParams.state, accessToken, &r.ExternalIdentity)
 			if err != nil {
+				if stderrors.Is(err, ErrLoginUnavailable) {
+					return err
+				}
 				return errors.ErrIdentityProviderOauthValidateAccessTokenFailed.WithArgs(err)
 			}
 
@@ -236,8 +278,15 @@ func (b *IdentityProvider) Authenticate(r *requests.Request) (err error) {
 		codeChallenge = base64.RawURLEncoding.EncodeToString(h[:])
 	}
 
-	if err := b.state.addLogin(state, nonce, codeVerifier, r.Upstream.SessionID, reqPath+"/authorization-code-callback", r.Response.ReturnURL); err != nil {
-		return errors.ErrIdentityProviderOauthAuthorizationStateLimitReached
+	now := time.Now()
+	transaction := LoginTransaction{State: state, Nonce: nonce, NonceRequired: nonceRequired, Verifier: codeVerifier,
+		Binding:   LoginBinding{Browser: sha256.Sum256([]byte(r.Upstream.SessionID)), Callback: reqPath + "/authorization-code-callback"},
+		ReturnURL: r.Response.ReturnURL, CreatedAt: now.Unix(), ExpiresAt: now.Add(oauthLoginLifetime).Unix()}
+	if err := b.loginStore.Create(r.Upstream.Request.Context(), b.loginNamespace, transaction); err != nil {
+		if stderrors.Is(err, ErrLoginCapacity) {
+			return errors.ErrIdentityProviderOauthAuthorizationStateLimitReached
+		}
+		return ErrLoginUnavailable
 	}
 	r.Response.Code = http.StatusFound
 	r.Response.RedirectURL = b.finalizeAuthorizationRedirectURL(preparedRedirect, codeChallenge)

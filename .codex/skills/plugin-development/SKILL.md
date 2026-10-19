@@ -65,6 +65,10 @@ Use [external-authorization](../external-authorization/SKILL.md) to maintain
 required request-time decisions, the HTTP JSON plugin, its public parsers, and
 gatekeeper/validator enforcement across cached credentials and OAuth sessions.
 
+Use [oauth-identity-provider](../oauth-identity-provider/SKILL.md) to maintain
+injectable upstream OAuth transaction storage, atomic callback claims, root
+bindings and the SQLite login-storage reference.
+
 Use [session-and-refresh-storage](../session-and-refresh-storage/SKILL.md) to maintain
 the SQLite refresh store, its parser, atomic durability contracts, and engine
 consumer tests.
@@ -106,6 +110,7 @@ A category or repository name alone does not establish an implementation.
 
 | Category | Responsibility | Current extension boundary |
 | --- | --- | --- |
+| OAuth login storage | Share single-use upstream login transactions | `oauth.LoginStore`, root `ServerOptions.OAuthLoginStores`, and the local SQLite reference; other session state remains separate |
 | Secrets | Retrieve values for configuration | SQLite bound-record plugin and external libraries; specialized skill above |
 | [Identity stores](references/plugin-categories.md#identity-stores) | Account lookup, authentication, and supported account operations | SQLite password store and configured `ids.IdentityStore` injection into `NewPortal` |
 | [Identity providers](references/plugin-categories.md#identity-providers) | Authenticate through a federation/protocol backend | SQLite tickets through optional `idp.HTTPLoginProvider` and direct portal injection |

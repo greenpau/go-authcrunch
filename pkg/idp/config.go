@@ -57,6 +57,7 @@ func (cfg *IdentityProviderConfig) Validate() error {
 			"driver",
 		}
 		optionalFields = []string{
+			"login_store",
 			"attachment",
 			"tenant_id",
 			"domain_name",

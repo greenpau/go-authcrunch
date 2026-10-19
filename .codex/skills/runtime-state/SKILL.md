@@ -84,6 +84,9 @@ then attaches session state before publication. `Server.Close` leaves durable
 records intact. Each directory has one live owner: drain and close the old runtime
 before opening its replacement. Opening new-before-closing-old must fail, not
 fall back to memory. This is not a distributed store or overlapping reload API.
+The separate [OAuth login storage contract](../oauth-identity-provider/references/login-storage.md)
+can share pending upstream exchanges through a host-injected backend. It does
+not change this directory's ownership or share the other runtime components.
 
 | Owner | Persistent integration |
 | --- | --- |

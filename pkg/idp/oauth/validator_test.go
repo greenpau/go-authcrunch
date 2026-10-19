@@ -504,6 +504,7 @@ func newOAuthValidatorTestProvider(t *testing.T, identityTokenFieldName string) 
 		t.Fatalf("failed creating JWKS key: %v", err)
 	}
 
+	state := newStateManager()
 	return &IdentityProvider{
 		config: &Config{
 			ClientID:               oauthValidatorTestClientID,
@@ -511,8 +512,9 @@ func newOAuthValidatorTestProvider(t *testing.T, identityTokenFieldName string) 
 			IdentityTokenFieldName: identityTokenFieldName,
 			Issuer:                 oauthValidatorTestIssuer,
 		},
-		keys:  newOAuthJwksSet([]*JwksKey{jwksKey}),
-		state: newStateManager(),
+		keys:       newOAuthJwksSet([]*JwksKey{jwksKey}),
+		state:      state,
+		loginStore: state,
 	}, privateKey, jwksKey
 }
 
