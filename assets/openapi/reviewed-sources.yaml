@@ -295,6 +295,14 @@ files:
     pkg/kms/methods.go: 5b3320f6484e4ca02264567a32004c02bb243ce3ecb35653c04c9d1cde14c6a4
     pkg/kms/parsers.go: 601d86e4cefcf24433722bda57666c9cb97b006bb0a6397a15bb7a33b95064b0
     pkg/kms/rsa_pss.go: 9580d4ec53e7ae572a08955e672c55e5b2b046301c56ffe86e0d1c82b0bd574d
+    pkg/messaging/config.go: c027eaee6375690cc004c8b2004e15c440b81c5f5ad4224971307664cbbdd39d
+    pkg/messaging/email_provider.go: 22c7116ce46cec0d6a03e7e9280cf0aca1efb55ec73c578b37e359e210ff3d63
+    pkg/messaging/email_send.go: 2dc271da71f774712bef37c078d0385c16ddcecfd17b39cd8cfd9988104d17b3
+    pkg/messaging/email_template.go: ee2397d456922f0dbeb08a1ddad553ff337c7f1a0b29a509b572a3b61264dfa3
+    pkg/messaging/file_provider.go: 90439103e1edb29b4899bbed5b3696c09c33727eea188689cf65f0885d17d03c
+    pkg/messaging/file_send.go: 44d65d47595069dab67f91d8c4819aaed38e93703076a6985443118ed95c14e0
+    pkg/messaging/provider.go: 696847dfce97989f7e4dc6bf18ea5150a404a7be446b975c647586298366694a
+    pkg/messaging/send_input.go: 68424af9aee547d39c7d3a990eac1c75c1e620b01b9843b1cbd7620e937ef7aa
     pkg/oidc/application.go: 90fcd8e61bb7b18f5490932981864c3005640ee3186862dee2542b40981fb323
     pkg/oidc/authorization.go: d7e7978743815408c53efaf6c09ecd32b2f8abed75d2f62d85ddd3d2c927b8fb
     pkg/oidc/claims.go: 2cecc9c5fe3e17d049adc9e08bb3fea414bedff5fc95704243b83749fe5d2f64
@@ -356,6 +364,9 @@ files:
     pkg/util/validate/additional_scopes.go: 0343fc55b0e850cc0c49ae12f28c1aa597232a88c8c626671f9c728d1e051ebb
     pkg/util/validate/login_hint.go: 0f415460fec2fdb3047635b8d8b6d703790fad279fc171fc67f8614c27e199eb
     pkg/waf/malformed_input_check.go: eaf3b3f2b24f741257709fa61f09f192efbb43b785b51e72b5ee26c597663785
+    plugins/messaging/sqlite/config.go: 69c8796a94b79dae329e5774ce2127e774c1a2b68e989c3f69b3b45924bff403
+    plugins/messaging/sqlite/outbox.go: acc9b1b9b62bb07741dcad6b8d2415ac18bb546976034e9742773bc41db54201
+    plugins/messaging/sqlite/parser/parser.go: e88c2cac603da0f8df3f22982a6c40de617b3196d5bb8cf27f2de62481f79657
     plugins/oauth-login-storage/sqlite/config.go: 98209c1750171fd425144fff4e928fd53391ffa294a3815c5953eccef43f1626
     plugins/oauth-login-storage/sqlite/parser/parser.go: 35534e0835a0b160f111033e6afc7d489372e4ae451087631ceaa4abcb2e8ffb
     plugins/oauth-login-storage/sqlite/store.go: 93a5fa57f10de9d62794be6711ab6bb7e96cc616d825f39dca5cc710dccfddb8

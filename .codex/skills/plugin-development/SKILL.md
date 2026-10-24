@@ -42,7 +42,8 @@ Use [sqlite-registration](../sqlite-registration/SKILL.md) to maintain durable
 email confirmation, recoverable account creation and the optional portal hook.
 
 Use [sqlite-messaging](../sqlite-messaging/SKILL.md) to maintain the durable
-SQLite outbox, runtime provider bindings and registration notification tests.
+SQLite outbox, runtime provider bindings, bounded SMTP delivery and registration
+notification tests.
 
 Use [sqlite-identity-store](../sqlite-identity-store/SKILL.md) to maintain the
 SQLite password backend, atomic login evidence, enrollment and portal tests.

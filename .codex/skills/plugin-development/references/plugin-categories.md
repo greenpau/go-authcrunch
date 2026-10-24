@@ -230,6 +230,14 @@ duplicate-delivery policy. Current
 [registration email tests](../../../../pkg/registry/local_user_registry_email_test.go)
 are useful starting points, not coverage of a new channel.
 
+For bounded SMTP delivery, the existing `EmailProvider` exposes `SendContext`.
+Its context controls the actual connection, including handshake and submission;
+do not emulate cancellation by abandoning a goroutine around legacy `Send`.
+Delivery may have succeeded before a transport error, so queue consumers still
+need at-least-once handling. The
+[SQLite messaging owner](../../sqlite-messaging/SKILL.md) defines exact lease
+expiry, configuration validation and worker ownership.
+
 ## Registration workflows
 
 **Purpose:** manage invitations, confirmations, approvals, and account creation.

@@ -88,3 +88,67 @@ func TestInjectedMessagingConfiguration(t *testing.T) {
 		t.Fatal("concrete collision accepted")
 	}
 }
+
+func TestNativeMessagingConfiguration(t *testing.T) {
+	fresh := func() *Config {
+		return &Config{EmailProviders: []*EmailProvider{{Name: "email", Address: "localhost:25", Protocol: "smtp", Passwordless: true, SenderEmail: "auth@example.test"}}, FileProviders: []*FileProvider{{Name: "file", RootDir: "/private/output", SenderEmail: "auth@example.test"}}}
+	}
+	cfg := fresh()
+	raw, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var restored Config
+	if err := json.Unmarshal(raw, &restored); err != nil {
+		t.Fatal(err)
+	}
+	queue := &injectedTestProvider{kind: "sqlite"}
+	if err := restored.AddProvider("queue", queue); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if err := restored.Validate(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if restored.ExtractEmailProvider("email") == nil || restored.ExtractFileProvider("file") == nil || restored.ExtractProvider("queue") != queue {
+		t.Fatal("native validation discarded providers")
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(*Config)
+	}{
+		{"nil email", func(c *Config) { c.EmailProviders[0] = nil }},
+		{"nil file", func(c *Config) { c.FileProviders[0] = nil }},
+		{"invalid email", func(c *Config) { c.EmailProviders[0].SenderEmail = "" }},
+		{"invalid file", func(c *Config) { c.FileProviders[0].RootDir = "" }},
+		{"duplicate email", func(c *Config) { c.EmailProviders = append(c.EmailProviders, c.EmailProviders[0]) }},
+		{"cross-kind duplicate", func(c *Config) { c.FileProviders[0].Name = "email" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			candidate := fresh()
+			tc.mutate(candidate)
+			if candidate.Validate() == nil {
+				t.Fatal("invalid native providers accepted")
+			}
+		})
+	}
+	cfg = fresh()
+	cfg.Add([]string{"kind file", "name replacement", "root_dir /private/replacement", "sender auth@example.test"})
+	if err := cfg.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.FindProvider("email") || cfg.FindProvider("file") || !cfg.FindProvider("replacement") {
+		t.Fatal("raw instructions lost authority")
+	}
+	cfg.Add([]string{"kind email", "name replacement", "address localhost:25", "protocol smtp", "sender auth@example.test", "passwordless"})
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("duplicate raw provider accepted")
+	}
+	if cfg.ExtractFileProvider("replacement") == nil {
+		t.Fatal("failed validation discarded previous providers")
+	}
+	if (*Config)(nil).Validate() == nil {
+		t.Fatal("nil configuration accepted")
+	}
+}

@@ -15,7 +15,10 @@
 package messaging
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -25,19 +28,49 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/util"
 )
 
-// Send sends an email message.
+// Send sends an email message using the transport's default timeouts.
+// Workers with leases or shutdown deadlines should use SendContext instead.
 func (e *EmailProvider) Send(req *SendInput) error {
-	dial := smtp.Dial
-	if e.Protocol == "smtps" {
-		dial = func(addr string) (*smtp.Client, error) {
-			return smtp.DialTLS(addr, nil)
-		}
-	}
+	return e.SendContext(context.Background(), req)
+}
 
-	c, err := dial(e.Address)
+// SendContext sends an email while honoring cancellation through dialing, TLS,
+// SMTP commands, message submission and shutdown. Cancellation closes the actual
+// connection; it never leaves a delivery goroutine running. An error after DATA
+// may follow server acceptance, so callers must allow duplicate delivery when
+// retrying and must not interpret cancellation as proof that no mail was sent.
+func (e *EmailProvider) SendContext(ctx context.Context, req *SendInput) (err error) {
+	if e == nil || req == nil {
+		return fmt.Errorf("email provider and send input are required")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if !e.Passwordless && req.Credentials == nil {
+		return fmt.Errorf("email transport credentials are required")
+	}
+	dialer := &net.Dialer{Timeout: 30 * time.Second}
+	var conn net.Conn
+	if e.Protocol == "smtps" {
+		tlsDialer := &tls.Dialer{NetDialer: dialer}
+		conn, err = tlsDialer.DialContext(ctx, "tcp", e.Address)
+	} else {
+		conn, err = dialer.DialContext(ctx, "tcp", e.Address)
+	}
 	if err != nil {
 		return err
 	}
+	// go-smtp sets its own operation deadlines. Closing the connection on caller
+	// cancellation remains authoritative even when a command replaces a deadline.
+	cancelConnection := context.AfterFunc(ctx, func() { _ = conn.Close() })
+	defer cancelConnection()
+	defer conn.Close()
+	defer func() {
+		if ctx.Err() != nil {
+			err = ctx.Err()
+		}
+	}()
+	c := smtp.NewClient(conn)
 	defer c.Close()
 
 	/*

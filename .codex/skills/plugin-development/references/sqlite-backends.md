@@ -34,8 +34,8 @@ per-process record locks can be dropped underneath another SQLite connection.
 Reads use a consistent read transaction and discard it. Writes acquire an
 immediate transaction with bounded BUSY retries before invoking the callback.
 `OpenExclusive` instead acquires an exclusive transaction before either a read
-or write callback. The OAuth login reference uses this entry point so competing
-clients cannot cause a later commit-time lock upgrade or read query to fail with
+or write callback. The OAuth login and messaging outbox references use this entry
+point so competing clients cannot cause a later commit-time lock upgrade or read query to fail with
 BUSY. Reads and writes serialize across clients. Contention remains bounded at admission; a
 timeout before admission does not invoke the callback or quarantine the handle.
 Keep `Open` and `OpenMigrated` on their established immediate-write behavior.

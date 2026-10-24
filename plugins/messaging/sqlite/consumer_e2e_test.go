@@ -15,6 +15,7 @@
 package sqlite_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,13 +24,107 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/plugins/messaging/sqlite"
 	"github.com/greenpau/go-authcrunch/plugins/messaging/sqlite/parser"
 )
+
+func TestE2ESQLiteMessagingConcurrentWorkers(t *testing.T) {
+	for _, separateQueues := range []bool{false, true} {
+		t.Run(fmt.Sprint("separate_queues=", separateQueues), func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.Chmod(dir, 0700); err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+			defer cancel()
+			var workers []*sqlite.Outbox
+			for i := range 2 {
+				name := "mail"
+				if separateQueues {
+					name = fmt.Sprint("mail", i)
+				}
+				config, err := parser.NewSQLiteMessagingConfigFromDirectives([]string{"name " + name, fmt.Sprintf("path %q", filepath.Join(dir, "outbox.db")), "timeout 2s"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				worker, err := sqlite.New(ctx, config)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer worker.Close()
+				workers = append(workers, worker)
+			}
+			const messages = 64
+			for i := range messages {
+				if err := workers[i%len(workers)].SendContext(ctx, &messaging.SendInput{Subject: fmt.Sprint(i), Body: "queued body", Recipients: []string{"alice@example.test"}}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			start := make(chan struct{})
+			acknowledged := make(chan string, messages)
+			failures := make(chan error, len(workers))
+			var wg sync.WaitGroup
+			for _, worker := range workers {
+				wg.Go(func() {
+					<-start
+					for {
+						message, err := worker.Claim(ctx)
+						if errors.Is(err, sqlite.ErrEmpty) {
+							return
+						}
+						if err != nil {
+							failures <- err
+							return
+						}
+						if err := worker.Acknowledge(ctx, message.ID, message.Lease); err != nil {
+							failures <- err
+							return
+						}
+						acknowledged <- message.Subject
+					}
+				})
+			}
+			close(start)
+			wg.Wait()
+			close(acknowledged)
+			close(failures)
+			for err := range failures {
+				t.Error("live worker failed", err)
+			}
+			seen := make(map[string]bool)
+			for subject := range acknowledged {
+				if seen[subject] {
+					t.Fatal("workers acknowledged duplicate work")
+				}
+				seen[subject] = true
+			}
+			if len(seen) != messages {
+				t.Fatalf("acknowledged %d messages, want %d", len(seen), messages)
+			}
+			for _, worker := range workers {
+				if _, err := worker.Claim(ctx); !errors.Is(err, sqlite.ErrEmpty) {
+					t.Fatal("drained live handle is unavailable", err)
+				}
+				if err := worker.SendContext(ctx, &messaging.SendInput{Subject: "after drain", Body: "queued body", Recipients: []string{"alice@example.test"}}); err != nil {
+					t.Fatal("drained handle cannot accept work", err)
+				}
+				message, err := worker.Claim(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := worker.Acknowledge(ctx, message.ID, message.Lease); err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
+}
 
 func TestE2ESQLiteRegistrationNotification(t *testing.T) {
 	dir := t.TempDir()
@@ -91,7 +186,7 @@ func TestE2ESQLiteRegistrationNotification(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(msg.Recipients) != 1 || msg.Recipients[0] != recipient || msg.Subject == "" {
+		if len(msg.Recipients) != 1 || msg.Recipients[0] != recipient || msg.Subject == "" || msg.LeaseExpiresAt <= time.Now().Unix() {
 			t.Fatal("wrong notification envelope")
 		}
 		decoded, err := io.ReadAll(quotedprintable.NewReader(strings.NewReader(msg.Body)))

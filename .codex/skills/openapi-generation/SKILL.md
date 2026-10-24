@@ -45,7 +45,9 @@ ordering, revocation, expiry and consent even when the JSON shape stays stable.
 `assets/openapi/reviewed-sources.yaml` fingerprints local contract inputs.
 Generation, ordinary Go tests and CI reject added/changed/removed inputs.
 The inventory also includes the SQLite OAuth login store, registration workflow
-and their private SQLite helper: persistence and migration affect OAuth callback
+and their private SQLite helper, plus messaging transports and the SQLite outbox:
+durable acceptance and delivery failures affect registration, and persistence
+and migration affect OAuth callback
 completion and confirmation-to-login navigation.
 The Documents Web Crypto module
 `pkg/authn/documents/client/crypto.mjs` is also fingerprinted: its key schedule

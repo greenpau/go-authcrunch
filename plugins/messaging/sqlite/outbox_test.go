@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
@@ -62,11 +63,20 @@ func TestOutboxLeaseLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if msg.ID <= 0 || msg.CreatedAt == 0 || msg.Recipients[0] != "alice@example.test" {
+	if msg.ID <= 0 || msg.CreatedAt == 0 || msg.LeaseExpiresAt <= time.Now().Unix() || msg.LeaseExpiresAt > time.Now().Unix()+60 || msg.Recipients[0] != "alice@example.test" {
 		t.Fatal("bad detached message")
 	}
+	var persistedExpiry int64
+	if err := out.db.Read(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+		return tx.QueryRowContext(ctx, "SELECT leased_until FROM messages WHERE id=?", msg.ID).Scan(&persistedExpiry)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if msg.LeaseExpiresAt != persistedExpiry {
+		t.Fatal("returned expiry differs from committed lease")
+	}
 	encoded, _ := json.Marshal(msg)
-	if strings.Contains(string(encoded), msg.Lease) {
+	if strings.Contains(string(encoded), msg.Lease) || strings.Contains(string(encoded), "lease_expires_at") || strings.Contains(string(encoded), "LeaseExpiresAt") {
 		t.Fatal("serialized worker lease")
 	}
 	if _, err := out.Claim(t.Context()); !errors.Is(err, ErrEmpty) {
@@ -179,7 +189,7 @@ func TestOutboxLeaseExpiryAndConcurrentWorkers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if next.ID != claimed.ID || next.Lease == claimed.Lease {
+	if next.ID != claimed.ID || next.Lease == claimed.Lease || next.LeaseExpiresAt <= time.Now().Unix() {
 		t.Fatal("expiry did not redeliver with new lease")
 	}
 	if err := out.Release(t.Context(), claimed.ID, claimed.Lease); !errors.Is(err, ErrLease) {
@@ -189,6 +199,90 @@ func TestOutboxLeaseExpiryAndConcurrentWorkers(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A reader must delay admission instead of causing a post-mutation COMMIT
+// upgrade failure and quarantining an otherwise healthy queue handle.
+func TestOutboxReaderContention(t *testing.T) {
+	for _, operation := range []string{"send", "claim", "acknowledge", "release"} {
+		t.Run(operation, func(t *testing.T) {
+			out, config := testOutbox(t)
+			var claimed *Message
+			if operation != "send" {
+				if err := out.Send(testMessage()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if operation == "acknowledge" || operation == "release" {
+				var err error
+				claimed, err = out.Claim(t.Context())
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			reader, err := sql.Open("sqlite", config.Path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer reader.Close()
+			tx, err := reader.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback()
+			var count int
+			if err := tx.QueryRowContext(t.Context(), "SELECT count(*) FROM sqlite_schema").Scan(&count); err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(t.Context(), 40*time.Millisecond)
+			defer cancel()
+			switch operation {
+			case "send":
+				err = out.SendContext(ctx, testMessage())
+			case "claim":
+				claimed, err = out.Claim(ctx)
+				if claimed != nil {
+					t.Fatal("blocked claim published a lease")
+				}
+			case "acknowledge":
+				err = out.Acknowledge(ctx, claimed.ID, claimed.Lease)
+			case "release":
+				err = out.Release(ctx, claimed.ID, claimed.Lease)
+			}
+			if !errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrCommitUncertain) {
+				t.Fatal("reader contention did not remain before mutation", err)
+			}
+			if err := tx.Rollback(); err != nil {
+				t.Fatal(err)
+			}
+			switch operation {
+			case "send":
+				if _, err := out.Claim(t.Context()); !errors.Is(err, ErrEmpty) {
+					t.Fatal("blocked send changed queue or quarantined handle", err)
+				}
+				if err := out.Send(testMessage()); err != nil {
+					t.Fatal("send did not recover after admission timeout", err)
+				}
+				fallthrough
+			case "claim":
+				claimed, err = out.Claim(t.Context())
+				if err != nil {
+					t.Fatal("claim did not recover after admission timeout", err)
+				}
+			case "acknowledge", "release":
+				if _, err := out.Claim(t.Context()); !errors.Is(err, ErrEmpty) {
+					t.Fatal("blocked completion changed active lease", err)
+				}
+			}
+			if err := out.Acknowledge(t.Context(), claimed.ID, claimed.Lease); err != nil {
+				t.Fatal("original lease did not remain valid after admission timeout", err)
+			}
+			if _, err := out.Claim(t.Context()); !errors.Is(err, ErrEmpty) {
+				t.Fatal("healthy handle did not drain", err)
+			}
+		})
+	}
+}
+
 func TestOutboxValidationAndFailures(t *testing.T) {
 	out, config := testOutbox(t)
 	if config.Timeout != "" {

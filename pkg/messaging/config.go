@@ -39,43 +39,73 @@ func (cfg *Config) Add(instructions []string) {
 	cfg.RawConfigs = append(cfg.RawConfigs, instructions)
 }
 
-// Validate validates credentials
+// Validate checks providers and normalizes raw declarations. Nonempty RawConfigs
+// are authoritative; otherwise typed native built-ins are retained and checked.
+// Runtime injections survive either path. Failed validation publishes no new
+// built-in lists and never closes caller-owned providers.
 func (cfg *Config) Validate() error {
-	emailProviders := []*EmailProvider{}
-	fileProviders := []*FileProvider{}
-	count := len(cfg.providers)
-	for _, provider := range cfg.providers {
+	if cfg == nil {
+		return errors.ErrMessagingConfigEmpty.WithArgs()
+	}
+	emailProviders := append([]*EmailProvider(nil), cfg.EmailProviders...)
+	fileProviders := append([]*FileProvider(nil), cfg.FileProviders...)
+	if len(cfg.RawConfigs) > 0 {
+		emailProviders = nil
+		fileProviders = nil
+		for _, instructions := range cfg.RawConfigs {
+			providerRaw, err := NewProvider(instructions)
+			if err != nil {
+				return err
+			}
+			switch provider := providerRaw.(type) {
+			case *EmailProvider:
+				emailProviders = append(emailProviders, provider)
+			case *FileProvider:
+				fileProviders = append(fileProviders, provider)
+			}
+		}
+	}
+	names := make(map[string]bool)
+	addName := func(name string) error {
+		if names[name] {
+			return fmt.Errorf("duplicate messaging provider name")
+		}
+		names[name] = true
+		return nil
+	}
+	for name, provider := range cfg.providers {
 		if err := provider.Validate(); err != nil {
 			return fmt.Errorf("invalid injected messaging provider")
 		}
-	}
-
-	for _, instructions := range cfg.RawConfigs {
-		providerRaw, err := NewProvider(instructions)
-		if err != nil {
+		if err := addName(name); err != nil {
 			return err
 		}
-
-		switch provider := providerRaw.(type) {
-		case *EmailProvider:
-			if _, exists := cfg.providers[provider.Name]; exists {
-				return fmt.Errorf("duplicate messaging provider name")
-			}
-			emailProviders = append(emailProviders, provider)
-			count++
-		case *FileProvider:
-			if _, exists := cfg.providers[provider.Name]; exists {
-				return fmt.Errorf("duplicate messaging provider name")
-			}
-			fileProviders = append(fileProviders, provider)
-			count++
+	}
+	for _, provider := range emailProviders {
+		if provider == nil {
+			return fmt.Errorf("invalid email messaging provider")
+		}
+		if err := provider.Validate(); err != nil {
+			return err
+		}
+		if err := addName(provider.Name); err != nil {
+			return err
 		}
 	}
-
-	if count < 1 {
+	for _, provider := range fileProviders {
+		if provider == nil {
+			return fmt.Errorf("invalid file messaging provider")
+		}
+		if err := provider.Validate(); err != nil {
+			return err
+		}
+		if err := addName(provider.Name); err != nil {
+			return err
+		}
+	}
+	if len(names) == 0 {
 		return errors.ErrMessagingConfigEmpty.WithArgs()
 	}
-
 	cfg.EmailProviders = emailProviders
 	cfg.FileProviders = fileProviders
 	return nil

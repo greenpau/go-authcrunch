@@ -57,6 +57,10 @@ type Message struct {
 	Recipients []string `json:"recipients,omitempty" xml:"recipients,omitempty" yaml:"recipients,omitempty"`
 	CreatedAt  int64    `json:"created_at,omitempty" xml:"created_at,omitempty" yaml:"created_at,omitempty"`
 	Lease      string   `json:"-" xml:"-" yaml:"-"`
+	// LeaseExpiresAt is the exact persisted Unix-second lease deadline. Workers
+	// must reserve acknowledgement time and never assume a full minute remains
+	// after Claim returns. It is runtime-only, like the acknowledgement secret.
+	LeaseExpiresAt int64 `json:"-" xml:"-" yaml:"-"`
 }
 
 // Outbox owns a queue handle. It does not start workers or deliver SMTP traffic.
@@ -74,7 +78,10 @@ func New(ctx context.Context, config *Config) (*Outbox, error) {
 	if err := c.Validate(); err != nil {
 		return nil, err
 	}
-	db, err := sqlitedb.Open(ctx, c.Path, c.Timeout, 1094931286, map[string]string{"messages": "CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT, queue TEXT NOT NULL, payload BLOB NOT NULL CHECK(length(payload)<=65536), created INTEGER NOT NULL, lease BLOB, leased_until INTEGER NOT NULL)"})
+	// All queue operations mutate state. Acquire the exclusive lock at admission
+	// so competing readers/workers cannot force a commit-time lock upgrade after
+	// mutation. Real COMMIT failures still require quarantine and reconciliation.
+	db, err := sqlitedb.OpenExclusive(ctx, c.Path, c.Timeout, 1094931286, map[string]string{"messages": "CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT, queue TEXT NOT NULL, payload BLOB NOT NULL CHECK(length(payload)<=65536), created INTEGER NOT NULL, lease BLOB, leased_until INTEGER NOT NULL)"})
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +184,8 @@ func (o *Outbox) Claim(ctx context.Context) (*Message, error) {
 		message.ID = id
 		message.CreatedAt = created
 		message.Lease = lease
-		_, err = tx.ExecContext(ctx, "UPDATE messages SET lease=?,leased_until=? WHERE id=?", digest[:], now+60, id)
+		message.LeaseExpiresAt = now + 60
+		_, err = tx.ExecContext(ctx, "UPDATE messages SET lease=?,leased_until=? WHERE id=?", digest[:], message.LeaseExpiresAt, id)
 		return err
 	})
 	if err != nil {
