@@ -42,7 +42,7 @@ applies the prefix before explicit names regardless of statement order.
 When adding a role, update the complete name list, parser mapping, factory,
 collision checks, and corresponding unit/E2E assertions. Include the effective
 refresh name after its feature override in cross-role collision checks.
-The SAML transaction suffix described below is code-owned browser isolation.
+The SAML and sandbox transaction suffixes described below are code-owned browser isolation.
 Do not introduce unrelated feature-specific hashed names or mandatory `__Host-` or
 `__Secure-` prefixes. Such names are explicit compatibility configurations;
 required attributes remain enforced independently of naming.
@@ -100,6 +100,42 @@ its cookie separately at its configured mount, including `/`. Do not emit an
 impossible legacy `__Host-` cookie or suppress active root-cookie deletion.
 
 ## Consumer Boundaries
+
+Browser password/MFA and connected-provider sandboxes share independent proofs.
+`SandboxIDCookieNameForSession`, `GetSandboxIDCookieForSession` and the matching
+deletion helper append `_` plus a generated 36–47 character ASCII alphanumeric
+sandbox ID to the configured base name. Malformed IDs return an empty result.
+The ID selects state; the independently random value is the credential.
+Proofs are host-only at the normalized portal mount, HttpOnly, SameSite=Lax and
+Max-Age=300. Secure follows the existing insecure flag; common domain, path,
+lifetime and SameSite settings cannot broaden this scope. Reserve `<base>_`
+against every other role and provider identity/login names, including overlap
+with the SAML dynamic prefix in either direction.
+
+Starts retain the legacy base-name cookie alongside the independent proof.
+`browserSandboxSecret` selects exactly one nonempty exact flow cookie; malformed
+raw occurrences, duplicate or wrong exact proofs fail without legacy fallback.
+Only absence of that exact name permits the legacy base cookie. Preserve this
+compatibility boundary: legacy-only clients still have the single-cookie race.
+Ordinary form and connected-provider starts must use the same issuance helper.
+Native JSON checkpoints retain rotating body secrets and issue no flow cookie.
+
+Completion or termination removes only the selected flow cookie. Redemption
+consumes state before credential delivery and places the scoped tombstone before
+rollback snapshots. Wrong proof must not consume valid state; ordinary factor
+failure remains retryable. Existing global base-cookie cleanup remains, so
+independent proofs protect competing tabs. Logout does not newly invalidate
+pending sandboxes; their five-minute expiry and runtime disposal remain limits.
+Shared access/refresh cookies still select one current browser identity.
+
+Sixteen visible canonical pending flow names reject another browser start with
+429 before new state or proof issuance. This sequential cookie budget cannot
+bound simultaneous requests or clients omitting cookies. `SandboxCache` separately
+enforces an atomic default capacity of 10000 entries; it prunes expired entries
+at capacity, refuses live duplicates and never evicts live flows for admission.
+`SetMaxEntries` changes that runtime limit without eviction; it is not serialized
+portal configuration. Exhaustion returns 503 from ordinary, connected-provider
+and JSON starts. Existing flows remain usable after refusal.
 
 Use [sqlite-ticket-provider](../sqlite-ticket-provider/SKILL.md) to maintain
 provider-owned HTTP login binding cookies and trusted ticket federation.
@@ -172,6 +208,14 @@ must be integrated separately in their owning repositories. Never change or
 run validation in sibling checkouts to finish this library's integration.
 
 ## Validation
+
+`browser_sandbox_test.go`, `cache/sandbox_capacity_test.go` and
+`cookie/sandbox_transaction_test.go` cover exact proof precedence, malformed raw
+cookies, admission, connected/native branches, name reservations and scope.
+`browser_sandbox_e2e_test.go` uses the public TLS root for independent starts,
+reverse password/MFA completion, fresh intent, proof attacks, replay and scoped
+cleanup. Keep the same browser jar throughout successful overlap; restoring
+cookies or using separate jars cannot demonstrate concurrent-tab support.
 
 Keep parser unit tests and executable examples external. Cover all roles,
 post-constructor prefix changes, explicit old-default overrides in both orders,

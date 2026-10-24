@@ -27,6 +27,11 @@ get:
     provider sub remains available for existing policies. Current local roles and factor rules
     apply; an external login alone cannot satisfy required local MFA. Use /connected-accounts
     to explicitly connect to an existing local account. Provider email never selects an account.
+    If verified identity requires interactive local factors, the portal creates an independent browser
+    sandbox. Its admission returns HTML 429 when 16 canonical sandbox proof cookies are already visible,
+    or HTML 503 when the shared portal sandbox cache is full, without evicting live sandboxes. Provider
+    verification may already have consumed its one-use evidence; follow its restart contract rather than
+    assuming the same callback can be retried.
   security: []
   parameters:
   - name: realm
@@ -60,9 +65,13 @@ get:
         text/html:
           schema:
             type: string
+    '429':
+      $ref: ../components/responses/HTML.yaml
     '500':
       $ref: ../components/responses/HTML.yaml
     '502':
+      $ref: ../components/responses/HTML.yaml
+    '503':
       $ref: ../components/responses/HTML.yaml
   x-source-files:
   - pkg/authn/handle_provider_login.go
@@ -70,3 +79,5 @@ get:
   - pkg/authn/handle_http_login.go
   - pkg/idp/http_login.go
   - pkg/authn/portal.go
+  - pkg/authn/connected_accounts.go
+  - pkg/authn/browser_sandbox.go

@@ -49,7 +49,7 @@ type loginRedirectFixture struct {
 	client *http.Client
 }
 
-func newLoginRedirectFixture(t *testing.T) *loginRedirectFixture {
+func newLoginRedirectFixture(t *testing.T, prepare ...func(*identity.Database)) *loginRedirectFixture {
 	t.Helper()
 	server := httptest.NewUnstartedServer(nil)
 	t.Cleanup(server.Close)
@@ -66,6 +66,9 @@ func newLoginRedirectFixture(t *testing.T) *loginRedirectFixture {
 		Username: "alice", Email: "alice@example.test", Password: tests.TestPwd1Hash(t), Roles: []string{"authp/user"},
 	}}); err != nil {
 		t.Fatal("could not provision redirect identity")
+	}
+	for _, seed := range prepare {
+		seed(db)
 	}
 	runtime, err := authcrunch.NewServer(&authcrunch.Config{
 		IdentityStores: []*ids.IdentityStoreConfig{{Name: "local", Kind: "local", Params: map[string]any{"path": dbPath, "realm": "local"}}},

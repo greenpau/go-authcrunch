@@ -39,7 +39,12 @@ get:
     provider sub remains available for existing policies. Current local roles and factor rules
     apply; an external login alone cannot satisfy required local MFA. Use /connected-accounts
     to explicitly connect to an existing local account. Provider email never selects an account.
-    Attached local MFA does not create a local-only downstream OIDC browser session.'
+    Attached local MFA does not create a local-only downstream OIDC browser session. If interactive local
+    factors require a sandbox, its independent browser proof retains this transaction destination.
+    Admission returns HTML 429 when 16 canonical sandbox proof cookies are already visible, or HTML 503
+    when the shared portal sandbox cache is full. Neither refusal evicts an existing live sandbox.
+    The upstream transaction has already been consumed; restart external login after admission refusal,
+    rather than replaying its callback.'
   security: []
   responses:
     '200':
@@ -51,6 +56,8 @@ get:
     '400':
       $ref: ../components/responses/HTML.yaml
     '401':
+      $ref: ../components/responses/HTML.yaml
+    '429':
       $ref: ../components/responses/HTML.yaml
     '503':
       $ref: ../components/responses/HTML.yaml
@@ -71,6 +78,8 @@ get:
   - pkg/idp/oauth/authenticate_setup.go
   - pkg/idp/oauth/state.go
   - pkg/idp/oauth/login_store.go
+  - pkg/authn/connected_accounts.go
+  - pkg/authn/browser_sandbox.go
   parameters:
   - name: realm
     in: path

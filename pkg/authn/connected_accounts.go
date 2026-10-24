@@ -196,7 +196,7 @@ func (p *Portal) signConnectedUser(rr *requests.Request, claims map[string]any, 
 	return u, nil
 }
 
-func (p *Portal) beginConnectedSandbox(_ context.Context, w http.ResponseWriter, _ *http.Request, rr *requests.Request, a *attachment.Attachment, raw map[string]any, current identity.RefreshIdentity, checkpoints []*user.Checkpoint) error {
+func (p *Portal) beginConnectedSandbox(_ context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, a *attachment.Attachment, raw map[string]any, current identity.RefreshIdentity, checkpoints []*user.Checkpoint) error {
 	var localRealm string
 	for _, backend := range p.identityStores {
 		if backend.GetKind() == "local" && backend.GetName() == a.StoreName() {
@@ -227,10 +227,10 @@ func (p *Portal) beginConnectedSandbox(_ context.Context, w http.ResponseWriter,
 	u.LoginReturnURL, u.LoginReturnURLBound = rr.Response.ReturnURL, rr.Response.ReturnURLBound
 	u.Authenticator = user.Authenticator{Name: a.StoreName(), Realm: localRealm, Method: "local", NextChallenge: checkpoints[0].Type,
 		TempSessionID: util.GetRandomStringFromRange(36, 48), TempSecret: util.GetRandomStringFromRange(36, 48)}
-	if err := p.sandboxes.Add(u.Authenticator.TempSessionID, u); err != nil {
+	if err := p.addBrowserSandbox(w, r, rr, u); err != nil {
+		rr.Response.Code = sandboxAdmissionStatus(err)
 		return err
 	}
-	w.Header().Add("Set-Cookie", p.cookie.GetSandboxIDCookie(rr.Upstream.BasePath, u.Authenticator.TempSecret))
 	w.Header().Set("Location", rr.Upstream.BasePath+"sandbox/"+u.Authenticator.TempSessionID)
 	rr.Response.Code = http.StatusSeeOther
 	return nil

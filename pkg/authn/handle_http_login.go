@@ -39,11 +39,12 @@ import (
 )
 
 func (p *Portal) handleHTTPLogin(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User) error {
-	if (p.refresh != nil || p.oidc != nil) && r.Method == http.MethodPost {
+	// A fresh login is completed interactively, even when another tab signs in
+	// after this page was opened. The submitted URL retains that intent.
+	fresh := r.URL.Query().Get("fresh") == "1"
+	if (p.refresh != nil || p.oidc != nil || fresh) && r.Method == http.MethodPost {
 		return p.handleHTTPLoginRequest(ctx, w, r, rr)
 	}
-	// A fresh login is completed interactively, even by a signed-in browser.
-	fresh := r.URL.Query().Get("fresh") == "1"
 	if !fresh {
 		// A tab returns to the destination its own login URL carries, without
 		// the redirect cookie, which every tab of the browser shares: a login
@@ -199,11 +200,11 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 	usr.LoginReturnURLBound = hasLoginDestination(r)
 	usr.LoginFresh = r.URL.Query().Get("fresh") == "1"
 
-	if err := p.sandboxes.Add(usr.Authenticator.TempSessionID, usr); err != nil {
-		rr.Response.Code = http.StatusInternalServerError
-		return p.handleHTTPErrorWithLog(ctx, w, r, rr, http.StatusInternalServerError, err.Error())
-	}
 	p.bindConnectedAccountLogin(r, usr)
+	if err := p.addBrowserSandbox(w, r, rr, usr); err != nil {
+		rr.Response.Code = sandboxAdmissionStatus(err)
+		return p.handleHTTPErrorWithLog(ctx, w, r, rr, rr.Response.Code, err.Error())
+	}
 
 	redirectLocation := fmt.Sprintf("%s%s/%s",
 		rr.Upstream.BaseURL,
@@ -211,7 +212,6 @@ func (p *Portal) handleHTTPLoginRequest(ctx context.Context, w http.ResponseWrit
 		usr.Authenticator.TempSessionID,
 	)
 
-	w.Header().Set("Set-Cookie", p.cookie.GetSandboxIDCookie(rr.Upstream.BasePath, usr.Authenticator.TempSecret))
 	w.Header().Set("Location", redirectLocation)
 	w.WriteHeader(http.StatusSeeOther)
 	return nil

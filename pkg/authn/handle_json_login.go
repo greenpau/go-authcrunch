@@ -566,8 +566,8 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 
 		usr.RefreshTransport = authRequest.RefreshTransport
 		if err := p.sandboxes.Add(usr.Authenticator.TempSessionID, usr); err != nil {
-			rr.Response.Code = http.StatusInternalServerError
-			return p.handleHTTPErrorWithLog(ctx, w, r, rr, http.StatusInternalServerError, err.Error())
+			rr.Response.Code = sandboxAdmissionStatus(err)
+			return p.handleJSONErrorWithLog(ctx, w, r, rr, rr.Response.Code, http.StatusText(rr.Response.Code))
 		}
 
 		p.logger.Debug(

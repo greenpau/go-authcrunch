@@ -128,6 +128,18 @@ the session continue page with the destination as `data-next` and on its
 the same destination (`consumeOwnRedirectCookie`), so nothing stale lingers and
 another tab's value survives. A `fresh=1` GET always renders the login page, and
 its form, back navigation and start-over link keep `fresh=1`.
+A submitted `fresh=1` POST also enters interactive authentication when another
+tab has signed in since the page opened; checking freshness only on GET lets
+shared access cookies bypass that intent. Preserve the public TLS waiting-page
+regression without reloading the page or restoring cookies between tabs.
+
+Password/MFA destinations also require independent browser proof cookies:
+storing separate return URLs cannot help if the second start overwrites the
+first sandbox secret. Follow the
+[sandbox cookie contract](../../authentication-portal-cookies/SKILL.md#consumer-boundaries)
+for exact-cookie precedence, legacy compatibility, scoped cleanup and admission.
+Independent login transactions do not create independent current browser
+identities: access and refresh cookies remain shared.
 
 The basic login page passes its destination to `login.js`. While visible, the
 script asks the mounted identity endpoint with `probe=login`,

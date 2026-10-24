@@ -64,6 +64,9 @@ func (f *Factory) ValidateIdentityTokenCookieName(name string) error {
 	if (&http.Cookie{Name: name}).Valid() != nil {
 		return fmt.Errorf("invalid identity cookie name")
 	}
+	if strings.HasPrefix(name, f.SandboxIDCookieName+"_") {
+		return fmt.Errorf("identity cookie overlaps sandbox transaction cookies")
+	}
 	if strings.HasPrefix(name, f.SAMLSessionIDCookieName+"_") {
 		return fmt.Errorf("identity cookie overlaps SAML transaction cookies")
 	}

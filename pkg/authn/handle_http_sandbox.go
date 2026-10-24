@@ -55,18 +55,9 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		sandboxPartition = sandboxArr[1]
 	}
 
-	// Parse sandbox cookie and authenticate temporary session ID
-	// and secret.
-	for _, cookie := range r.Cookies() {
-		if cookie.Name != p.cookie.SandboxIDCookieName {
-			continue
-		}
-		v := strings.TrimSpace(cookie.Value)
-		if v == "" {
-			continue
-		}
-		sandboxSecret = v
-	}
+	// The URL selects one flow; only that exact proof (or the absent-flow
+	// legacy transport) may authenticate it. Never search other flow values.
+	sandboxSecret = p.browserSandboxSecret(r, sandboxID)
 
 	if sandboxSecret == "" {
 		p.logger.Debug(
@@ -129,6 +120,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		return p.handleHTTPSandboxMfaBarcode(ctx, w, r, sandboxPartition)
 	case sandboxPartition == "terminate":
 		p.sandboxes.Delete(sandboxID)
+		p.deleteBrowserSandboxCookie(w, rr.Upstream.BasePath, sandboxID)
 		// Back to this tab's own login page, which keeps its destination.
 		location := loginPageLocation(usr.LoginReturnURL, usr.LoginFresh)
 		if usr.LoginReturnURLBound {
@@ -154,6 +146,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 	if err == nil {
 		if proofErr := p.recordLoginEvidence(usr, rr, completedBefore); proofErr != nil {
 			p.sandboxes.Delete(sandboxID)
+			p.deleteBrowserSandboxCookie(w, rr.Upstream.BasePath, sandboxID)
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
 		}
 	}
@@ -184,6 +177,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		switch data["view"] {
 		case "terminate":
 			p.sandboxes.Delete(sandboxID)
+			p.deleteBrowserSandboxCookie(w, rr.Upstream.BasePath, sandboxID)
 			// Starting over returns to this tab's own login page.
 			data["login_return_url"] = usr.LoginReturnURL
 			data["login_fresh"] = usr.LoginFresh
@@ -208,6 +202,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		if err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
 		}
+		p.deleteBrowserSandboxCookie(w, rr.Upstream.BasePath, sandboxID)
 		issued, tokens, err := p.issueSandboxTokens(ctx, r, rr, proof)
 		if err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)

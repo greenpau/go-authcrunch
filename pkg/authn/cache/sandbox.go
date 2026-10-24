@@ -28,6 +28,11 @@ const defaultSandboxCleanupInternal int = 60
 const minSandboxCleanupInternal int = 0
 const defaultSandboxMaxEntryLifetime int = 300
 const minSandboxMaxEntryLifetime int = 60
+const defaultSandboxMaxEntries = 10000
+
+// ErrSandboxCapacity indicates that new authentication state cannot be admitted.
+// Existing live sandboxes are never evicted to make room.
+var ErrSandboxCapacity = errors.New("sandbox capacity exhausted")
 
 // SandboxCacheEntry is an entry in SandboxCache.
 type SandboxCacheEntry struct {
@@ -101,6 +106,7 @@ type SandboxCache struct {
 	cleanupInternal int
 	// The maximum number of seconds the cached entry is available to a user.
 	maxEntryLifetime int
+	maxEntries       int
 	// If set to true, then the cache is being managed.
 	managed bool
 	// exit channel
@@ -113,9 +119,23 @@ func NewSandboxCache() *SandboxCache {
 	return &SandboxCache{
 		cleanupInternal:  defaultSandboxCleanupInternal,
 		maxEntryLifetime: defaultSandboxMaxEntryLifetime,
+		maxEntries:       defaultSandboxMaxEntries,
 		Entries:          make(map[string]*SandboxCacheEntry),
 		exit:             make(chan bool),
 	}
+}
+
+// SetMaxEntries changes the atomic admission limit without evicting entries.
+// A lower limit refuses new sandboxes until enough existing entries finish or
+// expire. This runtime setting is not serialized configuration.
+func (c *SandboxCache) SetMaxEntries(limit int) error {
+	if limit < 1 {
+		return errors.New("sandbox capacity must be positive")
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.maxEntries = limit
+	return nil
 }
 
 // SetCleanupInterval sets cache management interval.
@@ -211,6 +231,22 @@ func (c *SandboxCache) Add(sandboxID string, u *user.User) error {
 	defer c.mu.Unlock()
 	if c.Entries == nil {
 		return errors.New("sandbox cache is not available")
+	}
+	if existing := c.Entries[sandboxID]; existing != nil {
+		if existing.Valid(c.maxEntryLifetime) == nil {
+			return errors.New("sandbox id already exists")
+		}
+		delete(c.Entries, sandboxID)
+	}
+	if len(c.Entries) >= c.maxEntries {
+		for id, entry := range c.Entries {
+			if entry.Valid(c.maxEntryLifetime) != nil {
+				delete(c.Entries, id)
+			}
+		}
+		if len(c.Entries) >= c.maxEntries {
+			return ErrSandboxCapacity
+		}
 	}
 	c.Entries[sandboxID] = &SandboxCacheEntry{
 		sandboxID: sandboxID,

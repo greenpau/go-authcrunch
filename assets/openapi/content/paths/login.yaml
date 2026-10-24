@@ -68,11 +68,31 @@ post:
     Browser form login is also available at this path and returns redirects/HTML instead of the JSON challenge
     protocol. A browser form posted to /login?redirect_url=... keeps that trusted destination with its sandbox
     and is returned there after the last checkpoint, ahead of the shared redirect cookie; fresh=1 is kept for
-    a return to the login page. Without refresh tokens or OIDC, a browser that is already signed in with a
+    a return to the login page. A browser form POST carrying fresh=1 starts its own interactive checkpoint
+    even when another tab has authenticated since the form was opened; it does not skip the password or MFA.
+    Without refresh tokens or OIDC, a browser that is already signed in with a
     stored portal session and posts the form with a trusted redirect_url and without fresh=1 receives 303
     to that destination instead of a new login. Sandbox creation/policy errors can render HTML even when JSON was requested. Check response
     Content-Type before decoding. MFA selection uses a TOTP code directly or the literal webauthn, followed
     by its signed assertion; see LoginWebAuthnOptions.
+
+
+    Each admitted browser sandbox receives a separate host-only HttpOnly cookie named
+    <configured sandbox cookie name>_<sandbox_id>, scoped to the portal mount with SameSite=Lax and
+    Max-Age=300 seconds. It is Secure unless legacy insecure cookie mode is configured. The legacy base
+    sandbox cookie is also issued for compatible clients. Retain the independent cookies: two submitted
+    tabs can complete in either order without replacing another flow proof or destination. JSON clients
+    continue carrying the returned sandbox_id and latest sandbox_secret in request bodies; they do not
+    use the browser proof cookies.
+
+
+    New browser starts return HTML 429 when the request already carries 16 distinct canonical sandbox
+    proof-cookie names. This visible-cookie limit is not an atomic per-user quota. The portal sandbox
+    cache independently defaults to 10000 live entries across browser, JSON and connected-account starts;
+    exhaustion returns 503, HTML for browser login and PortalError JSON for JSON login. Refusal neither
+    issues a new sandbox proof nor evicts a live flow. Completion or expiry releases server capacity;
+    retained browser proof cookies expire after five minutes. Configured credential retry limits can
+    independently return JSON 429.
 
 
     LDAP verifies the directory password before resolving or automatically creating the attached local
@@ -133,7 +153,20 @@ post:
           schema:
             type: string
     '429':
-      $ref: ../components/responses/PortalError.yaml
+      description: Browser sandbox admission refused because 16 canonical proof-cookie names are already
+        visible, or a JSON credential retry limit was reached. Existing admitted flows remain usable.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+        text/html:
+          schema:
+            type: string
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
     '500':
       description: JSON protocol/admission error, or HTML from sandbox creation/policy failure. Inspect
         Content-Type before parsing the body.
@@ -148,7 +181,21 @@ post:
           schema:
             type: string
     '503':
-      $ref: ../components/responses/PortalError.yaml
+      description: The shared portal sandbox cache cannot admit another live login, or another required
+        authentication service is unavailable. Sandbox admission returns JSON for JSON login and HTML
+        for browser form login, without evicting a live flow or issuing its replacement proof.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalError.yaml
+        text/html:
+          schema:
+            type: string
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
   x-source-files:
   - pkg/authn/handle_json_login.go
   - pkg/apiauth/auth_request.go
@@ -156,6 +203,9 @@ post:
   - pkg/authn/respond_http.go
   - pkg/authn/handle_http_login.go
   - pkg/authn/inject_redirect_url.go
+  - pkg/authn/browser_sandbox.go
+  - pkg/authn/cookie/sandbox_transaction.go
+  - pkg/authn/cache/sandbox.go
   requestBody:
     required: true
     content:
@@ -200,7 +250,8 @@ post:
   - $ref: ../components/parameters/LoginReturnURL.yaml
   - name: fresh
     in: query
-    description: 'Browser form only: the form belongs to a fresh login, which a signed-in browser still completes.'
+    description: 'Browser form only: force an independent interactive login even if another tab has signed
+      in since this form was opened. The server still requires its selected password/MFA checkpoints.'
     required: false
     schema:
       type: string

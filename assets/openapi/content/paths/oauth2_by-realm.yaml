@@ -21,6 +21,11 @@ get:
     provider sub remains available for existing policies. Current local roles and factor rules
     apply; an external login alone cannot satisfy required local MFA. Use /connected-accounts
     to explicitly connect to an existing local account. Provider email never selects an account.
+    When a verified callback needs interactive local factors, it starts an independent browser sandbox
+    carrying the bound destination. Admission returns HTML 429 if 16 canonical sandbox proof cookies are
+    already visible, or HTML 503 if the shared portal sandbox cache is full. Existing live sandboxes
+    remain usable. The admitted upstream transaction has already been consumed; restart external login
+    after a capacity refusal instead of replaying that callback.
   security: []
   responses:
     '200':
@@ -34,6 +39,8 @@ get:
     '401':
       $ref: ../components/responses/HTML.yaml
     '403':
+      $ref: ../components/responses/HTML.yaml
+    '429':
       $ref: ../components/responses/HTML.yaml
     '503':
       $ref: ../components/responses/HTML.yaml
@@ -53,6 +60,8 @@ get:
   - pkg/idp/oauth/state.go
   - pkg/idp/oauth/login_store.go
   - pkg/authn/inject_redirect_url.go
+  - pkg/authn/connected_accounts.go
+  - pkg/authn/browser_sandbox.go
   parameters:
   - name: realm
     in: path

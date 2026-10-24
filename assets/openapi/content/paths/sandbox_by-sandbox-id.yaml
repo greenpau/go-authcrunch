@@ -3,12 +3,26 @@ get:
   tags:
   - Authentication Portal
   summary: Open the current browser login challenge
-  description: Browser challenge page selected by the server after form login. Retain the sandbox cookie
-    and submit only the fields supplied by the current rendered checkpoint. Fields differ for password,
-    TOTP and WebAuthn. JSON/native clients use POST /login instead. This is temporary authentication state,
-    not a final access-token session. Going back (the terminate action) or starting over after a terminal
-    failure leads to the login page with the trusted redirect_url and fresh=1 the login form was posted with,
-    and the last checkpoint returns to that destination ahead of the shared redirect cookie.
+  description: >-
+    Browser challenge page selected by the server after form login. Retain the independent
+    <configured sandbox cookie name>_<sandbox_id> proof and submit only the fields supplied by the current
+    rendered checkpoint. Its value is an independent secret; the URL identifier only selects the flow.
+    The cookie is host-only, HttpOnly, scoped to the portal mount, SameSite=Lax and expires after 300 seconds;
+    Secure is disabled only by legacy insecure cookie mode. Fields differ for password, TOTP and WebAuthn.
+    JSON/native clients use POST /login instead. This is temporary authentication state, not a final
+    access-token session.
+
+    The selected flow cookie takes precedence over the legacy base sandbox cookie. Only absence of the
+    selected cookie permits fallback to one nonempty valid legacy cookie. A wrong, empty, malformed or
+    duplicate selected cookie fails with 401; a valid legacy value cannot rescue it. Another flow cookie
+    is never substituted. Invalid proof does not consume a valid flow or delete its cookie.
+
+    Going back (the terminate action) or starting over after a terminal failure leads to the login page
+    with the trusted redirect_url and fresh=1 the login form was posted with. The last checkpoint returns
+    to that destination ahead of the shared redirect cookie. Consumption or termination expires the selected
+    independent cookie while preserving other live flow cookies; the deletion also survives a later token
+    delivery rollback. A consumed flow cannot be replayed with its original secret. Never place a sandbox
+    secret in a URL, form field, JavaScript or browser storage.
   security: []
   responses:
     '200':
@@ -23,27 +37,46 @@ get:
       $ref: ../components/responses/HTML.yaml
     '403':
       $ref: ../components/responses/HTML.yaml
+    '429':
+      $ref: ../components/responses/HTML.yaml
     '500':
+      $ref: ../components/responses/HTML.yaml
+    '503':
       $ref: ../components/responses/HTML.yaml
   x-source-files:
   - pkg/authn/handle_http_sandbox.go
   - pkg/authn/inject_redirect_url.go
+  - pkg/authn/browser_sandbox.go
+  - pkg/authn/cookie/sandbox_transaction.go
+  - pkg/authn/cache/sandbox.go
   parameters:
   - name: sandbox_id
     in: path
-    description: Server-selected sandbox identifier.
+    description: Server-selected alphanumeric sandbox identifier. It selects the corresponding proof-cookie
+      name but is not itself authentication evidence.
     required: true
     schema:
       type: string
+      pattern: ^[A-Za-z0-9]{36,47}$
+      minLength: 36
+      maxLength: 47
 post:
   operationId: browserSandboxPost
   tags:
   - Authentication Portal
   summary: Submit a browser login challenge response
-  description: Browser challenge page selected by the server after form login. Retain the sandbox cookie
-    and submit only the fields supplied by the current rendered checkpoint. Fields differ for password,
-    TOTP and WebAuthn. JSON/native clients use POST /login instead. This is temporary authentication state,
-    not a final access-token session.
+  description: >-
+    Answer the selected browser checkpoint using its rendered form and the independent
+    <configured sandbox cookie name>_<sandbox_id> HttpOnly cookie. Password, TOTP and WebAuthn fields differ.
+    JSON/native clients use POST /login and their body-carried rotating secret instead. This browser proof
+    is temporary authentication state, not a final access token; do not copy it into a form field or URL.
+
+    The exact flow cookie takes precedence. Only its absence permits one valid legacy base sandbox cookie;
+    wrong, empty, malformed or duplicate exact cookies fail with 401 without falling back or consuming a
+    valid flow. Two live tabs can complete in either order. Each uses its stored destination, unaffected by
+    another tab or a checkpoint query parameter. Completion and terminal failure expire the selected
+    independent cookie, including when later credential delivery fails. Other live flow cookies remain usable, and
+    replay of the consumed flow with its original proof is denied.
   security: []
   responses:
     '200':
@@ -58,12 +91,19 @@ post:
       $ref: ../components/responses/HTML.yaml
     '403':
       $ref: ../components/responses/HTML.yaml
+    '429':
+      $ref: ../components/responses/HTML.yaml
     '500':
+      $ref: ../components/responses/HTML.yaml
+    '503':
       $ref: ../components/responses/HTML.yaml
   x-source-files:
   - pkg/authn/handle_http_sandbox.go
   - pkg/authn/password_form_validator.go
   - pkg/authn/mfa_form_validator.go
+  - pkg/authn/browser_sandbox.go
+  - pkg/authn/cookie/sandbox_transaction.go
+  - pkg/authn/cache/sandbox.go
   requestBody:
     required: true
     content:
@@ -74,7 +114,7 @@ post:
             type: string
             description: Checkpoint form value.
           description: Form fields depend on the current browser checkpoint. Use only the server-rendered
-            form for that checkpoint and retain its sandbox cookie. Fields below explain common existing
+            form for that checkpoint and retain its independent sandbox cookie. Fields below explain common existing
             checkpoints; enrollment pages may supply further string fields.
           properties:
             secret:
@@ -109,7 +149,11 @@ post:
   parameters:
   - name: sandbox_id
     in: path
-    description: Server-selected sandbox identifier.
+    description: Server-selected alphanumeric sandbox identifier. It selects the corresponding proof-cookie
+      name but is not itself authentication evidence.
     required: true
     schema:
       type: string
+      pattern: ^[A-Za-z0-9]{36,47}$
+      minLength: 36
+      maxLength: 47

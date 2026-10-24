@@ -149,6 +149,9 @@ func (c *Config) validateNames() error {
 		if entry.suffix != DefaultSAMLSessionIDCookieName && strings.HasPrefix(*entry.value, c.SAMLSessionIDCookieName+"_") {
 			return fmt.Errorf("cookie name for %s overlaps SAML transaction cookies", entry.suffix)
 		}
+		if entry.suffix != DefaultSandboxIDCookieName && strings.HasPrefix(*entry.value, c.SandboxIDCookieName+"_") {
+			return fmt.Errorf("cookie name for %s overlaps sandbox transaction cookies", entry.suffix)
+		}
 		seen[*entry.value] = true
 	}
 	return nil

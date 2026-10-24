@@ -259,15 +259,25 @@ func (f *oidcE2EFixture) authorization(client string) url.Values {
 
 func (f *oidcE2EFixture) loginBrowser(t *testing.T) oidcE2EResponse {
 	t.Helper()
+	completed, _ := f.loginBrowserSandbox(t)
+	return completed
+}
+
+func (f *oidcE2EFixture) loginBrowserSandbox(t *testing.T) (oidcE2EResponse, string) {
+	t.Helper()
 	origin := http.Header{"Origin": {f.server.URL}}
 	start := f.request(t, "POST", "/login", url.Values{"username": {"alice"}, "realm": {"local"}}, origin)
 	oidcE2EStatus(t, start, 303)
 	sandbox := start.header.Get("Location")
+	id, ok := strings.CutPrefix(sandbox, f.issuer+"/sandbox/")
+	if !ok || !regexp.MustCompile(`^[A-Za-z0-9]{36,47}$`).MatchString(id) {
+		t.Fatal("login did not return a canonical mounted sandbox")
+	}
 	password := f.request(t, "POST", sandbox, url.Values{"secret": {tests.TestPwd1}}, origin)
 	oidcE2EStatus(t, password, 303)
 	completed := f.request(t, "GET", sandbox, nil, nil)
 	oidcE2EStatus(t, completed, 303)
-	return completed
+	return completed, id
 }
 
 func (f *oidcE2EFixture) loginJSON(t *testing.T) {
@@ -528,7 +538,21 @@ func TestE2EOIDCProviderBrowserConsent(t *testing.T) {
 			}
 			loginPage := f.request(t, "GET", start.header.Get("Location"), nil, nil)
 			oidcE2EStatus(t, loginPage, 200)
-			completed := f.loginBrowser(t)
+			completed, sandboxID := f.loginBrowserSandbox(t)
+			sandboxName := cookies.SandboxIDCookieName + "_" + sandboxID
+			deletions := 0
+			for _, c := range (&http.Response{Header: completed.header}).Cookies() {
+				if c.Name != sandboxName {
+					continue
+				}
+				deletions++
+				if c.Valid() != nil || c.Value != "delete" || c.Path != cookiePath || c.Domain != "" || !c.Secure || !c.HttpOnly || c.SameSite != http.SameSiteLaxMode || c.MaxAge != -1 || !c.Expires.Equal(time.Unix(0, 0)) {
+					t.Fatal("sandbox proof deletion lost its exact scope or expiry")
+				}
+			}
+			if deletions != 1 {
+				t.Fatal("login must delete exactly its own sandbox proof")
+			}
 			oidcE2ECookie(t, completed, tc.sessionName, cookiePath, 28800)
 			if tc.mount != "" {
 				for _, path := range []string{"/", "/other", tc.mount + "entication"} {
@@ -585,7 +609,7 @@ func TestE2EOIDCProviderBrowserConsent(t *testing.T) {
 			}
 			oidcE2ECookie(t, loggedOut, tc.sessionName, cookiePath, -1)
 			oidcE2ECookie(t, loggedOut, tc.requestName, cookiePath, -1)
-			allowed := map[string]bool{}
+			allowed := map[string]bool{sandboxName: true}
 			for _, name := range []string{cookies.SessionIDCookieName, cookies.RefererCookieName, cookies.SandboxIDCookieName, cookies.IdentityTokenCookieName, cookies.AccessTokenCookieName, cookies.RefreshTokenCookieName, cookies.OIDCSessionIDCookieName, cookies.OIDCRequestIDCookieName} {
 				allowed[name] = true
 			}

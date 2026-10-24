@@ -72,6 +72,11 @@ post:
     to contain login.microsoftonline.com or Referer to contain windowsazure.com (case-sensitive substring
     checks). These driver-specific hints never replace signature validation; the generic driver does not
     require them. Callback query destinations and shared redirect cookies cannot replace the bound destination; empty or rejected destinations select the portal.
+    If the verified attached account requires interactive local factors, the portal creates an independent
+    browser sandbox retaining that destination. Admission returns HTML 429 when 16 canonical sandbox proof
+    cookies are already visible, or HTML 503 when the shared portal sandbox cache is full, without evicting
+    existing live sandboxes. The signed transaction has already been consumed; restart SAML login after
+    this refusal instead of replaying its response.
   security:
   - SAMLBrowserBinding: []
   responses:
@@ -87,6 +92,8 @@ post:
       $ref: ../components/responses/HTML.yaml
       description: Provider authentication failed, including form admission, missing/duplicate fields,
         browser binding, expiry/replay or signature/claim validation.
+    '429':
+      $ref: ../components/responses/HTML.yaml
     '500':
       $ref: ../components/responses/HTML.yaml
     '502':
@@ -95,6 +102,8 @@ post:
       $ref: ../components/responses/HTML.yaml
     '501':
       $ref: ../components/responses/HTML.yaml
+    '503':
+      $ref: ../components/responses/HTML.yaml
   x-source-files:
   - pkg/authn/handle_external_login.go
   - pkg/idp/saml/authenticate.go
@@ -102,6 +111,8 @@ post:
   - pkg/idp/saml/provider.go
   - pkg/authn/inject_saml_session_id.go
   - pkg/authn/cookie/saml_transaction.go
+  - pkg/authn/connected_accounts.go
+  - pkg/authn/browser_sandbox.go
   requestBody:
     required: true
     content:
