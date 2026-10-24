@@ -33,7 +33,7 @@ func declaredPortalMount(r *http.Request) string {
 
 // ServeHTTPAt serves one explicitly declared portal mount. It requires a
 // canonical mount accepted by portalpath.Validate, matching enabled portal
-// refresh/OP bindings and cookie restrictions. Invalid declarations return 500;
+// refresh/OP/Documents bindings and cookie restrictions. Invalid declarations return 500;
 // outside or encoded mount aliases return 404, before any protocol dispatch or
 // cookie issuance. The original request and shared portal are never modified.
 // ServeHTTP remains the legacy entry point with inferred mount semantics.
@@ -64,6 +64,12 @@ func (p *Portal) portalMountAgrees(basePath string) bool {
 	}
 	if c := p.config.RefreshTokens; c != nil && c.Enabled && c.BasePath != basePath {
 		return false
+	}
+	if p.config.API != nil && p.config.API.DocumentsEnabled {
+		// Compare the private configuration that bound the opened store.
+		if p.documentsConfig == nil || p.documentsConfig.BasePath != basePath {
+			return false
+		}
 	}
 	if c := p.config.OIDCProvider; c != nil && c.Enabled {
 		issuer, err := url.Parse(c.Issuer)

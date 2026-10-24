@@ -81,7 +81,12 @@ redirect temporarily to their own `/login`, preserving the query; nonmatching
 paths return 404. Routes use segment boundaries, canonical paths, and reserved
 portal namespace/prefix checks. Do not let `http.ServeMux` clean a malformed path into
 a different namespace, and do not strip a mount before delegation. Refresh
-base paths and OIDC issuer paths must match their portal mounts.
+base paths and OIDC issuer paths must match their portal mounts. Enabled
+Documents also require agreement with the private mount used to open their
+store: `ServeHTTPAt` returns 500 before dispatch if that binding differs from
+the declared route. The standalone host's construction-time binding checks
+currently cover refresh and OP; do not describe the Documents request-time
+refusal as preflight rejection before storage or listeners.
 
 Follow the shared [reserved route and mount contract](../coding-directives/references/portal-routing.md)
 when changing mount validation. The independent catalogue distinguishes forbidden

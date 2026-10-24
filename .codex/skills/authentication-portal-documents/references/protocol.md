@@ -130,6 +130,13 @@ Operations use the resource paths below, relative to `<portalBasePath>`. GET
 reads resources; PUT installs immutable data; DELETE removes documents or grants.
 POST allocates uploads, commits them or resets a vault. Each path accepts exactly
 its documented method; other methods return 405 with that method in `Allow`.
+Join `/` as root without producing a double slash; for example root bootstrap is
+`/api/documents/bootstrap`. The configured Documents mount uses the shared
+[canonical portal path contract](../../coding-directives/references/portal-routing.md#explicit-and-inferred-mount-delegation)
+and must agree with an explicit `ServeHTTPAt` declaration and the opened store's
+private binding. A deployment mismatch is a generic 500 before this resource
+handler, not one of its JSON operation errors. Do not change mount spelling to
+recover encrypted data or silently retry a neighboring portal.
 Use `fetch`, never `get`, in read path names. There is no root dispatcher or
 compatibility alias for the old all-POST paths.
 

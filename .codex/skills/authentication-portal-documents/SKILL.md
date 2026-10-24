@@ -89,7 +89,8 @@ queries, including a bare `?`. Resource IDs and canonical decimal chunk numbers
 are path parameters; invalid values return 400. Origin, when present, must match the configured public origin;
 Sec-Fetch-Site must be `same-origin` or `none`. No CORS is enabled. Native requests
 may omit browser headers but still require stored login evidence. Embedding hosts
-own trusted forwarded-header normalization and reserved-mount validation.
+own trusted forwarded-header normalization and route declarations; Documents
+configuration also applies the shared canonical mount validation described below.
 
 ## Configuration and lifecycle
 
@@ -130,7 +131,7 @@ documents api realms local
 | `enable documents api` / `disable documents api` | Disabled; mutually exclusive, never implicit |
 | `documents api database PATH` | Required when enabled; absolute path, one dedicated database per portal |
 | `documents api public origin URL` | Required when enabled; canonical HTTPS origin, no path/trailing slash |
-| `documents api base path PATH` | `/`; canonical absolute mount, no trailing slash except root |
+| `documents api base path PATH` | `/`; canonical absolute portal mount accepted by `portalpath.Validate`, no trailing slash except root |
 | `documents api realms NAME...` | Required when enabled; distinct allowed identity-store realms |
 | `documents api max file bytes N` | 268435456 ciphertext bytes; allowed 16..4294967296 |
 | `documents api max user bytes N` | 1073741824 reserved ciphertext bytes, at least file limit |
@@ -141,8 +142,27 @@ documents api realms local
 | `documents api max recipients N` | 100 recipients per file, excluding owner; maximum 1000 |
 | `documents api upload ttl seconds N` | 86400, allowed 60..604800 |
 
-Zero numeric values request defaults. Config snapshots isolate running storage
-from later caller mutation. The public origin must already match the browser's
+Zero numeric values request defaults. Enabled typed configuration and the public
+parser validate `BasePath` through the shared
+[portal mount contract](../coding-directives/references/portal-routing.md#explicit-and-inferred-mount-delegation).
+Use `/` for root; other mounts are literal canonical visible-ASCII paths with no
+trailing slash, URL escapes or semicolons. Reserved portal prefixes and namespace
+segments are rejected at every depth. Keep the Documents limit of 2048 bytes.
+Do not normalize an invalid declaration into a different storage binding.
+Disabled Documents retain the storage-validation opt-out described above.
+
+Declare that same mount when an embedding host calls `Portal.ServeHTTPAt`.
+For an enabled Documents API, delegation compares the declaration with the
+private configuration used to open the store, not a later edit of the caller's
+`PortalConfig.Documents`. Disagreement returns 500 with no-store and no cookies
+before protocol dispatch. Outside or encoded mount aliases return 404 at the
+explicit route boundary. Hosts should also reject configuration disagreement
+before opening storage or starting listeners; request-time enforcement does not
+provide that construction-time guarantee. Legacy `Portal.ServeHTTP` remains
+available with inferred route semantics and does not acquire the explicit
+declaration check.
+
+Config snapshots isolate running storage from later caller mutation. The public origin must already match the browser's
 serialized HTTPS origin: use lowercase ASCII/punycode DNS names or canonical IP
 literals, omit default port 443, and write other ports in decimal without leading
 zeroes (0..65535). Reject query/fragment delimiters, even empty ones, Unicode host
@@ -235,6 +255,14 @@ verification belong to the client; the server cannot prove submitted bytes were
 correctly encrypted.
 
 ## Acceptance and validation
+
+When changing mount handling, qualify typed and parser rejection of reserved,
+escaped and non-ASCII mounts before database creation, plus root, nested and
+permitted lookalike mounts. Exercise an actual opened Documents store through
+`ServeHTTPAt`: a matching declaration must reach the API, a different declaration
+must fail before early dispatch, and mutating the caller's Documents settings
+must not retarget the private store binding. Preserve disabled-feature and
+legacy-delegation behavior as separate cases.
 
 `documents_api_config_test.go` covers default-disabled behavior, independent API
 flags, immutable configuration snapshots and JSON/XML/YAML round trips. The TLS

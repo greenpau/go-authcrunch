@@ -56,6 +56,7 @@ type documentsE2E struct {
 	server         *httptest.Server
 	client         *http.Client
 	base, database string
+	declaredMount  string
 	mu             sync.RWMutex
 	portal         *authn.Portal
 	store          *local.IdentityStore
@@ -136,7 +137,13 @@ func newDocumentsE2E(t *testing.T, base string, enabled bool, customize ...func(
 		}
 		f.mu.RLock()
 		defer f.mu.RUnlock()
-		if err := f.portal.ServeHTTP(r.Context(), w, r, requests.NewRequest()); err != nil {
+		var err error
+		if f.declaredMount == "" {
+			err = f.portal.ServeHTTP(r.Context(), w, r, requests.NewRequest())
+		} else {
+			err = f.portal.ServeHTTPAt(r.Context(), w, r, requests.NewRequest(), f.declaredMount)
+		}
+		if err != nil {
 			t.Error("documents portal response failed")
 		}
 	}))

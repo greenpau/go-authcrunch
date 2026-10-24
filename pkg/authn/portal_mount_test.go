@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/authn/documents"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -206,5 +207,23 @@ func TestPortalMountProviderRealmOwnership(t *testing.T) {
 	_ = p.ServeHTTPAt(t.Context(), w, r, requests.NewRequest(), "/team/auth")
 	if w.Code != 400 || provider.calls != before || w.Header().Get("Content-Type") == "application/jwk-set+json" {
 		t.Fatal("unknown provider child escaped into public discovery")
+	}
+}
+
+func TestPortalMountDocumentsAgreement(t *testing.T) {
+	f := newRefreshPortal(t, false, false)
+	p := f.portal
+	p.config.API = &APIConfig{DocumentsEnabled: true}
+	if p.portalMountAgrees("/auth") {
+		t.Fatal("enabled Documents without an opened binding agreed to a mount")
+	}
+	p.documentsConfig = &documents.Config{BasePath: "/auth"}
+	p.config.Documents = &documents.Config{BasePath: "/other"}
+	if !p.portalMountAgrees("/auth") || p.portalMountAgrees("/other") {
+		t.Fatal("Documents mount did not follow the private opened binding")
+	}
+	p.config.API.DocumentsEnabled = false
+	if !p.portalMountAgrees("/other") {
+		t.Fatal("disabled Documents imposed a mount constraint")
 	}
 }

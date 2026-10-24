@@ -20,13 +20,13 @@ import (
 	"errors"
 	"net/netip"
 	"net/url"
-	"path"
 	"strconv"
 	"strings"
 
 	"golang.org/x/net/idna"
 
 	"github.com/greenpau/go-authcrunch/internal/sqlitedb"
+	"github.com/greenpau/go-authcrunch/pkg/portalpath"
 )
 
 // ChunkSize is the protocol's plaintext chunk size, in bytes. Even an empty
@@ -70,7 +70,7 @@ func (c *Config) Validate() error {
 	if c.BasePath == "" {
 		c.BasePath = "/"
 	}
-	if !sqlitedb.ValidText(c.BasePath, 2048) || !strings.HasPrefix(c.BasePath, "/") || path.Clean(c.BasePath) != c.BasePath || strings.ContainsAny(c.BasePath, "\\%?#\r\n\t ") {
+	if !sqlitedb.ValidText(c.BasePath, 2048) || portalpath.Validate(c.BasePath) != nil {
 		return ErrConfig
 	}
 	if len(c.Realms) == 0 || len(c.Realms) > 64 {

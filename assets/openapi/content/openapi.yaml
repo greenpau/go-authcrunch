@@ -65,7 +65,11 @@ tags:
     and valid storage/origin/realm settings. Configure the exact serialized HTTPS origin:
     lowercase ASCII/punycode host or canonical IP, no path/query/fragment, no default
     `:443`, and no empty or zero-padded port. Invalid enabled settings fail before
-    creating storage. Requests need a valid portal access token
+    creating storage. The configured base path defaults to `/` and uses the shared
+    canonical portal mount validator, including reserved route segments and cookie-path
+    restrictions. An explicit `ServeHTTPAt` declaration must match the mount bound
+    to the opened Documents store; disagreement returns uncached HTTP 500 without
+    cookies before any endpoint dispatch. Requests need a valid portal access token
     and current stored browser login evidence for an allowed local user. Ownership
     and grants use the exact local database user `id`; administrators have no override.
 

@@ -79,7 +79,7 @@ files:
     pkg/authn/direct_authentication_identity.go: b8c6d7eac378fa48f7f63154d833805521ca627bcf53570cc7a00cdf6028bbe7
     pkg/authn/documents.go: 81088fa1296efa6fd95d322c17c6b1b6525705ea98f2367fa7cec7e848496de4
     pkg/authn/documents/client/crypto.mjs: 6108353eb784233f14edf1ba2f79c0ad80d4a2487ae7d5f1334480e292e8648f
-    pkg/authn/documents/config.go: 7a6ab30d3ce1211cbf505d44afeb8c7f28c5017bcfcc621195737256291113ce
+    pkg/authn/documents/config.go: 2865b2b758945ad6614f5387886540f1d421277c2c4e557fdefc8db34b418ebd
     pkg/authn/documents/parser/parser.go: 915245ccde5e65e03dda937b1ecf0e51322deb8395d221fbb7a66e24afa1ee36
     pkg/authn/documents/protocol.go: 167fb8e49e36ee2cce34a5d1580f072dbe7b6d1069bd6fdd5eb7b7f1dfae5d13
     pkg/authn/documents/store.go: 84f862d2bfea9da062f47f655d71ca77ef97bc6cc4ecbedb32946679debb1013
@@ -140,7 +140,7 @@ files:
     pkg/authn/password_form_validator.go: 1e30735fcc1abc71b9f36d752c315ff0aff3514bdfbc8d9cac66edd973817456
     pkg/authn/persistent_state.go: ab02a3eedc07766e061e4cdbc9cfae12036efbb9b9819df3a1a20fabeae4d062
     pkg/authn/portal.go: fe77f5e025be2ecaf7fd9b5fab0fbecd7124d1105263c502d739e538388464d9
-    pkg/authn/portal_mount.go: 8415c5c2ff8d4ea02e98d702d6ddbcf2a6f4d795aeaa52b72e9b0bd7bcde50e0
+    pkg/authn/portal_mount.go: 028100849fc12a9e6e1a3aacd21c17c860a649e35e801ac2f2ff729f4b07aaf6
     pkg/authn/profile_auth_challenges.go: d016b39d03224bc98eb22d6f46698093637f41b126b0d9f65a6a219cc7b9a115
     pkg/authn/profile_identity.go: 0dbaf1f77b62c1042ff920d5d0d15d9090309a858d9ce16e9a93cb25d811120f
     pkg/authn/respond_api.go: 62e482b84494029222fdb59ad669719b85f5d69173db813d20f57b2d3c87e3de

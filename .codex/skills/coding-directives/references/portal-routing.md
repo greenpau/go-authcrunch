@@ -66,12 +66,14 @@ strip non-ASCII bytes or reinterpret a semicolon as an attribute boundary.
 Encoding a route does not repair an invalid declaration. Allowed punctuation
 such as `+`, `,`, `:`, `@` and `~` retains its spelling and segment scope.
 
-The standalone host, enabled portal refresh and SQLite ticket/registration
+The standalone host, enabled portal refresh/Documents and SQLite ticket/registration
 configuration use this policy through their typed validators and public parsers.
 The enabled portal OP adapter applies it when parsed or typed configuration is
 attached to a portal. SQLite consumers retain their narrower
 ASCII letter/digit/underscore/hyphen segments, 512-byte limit and `/auth` default.
-Disabled refresh/OP retain their semantic opt-out. The portal OP adapter validates
+Documents retain their `/` default and 2048-byte limit; their enabled API parser
+and portal configurator apply storage validation before opening a database.
+Disabled refresh/OP/Documents retain their semantic opt-out. The portal OP adapter validates
 its issuer's mount; independent `pkg/oidc.Config` and its public parser do not
 acquire portal reservations. New reservations must update shared validation and independent
 catalogue-driven consumer tests together. Other embedding hosts can use the
@@ -87,11 +89,18 @@ Embedders can call `Portal.ServeHTTPAt(ctx, w, r, rr, basePath)` with a validate
 mount. Retain the original full request path. Before any OP, signing-JWKS, API
 or browser dispatch, this entry point checks the declaration, exact segment
 containment in both decoded and escaped paths, cookie restrictions and enabled
-refresh/OP mount agreement. Invalid declarations or feature disagreement return
+refresh/OP/Documents mount agreement. Documents agreement uses the private
+configuration that bound the opened store, so later mutation of the caller's
+Documents settings cannot retarget that binding. Invalid declarations or feature disagreement return
 500; outside paths, neighbor prefixes and encoded mount/boundary aliases return
 404. These refusals use no-store, do not issue cookies and do not mark the
 request authenticated. Host origin/forwarded-header trust remains the embedder's
 responsibility.
+
+This check runs during request delegation. An embedding host that promises
+rejection before storage or listener acquisition must additionally validate
+feature agreement during configuration preflight; do not infer that guarantee
+from calling `ServeHTTPAt` alone.
 
 The accepted mount travels in private request context. Repeated extraction uses
 that exact value, including a trailing slash internally, without changing the

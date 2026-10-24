@@ -41,7 +41,17 @@ disabled by default and independent of Admin/Profile. A configured storage path
 alone does not enable it.
 
 Configure the exact portal origin/base path via the embedding app's trusted
-bootstrap; API base is `<basePath>/api/documents`. Every operation has its own
+bootstrap. The host's Documents storage mount and declared portal route must
+agree; use the canonical mount accepted by the shared
+[portal path contract](../coding-directives/references/portal-routing.md#explicit-and-inferred-mount-delegation).
+Root is `/`; remove that one trailing slash when joining the API suffix so root
+uses `/api/documents` and `/tenant/auth` uses `/tenant/auth/api/documents`.
+Do not infer a different mount from the current React page, normalize an invalid
+mount, or probe alternate paths after a configuration failure. A mount mismatch
+at explicit portal delegation returns 500 and needs a host configuration fix;
+it is not an expired session or a reason to reset a vault. The database's portal,
+origin and mount binding persists across reopening, so moving an app's static
+route alone does not migrate Documents data. Every operation has its own
 method/resource path; use the complete
 [operation table](../authentication-portal-documents/references/protocol.md#http-messages).
 GET reads; PUT registers keys and writes immutable manifests, chunks or grants;

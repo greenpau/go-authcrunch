@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+	"github.com/greenpau/go-authcrunch/pkg/authn/documents"
+	documentsparser "github.com/greenpau/go-authcrunch/pkg/authn/documents/parser"
 	refreshparser "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh/parser"
 	"github.com/greenpau/go-authcrunch/pkg/httpserver"
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
@@ -46,6 +48,13 @@ func TestPortalMountConsumers(t *testing.T) {
 			consumers := map[string]func() error{
 				"standalone HTTP": func() error {
 					return (&httpserver.Config{InsecureHTTP: true, Portals: []httpserver.PortalRoute{{Name: "portal", Path: tc.path}}}).Validate()
+				},
+				"documents typed": func() error {
+					return (&documents.Config{Database: database, PublicOrigin: "https://auth.example.test", BasePath: tc.path, Realms: []string{"local"}}).Validate()
+				},
+				"documents parser": func() error {
+					_, err := documentsparser.NewDocumentsAPIConfigFromDirectives([]string{"enable documents api", cfgutil.EncodeArgs([]string{"documents", "api", "database", database}), "documents api public origin https://auth.example.test", "documents api realms local", cfgutil.EncodeArgs([]string{"documents", "api", "base", "path", tc.path})})
+					return err
 				},
 				"refresh typed": refresh.Validate,
 				"refresh parser": func() error {
