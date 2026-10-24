@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/internal/accessclaims"
 	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/state"
@@ -398,7 +399,7 @@ func (p *Portal) issueCrossDeviceProvider(ctx context.Context, r *http.Request, 
 	}
 	now := time.Now().Unix()
 	m["jti"], m["iat"], m["nbf"] = rr.Upstream.SessionID, now, now-60
-	m["exp"] = min(proof.expires, now+int64(p.keystore.GetTokenLifetime(nil, nil)))
+	m["exp"] = min(proof.expires, now+int64(p.accessLifetimeSeconds()))
 	if _, exists := m["origin"]; !exists {
 		m["origin"] = rr.Upstream.Realm
 	}
@@ -420,10 +421,18 @@ func (p *Portal) issueCrossDeviceProvider(ctx context.Context, r *http.Request, 
 	}
 	// Keep transfers bounded by the completed login's lifetime, even if a
 	// transform tries to extend expiry or replace the new session identifier.
-	m["exp"], m["jti"] = min(proof.expires, now+int64(p.keystore.GetTokenLifetime(nil, nil))), rr.Upstream.SessionID
+	expiry := min(proof.expires, now+int64(p.accessLifetimeSeconds()))
+	if p.accessSigner != nil {
+		approved, err := accessclaims.Integer(m["exp"])
+		if err != nil {
+			return nil, errCrossDeviceDenied
+		}
+		expiry = min(expiry, approved)
+	}
+	m["exp"], m["jti"] = expiry, rr.Upstream.SessionID
 	m["nonce"] = util.GetRandomString(32)
 	injectPortalRoles(m, p.config)
-	issued, err := user.NewUser(m)
+	issued, err := p.newAccessUser(m)
 	if err != nil {
 		return nil, err
 	}
@@ -433,7 +442,7 @@ func (p *Portal) issueCrossDeviceProvider(ctx context.Context, r *http.Request, 
 			return nil, err
 		}
 	}
-	if err := p.keystore.SignToken(nil, nil, issued); err != nil {
+	if err := p.signAccessUser(ctx, issued); err != nil {
 		return nil, err
 	}
 	return issued, nil

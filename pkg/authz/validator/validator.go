@@ -22,6 +22,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/greenpau/go-authcrunch/internal/accessclaims"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz/cache"
@@ -474,7 +475,48 @@ func (v *TokenValidator) CacheUser(usr *user.User) error {
 	if usr != nil && usr.CacheDisabled {
 		return nil
 	}
+
+	if v.keystore.HasAccessTokenProfile() && usr != nil {
+		credential := usr.TokenSource == tokenSourceBasicAuth || usr.TokenSource == tokenSourceAPIAuth
+		if credential {
+			if !strings.HasPrefix(usr.Token, credentialCachePrefix) {
+				return fmt.Errorf("invalid credential cache namespace")
+			}
+		} else {
+			claims, err := v.keystore.VerifyAccessToken(context.Background(), usr.Token)
+			if err != nil {
+				return fmt.Errorf("invalid cached access token")
+			}
+			canonical, err := user.NewUser(claims)
+			if err != nil || usr.Claims == nil ||
+				!accessclaims.Equal(canonical.AsMap(), usr.AsMap()) ||
+				!accessclaims.Equal(canonical.GetData(), usr.GetData()) ||
+				!accessclaims.Equal(cacheClaims(canonical.Claims), cacheClaims(usr.Claims)) {
+				return fmt.Errorf("cached access claims do not match token")
+			}
+		}
+	}
 	return v.cache.Add(usr)
+}
+
+// cacheClaims projects every exported claim used by authorization or identity
+// propagation. User keeps these independently from AsMap and GetData; checking
+// all three views preserves private login evidence without trusting mutations of
+// the public claim fields. Custom claims remain covered by AsMap.
+func cacheClaims(c *user.Claims) map[string]any {
+	claims := map[string]any{
+		"amr": c.AuthenticationMethods, "aud": c.Audience,
+		"exp": c.ExpiresAt, "jti": c.ID, "iat": c.IssuedAt,
+		"iss": c.Issuer, "nbf": c.NotBefore, "sub": c.Subject,
+		"name": c.Name, "email": c.Email, "roles": c.Roles,
+		"origin": c.Origin, "scopes": c.Scopes, "org": c.Organizations,
+		"addr": c.Address, "picture": c.PictureURL, "metadata": c.Metadata,
+		"acl": nil,
+	}
+	if c.AccessList != nil {
+		claims["acl"] = map[string]any{"paths": c.AccessList.Paths}
+	}
+	return claims
 }
 
 // RegisterAuthProxy registers authproxy.Authenticator  with TokenValidator.
@@ -575,3 +617,6 @@ func (v *TokenValidator) AuthorizeUser(ctx context.Context, r *http.Request, usr
 	}
 	return v.authorizeRequest(ctx, r, usr)
 }
+
+// AccessTokenTrust identifies this validator's already loaded profile keys.
+func (v *TokenValidator) AccessTokenTrust() string { return v.keystore.AccessTokenTrust() }

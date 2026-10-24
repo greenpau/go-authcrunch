@@ -78,6 +78,14 @@ restore that component's old authority. Reordering or unrelated configuration
 changes can conservatively require login. Stable generated KMS keys use separate
 bindings and survive these session invalidations.
 
+Strict access profiles additionally bind public RSA trust captured from every
+portal and policy-only verifier, plus the current signer role. Fingerprints use
+loaded key snapshots, never a second file read. A key change at an unchanged
+filename retires the epoch; equivalent PEM encoding of identical authority does
+not. No-profile roots preserve their existing binding representation. See
+[selected signing](../cryptographic-signing/references/selected-access-signing.md)
+for descriptor and ownership rules.
+
 Root construction opens storage first and owns it last during reverse cleanup.
 It injects KMS storage before constructing keys, restores local identity epochs,
 then attaches session state before publication. `Server.Close` leaves durable

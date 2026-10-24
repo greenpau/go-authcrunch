@@ -50,7 +50,10 @@ post:
     A disabled or changed local account denies renewal. Upstream role changes, disablement and logout
     remain unseen until fresh login. Original sub, sid, auth_time and verified amr remain fixed.
     Successful refresh extends idle expiry within the original absolute deadline; protected application
-    requests alone do not. Provider browser callbacks issue only cookie-transport families.'
+    requests alone do not. Provider browser callbacks issue only cookie-transport families.
+    With an external access signer, the current selected access-token profile supplies the single
+    audience and approved expiry bound. Signature and exact claims verification precede refresh commit
+    and credential publication; signing failure neither spends the refresh token nor publishes credentials.'
   security:
   - RefreshCookie: []
   - {}

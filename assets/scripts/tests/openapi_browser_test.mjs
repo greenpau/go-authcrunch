@@ -452,6 +452,25 @@ test('real Scalar renders every operation under the shared mount and restores de
     await centerDescription(phrases[0]);
     const capture = await send('Page.captureScreenshot', { format: 'png' });
     await writeFile(path.join(work, artifact), Buffer.from(capture.data, 'base64'));
+    if (name === 'PublicJWK') {
+      assert.ok(await evaluate(`(() => {
+        const picker = Array.from(document.querySelectorAll('button'))
+          .findLast(n => n.textContent.includes('RSA signing key'));
+        if (!picker) return false;
+        picker.click(); return true;
+      })()`), 'public signing key category picker');
+      await eventually(() => evaluate(`(() => {
+        const option = Array.from(document.querySelectorAll('[role="option"]'))
+          .find(n => n.textContent.includes('RSA-PSS access signing key'));
+        if (!option) return false;
+        option.click(); return true;
+      })()`), 'selected access signing key selection');
+      await eventually(() => evaluate(`document.body.innerText.includes('PS256 access profiles always include the explicit key ID') &&
+        document.body.innerText.includes('SHA-256 public-key thumbprint')`), 'selected and independent OIDC key identifiers');
+      await centerDescription('PS256 access profiles always include the explicit key ID');
+      const selected = await send('Page.captureScreenshot', { format: 'png' });
+      await writeFile(path.join(work, 'viewer-selected-access-key.png'), Buffer.from(selected.data, 'base64'));
+    }
     if (name === 'ProfilePublicKeyRecord') {
       assert.ok(await evaluate(`(() => {
         const picker = Array.from(document.querySelectorAll('button'))

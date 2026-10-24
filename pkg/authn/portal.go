@@ -70,6 +70,8 @@ type Portal struct {
 	config              *PortalConfig
 	userRegistries      map[string]registry.Provider
 	validator           *validator.TokenValidator
+	accessSigner        *kms.AccessSignerBinding
+	accessJWKS          []byte
 	keystore            *kms.CryptoKeyStore
 	identityStores      []ids.IdentityStore
 	identityProviders   []idp.IdentityProvider
@@ -92,6 +94,7 @@ type Portal struct {
 
 // PortalParameters are input parameters for NewPortal.
 type PortalParameters struct {
+	AccessSigner *kms.AccessSignerBinding `json:"-" xml:"-" yaml:"-"`
 	// IdentityAttachmentsBound means the caller has completed attachment wiring
 	// for every supplied store and provider. Skip automatic binding so borrowed
 	// handles retain their caller-owned state. Standalone callers may omit it.
@@ -116,10 +119,22 @@ func NewPortal(params PortalParameters) (*Portal, error) {
 	if err := params.Config.Validate(); err != nil {
 		return nil, errors.ErrNewPortal.WithArgs(err)
 	}
+	var accessSigner *kms.AccessSignerBinding
+	if (params.Config.AccessSigner != "") != (params.AccessSigner != nil) {
+		return nil, fmt.Errorf("selected access signer requires its runtime binding")
+	}
+	if params.AccessSigner != nil {
+		var err error
+		accessSigner, err = params.AccessSigner.Prepare()
+		if err != nil {
+			return nil, err
+		}
+	}
 	p := &Portal{
-		id:     uuid.New().String(),
-		config: params.Config,
-		logger: params.Logger,
+		accessSigner: accessSigner,
+		id:           uuid.New().String(),
+		config:       params.Config,
+		logger:       params.Logger,
 	}
 
 	for _, storeName := range params.Config.IdentityStores {
@@ -269,6 +284,9 @@ func (p *Portal) configure() error {
 		return err
 	}
 	if err := p.configureUserTransformer(); err != nil {
+		return err
+	}
+	if err := p.configureAccessSigner(); err != nil {
 		return err
 	}
 	if err := p.configureRefresh(); err != nil {

@@ -43,7 +43,7 @@ func TestConfigValidation(t *testing.T) {
 	if err := good.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if good.Algorithm != "PS256" || good.MaxLifetime != "15m" {
+	if good.Algorithm != "PS256" || good.MaxLifetime != "15m0s" {
 		t.Fatal("incorrect defaults")
 	}
 	cases := map[string]func(*signing.Config){

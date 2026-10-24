@@ -33,6 +33,9 @@ func (p *Portal) handleHTTPJWKS(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	content, err := p.keystore.GetJWKS()
+	if p.accessSigner != nil {
+		content, err = p.accessJWKS, nil
+	}
 	if err != nil {
 		p.logger.Error("Failed to publish portal signing keys", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)

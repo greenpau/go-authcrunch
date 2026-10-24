@@ -218,9 +218,11 @@ func (v *TokenValidator) parseCustomAPIKeyAuthHeader(ctx context.Context, r *htt
 	return nil
 }
 
+const credentialCachePrefix = "authcrunch-credential:"
+
 func credentialCacheKey(kind, method string, r *authproxy.Request) string {
 	digest := sha256.Sum256([]byte(r.Secret))
-	return fmt.Sprintf("%q|%q|%q|%q|%x", kind, method, r.Address, r.Realm, digest)
+	return credentialCachePrefix + fmt.Sprintf("%q|%q|%q|%q|%x", kind, method, r.Address, r.Realm, digest)
 }
 
 func authenticateCredential(ctx context.Context, a authproxy.Authenticator, r *authproxy.Request, basic bool) error {

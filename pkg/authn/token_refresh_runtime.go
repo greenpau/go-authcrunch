@@ -97,7 +97,7 @@ func (p *Portal) configureRefresh() error {
 	p.refreshStore = store
 	adapter := &portalRefreshAdapter{portal: p}
 	policy := tokenrefresh.Policy{
-		AccessLifetime:  time.Duration(min(c.AccessLifetimeSeconds, p.keystore.GetTokenLifetime(nil, nil))) * time.Second,
+		AccessLifetime:  time.Duration(min(c.AccessLifetimeSeconds, p.accessLifetimeSeconds())) * time.Second,
 		IdleTimeout:     time.Duration(c.IdleTimeoutSeconds) * time.Second,
 		AbsoluteTimeout: time.Duration(c.AbsoluteTimeoutSeconds) * time.Second,
 	}
@@ -121,7 +121,10 @@ func (a *portalRefreshAdapter) Sign(ctx context.Context, claims map[string]any) 
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	u, err := user.NewUser(claims)
+	if a.portal.accessSigner != nil && claims["iss"] != a.portal.accessSigner.Config.Policy.Issuer {
+		return "", fmt.Errorf("prepared refresh issuer does not match access signer")
+	}
+	u, err := a.portal.newAccessUser(claims)
 	if err != nil {
 		return "", err
 	}
@@ -130,7 +133,7 @@ func (a *portalRefreshAdapter) Sign(ctx context.Context, claims map[string]any) 
 			return "", err
 		}
 	}
-	if err := a.portal.keystore.SignToken(nil, nil, u); err != nil {
+	if err := a.portal.signAccessUser(ctx, u); err != nil {
 		return "", err
 	}
 	// Return the same canonical representation that the real KMS signed.
@@ -187,6 +190,9 @@ func (a *portalRefreshAdapter) WithIdentity(ctx context.Context, principal token
 			if !satisfiedRefreshChallenge(challenge, principal.Challenges) {
 				return tokenrefresh.ErrDenied
 			}
+		}
+		if err := p.validateAccessAudience(claims); err != nil {
+			return err
 		}
 		return apply(claims)
 	})

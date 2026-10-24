@@ -76,7 +76,7 @@ func (p *Portal) externalAccountClaims(ctx context.Context, r *http.Request, rr 
 	}
 	now := time.Now().Unix()
 	claims["id"] = rr.ExternalIdentity.Evidence.UserID
-	claims["jti"], claims["iat"], claims["nbf"], claims["exp"] = rr.Upstream.SessionID, now, now-60, now+int64(p.keystore.GetTokenLifetime(nil, nil))
+	claims["jti"], claims["iat"], claims["nbf"], claims["exp"] = rr.Upstream.SessionID, now, now-60, now+int64(p.accessLifetimeSeconds())
 	claims["iss"], claims["addr"] = util.GetIssuerURL(r), addrutil.GetSourceAddress(r)
 	claims["origin"], claims["realm"] = rr.Upstream.Realm, rr.Upstream.Realm
 	delete(claims, "amr")
@@ -144,7 +144,7 @@ func (p *Portal) authorizeConnectedLogin(ctx context.Context, w http.ResponseWri
 		if len(required) > 0 {
 			return nil
 		}
-		issued, err = p.signConnectedUser(rr, claims, []string{"federated"})
+		issued, err = p.signConnectedUser(ctx, rr, claims, []string{"federated"})
 		return err
 	})
 	if err != nil {
@@ -174,11 +174,11 @@ func (p *Portal) authorizeConnectedLogin(ctx context.Context, w http.ResponseWri
 	return nil
 }
 
-func (p *Portal) signConnectedUser(rr *requests.Request, claims map[string]any, methods []string) (*user.User, error) {
+func (p *Portal) signConnectedUser(ctx context.Context, rr *requests.Request, claims map[string]any, methods []string) (*user.User, error) {
 	claims["amr"] = append([]string(nil), methods...)
 	claims["auth_time"] = rr.ExternalIdentity.Evidence.AuthenticatedAt
 	claims["nonce"] = util.GetRandomString(32)
-	u, err := user.NewUser(claims)
+	u, err := p.newAccessUser(claims)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (p *Portal) signConnectedUser(rr *requests.Request, claims map[string]any, 
 			return nil, err
 		}
 	}
-	if err := p.keystore.SignToken(nil, nil, u); err != nil {
+	if err := p.signAccessUser(ctx, u); err != nil {
 		return nil, err
 	}
 	return u, nil
@@ -284,7 +284,7 @@ func (p *Portal) issueConnectedSandbox(ctx context.Context, r *http.Request, rr 
 			}
 			claims["exp"] = min(claims["exp"].(int64), maxExpiry)
 		}
-		result, err = p.signConnectedUser(rr, claims, methods)
+		result, err = p.signConnectedUser(ctx, rr, claims, methods)
 		return err
 	})
 	return result, err

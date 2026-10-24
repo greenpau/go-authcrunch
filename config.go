@@ -28,6 +28,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/logging"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
@@ -38,6 +39,7 @@ import (
 
 // Config is a configuration of Server.
 type Config struct {
+	ExternalAccessSigners []*kms.ExternalAccessSignerConfig `json:"external_access_signers,omitempty" xml:"external_access_signers,omitempty" yaml:"external_access_signers,omitempty"`
 	// Logging configures diagnostic suppression for this runtime's components.
 	Logging *logging.Config `json:"logging,omitempty" xml:"logging,omitempty" yaml:"logging,omitempty"`
 	// State enables host-independent durable keys and authenticated sessions.
@@ -133,6 +135,9 @@ func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
 func (cfg *Config) Validate() error {
 	if cfg == nil {
 		return fmt.Errorf("config is nil")
+	}
+	if err := cfg.validateExternalAccessSigners(); err != nil {
+		return err
 	}
 	externalStores, err := cfg.validateExternalIdentityStores()
 	if err != nil {

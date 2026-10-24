@@ -3,9 +3,12 @@ get:
   tags:
   - Discovery
   summary: Read public portal signing keys
-  description: 'Public access-token signing keys, independent of admin/export flags. The first eligible
-    non-system signer decides availability: HMAC first returns 404 even if asymmetric signers follow.
-    Verification-only and system keys are excluded. Invalid credentials do not block discovery. HEAD has
+  description: 'Public access-token signing keys, independent of admin/export flags. With ordinary KMS
+    issuance, the first eligible non-system signer decides availability: HMAC first returns 404 even if
+    asymmetric signers follow, and verification-only keys are excluded. An explicitly selected PS256
+    access signer instead publishes its current key and all explicitly retained profile verification
+    keys, sorted by key ID; each advertises PS256. System and private keys are always excluded.
+    Invalid credentials do not block discovery. HEAD has
     the same headers and Content-Length as GET with no body. With an explicit portal mount,
     only the exact mounted endpoint is public discovery: nested suffix impostors and encoded endpoint
     aliases do not select this operation. Legacy inferred hosting retains its complete-suffix route
@@ -56,6 +59,8 @@ get:
           $ref: ../components/headers/NoSniff.yaml
   x-source-files:
   - pkg/authn/handle_http_jwks.go
+  - pkg/authn/access_signing.go
+  - pkg/kms/access_token_profile.go
   - pkg/authn/portal_mount.go
   - pkg/authn/serve_http.go
 head:
@@ -63,9 +68,12 @@ head:
   tags:
   - Discovery
   summary: Read public portal signing keys (headers only)
-  description: 'Public access-token signing keys, independent of admin/export flags. The first eligible
-    non-system signer decides availability: HMAC first returns 404 even if asymmetric signers follow.
-    Verification-only and system keys are excluded. Invalid credentials do not block discovery. HEAD has
+  description: 'Public access-token signing keys, independent of admin/export flags. With ordinary KMS
+    issuance, the first eligible non-system signer decides availability: HMAC first returns 404 even if
+    asymmetric signers follow, and verification-only keys are excluded. An explicitly selected PS256
+    access signer instead publishes its current key and all explicitly retained profile verification
+    keys, sorted by key ID; each advertises PS256. System and private keys are always excluded.
+    Invalid credentials do not block discovery. HEAD has
     the same headers and Content-Length as GET with no body. With an explicit portal mount,
     only the exact mounted endpoint is public discovery: nested suffix impostors and encoded endpoint
     aliases do not select this operation. Legacy inferred hosting retains its complete-suffix route
@@ -112,5 +120,7 @@ head:
           $ref: ../components/headers/NoSniff.yaml
   x-source-files:
   - pkg/authn/handle_http_jwks.go
+  - pkg/authn/access_signing.go
+  - pkg/kms/access_token_profile.go
   - pkg/authn/portal_mount.go
   - pkg/authn/serve_http.go

@@ -101,7 +101,7 @@ func (p *Portal) issueDirectAuthenticationToken(ctx context.Context, rr *request
 		claims := map[string]any{
 			"sub": rr.User.Username, "email": rr.User.Email, "origin": rr.Upstream.Realm,
 			"iss": issuer, "addr": address, "iat": now, "nbf": now - 60,
-			"exp": now + int64(p.keystore.GetTokenLifetime(nil, nil)),
+			"exp": now + int64(p.accessLifetimeSeconds()),
 		}
 		if rr.User.FullName != "" {
 			claims["name"] = rr.User.FullName
@@ -128,11 +128,11 @@ func (p *Portal) issueDirectAuthenticationToken(ctx context.Context, rr *request
 		}
 		injectPortalRoles(claims, p.config)
 		var err error
-		usr, err = user.NewUser(claims)
+		usr, err = p.newAccessUser(claims)
 		if err != nil {
 			return err
 		}
-		return p.keystore.SignToken(nil, nil, usr)
+		return p.signAccessUser(ctx, usr)
 	})
 	if err != nil {
 		return nil, err

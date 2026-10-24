@@ -49,6 +49,9 @@ and their private SQLite helper, plus messaging transports and the SQLite outbox
 durable acceptance and delivery failures affect registration, and persistence
 and migration affect OAuth callback
 completion and confirmation-to-login navigation.
+The shared bounded access-claims codec and RSA-PSS signing backend are included
+because selected signing affects portal issuance, strict verification and public
+discovery. Keep ordinary KMS and selected-profile behavior distinct in the YAML.
 The Documents Web Crypto module
 `pkg/authn/documents/client/crypto.mjs` is also fingerprinted: its key schedule
 and encrypted wire encodings are part of the HTTP contract. Keep the CLI E2E isolated checkout and its source-drift cases aligned with new

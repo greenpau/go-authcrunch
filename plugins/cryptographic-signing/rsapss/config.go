@@ -64,6 +64,7 @@ func (c *Config) Validate() error {
 	if err != nil || d < time.Second || d > 24*time.Hour || d%time.Second != 0 {
 		return fmt.Errorf("PS256 signing lifetime must be whole seconds within 1s-24h")
 	}
+	c.MaxLifetime = d.String()
 	return nil
 }
 

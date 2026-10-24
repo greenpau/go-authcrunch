@@ -15,6 +15,7 @@
 package authn
 
 import (
+	"fmt"
 	"regexp"
 	"slices"
 
@@ -37,7 +38,9 @@ const (
 
 // PortalConfig represents Portal configuration.
 type PortalConfig struct {
-	Name string `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
+	AccessSigner       string                        `json:"access_signer,omitempty" xml:"access_signer,omitempty" yaml:"access_signer,omitempty"`
+	AccessTokenProfile *kms.AccessTokenProfileConfig `json:"access_token_profile,omitempty" xml:"access_token_profile,omitempty" yaml:"access_token_profile,omitempty"`
+	Name               string                        `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
 	// UI holds the configuration for the user interface.
 	UI *ui.Parameters `json:"ui,omitempty" xml:"ui,omitempty" yaml:"ui,omitempty"`
 	// UserTransformerConfig holds the configuration for the user transformer.
@@ -199,6 +202,31 @@ func (cfg *PortalConfig) parsePortalRoles() error {
 
 // Validate validates PortalConfig.
 func (cfg *PortalConfig) Validate() error {
+	if (cfg.AccessSigner != "") != (cfg.AccessTokenProfile != nil) {
+		return fmt.Errorf("selected portal access signing requires an explicit profile")
+	}
+	if cfg.AccessTokenProfile != nil {
+		if err := cfg.AccessTokenProfile.Validate(); err != nil {
+			return err
+		}
+		crypto, err := kms.NewCryptoKeyStoreConfig(cfg.RawCryptoKeyStoreConfig)
+		if err != nil {
+			return err
+		}
+		if crypto.TokenLifetime < 0 || len(crypto.RawKeyConfigs) == 0 {
+			return fmt.Errorf("selected signing requires explicit verification keys and a valid lifetime")
+		}
+		keys, err := kms.ParseCryptoKeyConfigs(crypto.RawKeyConfigs)
+		if err != nil {
+			return err
+		}
+		for _, key := range keys {
+			if key.Usage != "verify" && key.Usage != "system" {
+				return fmt.Errorf("selected access signer forbids ordinary signing keys")
+			}
+		}
+	}
+
 	if cfg.validated {
 		return nil
 	}
@@ -238,6 +266,10 @@ func (cfg *PortalConfig) Validate() error {
 		return err
 	}
 	cfg.CryptoKeyStoreConfig = rawCryptoKeyStoreConfig
+	cfg.CryptoKeyStoreConfig.AccessTokenProfile = cfg.AccessTokenProfile.Clone()
+	if cfg.AccessSigner != "" && cfg.CryptoKeyStoreConfig.TokenLifetime < 0 {
+		return fmt.Errorf("invalid selected access lifetime")
+	}
 
 	for _, redirURIConfig := range cfg.TrustedLogoutRedirectURIConfigs {
 		if err := redirURIConfig.Validate(); err != nil {

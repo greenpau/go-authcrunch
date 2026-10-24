@@ -112,7 +112,7 @@ func (p *Portal) issueSandboxAccessToken(ctx context.Context, r *http.Request, r
 	}
 	m := map[string]any{"sub": current.Username, "email": current.Email, "name": current.Name, "roles": current.Roles, "origin": proof.Authenticator.Realm, "realm": proof.Authenticator.Realm, "iss": util.GetIssuerURL(r), "addr": addrutil.GetSourceAddress(r)}
 	now := time.Now().Unix()
-	m["jti"], m["iat"], m["nbf"], m["exp"] = rr.Upstream.SessionID, now, now-60, now+int64(p.keystore.GetTokenLifetime(nil, nil))
+	m["jti"], m["iat"], m["nbf"], m["exp"] = rr.Upstream.SessionID, now, now-60, now+int64(p.accessLifetimeSeconds())
 	rr.User.Challenges = append([]string(nil), current.Challenges...)
 	rr.User.AuthMethods = append([]string(nil), current.AuthMethods...)
 	if err := p.transformUser(ctx, rr, m); err != nil {
@@ -145,7 +145,7 @@ func (p *Portal) issueSandboxAccessToken(ctx context.Context, r *http.Request, r
 		m["amr"] = append([]string(nil), proof.LoginMethods...)
 	}
 	injectPortalRoles(m, p.config)
-	u, err := user.NewUser(m)
+	u, err := p.newAccessUser(m)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +158,7 @@ func (p *Portal) issueSandboxAccessToken(ctx context.Context, r *http.Request, r
 			return nil, err
 		}
 	}
-	if err := p.keystore.SignToken(nil, nil, u); err != nil {
+	if err := p.signAccessUser(ctx, u); err != nil {
 		return nil, err
 	}
 	return u, nil

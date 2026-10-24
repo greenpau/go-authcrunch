@@ -11,7 +11,9 @@ properties:
   access_token:
     type: string
     description: Signed portal access credential. Use the configured bearer/cookie transport; its lifetime
-      and claims follow portal crypto and transform configuration. Keep secret.
+      and claims follow portal crypto and transform configuration. With selected PS256 signing, the
+      returned signature and full claims are verified against the approved snapshot before publication.
+      Signing or staging failure returns no credential. Keep secret.
     minLength: 1
   access_token_name:
     type: string

@@ -52,7 +52,11 @@ directories for consumer integration; those repositories are updated separately.
   bounded provider snapshots, trust bindings, and provider-specific renewal.
 - `pkg/authn/token_refresh/{token,store,memory,manager}.go`: opaque encoding, store
   contract, bounded in-memory families, and staged issuance/rotation.
-- `pkg/kms/crypto_keystore.go`: actual access signing-key lifetime selection.
+- `pkg/kms/crypto_keystore.go`: legacy access signing-key lifetime selection.
+- `pkg/authn/access_signing.go`: selected external signing, exact staged-claim
+  verification and effective lifetime. Read the
+  [selected signing contract](../cryptographic-signing/references/selected-access-signing.md)
+  for the borrowed root/standalone boundary, strict profile and issuer equality.
 
 ## Issuance and State
 

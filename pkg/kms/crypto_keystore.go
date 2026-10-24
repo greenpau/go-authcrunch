@@ -15,11 +15,16 @@
 package kms
 
 import (
+	"context"
+	"crypto/rsa"
+	"encoding/base64"
 	stderrors "errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	jwtlib "github.com/golang-jwt/jwt/v5"
+	"github.com/greenpau/go-authcrunch/internal/accessclaims"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -38,15 +43,32 @@ const (
 // CryptoKeyStore constains keys assembled for a specific purpose, i.e. signing or
 // validation.
 type CryptoKeyStore struct {
-	config     *CryptoKeyStoreConfig
-	keys       []*CryptoKey
-	signKeys   []*CryptoKey
-	verifyKeys []*CryptoKey
-	logger     *zap.Logger
+	accessProfile *AccessTokenProfileConfig
+	accessKeys    map[string]*rsa.PublicKey
+	config        *CryptoKeyStoreConfig
+	keys          []*CryptoKey
+	signKeys      []*CryptoKey
+	verifyKeys    []*CryptoKey
+	logger        *zap.Logger
 }
 
 // NewCryptoKeyStore returns a new instance of CryptoKeyStore
 func NewCryptoKeyStore(cfg *CryptoKeyStoreConfig, logger *zap.Logger) (*CryptoKeyStore, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("keystore configuration is required")
+	}
+	copy := *cfg
+	copy.RawKeyConfigs = slices.Clone(cfg.RawKeyConfigs)
+	copy.AccessTokenProfile = cfg.AccessTokenProfile.Clone()
+	cfg = &copy
+	if cfg.AccessTokenProfile != nil {
+		if err := cfg.AccessTokenProfile.Validate(); err != nil {
+			return nil, err
+		}
+		if len(cfg.RawKeyConfigs) == 0 {
+			return nil, fmt.Errorf("access profile requires explicit verification keys")
+		}
+	}
 	ks := &CryptoKeyStore{
 		config: cfg,
 		logger: logger,
@@ -70,6 +92,9 @@ func NewCryptoKeyStore(cfg *CryptoKeyStoreConfig, logger *zap.Logger) (*CryptoKe
 		if err := ks.AutoGenerate(); err != nil {
 			return nil, err
 		}
+	}
+	if err := ks.configureAccessTokenProfile(); err != nil {
+		return nil, err
 	}
 	return ks, nil
 }
@@ -211,6 +236,39 @@ func (ks *CryptoKeyStore) AddKey(k *CryptoKey) error {
 
 // ParseToken parses JWT token and returns User instance.
 func (ks *CryptoKeyStore) ParseToken(ar *requests.AuthorizationRequest) (*user.User, error) {
+	if ks.HasAccessTokenProfile() {
+		claims, err := ks.VerifyAccessToken(context.Background(), ar.Token.Payload)
+		if err != nil {
+			return nil, errors.ErrCryptoKeyStoreParseTokenFailed
+		}
+		header, _ := base64.RawURLEncoding.DecodeString(strings.SplitN(ar.Token.Payload, ".", 2)[0])
+		metadata, _ := accessclaims.Decode(header)
+		allowed := false
+		for _, key := range ks.verifyKeys {
+			if key.Config.ID != metadata["kid"] || key.Config.Usage == "system" {
+				continue
+			}
+			switch ar.Token.Source {
+			case tokenSourceCookie:
+				_, allowed = key.Verify.Token.CookieNames[ar.Token.Name]
+			case tokenSourceHeader:
+				_, allowed = key.Verify.Token.HeaderNames[ar.Token.Name]
+			case tokenSourceQuery:
+				_, allowed = key.Verify.Token.QueryParamNames[ar.Token.Name]
+			case tokenSourceBasicAuth, tokenSourceAPIAuth, tokenSourceBearerHeader:
+				allowed = true
+			}
+			break
+		}
+		if !allowed {
+			return nil, errors.ErrCryptoKeyStoreParseTokenFailed
+		}
+		usr, err := user.NewUser(claims)
+		if err != nil {
+			return nil, errors.ErrCryptoKeyStoreTokenData
+		}
+		return usr, nil
+	}
 	for _, k := range ks.verifyKeys {
 		if !k.Verify.Capable {
 			continue

@@ -29,6 +29,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/idp/oauth"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
+	"github.com/greenpau/go-authcrunch/pkg/kms"
 	"github.com/greenpau/go-authcrunch/pkg/logging"
 	"github.com/greenpau/go-authcrunch/pkg/registry"
 	"github.com/greenpau/go-authcrunch/pkg/sso"
@@ -79,6 +80,8 @@ func newRefMap() refMap {
 // Supply fresh bindings after decoding configuration; NewServer never falls
 // back to memory for a configured but missing OAuth store.
 type ServerOptions struct {
+	// AccessSigners are borrowed runtimes for exactly the declared descriptors.
+	AccessSigners map[string]kms.AccessSigner `json:"-" xml:"-" yaml:"-"`
 	// IdentityProviders binds Config.ExternalIdentityProviders. Handles retain
 	// their optional capabilities. The root never configures, installs persistent
 	// state in or closes these providers. Attachment wiring is preserved unless
@@ -119,6 +122,10 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 	}
 	var authenticators []authproxy.Authenticator
 	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+	accessSigners, err := prepareExternalAccessSigners(config, options.AccessSigners)
+	if err != nil {
 		return nil, err
 	}
 	if err := validateExternalIdentityStoreBindings(config, options.IdentityStores); err != nil {
@@ -281,6 +288,7 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 
 	for _, cfg := range config.AuthenticationPortals {
 		params := authn.PortalParameters{
+			AccessSigner:             accessSigners[cfg.AccessSigner],
 			IdentityAttachmentsBound: true,
 			Config:                   cfg,
 			Logger:                   logger,

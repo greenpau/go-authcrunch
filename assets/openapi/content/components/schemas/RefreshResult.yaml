@@ -1,3 +1,7 @@
 oneOf:
 - $ref: BrowserRefresh.yaml
 - $ref: NativeRefresh.yaml
+description: Committed renewal result. Selected access signing verifies the staged signature and exact
+  approved claims before the refresh operation commits; access expiry reflects the shortest applicable
+  signer, portal, and absolute session deadline. Signing, verification, or storage failure publishes no
+  staged credential. The HTTP field shape is independent of the selected signing backend.

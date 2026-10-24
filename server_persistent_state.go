@@ -31,7 +31,25 @@ func (s *Server) persistentStateBinding(config *Config) (string, error) {
 	// Diagnostic suppression carries no authentication or authorization policy.
 	// Changing it must not retire otherwise valid persisted sessions.
 	snapshot.Logging = nil
-	binding, err := state.Binding(&snapshot)
+	var fingerprint any = &snapshot
+	trust := make(map[string]string)
+	for _, portal := range s.portals {
+		if value := portal.AccessTokenTrust(); value != "" {
+			trust["portal/"+portal.GetName()] = value
+		}
+	}
+	for name, gatekeeper := range s.nameRefs.gatekeepers {
+		if value := gatekeeper.AccessTokenTrust(); value != "" {
+			trust["policy/"+name] = value
+		}
+	}
+	if len(trust) > 0 {
+		fingerprint = struct {
+			Config      *Config
+			AccessTrust map[string]string
+		}{&snapshot, trust}
+	}
+	binding, err := state.Binding(fingerprint)
 	if err != nil {
 		return "", err
 	}

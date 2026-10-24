@@ -34,7 +34,7 @@ func TestParser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.KeyFile != "/missing/private key.pem" || cfg.KeyID != "key-v1" || cfg.Algorithm != "PS256" || cfg.MaxLifetime != "15m" {
+	if cfg.KeyFile != "/missing/private key.pem" || cfg.KeyID != "key-v1" || cfg.Algorithm != "PS256" || cfg.MaxLifetime != "15m0s" {
 		t.Fatal("incorrect configuration")
 	}
 	// Parsing validates without accessing the deliberately nonexistent key file.
@@ -47,7 +47,7 @@ func TestParser(t *testing.T) {
 		t.Fatal("config serialization changed")
 	}
 	cfg, err = parser.NewRSAPSSSigningConfigFromDirectives(append(directives(), "algorithm PS256", "max lifetime 5m"))
-	if err != nil || cfg.MaxLifetime != "5m" {
+	if err != nil || cfg.MaxLifetime != "5m0s" {
 		t.Fatal("explicit settings rejected")
 	}
 	invalid := []string{"", "key", "key file", "key file a b", "key unknown secret", "max unknown secret", "issuer a b", "algorithm RS256", "algorithm ps256", "max lifetime 500ms", "unknown secret", "audience secret", "key id duplicate", "key file duplicate", "issuer duplicate", "issuer secret\nvalue", "audience \xff", "audience \x00", `audience "unterminated`, `audience ""`}
@@ -74,5 +74,5 @@ func ExampleNewRSAPSSSigningConfigFromDirectives() {
 		panic(err)
 	}
 	fmt.Println(cfg.Algorithm, cfg.KeyID, cfg.MaxLifetime)
-	// Output: PS256 access-v1 5m
+	// Output: PS256 access-v1 5m0s
 }

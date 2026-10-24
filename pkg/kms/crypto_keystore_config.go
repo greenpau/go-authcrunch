@@ -25,7 +25,8 @@ import (
 
 // CryptoKeyStoreConfig holds crypto key store configuration settings.
 type CryptoKeyStoreConfig struct {
-	state *state.Store
+	AccessTokenProfile *AccessTokenProfileConfig `json:"access_token_profile,omitempty" xml:"access_token_profile,omitempty" yaml:"access_token_profile,omitempty"`
+	state              *state.Store
 	// TokenName is the token name associated with the key store.
 	TokenName string `json:"token_name,omitempty" xml:"token_name,omitempty" yaml:"token_name,omitempty"`
 	// TokenLifetime is the expected token grant lifetime in seconds.
@@ -50,8 +51,14 @@ func NewCryptoKeyStoreConfig(statements []string) (*CryptoKeyStoreConfig, error)
 		if err != nil {
 			return nil, err
 		}
+		if len(args) == 0 {
+			return nil, fmt.Errorf("invalid crypto directive")
+		}
 		if args[0] != "crypto" {
 			return nil, errors.ErrCryptoKeyStoreConfigEntryInvalid.WithArgs(statement, "must be prefixed with 'crypto' keyword")
+		}
+		if len(args) < 2 {
+			return nil, errors.ErrCryptoKeyStoreConfigEntryInvalid.WithArgs(statement, "too few arguments")
 		}
 		switch args[1] {
 		case "default":

@@ -7,6 +7,12 @@ description: Maintain authorization ACL rules, typed custom claim fields, their 
 
 ## Ownership and public APIs
 
+Use [cryptographic-signing](../cryptographic-signing/SKILL.md) to configure or
+change strict access-token profiles and cache admission before ACL evaluation.
+The optional `PolicyConfig.AccessTokenProfile` applies to incoming signed tokens
+and cannot be combined with direct OAuth. It does not replace ACLs, enrichment,
+external authorization or separately configured credential authenticators.
+
 `pkg/acl` owns field definitions, condition compilation, matching and projection.
 `pkg/authz` owns policy configuration and gatekeeper construction;
 `pkg/authz/validator` supplies authenticated user claims and authoritative request

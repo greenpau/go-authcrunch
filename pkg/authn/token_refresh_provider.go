@@ -425,6 +425,9 @@ func (p *Portal) withProviderRefreshClaims(ctx context.Context, principal tokenr
 		if err != nil {
 			return err
 		}
+		if err := p.validateAccessAudience(claims); err != nil {
+			return err
+		}
 		return apply(claims)
 	}
 	a, realm, err := p.externalIdentityAttachment(principal.ExternalIdentity)
@@ -438,6 +441,9 @@ func (p *Portal) withProviderRefreshClaims(ctx context.Context, principal tokenr
 	err = store.WithRefreshIdentity(ctx, principal.ExternalIdentity.Evidence, func(current identity.RefreshIdentity) error {
 		claims, err := p.refreshProviderClaimsCurrent(ctx, principal, &current)
 		if err != nil {
+			return err
+		}
+		if err := p.validateAccessAudience(claims); err != nil {
 			return err
 		}
 		return apply(claims)

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/errors"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -220,7 +221,15 @@ func (v *TokenValidator) Authorize(ctx context.Context, r *http.Request, ar *req
 		if ar.Token.Source == tokenSourceBasicAuth || ar.Token.Source == tokenSourceAPIAuth {
 			usr = v.credentialCacheUser(ar.Token.CacheKey, ar.Token.CacheDisabled)
 		} else {
-			usr = v.cache.Get(ar.Token.Payload)
+			if !strings.HasPrefix(ar.Token.Payload, credentialCachePrefix) {
+				usr = v.cache.Get(ar.Token.Payload)
+			}
+		}
+		if usr != nil && v.keystore.HasAccessTokenProfile() {
+			now := time.Now().Unix()
+			if usr.Claims.ExpiresAt <= now || usr.Claims.IssuedAt > now || usr.Claims.NotBefore > now {
+				usr = nil
+			}
 		}
 		if usr == nil {
 			v.logger.Debug("cache miss for JWT credentials",

@@ -18,7 +18,9 @@ get:
     segment overrides the path realm and its value is not unquoted. Use one conventional Basic segment
     and the configured path realm. A challenge is emitted only when no recognized Basic credentials exist,
     not for a wrong password. A decoded empty username or password currently reaches a handler error
-    and returns an empty text/plain HTTP 500 response from the portal.'
+    and returns an empty text/plain HTTP 500 response from the portal.
+    When an external access signer is selected, its signature and exact approved claims are verified
+    before any access, refresh or session credential is published. Signing failure publishes none.'
   security:
   - BasicLogin: []
   responses:

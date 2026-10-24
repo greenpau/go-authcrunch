@@ -49,7 +49,12 @@ does not apply the override. `authn.TokenRefreshConfig.Validate` leaves an omitt
 name empty so independently parsed configuration can inherit its portal's names.
 Durations are integer seconds. The maximum absolute timeout is 30 days.
 The access lifetime is also capped by the existing access signing key's token
-lifetime. Refresh cookies have an independent idle deadline and never inherit
+lifetime. Selected external signing instead caps against the crypto-default
+lifetime and signer/profile maximum; its issuer must exactly match refresh
+origin plus mount (bare origin for root). Both the current approved audience and
+the original family grant remain mandatory. Read
+[selected access signing](../../cryptographic-signing/references/selected-access-signing.md)
+for complete configuration and staged-output validation. Refresh cookies have an independent idle deadline and never inherit
 the ordinary access cookie lifetime or Domain setting.
 
 The origin must be an exact HTTPS origin without a path, query, or fragment.

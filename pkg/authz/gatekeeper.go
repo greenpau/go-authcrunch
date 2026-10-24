@@ -304,3 +304,11 @@ func (g *Gatekeeper) Close() {
 		g.oauth.close()
 	})
 }
+
+// AccessTokenTrust returns loaded strict-profile trust for root persistence.
+func (g *Gatekeeper) AccessTokenTrust() string {
+	if g.tokenValidator == nil {
+		return ""
+	}
+	return g.tokenValidator.AccessTokenTrust()
+}

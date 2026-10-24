@@ -22,8 +22,9 @@ properties:
       your validation policy.
   kid:
     type: string
-    description: Signer key identifier, present only when its JWT includes kid. Portal configuration IDs
-      empty or 0 omit it. OIDC always uses its separately derived SHA-256 public-key thumbprint; see OIDCJWKS.
+    description: Signer key identifier. Ordinary portal configuration IDs empty or 0 omit it. Selected
+      PS256 access profiles always include the explicit key ID, including a literal 0. OIDC always uses
+      its separately derived SHA-256 public-key thumbprint; see OIDCJWKS.
     minLength: 1
   n:
     $ref: JWKUnsignedInteger.yaml
@@ -49,7 +50,9 @@ additionalProperties: false
 description: Public signing material only. RSA uses n/e; EC uses crv/x/y; Ed25519 uses kty=OKP, crv=Ed25519,
   x. No private d. EC coordinates retain leading zero octets to 32/48/66 bytes for P-256/P-384/P-521;
   Ed25519 public keys use 32 bytes. Canonical output lengths are 43/64/88 characters. The matching algorithms
-  are ES256/ES384/ES512 for EC, RS256/RS384/RS512 for RSA, and EdDSA or Ed25519 for OKP.
+  are ES256/ES384/ES512 for EC, RS256/RS384/RS512 or explicitly selected PS256 for RSA, and EdDSA or
+  Ed25519 for OKP. PS256 profile material has a 2048–8192-bit modulus; cryptographic key validity is
+  checked by the runtime, beyond this serialized shape.
 oneOf:
 - properties:
     kty:
@@ -72,6 +75,28 @@ oneOf:
   - n
   - e
   title: RSA signing key
+- properties:
+    kty:
+      const: RSA
+    alg:
+      const: PS256
+    n:
+      minLength: 342
+      maxLength: 1366
+    crv:
+      not: {}
+      description: Not emitted for RSA signing keys.
+    x:
+      not: {}
+      description: Not emitted for RSA signing keys.
+    y:
+      not: {}
+      description: Not emitted for RSA signing keys.
+  required:
+  - n
+  - e
+  - kid
+  title: RSA-PSS access signing key
 - properties:
     kty:
       const: EC
@@ -164,3 +189,5 @@ x-source-files:
 - pkg/kms/jwks.go
 - pkg/kms/methods.go
 - pkg/kms/crypto_key.go
+- pkg/kms/access_token_profile.go
+- plugins/cryptographic-signing/rsapss/signer.go

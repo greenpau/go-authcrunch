@@ -363,8 +363,11 @@ A secrets plugin retrieves material; a signing plugin performs the operation.
 **Current APIs:** [tokenrefresh.Signer](../../../../pkg/authn/token_refresh/manager.go)
 exposes `Sign(context.Context, map[string]any) (string, error)` and is injected
 into `NewManager`. Its input is canonical claims; the output is a signed token.
-The portal supplies its own signing adapter. General portal access-token signing
-uses concrete [kms.CryptoKeyStore](../../../../pkg/kms/crypto_keystore.go) and
+The portal supplies its own signing adapter. Optional
+[kms.AccessSigner](../../../../pkg/kms/access_signer.go) bindings select borrowed
+access signers through root descriptors or standalone portal parameters, with
+strict profiles and independent staged-output verification. Omitted selection
+retains concrete [kms.CryptoKeyStore](../../../../pkg/kms/crypto_keystore.go) and
 [CryptoKey](../../../../pkg/kms/crypto_key.go) paths. Downstream OIDC has
 [separate key loading/signing](../../../../pkg/oidc/keys.go). None of these facts
 establishes a general remote-signer registration or arbitrary `crypto.Signer`
@@ -375,7 +378,10 @@ lives at `plugins/cryptographic-signing/rsapss`. It provides PS256 signing, a
 public directive parser, detached public JWKS, and refresh-engine consumer tests.
 Core RSA verification accepts its PS256 tokens with the required salt length;
 core RSA signing defaults remain unchanged. This is local-key, engine-level
-composition, not a remote backend or automatic portal/OIDC selection.
+composition plus explicit root/portal access selection, not a remote backend or
+automatic downstream OIDC selection. Read
+[selected access signing](../../cryptographic-signing/references/selected-access-signing.md)
+for descriptor, profile-parser, loaded-key, ownership and validation contracts.
 
 **Implementation contract:** select allowed algorithm, key identity, token
 purpose, and key version through trusted configuration. Preserve supplied claims

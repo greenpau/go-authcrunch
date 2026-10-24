@@ -28,11 +28,13 @@ properties:
   iss:
     type: string
     description: Issuer assigned to the portal token, normally the authentication URL. It is distinct
-      from the external provider issuer and the separately configured OIDC issuer.
+      from the external provider issuer and the separately configured OIDC issuer. Selected access signing
+      uses its exact configured HTTPS issuer; renewable selection must match the portal origin and mount.
   exp:
     $ref: UnixTime.yaml
     description: Expiration time of the access token; validation rejects expired tokens according to the
-      configured validator policy. Whole seconds since 1970-01-01T00:00:00Z (UTC), excluding leap seconds;
+      configured validator policy. A selected access profile has zero leeway and requires iat <= nbf <= now
+      < exp with exp minus iat no greater than its configured maximum lifetime. Whole seconds since 1970-01-01T00:00:00Z (UTC), excluding leap seconds;
       a Unix timestamp, not milliseconds or an ISO date string.
   iat:
     $ref: UnixTime.yaml
@@ -42,7 +44,8 @@ properties:
   nbf:
     $ref: UnixTime.yaml
     description: Time before which the token is not valid. Portal issuance can backdate this value to
-      accommodate clock skew. Whole seconds since 1970-01-01T00:00:00Z (UTC), excluding leap seconds;
+      accommodate clock skew with ordinary KMS issuance. Selected access issuance instead sets nbf to its
+      trusted integral iat after policy approval, preserving shorter expiry. Whole seconds since 1970-01-01T00:00:00Z (UTC), excluding leap seconds;
       a Unix timestamp, not milliseconds or an ISO date string.
   jti:
     type: string
@@ -83,7 +86,9 @@ properties:
       items:
         type: string
     description: Intended audience or audiences of the token. Preserves the supplied claim representation;
-      accepted audiences depend on authorization configuration.
+      accepted audiences depend on authorization configuration. Selected access signing requires policy
+      to explicitly grant exactly its configured audience; omission or a different/broader grant fails.
+      The signer does not add an audience removed during refresh.
   realm:
     type: string
     description: Authentication realm when included by the selected issuance path.
@@ -117,6 +122,8 @@ x-source-files:
 - pkg/user/user.go
 - pkg/authn/handle_json_whoami.go
 - pkg/authn/token_issuer.go
+- pkg/authn/access_signing.go
+- pkg/kms/access_token_profile.go
 - pkg/authn/connected_accounts.go
 - pkg/authn/cross_device_http.go
 - pkg/authn/handle_http_login.go

@@ -60,8 +60,8 @@ Use [claims-enrichment](../claims-enrichment/SKILL.md) to maintain request-time
 attribute backends, their gatekeeper/validator hooks, and the static claims plugin.
 
 Use [cryptographic-signing](../cryptographic-signing/SKILL.md) to maintain the
-local PS256 plugin, its parser, refresh-engine composition, public JWKS, and
-strict core verification.
+local PS256 plugin, its parser, borrowed root/portal selection, strict access
+profiles, staged refresh signing and public JWKS.
 
 Use [external-authorization](../external-authorization/SKILL.md) to maintain
 required request-time decisions, the HTTP JSON plugin, its public parsers, and
@@ -120,7 +120,7 @@ A category or repository name alone does not establish an implementation.
 | [Messaging](references/plugin-categories.md#messaging) | Deliver registration or notification messages | SQLite outbox and `messaging.Config.AddProvider` runtime injection |
 | [Registration workflows](references/plugin-categories.md#registration-workflows) | Manage enrollment, confirmation, approval, and account creation | SQLite enrollment and optional `ConfirmationProvider` via `Portal.AddUserRegistry`; root dispatch is local-only |
 | [Session and refresh storage](references/plugin-categories.md#session-and-refresh-storage) | Store token families and enforce atomic rotation/revocation | SQLite plugin and `tokenrefresh.Store` engine injection; portal selection needs wiring |
-| [Cryptographic signing](references/plugin-categories.md#cryptographic-signing) | Sign approved claims with a selected key | `tokenrefresh.Signer` and local PS256 plugin at engine level; general portal/OIDC signing needs integration |
+| [Cryptographic signing](references/plugin-categories.md#cryptographic-signing) | Sign approved claims with a selected key | `kms.AccessSigner` for selected root/portal access signing, strict profiles and `tokenrefresh.Signer` at engine level; downstream OIDC signing is separate |
 | [External authorization](references/plugin-categories.md#external-authorization) | Evaluate an authenticated subject's access to a resource | Public decision interface and gatekeeper/validator attachment; HTTP JSON plugin available |
 | [Claims enrichment](references/plugin-categories.md#claims-enrichment) | Retrieve and validate additional identity attributes | `enrichment.Backend` and validator/gatekeeper attachment; static claims plugin available |
 

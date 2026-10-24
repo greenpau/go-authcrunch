@@ -85,7 +85,11 @@ func (p *Portal) handleIssueTokens(ctx context.Context, w http.ResponseWriter, r
 	}
 	if tokens == nil {
 		if browserReplacement {
-			w.Header().Add("Set-Cookie", p.cookie.GetAccessTokenCookie(addrutil.GetSourceHost(r), u.Token))
+			accessCookie, err := p.accessTokenCookie(addrutil.GetSourceHost(r), u)
+			if err != nil {
+				return nil, err
+			}
+			w.Header().Add("Set-Cookie", accessCookie)
 		}
 		return &apiauth.AuthResponse{Authenticated: true, AccessToken: u.Token, AccessTokenName: p.config.TokenGrantorOptions.AccessTokenCookieName}, nil
 	}

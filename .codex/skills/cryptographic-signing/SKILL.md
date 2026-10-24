@@ -1,6 +1,6 @@
 ---
 name: cryptographic-signing
-description: Maintain the local RSA-PSS PS256 signing plugin, its public parser, refresh-engine composition, public JWKS, and strict core verification. Excludes portal or OIDC signer selection and remote KMS backends.
+description: Maintain local RSA-PSS PS256 signing, its parser and metadata, selected portal access profiles, public JWKS, strict verification, and standalone refresh-engine composition. OP ID signing and remote KMS backends have separate owners.
 ---
 
 # Cryptographic Signing
@@ -18,15 +18,21 @@ alone does not authorize issuance or commit a session.
 
 This is an ordinary Go package in the root module. It has no registration side
 effects, workers, remote services, key generation, or nested module. Core
-production code must not import it. It is not a selectable backend in root JSON,
-`authdb`, `authn.NewPortal`, or downstream OIDC. Those concrete signing paths
-remain separate; do not imply that importing the plugin replaces them.
+production code must not import it. Hosts declare core-owned external signer
+metadata and supply borrowed runtime handles through `ServerOptions.AccessSigners`;
+portals select the name with an explicit matching access-token profile. Native
+configuration alone does not construct an external backend. Standalone portals
+can receive the same typed binding. Read
+[selected access signing](references/selected-access-signing.md) for root/portal
+assembly, approved claims, consumer profiles, discovery and persistent trust.
+OP ID signing remains separate; importing a plugin does not change that owner.
 
 [`pkg/kms/rsa_pss.go`](../../../pkg/kms/rsa_pss.go) supplies the core verification
 integration. Existing RSA public-key configuration can verify PS256 tokens from
-this plugin. Core RSA issuance still uses its existing RS256/384/512 methods and
-defaults. This change does not enable PS384 or PS512, change core JWKS discovery,
-or create a generic signer factory.
+this plugin. An explicit core access profile additionally enforces purpose,
+issuer, sole audience and temporal limits across the complete consumer, with no
+fallback to unrelated keys. Ordinary RSA issuance retains its RS methods and
+defaults. Neither surface enables PS384 or PS512.
 
 ## Public configuration and parser
 
@@ -50,7 +56,9 @@ max lifetime 5m
 
 Each setting occurs at most once. `algorithm` defaults to `PS256`, the only
 accepted algorithm. `max lifetime` defaults to `15m` and accepts whole seconds
-from `1s` through `24h`. All other settings are required. Use
+from `1s` through `24h`. Validation canonicalizes durations (for example `15m`
+and `900s` both become `15m0s`) before descriptor hashing. All other settings
+are required. Use
 `cfgutil.EncodeArgs` for values such as filenames containing spaces. Unknown,
 duplicate, malformed, invalid-UTF-8, or empty directives fail without echoing
 values. Parsing does not expand environment variables or read files.
@@ -58,7 +66,10 @@ values. Parsing does not expand environment variables or read files.
 Key IDs contain 1–128 ASCII letters, digits, dots, underscores, or hyphens.
 File path, issuer, and audience limits are 4096, 2048, and 1024 UTF-8 bytes;
 reject control characters and surrounding whitespace. Issuer and audience are
-exact opaque bindings, not URL normalization or discovery inputs.
+exact opaque bindings in the standalone plugin. Selected root/portal access
+profiles additionally require a canonical HTTPS issuer; Metadata rejects a
+configuration that cannot satisfy that profile without changing the existing
+standalone constructor or Sign contract.
 
 For a host, import `plugins/cryptographic-signing/rsapss` and its `parser`, parse
 the directives, call `rsapss.New(config)`, and pass the returned signer as the
@@ -108,6 +119,15 @@ Callers must not mutate claims during `Sign`.
 
 ## Lifecycle, publication, and verification
 
+`Metadata() (kms.AccessSignerMetadata, error)` returns detached scalar policy,
+kind and normalized backend digest without reopening the key. The core descriptor
+constructor hashes the normalized backend configuration independently of its
+host-assigned name. Equivalent lifetime spellings agree; changes to key ID,
+issuer, audience, lifetime or path change the digest. Actual loaded key identity
+is separately checked through public JWKS and the consumer's trusted verifier.
+Nil/uninitialized runtimes fail with sanitized errors. The plugin also implements
+`kms.AccessSigner`; it retains its existing `tokenrefresh.Signer` compatibility.
+
 A signer owns an immutable key/config snapshot, closes its input file during
 construction, and is safe for concurrent signing and JWKS calls. There is no
 `Close` operation or hidden refresh timer. Replacing the file does not alter the
@@ -127,9 +147,10 @@ SHA-256 and the exact salt size per token. Do not modify golang-jwt's global
 Reject other PSS algorithms, altered signatures, algorithm relabeling, and HMAC
 confusion. Existing RS verification and signing behavior must remain intact.
 RSA key configuration historically permits its RSA method family; a `kid` is a
-selection label, not a separate trust boundary. Hosts must enforce issuer,
-audience, purpose, and authorization independently where their consumer requires
-those checks; core key verification alone does not establish them.
+selection label, not a separate trust boundary. Legacy consumers must enforce issuer,
+audience, purpose and authorization independently; plain key verification alone
+does not establish them. Selected core access profiles own those trust checks,
+while ACLs still decide authorization.
 
 The refresh manager stages signing before atomic Create/Rotate. Signing errors,
 cancellation, or rejected commits publish no credentials and must not spend the
@@ -170,3 +191,10 @@ cancellation, not accept an unrelated client failure.
 temporary module with a local checkout replacement and networking disabled for
 module resolution. Keep both in the default suite; do not substitute a compile
 check or live service for this public consumer evidence.
+
+The metadata tests additionally verify normalized descriptor agreement, detached
+configuration, no reread after the key file is removed, policy changes, and
+preserved standalone opaque-issuer signing. The shared bounded JSON codec lives
+in `internal/accessclaims`; retain the plugin claim-shape, precision and allocation
+regressions when changing it. Root/portal acceptance belongs to the selected
+access-signing reference and complements the portable standalone consumer.

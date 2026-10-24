@@ -65,6 +65,10 @@ post:
     in HttpOnly cookies. Native clients explicitly send refresh_transport: body at EVERY checkpoint, require
     body transport enabled, and send no Cookie, Origin or Sec-Fetch headers. API-key login is access-only.
     An invalid pre-existing access token can fail authorization before login. Responses disable caching.
+    When an external access signer is selected, the portal verifies the staged signature and exact
+    approved claims before publishing access, refresh or session credentials. A signing failure publishes
+    none of those credentials. For access-only login, a positive access-cookie Max-Age is capped by the
+    approved token expiry; session cookies and shorter configured lifetimes retain their behavior.
     Browser form login is also available at this path and returns redirects/HTML instead of the JSON challenge
     protocol. A browser form posted to /login?redirect_url=... keeps that trusted destination with its sandbox
     and is returned there after the last checkpoint, ahead of the shared redirect cookie; fresh=1 is kept for

@@ -24,7 +24,9 @@ post:
     External logins remain access-only transfers after completing attached local MFA. The requester
     retains the immutable local ID and verified factors, receives no new refresh family or local OIDC
     session, and cannot extend the approving login expiry. Current local identity and factor checks,
-    the expiry bound and signing occur in one identity transaction.'
+    the expiry bound and signing occur in one identity transaction.
+    An external access signer must return a verified signature over the exact approved claims before
+    credentials are published. Its configured lifetime cannot extend the original approving login expiry.'
   security: []
   responses:
     '200':

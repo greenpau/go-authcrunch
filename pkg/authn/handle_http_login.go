@@ -367,7 +367,7 @@ func (p *Portal) authorizeLoginUser(ctx context.Context, r *http.Request, rr *re
 	}
 
 	m["jti"] = rr.Upstream.SessionID
-	m["exp"] = time.Now().Add(time.Duration(p.keystore.GetTokenLifetime(nil, nil)) * time.Second).UTC().Unix()
+	m["exp"] = time.Now().Add(time.Duration(p.accessLifetimeSeconds()) * time.Second).UTC().Unix()
 	m["iat"] = time.Now().UTC().Unix()
 	m["nbf"] = time.Now().Add(time.Duration(60) * time.Second * -1).UTC().Unix()
 	if _, exists := m["origin"]; !exists {
@@ -398,19 +398,17 @@ func (p *Portal) authorizeLoginUser(ctx context.Context, r *http.Request, rr *re
 	}
 	injectPortalRoles(m, p.config)
 	m["nonce"] = util.GetRandomString(32)
-	usr, err := user.NewUser(m)
+	usr, err := p.newAccessUser(m)
 	if err != nil {
 		rr.Response.Code = http.StatusUnauthorized
 		return nil, err
 	}
-	if err := p.keystore.SignToken(nil, nil, usr); err != nil {
-		p.logger.Warn(
-			"user token signing failed",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-			zap.Any("user", m),
-			zap.Error(err),
-		)
+	if err := p.signAccessUser(ctx, usr); err != nil {
+		fields := []zap.Field{zap.String("session_id", rr.Upstream.SessionID), zap.String("request_id", rr.ID), zap.Error(err)}
+		if p.accessSigner == nil {
+			fields = append(fields, zap.Any("user", m))
+		}
+		p.logger.Warn("user token signing failed", fields...)
 		rr.Response.Code = http.StatusInternalServerError
 		return nil, err
 	}
@@ -456,6 +454,10 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	}
 
 	h := addrutil.GetSourceHost(r)
+	accessCookie, err := p.accessTokenCookie(h, usr)
+	if err != nil {
+		return err
+	}
 
 	rr.Response.Authenticated = true
 	usr.Authorized = true
@@ -471,7 +473,7 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 	// 	w.Header().Set("Set-Cookie", p.cookie.GetCookie(h, usr.TokenName, usr.Token))
 	// }
 
-	w.Header().Add("Set-Cookie", p.cookie.GetAccessTokenCookie(h, usr.Token))
+	w.Header().Add("Set-Cookie", accessCookie)
 
 	// Add a cookie with identity token, if id_token is available.
 	if rr.Response.IdentityTokenCookie.Enabled {

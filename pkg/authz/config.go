@@ -35,6 +35,7 @@ const DefaultAuthRealmHeaderName = "X-Auth-Realm"
 
 // PolicyConfig is Gatekeeper configuration.
 type PolicyConfig struct {
+	AccessTokenProfile *kms.AccessTokenProfileConfig `json:"access_token_profile,omitempty" xml:"access_token_profile,omitempty" yaml:"access_token_profile,omitempty"`
 	// OAuth enables direct provider login without an authentication portal.
 	OAuth                      *OAuthAuthorizationConfig `json:"oauth,omitempty" xml:"oauth,omitempty" yaml:"oauth,omitempty"`
 	Name                       string                    `json:"name,omitempty" xml:"name,omitempty" yaml:"name,omitempty"`
@@ -147,11 +148,29 @@ func (cfg *PolicyConfig) parseRawAuthProxyConfig() error {
 
 // Validate validates PolicyConfig.
 func (cfg *PolicyConfig) Validate() error {
+	if cfg.AccessTokenProfile != nil {
+		if err := cfg.AccessTokenProfile.Validate(); err != nil {
+			return err
+		}
+		if cfg.OAuth != nil {
+			return fmt.Errorf("direct OAuth policies cannot select an access token profile")
+		}
+		crypto, err := kms.NewCryptoKeyStoreConfig(cfg.RawCryptoKeyStoreConfig)
+		if err != nil {
+			return err
+		}
+		if len(crypto.RawKeyConfigs) == 0 {
+			return fmt.Errorf("access profile requires explicit verification keys")
+		}
+		if _, err := kms.ParseCryptoKeyConfigs(crypto.RawKeyConfigs); err != nil {
+			return err
+		}
+	}
 	if cfg.OAuth != nil {
 		if err := cfg.OAuth.Validate(cfg.Name); err != nil {
 			return err
 		}
-		if len(cfg.RawCryptoKeyStoreConfig) != 0 || hasMeaningfulOAuthCryptoKeyStoreConfig(cfg.CryptoKeyStoreConfig) || len(cfg.AllowedTokenSources) != 0 || len(cfg.AuthProxyRawConfig) != 0 || cfg.AuthProxyConfig != nil || len(cfg.AccessTokenCookieNames) != 0 || cfg.SessionIDCookieName != "" || cfg.ValidateBearerHeader {
+		if cfg.AccessTokenProfile != nil || len(cfg.RawCryptoKeyStoreConfig) != 0 || hasMeaningfulOAuthCryptoKeyStoreConfig(cfg.CryptoKeyStoreConfig) || len(cfg.AllowedTokenSources) != 0 || len(cfg.AuthProxyRawConfig) != 0 || cfg.AuthProxyConfig != nil || len(cfg.AccessTokenCookieNames) != 0 || cfg.SessionIDCookieName != "" || cfg.ValidateBearerHeader {
 			return fmt.Errorf("direct OAuth policies use their own cookies and cannot configure JWT keys, token sources or auth proxies")
 		}
 	}
@@ -167,6 +186,7 @@ func (cfg *PolicyConfig) Validate() error {
 		return err
 	}
 	cfg.CryptoKeyStoreConfig = cryptoKeyStoreConfig
+	cfg.CryptoKeyStoreConfig.AccessTokenProfile = cfg.AccessTokenProfile.Clone()
 
 	if err := cfg.parseRawAuthProxyConfig(); err != nil {
 		return err
@@ -241,7 +261,7 @@ func hasMeaningfulOAuthCryptoKeyStoreConfig(cfg *kms.CryptoKeyStoreConfig) bool 
 	if cfg == nil {
 		return false
 	}
-	if cfg.TokenName != "" || cfg.TokenLifetime != 0 || len(cfg.RawKeyConfigs) != 0 {
+	if cfg.AccessTokenProfile != nil || cfg.TokenName != "" || cfg.TokenLifetime != 0 || len(cfg.RawKeyConfigs) != 0 {
 		return true
 	}
 	if cfg.AutoGenerateTag != "" && cfg.AutoGenerateTag != "default" {

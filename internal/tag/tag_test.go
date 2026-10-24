@@ -27,6 +27,7 @@ import (
 	"github.com/greenpau/go-authcrunch/internal/openapi"
 	"github.com/greenpau/go-authcrunch/internal/sqlitedb"
 	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/internal/tests/accesssigner"
 	"github.com/greenpau/go-authcrunch/internal/testutils"
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/apiauth"
@@ -97,6 +98,12 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test kms.AccessSignerPolicy struct", entry: &kms.AccessSignerPolicy{}, opts: &Options{}},
+		{name: "test kms.ExternalAccessSignerConfig struct", entry: &kms.ExternalAccessSignerConfig{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"policy": true}}},
+		{name: "test kms.AccessSignerMetadata struct", entry: &kms.AccessSignerMetadata{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"policy": true}}},
+		{name: "test kms.AccessSignerBinding struct", entry: &kms.AccessSignerBinding{}, opts: &Options{}},
+		{name: "test kms.AccessTokenProfileConfig struct", entry: &kms.AccessTokenProfileConfig{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"key_ids": true}}},
+		{name: "test accesssigner.Fixture struct", entry: &accesssigner.Fixture{}, opts: &Options{}},
 		{name: "test oauth.LoginStoreConfig struct", entry: &oauth.LoginStoreConfig{}, opts: &Options{}},
 		{name: "test oauth.LoginBinding struct", entry: &oauth.LoginBinding{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"browser": true}}},
 		{name: "test oauth.LoginTransaction struct", entry: &oauth.LoginTransaction{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"binding": true}}},

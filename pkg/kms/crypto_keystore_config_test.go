@@ -16,6 +16,7 @@ package kms
 
 import (
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -55,6 +56,18 @@ func TestNewCryptoKeyStoreConfig(t *testing.T) {
 			},
 			shouldErr: true,
 			err:       errors.ErrCryptoKeyStoreConfigEntryInvalid.WithArgs("foo", "must be prefixed with 'crypto' keyword"),
+		},
+		{
+			name:      "test empty directive",
+			config:    []string{""},
+			shouldErr: true,
+			err:       io.EOF,
+		},
+		{
+			name:      "test crypto prefix only",
+			config:    []string{"crypto"},
+			shouldErr: true,
+			err:       errors.ErrCryptoKeyStoreConfigEntryInvalid.WithArgs("crypto", "too few arguments"),
 		},
 		{
 			name: "test too few arguments for crypto default",

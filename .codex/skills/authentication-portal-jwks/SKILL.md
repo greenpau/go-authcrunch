@@ -11,7 +11,11 @@ description: Maintain portal public signing-key discovery at .well-known/jwks.js
 `pkg/authn/handle_http_jwks.go`. `pkg/kms/jwks.go` owns `CryptoKeyStore.GetJWKS`
 and public-key serialization. Keep signing-key selection aligned with
 `CryptoKeyStore.SignToken(nil, nil, user)` in `pkg/kms/crypto_keystore.go`.
-All current portal access-token issuance paths use this default selection.
+Legacy portal access-token issuance paths use this default selection.
+Selected external access signing uses the shared strict boundary and publishes
+its captured public profile instead; read the
+[selected access signing contract](../cryptographic-signing/references/selected-access-signing.md)
+when changing that mode.
 
 `pkg/authn/handle_api_private_keys.go` owns the explicitly enabled admin export
 route. `pkg/kms/jwks_private_keys.go` owns `GetJWKSPrivateKeys`. Both public
@@ -51,7 +55,7 @@ API/QR namespace segments as mounts; legacy suffix compatibility remains.
 - GET returns 200 with `application/jwk-set+json` and a nonempty `keys` array
   when the selected issuer is asymmetric.
 - HEAD returns the same success headers and Content-Length, without a body.
-- Missing signing keys or a symmetric selected issuer return 404, including
+- In legacy KMS mode, missing signing keys or a symmetric selected issuer return 404, including
   a store with HMAC first and RSA/EC later. Verification-only public keys do
   not enable this endpoint.
 - Other methods return 405 with `Allow: GET, HEAD`.
@@ -71,7 +75,13 @@ are JWKs; admin entries pair `public_key` with `private_key` in every format.
 
 ## Key Selection and Encoding
 
-The first non-system signing key determines whether discovery is available.
+With an external access signer, publish exactly the sorted current and retained
+profile RSA public keys, with PS256 and explicit kid, captured before publication.
+Do not expose the borrowed private signer through admin export or broaden public
+trust to unrelated loaded verifiers. This mode can publish verification-only
+public files because its issuing authority is separately bound and validated.
+
+In legacy KMS mode, the first non-system signing key determines whether discovery is available.
 When it is asymmetric, publish the public parts of configured non-system RSA,
 ECDSA, and Ed25519 signing keys, in signing order, deduplicating identical JWK entries.
 Exclude symmetric keys, verification-only keys, and system keys. Derive public
@@ -132,7 +142,8 @@ crypto key signing-v1 sign-verify from file /etc/authcrunch/signing-key.pem
 RSA, supported ECDSA, and Ed25519 PKCS#8 private PEM keys work. `sign` also works when portal
 verification is configured separately. A literal shared secret, such as
 `crypto key sign-verify <shared-secret>`, selects HMAC and yields 404. Merely
-loading a public RSA/EC/Ed25519 verifier does not configure an asymmetric issuer.
+loading a public RSA/EC/Ed25519 verifier without a selected external signer does
+not configure an asymmetric issuer.
 
 Configure an application's verifier with the trusted portal JWKS URL and its
 expected algorithms, issuer, and audience. Use matching `kid` values when

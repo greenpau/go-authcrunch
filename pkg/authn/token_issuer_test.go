@@ -110,12 +110,12 @@ func TestAccessOnlySessionTokensAreDistinct(t *testing.T) {
 			t.Fatal("distinct local login proofs produced the same access token")
 		}
 		claims := map[string]any{"sub": "upstream-subject", "id": proof.LoginEvidence.UserID, "jti": rr.Upstream.SessionID, "iat": time.Now().Unix(), "exp": time.Now().Add(time.Minute).Unix()}
-		externalFirst, err := f.portal.signConnectedUser(rr, claims, []string{"federated"})
+		externalFirst, err := f.portal.signConnectedUser(t.Context(), rr, claims, []string{"federated"})
 		if err != nil {
 			t.Fatal(err)
 		}
 		rr.ExternalIdentity.Evidence.CredentialVersion++
-		externalSecond, err := f.portal.signConnectedUser(rr, claims, []string{"federated"})
+		externalSecond, err := f.portal.signConnectedUser(t.Context(), rr, claims, []string{"federated"})
 		if err != nil {
 			t.Fatal(err)
 		}
