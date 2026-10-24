@@ -75,6 +75,8 @@ get:
       $ref: ../components/responses/HTML.yaml
   x-source-files:
   - pkg/authn/handle_provider_login.go
+  - plugins/identity-providers/sqlite/provider.go
+  - plugins/identity-providers/sqlite/config.go
   - pkg/authn/serve_http.go
   - pkg/authn/handle_http_login.go
   - pkg/idp/http_login.go

@@ -20,8 +20,14 @@ Use `parser.NewSQLiteRegistrationConfigFromDirectives([]string)`. Required:
 fragment; explicit ports must be 1–65535).
 Optional `base_path` defaults to `/auth`; it accepts `/` or slash-separated ASCII
 letters/digits/underscore/hyphen segments without a trailing slash, at most 512
-bytes. Reject existing portal protocol namespaces (including api, provider and
-register) anywhere in the mount; their routing would intercept confirmation links.
+bytes. Typed and parser validation also apply `portalpath.Validate` and the
+shared [reserved mount rules](../coding-directives/references/portal-routing.md):
+whole namespace segments (including `connected-accounts`) and legacy prefixes
+such as `register` cannot appear in any mount segment. Unicode and semicolons
+cannot preserve browser cookie Path scope; SQLite's narrower segment rule stays
+in force. Realm values remain data. Align the declared host mount with this
+backend path so confirmation links reach the selected portal; validation does
+not create routes.
 Optional `timeout` defaults to 1s and permits 1ms..30s. Each setting takes one
 value once.
 Realm is 1–64 ASCII letters/digits/underscore/hyphen. Parser validation is pure.

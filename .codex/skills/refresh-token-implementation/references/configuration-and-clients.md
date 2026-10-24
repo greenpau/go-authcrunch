@@ -53,8 +53,13 @@ lifetime. Refresh cookies have an independent idle deadline and never inherit
 the ordinary access cookie lifetime or Domain setting.
 
 The origin must be an exact HTTPS origin without a path, query, or fragment.
-The mount must be a canonical absolute path (`/` is supported). Use a unique
-cookie name or prefix for portals with overlapping mounts on the same host.
+The enabled mount passes the shared `portalpath.Validate` contract: a canonical
+absolute path (`/` is supported), visible ASCII requiring no URL escaping,
+no semicolons, and no reserved portal word/prefix in any segment. Read the
+[mount rules](../../coding-directives/references/portal-routing.md) when adding
+paths; they preserve both endpoint ownership and browser cookie Path scope.
+Disabled refresh retains its semantic opt-out. Use a unique cookie name or
+prefix for portals with overlapping mounts on the same host.
 Names do not require browser security prefixes or hashes. All refresh cookies
 remain host-only and scoped to the portal mount, with Secure, HttpOnly, and
 SameSite=Lax. Explicit `__Host-` names are supported only at the root mount.
@@ -147,6 +152,9 @@ whitespace and can discard a final empty field. Resolve environment variables
 and secrets before encoding statements and calling the constructor; the library
 does not expand placeholders. The portal mount and HTTPS origin must match the
 actual HTTP route; validation does not create routes or configure TLS.
+Embedders using `Portal.ServeHTTPAt` pass that same declared mount; disagreement
+with enabled refresh is rejected before protocol dispatch or cookie issuance.
+Legacy `ServeHTTP` callers retain inferred routing.
 
 This repository supplies the library constructor and runtime. Consumer adapters,
 block parsing, wiring, and tests will be updated separately.

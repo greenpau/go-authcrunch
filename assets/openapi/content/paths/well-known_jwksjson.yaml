@@ -6,7 +6,10 @@ get:
   description: 'Public access-token signing keys, independent of admin/export flags. The first eligible
     non-system signer decides availability: HMAC first returns 404 even if asymmetric signers follow.
     Verification-only and system keys are excluded. Invalid credentials do not block discovery. HEAD has
-    the same headers and Content-Length as GET with no body. This is distinct from OIDC /oidc/jwks.'
+    the same headers and Content-Length as GET with no body. With an explicit portal mount,
+    only the exact mounted endpoint is public discovery: nested suffix impostors and encoded endpoint
+    aliases do not select this operation. Legacy inferred hosting retains its complete-suffix route
+    behavior. This is distinct from OIDC /oidc/jwks.'
   security: []
   responses:
     '200':
@@ -53,6 +56,8 @@ get:
           $ref: ../components/headers/NoSniff.yaml
   x-source-files:
   - pkg/authn/handle_http_jwks.go
+  - pkg/authn/portal_mount.go
+  - pkg/authn/serve_http.go
 head:
   operationId: portalJWKSHead
   tags:
@@ -61,7 +66,10 @@ head:
   description: 'Public access-token signing keys, independent of admin/export flags. The first eligible
     non-system signer decides availability: HMAC first returns 404 even if asymmetric signers follow.
     Verification-only and system keys are excluded. Invalid credentials do not block discovery. HEAD has
-    the same headers and Content-Length as GET with no body. This is distinct from OIDC /oidc/jwks.'
+    the same headers and Content-Length as GET with no body. With an explicit portal mount,
+    only the exact mounted endpoint is public discovery: nested suffix impostors and encoded endpoint
+    aliases do not select this operation. Legacy inferred hosting retains its complete-suffix route
+    behavior. This is distinct from OIDC /oidc/jwks.'
   security: []
   responses:
     '200':
@@ -104,3 +112,5 @@ head:
           $ref: ../components/headers/NoSniff.yaml
   x-source-files:
   - pkg/authn/handle_http_jwks.go
+  - pkg/authn/portal_mount.go
+  - pkg/authn/serve_http.go

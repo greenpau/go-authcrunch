@@ -54,6 +54,12 @@ func extractBaseURLPath(_ context.Context, r *http.Request, rr *requests.Request
 }
 
 func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request) {
+	if mount := declaredPortalMount(r); mount != "" {
+		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
+		rr.Upstream.BasePath = strings.TrimSuffix(mount, "/") + "/"
+		return
+	}
+
 	crossDeviceIndex := crossDeviceRouteIndex(r.URL.Path)
 	switch {
 	case r.URL.Path == "/":

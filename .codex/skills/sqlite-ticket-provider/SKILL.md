@@ -26,8 +26,16 @@ on either URL must be 1–65535; a trailing empty port is invalid. No discovery 
 network request runs during parsing or construction.
 
 Optional `base_path` defaults `/auth`; `/` and unreserved nested paths work.
-Segments use ASCII letters/digits/underscore/hyphen, with no trailing slash or
-existing portal protocol namespace. Optional `timeout` defaults 1s (1ms..30s).
+Segments use ASCII letters/digits/underscore/hyphen, with no trailing slash and
+a maximum total length of 512 bytes. Typed and parser validation also apply
+`portalpath.Validate` and the shared
+[reserved mount rules](../coding-directives/references/portal-routing.md),
+including whole-segment and legacy prefix reservations in every segment.
+Unicode and semicolons cannot preserve browser cookie Path scope; SQLite's
+narrower segment rule remains in force. These checks apply to `base_path`, not
+realm values or the trusted issuer application's path. Align the declared host
+mount with this backend path; validation does not create an HTTP route.
+Optional `timeout` defaults 1s (1ms..30s).
 Optional `cookie_name` defaults `AUTHP_PROVIDER_SESSION_ID`. It is independently
 configured, not generated from a hash or a portal's common prefix. An explicit
 `__Secure-` prefix is allowed. `__Host-` cannot use the callback subpath and fails.

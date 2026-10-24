@@ -84,7 +84,8 @@ func TestPortalReservedRouteWords(t *testing.T) {
 	words := portalReservedWords(t)
 	sources := map[string][]string{
 		"extract_base_path.go":       {"extractBasePath", "extractBaseURLPath", "extractBasePathPrefix"},
-		"serve_http.go":              {"ServeHTTP"},
+		"serve_http.go":              {"ServeHTTP", "serveHTTP"},
+		"portal_mount.go":            {"ServeHTTPAt", "portalMountContains", "portalSigningJWKSRequest"},
 		"respond_http.go":            {"handleHTTP", "authorizeRequest"},
 		"respond_json.go":            {"handleJSON"},
 		"respond_api.go":             {"handleAPI"},

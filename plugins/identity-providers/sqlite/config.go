@@ -25,6 +25,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/internal/sqlitedb"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cookie"
+	"github.com/greenpau/go-authcrunch/pkg/portalpath"
 )
 
 // Config binds a private ticket database to a canonical portal and trusted issuer.
@@ -85,14 +86,8 @@ func (c *Config) Validate() error {
 	if len(c.BasePath) > 512 || (c.BasePath != "/" && !matches(`^(/[A-Za-z0-9_-]+)+$`, c.BasePath)) {
 		return ErrInvalid
 	}
-	for segment := range strings.SplitSeq(c.BasePath, "/") {
-		if strings.HasPrefix(segment, "favicon") {
-			return ErrInvalid
-		}
-		switch segment {
-		case "connected-accounts", "provider", "api", "profile", "sandbox", "register", "apps", "barcode", "saml", "oauth2", "basic", "assets", "favicon", "cross-device", "qrcode", "portal":
-			return ErrInvalid
-		}
+	if portalpath.Validate(c.BasePath) != nil {
+		return ErrInvalid
 	}
 	if c.IssuerURL == c.PublicOrigin+strings.TrimSuffix(c.BasePath, "/")+"/provider/"+c.Realm {
 		return ErrInvalid

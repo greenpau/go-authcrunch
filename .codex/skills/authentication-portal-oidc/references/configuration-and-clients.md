@@ -80,8 +80,9 @@ secret before loading it. The embedding HTTP server mounts this portal at
 OIDC is enabled and those fields are omitted. Enabling OIDC does not enable an
 admin API. This repository implements Go and JSON/XML/YAML configuration;
 `caddy-security` owns its separate Caddyfile grammar. Library parser support
-does not establish consumer directive support. Embedders pass requests through
-`Portal.ServeHTTP` as usual.
+does not establish consumer directive support. Embedders can pass the exact
+configured mount through `Portal.ServeHTTPAt`; `Portal.ServeHTTP` remains available
+with its legacy inferred mount behavior.
 
 Generate a dedicated persistent key, for example:
 
@@ -251,9 +252,19 @@ There is no advertised RP-initiated logout. OIDC refresh tokens are described in
 [provider capabilities](provider-capabilities.md); portal refresh is separate.
 
 The issuer must be a canonical HTTPS URL without a trailing slash, query, or
-fragment. The path is the portal mount. Mounts containing reserved portal routes
-(such as `/api/`, `/portal`, or `/sandbox/`) are rejected. When portal refresh is
-also enabled, its public origin and mount must agree with the issuer. The
+fragment. The path is the portal mount; an empty issuer path means `/`.
+The enabled portal adapter applies `portalpath.Validate`: canonical visible-ASCII
+paths requiring no URL escaping, no semicolons, and every segment checked
+against shared reserved namespace/prefix rules. See the
+[mount contract](../../coding-directives/references/portal-routing.md) for
+accepted lookalikes and cookie-scope constraints. This validation applies to
+`PortalConfig.Validate` and `PortalConfig.ConfigureOIDCProvider`; root
+`Config.ConfigureOIDCProvider` applies it after public directive parsing.
+Independent `pkg/oidc.Config.Validate` and its parser retain standalone OP
+semantics. Disabled portal OP
+retains its semantic opt-out. When portal refresh is also enabled, its public
+origin and mount must agree with the issuer. Explicit `ServeHTTPAt` delegation
+requires the issuer's mount to match before early protocol handling. The
 embedding server owns host/forwarded-header normalization and TLS policy.
 
 To rotate keys, put the new private key first in `signing_key_files` and retain

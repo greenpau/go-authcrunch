@@ -26,17 +26,27 @@ asymmetric payload encryption.
 
 ## HTTP Contract
 
-The route is the complete `/.well-known/jwks.json` suffix beneath the portal
-mount. Root, `/auth/`, `/xauth/`, and `/tenant/xauth/` mounts expose,
+The public endpoint is `<mount>/.well-known/jwks.json`. Root, `/auth/`,
+`/xauth/`, and `/tenant/xauth/` mounts expose,
 respectively, `/.well-known/jwks.json`, `/auth/.well-known/jwks.json`,
 `/xauth/.well-known/jwks.json`, and
-`/tenant/xauth/.well-known/jwks.json`. The embedding server determines which
-paths reach a portal; the library has no general configured mount prefix.
+`/tenant/xauth/.well-known/jwks.json`.
 
-Match the complete suffix on Go's decoded `r.URL.Path`. Do not accept an extra
-trailing slash, filename suffix, or a match only in the query. Route before
-API/QR-code dispatch and JSON negotiation, so nested mounts containing those
-segments, `format=json`, and JSON request headers work identically.
+`Portal.ServeHTTPAt` first checks the explicit mount boundary, then recognizes
+only the exact discovery endpoint with its canonical escaped spelling. Encoded
+mount aliases, outside paths and neighbor prefixes cannot reach discovery. A
+JWKS suffix inside an API/provider/resource path stays with that owner. Follow
+the shared [mount contract](../coding-directives/references/portal-routing.md)
+for pure `portalpath.Validate` rules and feature agreement. The standalone host
+uses this entry point.
+
+Legacy `Portal.ServeHTTP` retains complete-suffix matching on Go's decoded
+`r.URL.Path`; its embedding server determines which paths reach the portal.
+Do not silently impose explicit-mount semantics on those callers. Neither mode
+accepts an extra trailing slash, filename suffix or query-only match. Discovery
+runs before ordinary API/QR-code dispatch and JSON negotiation, so `format=json`
+and JSON request headers do not change it. Explicit declarations reject reserved
+API/QR namespace segments as mounts; legacy suffix compatibility remains.
 
 - GET returns 200 with `application/jwk-set+json` and a nonempty `keys` array
   when the selected issuer is asymmetric.

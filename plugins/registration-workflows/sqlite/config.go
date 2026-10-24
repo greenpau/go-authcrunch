@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/internal/sqlitedb"
+	"github.com/greenpau/go-authcrunch/pkg/portalpath"
 )
 
 // Config fixes the enrollment destination and public confirmation-link origin.
@@ -58,14 +59,8 @@ func (c *Config) Validate() error {
 		return ErrInvalid
 	}
 	// Portal routing owns these namespaces before a mounted registration flow.
-	for segment := range strings.SplitSeq(c.BasePath, "/") {
-		if strings.HasPrefix(segment, "favicon") {
-			return ErrInvalid
-		}
-		switch segment {
-		case "provider", "api", "profile", "sandbox", "register", "apps", "barcode", "saml", "oauth2", "basic", "assets", "favicon", "cross-device", "qrcode", "portal":
-			return ErrInvalid
-		}
+	if portalpath.Validate(c.BasePath) != nil {
+		return ErrInvalid
 	}
 	return sqlitedb.Normalize(&c.Path, &c.Timeout)
 }

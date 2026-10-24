@@ -3,8 +3,8 @@
 Before adding, renaming, or matching a portal route, read the canonical
 [reserved-word catalogue](../../../../pkg/authn/testdata/reserved_route_words.json).
 Each word has an owner, a route role, and a mount rule. This contributor and CI
-contract also checks the standalone host's configuration validation; it is not
-a request-time denylist or a new router.
+contract also checks declared mount consumers; reservations are not a
+request-time denylist for realm names or resources.
 
 ## Reservation rules
 
@@ -54,28 +54,71 @@ reservations are conservative ownership rules even when a subset of endpoints
 currently works at that mount; successful login alone does not prove that all
 features can share it. Matching is case-sensitive, as in portal dispatch.
 
-`httpserver.Config.Validate`, its public directive parser and `httpserver.Serve`
-enforce this policy before provisioning. Host paths must also be canonical
-absolute paths, with `/` for root and no trailing slash otherwise; URL escapes,
-control characters, query/fragment delimiters and dot segments are rejected by
-the existing host validator. New reservations must update host validation and
-its catalogue-driven tests together. Other embedding hosts own their configured
-mount validation and must adopt this contract; the portal cannot reliably
-recover an intended mount from an already ambiguous request path.
+`pkg/portalpath.Validate` is the shared, pure validator for declared mounts.
+It does not normalize values or perform I/O. Mounts are canonical absolute paths,
+with `/` for root and no trailing slash otherwise. Reject non-ASCII bytes,
+whitespace/control characters, semicolons, URL escapes, query/fragment delimiters,
+backslashes, dot segments and placeholder/glob delimiters. The path must also
+retain its exact spelling through `url.URL.EscapedPath`; punctuation requiring
+escaping, such as angle brackets or quotes, is rejected. This keeps the literal
+cookie Path equal to the request target. Cookie serialization can otherwise
+strip non-ASCII bytes or reinterpret a semicolon as an attribute boundary.
+Encoding a route does not repair an invalid declaration. Allowed punctuation
+such as `+`, `,`, `:`, `@` and `~` retains its spelling and segment scope.
+
+The standalone host, enabled portal refresh and SQLite ticket/registration
+configuration use this policy through their typed validators and public parsers.
+The enabled portal OP adapter applies it when parsed or typed configuration is
+attached to a portal. SQLite consumers retain their narrower
+ASCII letter/digit/underscore/hyphen segments, 512-byte limit and `/auth` default.
+Disabled refresh/OP retain their semantic opt-out. The portal OP adapter validates
+its issuer's mount; independent `pkg/oidc.Config` and its public parser do not
+acquire portal reservations. New reservations must update shared validation and independent
+catalogue-driven consumer tests together. Other embedding hosts can use the
+public validator when accepting an explicit mount.
 
 These rules constrain configured mount paths, not realm names or resources
 inside an established route family. Do not turn them into a global rejection of
 requests containing reserved words.
 
+## Explicit and inferred mount delegation
+
+Embedders can call `Portal.ServeHTTPAt(ctx, w, r, rr, basePath)` with a validated
+mount. Retain the original full request path. Before any OP, signing-JWKS, API
+or browser dispatch, this entry point checks the declaration, exact segment
+containment in both decoded and escaped paths, cookie restrictions and enabled
+refresh/OP mount agreement. Invalid declarations or feature disagreement return
+500; outside paths, neighbor prefixes and encoded mount/boundary aliases return
+404. These refusals use no-store, do not issue cookies and do not mark the
+request authenticated. Host origin/forwarded-header trust remains the embedder's
+responsibility.
+
+The accepted mount travels in private request context. Repeated extraction uses
+that exact value, including a trailing slash internally, without changing the
+original request, its body/headers, or shared portal state. Root is represented
+by `/`. Different concurrent calls cannot overwrite one another's mount.
+Canonical child data stays with the selected feature; this boundary is not a
+replacement for every legacy full-path dispatcher. Reserved words inside realms
+and resources must still be handled by their namespace owner.
+
+Explicit signing-JWKS discovery matches only
+`<mount>/.well-known/jwks.json`, including its canonical escaped spelling.
+A suffix under an API/provider/resource path is not discovery and stays with
+that owner. `Portal.ServeHTTP` remains the compatibility entry point: it infers
+the mount and retains its decoded-path JWKS suffix behavior. Choosing explicit
+mounts does not globally change callers that omit them. The standalone HTTP
+server delegates through `ServeHTTPAt`; its additional request-path checks and
+bare-mount temporary redirect remain intact.
+
 ## Why mount extraction matters
 
 `pkg/authn/serve_http.go` selects protocol/API/JSON/browser dispatch;
 `respond_http.go`, `respond_json.go`, and `respond_api.go` select operations.
-`extract_base_path.go` independently derives the portal mount. They must agree
-on the boundary between mount, namespace, and operation/resource.
+`extract_base_path.go` uses the declared mount or independently derives a legacy
+inferred mount. They must agree on the boundary between mount, namespace, and operation/resource.
 
-`extractBaseURLPath` delegates to `util.GetBaseURL`, which uses the first
-substring matching one of its comma-separated markers. It is not a router,
+Without an explicit declaration, `extractBaseURLPath` delegates to
+`util.GetBaseURL`, which uses the first substring matching one of its comma-separated markers. It is not a router,
 longest-prefix matcher, or segment-aware mount resolver. A short action marker
 can mistake its feature prefix for the mount. A marker can also match text
 inside the mount itself. Replacing `Index` with `LastIndex` does not establish
@@ -97,6 +140,21 @@ configured issuer mount; discovery and host-delegated authorization-policy
 callbacks have separate dispatch contracts.
 
 ## Enforced checks and acceptance evidence
+
+- `pkg/portalpath` tests check the authored catalogue against the public validator,
+  typed consumers and their parsers, including disabled-feature and standalone OP
+  boundaries. Cookie-scope negative controls call the public proof factory to
+  demonstrate why non-ASCII, semicolon and URL-escaped punctuation mounts fail
+  validation. Cookie-jar controls check allowed punctuation at its own child
+  versus a neighbor; Go's decoded-path jar is not browser encoding evidence.
+- `TestPortalMountRequestBoundary` and related units check exact boundary
+  rejection before early dispatch, immutable request context/body, repeated
+  extraction, concurrent mount isolation, feature agreement and provider realms
+  containing reserved words. `TestE2EPortalExplicitMount` uses real trusted TLS
+  at root, nested and allowed lookalike mounts for login, assets, signing-JWKS
+  GET/HEAD, authenticated API method rejection and a real OP code exchange with
+  independent ID-token verification. Outside aliases must not issue cookies;
+  wrong API methods must preserve the exact authenticated identity/session.
 
 - `TestPortalReservedRouteWords` inspects path literals and local constant
   declarations in the full-path extraction/dispatch owners, folding literal
@@ -146,6 +204,6 @@ correct dispatch. No finite vocabulary or test matrix proves all possible
 combinations; naming review and feature-specific E2E remain required.
 
 ```sh
-make test TEST_DIR='./pkg/authn ./pkg/httpserver/...' TEST='PortalReservedRoute|PortalRouteContract|ReservedMount|ExtractBasePath|OIDCIssuerMount|E2EHTTPServerSessions' COVERAGE_DIR=.coverage/portal-routing
+make test TEST_DIR='./pkg/portalpath ./pkg/authn ./pkg/httpserver/...' TEST='PortalPath|PortalMount|PortalExplicitMount|PortalReservedRoute|PortalRouteContract|ReservedMount|ExtractBasePath|OIDCIssuerMount|E2EHTTPServerSessions' COVERAGE_DIR=.coverage/portal-routing
 make test TEST_DIR=./cmd/authdb TEST=E2EAuthdb COVERAGE_DIR=.coverage/portal-mount-executable
 ```

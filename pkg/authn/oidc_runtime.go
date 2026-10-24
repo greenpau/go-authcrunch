@@ -27,6 +27,7 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/oidc"
+	"github.com/greenpau/go-authcrunch/pkg/portalpath"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
@@ -42,13 +43,14 @@ func validateOIDCPortalConfig(config *oidc.Config) error {
 		return nil
 	}
 	issuer, _ := url.Parse(config.Issuer)
-	// Portal routes inspect segments before login/sandbox dispatch. This is a
-	// portal restriction; standalone providers can use other canonical mounts.
-	for _, marker := range []string{"/connected-accounts/", "/api/", "/qrcode/", "/profile/", "/assets/", "/favicon", "/portal", "/register/", "/apps/sso", "/apps/mobile-access", "/saml/", "/oauth2/", "/basic/login/", "/barcode/mfa/", "/sandbox/"} {
-		if strings.Contains(issuer.Path+"/", marker) {
-			return fmt.Errorf("oidc issuer mount contains a reserved portal route")
-		}
+	mount := issuer.Path
+	if mount == "" {
+		mount = "/"
 	}
+	if portalpath.Validate(mount) != nil {
+		return fmt.Errorf("oidc issuer mount contains a reserved portal route or invalid path")
+	}
+
 	return nil
 }
 

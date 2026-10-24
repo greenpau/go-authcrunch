@@ -16,13 +16,14 @@
 package httpserver
 
 import (
+	"errors"
 	"fmt"
 	"net"
-	"path"
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
+
+	"github.com/greenpau/go-authcrunch/pkg/portalpath"
 )
 
 // PortalRoute mounts one named portal at an absolute path. Paths are retained
@@ -114,25 +115,14 @@ func (cfg *Config) Validate() error {
 			return fmt.Errorf("portal route %d has an empty or duplicate name", i+1)
 		}
 		names[route.Name] = true
-		if route.Path == "" || route.Path[0] != '/' || path.Clean(route.Path) != route.Path || strings.ContainsAny(route.Path, "%?#\\ {}") || strings.IndexFunc(route.Path, unicode.IsControl) >= 0 {
-			return fmt.Errorf("portal route %d requires a canonical absolute path", i+1)
-		}
-		// Portal endpoint dispatch discovers its base using these namespaces.
-		// Keep reservations aligned with the independent route/mount catalogue
-		// in pkg/authn/testdata/reserved_route_words.json; contract tests check
-		// both rejection and continued acceptance of neutral/lookalike mounts.
-		for segment := range strings.SplitSeq(strings.Trim(route.Path, "/"), "/") {
-			// Several legacy base-path helpers match an endpoint prefix rather
-			// than a whole segment. For example, /login-service/login would
-			// otherwise discover the mount at the first /login occurrence.
-			for _, prefix := range []string{"profile", "portal", "recover", "forgot", "register", "whoami", "logout", "favicon", "beacon", "login"} {
-				if strings.HasPrefix(segment, prefix) {
-					return fmt.Errorf("portal route %d uses a reserved endpoint prefix", i+1)
-				}
-			}
-			switch segment {
-			case "connected-accounts", "api", "qrcode", "sandbox", "apps", "barcode", "saml", "oauth2", "basic", "assets", "provider", "cross-device", "oidc", ".well-known":
+		if err := portalpath.Validate(route.Path); err != nil {
+			switch {
+			case errors.Is(err, portalpath.ErrReservedPrefix):
+				return fmt.Errorf("portal route %d uses a reserved endpoint prefix", i+1)
+			case errors.Is(err, portalpath.ErrReservedSegment):
 				return fmt.Errorf("portal route %d uses a reserved endpoint segment", i+1)
+			default:
+				return fmt.Errorf("portal route %d requires a canonical absolute path", i+1)
 			}
 		}
 		for _, previous := range cfg.Portals[:i] {

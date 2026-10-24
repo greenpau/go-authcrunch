@@ -29,8 +29,16 @@ servers:
         Use a neutral mount such as /auth, /xauth or /tenant/auth. Do not use reserved
         route namespaces such as saml or oauth2 as mount segments, including inside
         nested mounts. Legacy endpoint prefixes such as login-service and profile-ui
-        are also reserved. The standalone host rejects reserved mounts at startup;
-        other embedding hosts own their mount validation.
+        are also reserved. The standalone host and configured portal feature mounts use the shared
+        canonical mount validator, requiring ASCII cookie paths without semicolons,
+        URL escapes, characters needing URL escaping or placeholders. Embedding hosts can declare an explicit mount
+        through ServeHTTPAt, which rejects outside or encoded mount aliases before
+        OIDC or signing-key discovery. Legacy ServeHTTP retains inferred mounts;
+        host configuration must distinguish these modes. The empty server variable
+        represents root in URLs; a declared runtime root is the literal slash.
+        Outside-mount requests receive 404; invalid declarations or mounted feature
+        disagreement receive 500 before endpoint dispatch. These boundary failures
+        disable caching and set no cookies.
 tags:
 - name: Registration
   description: Browser registration submission and acknowledgement.

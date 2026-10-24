@@ -18,8 +18,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
+
+	"github.com/greenpau/go-authcrunch/pkg/portalpath"
 )
 
 const (
@@ -73,7 +74,7 @@ func (c *TokenRefreshConfig) Validate() error {
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.Opaque != "" || u.Host != strings.ToLower(u.Host) {
 		return fmt.Errorf("refresh public_origin must be an HTTPS origin without a path")
 	}
-	if !strings.HasPrefix(c.BasePath, "/") || path.Clean(c.BasePath) != c.BasePath || strings.ContainsAny(c.BasePath, "\\%?#;\r\n\t ") {
+	if portalpath.Validate(c.BasePath) != nil {
 		return fmt.Errorf("refresh base_path must be a canonical absolute path")
 	}
 	if c.CookieName != "" {

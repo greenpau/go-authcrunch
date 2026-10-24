@@ -75,7 +75,8 @@ them in CLI parsing. New settings need typed, parser, and consumer coverage.
 
 ## Routing and Lifecycle
 
-Keep paths intact when delegating to `authn.Portal.ServeHTTP`. Mount roots
+Keep paths intact when delegating to
+`authn.Portal.ServeHTTPAt(ctx, w, r, rr, route.Path)`. Mount roots
 redirect temporarily to their own `/login`, preserving the query; nonmatching
 paths return 404. Routes use segment boundaries, canonical paths, and reserved
 portal namespace/prefix checks. Do not let `http.ServeMux` clean a malformed path into
@@ -87,8 +88,13 @@ when changing mount validation. The independent catalogue distinguishes forbidde
 whole segments (`saml`, `oauth2`, `provider`, discovery and other namespaces)
 from legacy prefix reservations (`login-service`, `profile-ui`). Check every
 segment of nested mounts, preserve `/auth` and `/xauth`, and reject reservations
-before provisioning even when a feature is disabled. Catalogue-driven typed,
-parser and listener-startup tests must accompany new route reservations.
+before provisioning even when a feature is disabled. `portalpath.Validate` also
+requires canonical visible-ASCII paths needing no URL escaping and rejects
+semicolons, preserving issued cookie Path scope. The listener retains its stricter malformed/escaped request
+path rejection. Explicit delegation checks the boundary before early OP/JWKS
+handling and exposes signing keys only at the exact mounted discovery endpoint.
+Catalogue-driven typed, parser and listener-startup tests must accompany new
+route reservations.
 
 The direct listener discards `Forwarded`, all `X-Forwarded-*`, and `X-Real-IP`
 headers before invoking AuthCrunch. TLS terminates locally; there is no trusted

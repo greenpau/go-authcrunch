@@ -202,7 +202,7 @@ func (h *portalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		response := &responseWriter{ResponseWriter: w}
-		if err := h.portals[route.Name].ServeHTTP(r.Context(), response, r, requests.NewRequest()); err != nil {
+		if err := h.portals[route.Name].ServeHTTPAt(r.Context(), response, r, requests.NewRequest(), route.Path); err != nil {
 			// Handler errors may contain credential-bearing request data.
 			h.logger.Error("authdb portal request failed", zap.String("portal", route.Name))
 			if !response.written {

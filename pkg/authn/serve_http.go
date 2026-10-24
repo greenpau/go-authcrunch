@@ -24,7 +24,11 @@ import (
 )
 
 // ServeHTTP is a gateway for the authentication portal.
-func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) (err error) {
+func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) error {
+	return p.serveHTTP(ctx, w, r, rr)
+}
+
+func (p *Portal) serveHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) (err error) {
 	if p.state != nil {
 		response := &persistentResponseWriter{ResponseWriter: w, health: p.persistentStateErr}
 		defer func() {
@@ -61,7 +65,7 @@ func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.R
 		rr.Response.Title = p.config.UI.Title
 	}
 	rr.Response.RedirectTokenName = p.cookie.RefererCookieName
-	if strings.HasSuffix(r.URL.Path, jwksPath) {
+	if portalSigningJWKSRequest(r) {
 		// Public discovery must precede session authorization, API routing,
 		// and content negotiation, including at nested portal mounts.
 		return p.handleHTTPJWKS(w, r)

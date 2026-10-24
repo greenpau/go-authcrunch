@@ -7,7 +7,8 @@ handlers, serializers, validators and configuration. All evidence paths are
 relative to this checkout. The reviewed source inventory fingerprints root
 configuration/runtime, `pkg/httpserver`, `cmd/authdb`, authentication/authorization,
 wire models, identity stores/providers, OIDC, keys, registry, challenges, tagging,
-random encodings and utility validators. It detects newly added handlers and
+random encodings, `pkg/portalpath`, the SQLite ticket HTTP provider and utility
+validators. It detects newly added handlers and
 ignores tests. Review external dependency changes separately.
 Redirect policy, URL construction/sanitization, forwarded-address helpers and
 their WAF validators are also contract inputs: changing these can alter browser
@@ -28,7 +29,7 @@ it inherits the same document server as portal federation and the other APIs.
 | Surface | Implementation evidence | Review decisions |
 | --- | --- | --- |
 | Host boundary | Root `server.go`, `pkg/httpserver/server.go`, `cmd/authdb/main.go` | Provisioning, lifecycle, portal/policy mount, handled callback responses, trusted metadata |
-| Portal dispatch | `pkg/authn/serve_http.go`, `respond_api.go`, `respond_json.go`, `respond_http.go`, `extract_base_path.go` | Route/method negotiation, guard ordering, trailing mount, disabled feature behavior |
+| Portal dispatch | `pkg/authn/serve_http.go`, `portal_mount.go`, `respond_api.go`, `respond_json.go`, `respond_http.go`, `extract_base_path.go`, `pkg/portalpath/path.go` | Explicit mount containment before early dispatch, legacy inference, route/method negotiation, guard ordering, trailing mount, disabled feature behavior |
 | JSON/API-key login | `pkg/apiauth/*.go`, `pkg/authn/handle_json_login.go`, `handle_json_api_key_login.go` | 1024-byte limit, strict decoding, evolving sandbox secret, MFA checkpoints, access-only versus refresh success |
 | Refresh/session/logout | `pkg/authn/handle_api_refresh_token.go`, `token_refresh_*.go`, `pkg/authn/cookie/*.go` | Body/cookie transport, exact HTTPS origin, CSRF header, preconditions, replay, capacity and invalidation |
 | Claims/beacon | `pkg/authn/handle_json_whoami.go`, `handle_json_beacon.go`, `handle_http_whoami.go`, `pkg/util/request_id.go` | Exact Accept negotiation, HTML redirects versus JSON denial, custom/transformed claims, probe precedence, raw `OK` with JSON media type |
@@ -39,7 +40,7 @@ it inherits the same document server as portal federation and the other APIs.
 | System | `pkg/authn/handle_api_system.go`, `pkg/system/*` | AuthCrunch encrypted wire content and footer key ID, encrypted authenticated success, JSON error envelopes on failure |
 | Portal OpenID Provider | `pkg/oidc/*`, local `caddyfile_oauth_application.go`, `caddyfile_authn_oidc.go` | Discovery versus portal JWKS, Authorization Code/PKCE, client auth, consent, opaque access tokens, rotating OP refresh, revoke, registered redirect trust |
 | Cross-device | `pkg/authn/cross_device*.go` | Explicit approval, requester/approver browser binding, code and secret, CSRF, polls, terminal states, one-time cookie issuance |
-| Injected HTTP provider | `pkg/authn/handle_provider_login.go`, `pkg/idp/http_login.go` | GET-only realm route, provider-owned query/proof, HTML negotiation, safe results/cookies, federated evidence |
+| Injected HTTP provider | `pkg/authn/handle_provider_login.go`, `pkg/idp/http_login.go`, `plugins/identity-providers/sqlite/provider.go`, `plugins/identity-providers/sqlite/config.go` | GET-only realm route, provider-owned query/proof, HTML negotiation, safe results/cookies, federated evidence and configured mount admission |
 | Browser/federation | `pkg/authn/handle_http_*.go`, `handle_basic_login.go`, `pkg/idp/oauth/*`, `pkg/idp/saml/*` | HTML and redirects, sandbox form challenge, provider callbacks, RelayState/browser binding, browser-only evidence |
 | Registration/SSO | `pkg/authn/handle_register.go`, `handle_http_apps_sso.go`, `pkg/sso/*`, `pkg/registry/*` | Required registration realm (bare `/register` has no default), acknowledgement form versus code submission, form results, reachable metadata versus unimplemented assume handlers |
 | Direct OAuth | `pkg/authz/oauth*.go`, root server delegation | Protected-app callback and logout, own cookie/CSRF/origin boundary; never a fictional fixed REST authorize resource |
@@ -88,6 +89,16 @@ for final field names and omissions.
   redirects described without promising an interactive login wizard.
 
 ## Deployment and mount review
+
+Explicit `Portal.ServeHTTPAt` mounts are canonical ASCII cookie paths requiring no
+URL escaping. Shared
+validation rejects semicolons, escaped aliases and reserved route segments.
+The wrapper rejects requests outside the literal mount with 404, and invalid
+declarations or feature disagreement with 500, before OIDC or signing-key
+discovery; these failures set no cookies and disable caching. Legacy `ServeHTTP`
+retains inferred mounts and suffix discovery. Keep those modes distinct when
+reviewing host contracts. The standalone HTTP host declares its configured
+mount and retains its stricter request escaping and bare-mount redirect rules.
 
 Do not introduce path/operation `servers` overrides. They can make Scalar ignore
 the document's selected origin and mount, including saved browser settings.

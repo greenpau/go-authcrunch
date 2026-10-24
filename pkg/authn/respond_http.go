@@ -34,7 +34,7 @@ func (p *Portal) handleHTTP(ctx context.Context, w http.ResponseWriter, r *http.
 	usr, _ := p.authorizeRequest(ctx, w, r, rr)
 
 	switch {
-	case r.URL.Path == "/" || r.URL.Path == "/auth" || r.URL.Path == "/auth/" || r.URL.Path == rr.Upstream.BasePath:
+	case r.URL.Path == "/" || r.URL.Path == "/auth" || r.URL.Path == "/auth/" || r.URL.Path == rr.Upstream.BasePath || (declaredPortalMount(r) != "" && r.URL.Path == strings.TrimSuffix(rr.Upstream.BasePath, "/")):
 		p.injectRedirectURL(ctx, w, r, rr)
 		// Keep the destination in this tab's URL too: the cookie is shared by
 		// every tab of the browser, so the last tab to arrive would win it.
