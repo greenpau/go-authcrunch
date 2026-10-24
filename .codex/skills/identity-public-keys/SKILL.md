@@ -26,12 +26,13 @@ authorization boundary.
 
 Use the maintained `github.com/ProtonMail/go-crypto/openpgp` package pinned by
 `go.mod`; do not reintroduce `golang.org/x/crypto/openpgp`. The latter import
-predates v1.1.41 and is covered by
+is covered by
 [GO-2026-5932](https://pkg.go.dev/vuln/GO-2026-5932), which lists no fixed version
 of that unmaintained package. Other `x/crypto` packages remain dependencies.
 Review the current advisory and maintained package guidance for future changes.
-Check the replacement's transitive dependencies too: ProtonMail v1.4.1 selects
-CIRCL v1.6.2, so this repository pins CIRCL v1.6.3 to include the fix for
+Check the replacement's transitive dependencies too: inspect the selected
+ProtonMail and CIRCL entries in `go.mod` and the effective module graph, and
+retain a CIRCL selection with the fix for
 [GO-2026-4550](https://pkg.go.dev/vuln/GO-2026-4550). A maintained direct
 dependency alone does not establish that its selected dependency graph is current.
 

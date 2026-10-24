@@ -70,7 +70,7 @@ Selection rules:
   specific package indicator instead of `auth`, `api`, `hosting`, `misc`, or
   `chore`.
 - Use colon form for new dependency bumps, such as
-  `ops: upgrade golang.org/x/crypto to v0.48.0`, even though older history has
+  `ops: upgrade golang.org/x/crypto`, even though older history has
   subjects without a change indicator.
 
 Use one of these package or product-surface indicators:

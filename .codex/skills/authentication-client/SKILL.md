@@ -80,8 +80,8 @@ client performs only initial/fresh login and credential persistence.
 omitted default) or `RefreshTransportBody` (`body`). Carry it through the initial
 request and every sandbox/password/TOTP checkpoint. Cookie mode preserves the
 legacy access-only JSON login contract and browser jar behavior. Omit
-`refresh_transport` from the wire in cookie/default mode: v1.1.41's strict
-request decoder rejects this newer field. Body mode sends it explicitly on
+`refresh_transport` from the wire in cookie/default mode: legacy strict
+request decoders reject this newer field. Body mode sends it explicitly on
 every exchange. Keep the legacy-schema unit test and real TLS password/TOTP
 wire-envelope E2E alongside native-mode tests. In a refresh
 realm its metadata-only success returns `ErrNativeTransportRequired`, with no

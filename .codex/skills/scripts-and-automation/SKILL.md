@@ -119,13 +119,16 @@ under `tmp/` and generated output. Keep new source trees in the explicit lint
 scope. `assets/scripts/tests/linter_test.py` exercises the real Make target with
 temporary checkouts and verifies that source and test-file warnings still fail.
 
-The Go module minimum is `1.26.0`; CI and release builds select Go `1.26.8`, Node 24, and Python
-3. Use Python 3.9+ locally. `go.mod` and `go.sum` pin `tested` v1.1.0, `versioned`, and
-`golint`; never replace the pinned lifecycle with global tools installed at
-`@latest`. `make install-test-tools` resolves `go tool tested` without modifying
-module manifests or global executable directories. Go dependency/tool downloads
-may need network access. Node browser tests and Python automation use only their
-standard libraries and need no npm/pip installation.
+Read `go.mod` for the Go language minimum and the checked-in CI/release
+workflows for compiler, Node and Python selections. Qualify production Go
+builds with a supported patched compiler independently of the language
+minimum. Use the Python minimum required by the repository scripts. `go.mod`
+and `go.sum` pin `tested`, `versioned`, and `golint`; never replace the pinned
+lifecycle with global tools installed at `@latest`. `make install-test-tools`
+resolves `go tool tested` without modifying module manifests or global
+executable directories. Go dependency/tool downloads may need network access.
+Node browser tests and Python automation use only their standard libraries and
+need no npm/pip installation.
 
 `test-ui` discovers `pkg/authn/ui/testdata/*_client_test.cjs`; the current files
 cover login/QR state transitions, the refresh client, and Documents Web Crypto

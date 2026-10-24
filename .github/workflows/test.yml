@@ -62,23 +62,23 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          go-version: '1.26.8'
+          go-version: '1.26.10'
           cache: false
       - name: Cache Go modules
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/go/pkg/mod
-          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.8-${{ hashFiles('go.sum') }}
+          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}
           restore-keys: |
-            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.8-
+            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-
       - name: Cache Go builds
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/go-build
-          key: go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-quality-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          key: go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-quality-${{ hashFiles('go.sum') }}-${{ github.sha }}
           restore-keys: |
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-quality-${{ hashFiles('go.sum') }}-
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-quality-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-quality-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-quality-
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -141,25 +141,25 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          go-version: '1.26.8'
+          go-version: '1.26.10'
           cache: false
       - name: Cache Go modules
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/go/pkg/mod
-          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.8-${{ hashFiles('go.sum') }}
+          key: go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ hashFiles('go.sum') }}
           restore-keys: |
-            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.8-
+            go-mod-${{ runner.os }}-${{ runner.arch }}-1.26.10-
       - name: Cache Go builds
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/go-build
-          key: go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          key: go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
           restore-keys: |
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-${{ matrix.shard }}-
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-${{ matrix.cache_group }}-${{ hashFiles('go.sum') }}-
-            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.8-${{ matrix.cache_group }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.shard }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.cache_group }}-${{ hashFiles('go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-1.26.10-${{ matrix.cache_group }}-
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:

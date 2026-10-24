@@ -176,8 +176,9 @@ or validator modifications. Consent commands cover both `/oidc/authorize` and
 marked in execution metadata and is never full qualification.
 
 Prepare the suite inside this repository, at the pinned revision
-`e3b5558d6d5e0c17ab578a47b955fd3b405f902b` (v5.2.4). Its source checkout must be
-unmodified. Build its `target/fapi-test-suite.jar` with Java 21 and Maven using
+`e3b5558d6d5e0c17ab578a47b955fd3b405f902b`. Its source checkout must be
+unmodified. Build its `target/fapi-test-suite.jar` with the Java and Maven
+versions required by that pinned source, using
 `mvn -B -Dmaven.test.skip -Dpmd.skip package`, following the suite's own build
 instructions. Put generated suite sources in a hidden directory so this
 repository's legacy recursive lint command does not traverse them. Do not use

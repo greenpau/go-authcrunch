@@ -330,7 +330,7 @@ or treat claims as globally safe to log.
 
 `pkg/util/random.go` supplies session identifiers, nonces, and credential data
 to multiple authentication flows. Keep it cryptographically secure without a
-`math/rand` fallback. Follow the existing Go 1.26 `crypto/rand.Read` contract:
+`math/rand` fallback. Follow the selected toolchain's `crypto/rand.Read` contract:
 fill the buffer or terminate on unrecoverable entropy failure. Preserve helper
 length/charset contracts and unbiased bounded sampling. Verify failure behavior
 in isolated subprocesses, never by replacing `rand.Reader` in parallel tests.

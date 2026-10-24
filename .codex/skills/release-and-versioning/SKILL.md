@@ -83,8 +83,8 @@ with a real Git fetch and reject lightweight, missing, and mismatched tags.
 
 The library's minimum Go version and the final executable's build toolchain are
 separate contracts. Inspect both reusable-test and GoReleaser setup-go pins when
-qualifying a release; the current workflows explicitly select Go 1.26.8 with
-`GOTOOLCHAIN=local`. Check the official Go release history and vulnerability
+qualifying a release; the checked-in workflows own the explicit compiler and
+`GOTOOLCHAIN` selections. Check the official Go release history and vulnerability
 database for a supported patched toolchain before shipping binaries. A local
 upgrade does not update CI, and changing only `go.mod` does not update explicit
 workflow pins. Record `go version` for validation and `go version -m` for the
@@ -96,8 +96,8 @@ Do not raise the module's minimum Go version solely to clear a local stdlib scan
 
 Only execute a publishing command when the user requests an actual release:
 
-- `make release`: patch bump, e.g. `1.1.41` to `1.1.42`.
-- `make minor-release`: minor bump/reset, e.g. `1.1.41` to `1.2.0`.
+- `make release`: increment the patch component.
+- `make minor-release`: increment the minor component and reset the patch component.
 - `make fast-release`: patch release without the local `make ci-check` gate.
 - `make fast-minor-release`: minor release without the local `make ci-check` gate.
 - `make release-git-check`: read-only local branch/clean-tree/version checks.

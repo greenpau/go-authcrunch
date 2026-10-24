@@ -180,9 +180,9 @@ emit wildcard package/symbol entries from an advisory. Those placeholders do not
 prove that the affected package or function is linked. Preserve the exact
 shipping-artifact assessment and supplement it with source analysis and a
 matching build retaining symbols when needed; do not remove findings or change
-release stripping solely to produce a green scan. Govulncheck v1.8.0 documents
-this fallback in its
-[official binary analyzer](https://github.com/golang/vuln/blob/v1.8.0/internal/vulncheck/binary.go).
+release stripping solely to produce a green scan. Confirm this fallback for
+the installed analyzer in `internal/vulncheck/binary.go` within the
+[official vulnerability tools source](https://github.com/golang/vuln).
 A retained module can still match an advisory for a package no longer imported.
 State that boundary instead of claiming the module itself is advisory-free.
 

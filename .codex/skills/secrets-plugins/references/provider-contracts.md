@@ -2,11 +2,12 @@
 
 ## Source authority
 
-These are independently usable Go libraries. Both declare `package secrets`
-and Go 1.18 in the inspected module manifests; neither depends on go-authcrunch
-or a host framework. Do not derive runtime behavior from their repository titles
-or old README terminology. The old `go-authcrunch-creds-aws-secrets-manager` URL
-redirects to the current `go-authcrunch-secrets-aws-secrets-manager` repository.
+These are independently usable Go libraries. Both declare `package secrets`;
+neither depends on go-authcrunch or a host framework. Their module manifests
+own their Go language requirements. Do not derive runtime behavior from their
+repository titles or old README terminology. The old
+`go-authcrunch-creds-aws-secrets-manager` URL redirects to the current
+`go-authcrunch-secrets-aws-secrets-manager` repository.
 
 The following immutable revisions make these observations reproducible. Recheck
 source, tests, and module metadata before documenting a newer revision.
@@ -17,8 +18,9 @@ source, tests, and module metadata before documenting a newer revision.
 | AWS | [`secrets.go` at `9f35416c8e31afe86e86e85be5c2986b160c655a`](https://github.com/greenpau/go-authcrunch-secrets-aws-secrets-manager/blob/9f35416c8e31afe86e86e85be5c2986b160c655a/secrets.go) | [`secrets_test.go`](https://github.com/greenpau/go-authcrunch-secrets-aws-secrets-manager/blob/9f35416c8e31afe86e86e85be5c2986b160c655a/secrets_test.go), [`go.mod`](https://github.com/greenpau/go-authcrunch-secrets-aws-secrets-manager/blob/9f35416c8e31afe86e86e85be5c2986b160c655a/go.mod) |
 
 The static module's only required module is its test comparison library. AWS
-pins SDK v2 core `v1.17.3`, config `v1.18.8`, and Secrets Manager `v1.18.0`.
-These versions identify the inspected implementation, not an upgrade
+uses SDK v2 core, config and Secrets Manager packages; inspect the immutable
+module manifest above for their exact dependency selections. These source
+revisions identify the inspected implementation, not an upgrade
 recommendation. Its `VERSION` file alone is not a dependency tag guarantee.
 
 ## Public API comparison
