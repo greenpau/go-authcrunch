@@ -53,9 +53,12 @@ operations. A Go host can construct/configure an implementation and supply it in
 `authn.PortalParameters.IdentityStores`; select its `GetName()` in
 `PortalConfig.IdentityStores`. `NewPortal` requires `Configured()` to be true.
 The [shared config](../../../../pkg/ids/config.go) and factory accept only `local`
-and `ldap`. A new root-config kind therefore needs validator, parser, factory,
-and server integration. Direct portal injection avoids that factory requirement,
-but still must satisfy the consuming authentication flow and metadata/icon APIs.
+and `ldap`. Root hosts can instead derive an `ids.ExternalIdentityStoreConfig`
+from normalized backend configuration, append it to `Config.ExternalIdentityStores`,
+and provide a configured handle in `ServerOptions.IdentityStores` to
+`NewServerWithOptions`. This explicit borrowed-handle path preserves root
+assembly without registering a new factory kind. Both paths must satisfy the
+consuming authentication flow and metadata/icon APIs.
 
 **Implementation contract:**
 

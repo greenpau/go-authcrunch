@@ -143,6 +143,15 @@ independent of request cancellation, and restore pre-credential response headers
 Do not undo earlier completed revocations. Consult the OIDC skill for candidate
 rollback and revocation-size invariants.
 
+Injected identity-store descriptors (`Config.ExternalIdentityStores`) participate
+in the normalized root fingerprint, including a digest of the backend's resolved
+configuration. Their runtime handles remain borrowed and are never configured
+with root state. A fresh SQLite handle retains its fresh proof epoch, so restored
+refresh sessions cannot renew old identity evidence. Account-file durability does
+not imply continuity of authentication proofs. See the
+[SQLite identity-store contract](../sqlite-identity-store/SKILL.md) for supported
+consumers and root construction/ownership validation.
+
 Local identity files remain the source of current account status and credential
 versions. Persist their epoch after an atomic identity write and before granting
 authority from current identity. Keep persistence attached to transaction targets,

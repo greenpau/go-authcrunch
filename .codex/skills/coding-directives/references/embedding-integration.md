@@ -34,6 +34,16 @@ clients; the host must close them after every consumer drains. The provider's
 [login storage contract](../../oauth-identity-provider/references/login-storage.md)
 defines atomicity, errors and the separate boundaries of full portal HA.
 
+For an external identity store, normalize its backend configuration through the
+backend parser, derive `ids.ExternalIdentityStoreConfig` with
+`NewExternalIdentityStoreConfig`, and add it to `Config.ExternalIdentityStores`.
+Pass the matching configured handle in `ServerOptions.IdentityStores` before
+root construction. The root validates exact bindings and borrows handles; the
+host owns disposal on every success/failure path. Do not use built-in kinds for
+external stores. Descriptors join the root persistence binding while backend
+proof epochs remain backend-owned. This derived descriptor is not an additional
+operator grammar: the backend's public parser owns its configuration.
+
 Read the feature's owning skill for its exact grammar, defaults, and exclusions.
 Keep downstream handlers thin; do not copy field allowlists or parse the same
 settings independently. Do not route upstream OAuth settings into `pkg/oidc`.

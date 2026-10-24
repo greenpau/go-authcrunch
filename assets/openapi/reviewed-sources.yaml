@@ -1,7 +1,8 @@
 module: github.com/greenpau/go-authcrunch
 files:
     cmd/authdb/main.go: 53cb8c3ca9c3df5ababb8fecb7d2b80ac96a9c0fc52d31ecf88d1e27e5772df1
-    config.go: 515cfb1446a474cf892819526e6f8bb3239db12abef7454c740bbbb52e537d8c
+    config.go: 3f3715e00c4b0ad1497c5c1f62cca7d8fb1356015ef8e7977bf7199617d6197e
+    config_external_identity.go: 78a95078289c4b13d88f7ee21d96594f1fdccc437cbd4a569f3898d037a42ac9
     config_oauth_applications.go: c3d105f8cb5eab55866d97259bd990d3b0da25eb68412f6069b293e21c20491d
     config_oauth_authorization.go: 19e0d80bce0f703c65752ade6259436bd033bc258a420a76b83a1edb0ab6de62
     internal/sqlitedb/database.go: 2960aa0fc3f1307e133c8a68e95bf12313e11913ab63359512b7b1c606fc86bb
@@ -269,6 +270,7 @@ files:
     pkg/idp/saml/state.go: c9e5ccf513d50c044eee33457e8f7f84e9549dd404242c24892ee5ecf4c9dec0
     pkg/ids/attachment.go: e20a7869a8b6727cbc628ebb6800d0c4942f423e8e97fa010d6ae310d76eedd9
     pkg/ids/config.go: 1a35e9679940ad47e7895a57d99193ff51bbc56d8fca8e03322e640e7655afe4
+    pkg/ids/external_config.go: 4627e43ac58d7f98cd294c9b6d496cbd780394b93e7a9d931bb1a1b45fd0e75b
     pkg/ids/ldap/authenticator.go: bc45dd5b695c2a5d49360d6b2b6a4bccff145a896fb7f05949d5e11e664e964a
     pkg/ids/ldap/parse_dn.go: be6e2de880f9528c68fb586f3cef4f29ea4f7f9e64f686f9916e16daec4b366a
     pkg/ids/ldap/store.go: 88b5c6c6e0c959dfea30fe04cb1b0391ff9a8d0a0484749af3f366d6d328f5fb
@@ -360,5 +362,5 @@ files:
     plugins/registration-workflows/sqlite/config.go: 17c42cd759d1092d178e1eb983d134cbfc03d1123e222e9a91505970b95554b5
     plugins/registration-workflows/sqlite/parser/parser.go: 757678ff613256309f3a9a536ff968ed87cde46c3ee691300193d98a031fbd04
     plugins/registration-workflows/sqlite/workflow.go: 4ddedd74461407312ebd4b0b4839eb28c0044dddbab3d945c859e5a3a45419a7
-    server.go: 48e69579c476b638f1e82b8fa6b46f047b6af68c4c651201edde4c8b27a9abba
+    server.go: 5a18a83adc2c8165ff92fbb240a340060fd05c3f3efa0e57ec5d6d0071c4daec
     server_persistent_state.go: 706d1920510d914041ee78a43143068a11b7294028eadb234b363073065cd371

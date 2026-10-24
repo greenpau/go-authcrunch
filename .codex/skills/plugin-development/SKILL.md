@@ -112,7 +112,7 @@ A category or repository name alone does not establish an implementation.
 | --- | --- | --- |
 | OAuth login storage | Share single-use upstream login transactions | `oauth.LoginStore`, root `ServerOptions.OAuthLoginStores`, and the local SQLite reference; other session state remains separate |
 | Secrets | Retrieve values for configuration | SQLite bound-record plugin and external libraries; specialized skill above |
-| [Identity stores](references/plugin-categories.md#identity-stores) | Account lookup, authentication, and supported account operations | SQLite password store and configured `ids.IdentityStore` injection into `NewPortal` |
+| [Identity stores](references/plugin-categories.md#identity-stores) | Account lookup, authentication, and supported account operations | SQLite password store and configured `ids.IdentityStore` injection into `NewPortal` or root `ServerOptions.IdentityStores` |
 | [Identity providers](references/plugin-categories.md#identity-providers) | Authenticate through a federation/protocol backend | SQLite tickets through optional `idp.HTTPLoginProvider` and direct portal injection |
 | [Credential authenticators](references/plugin-categories.md#credential-authenticators) | Validate Basic credentials or API keys | SQLite API keys and `authproxy.Authenticator` through `Gatekeeper.AddAuthenticators` |
 | [Messaging](references/plugin-categories.md#messaging) | Deliver registration or notification messages | SQLite outbox and `messaging.Config.AddProvider` runtime injection |
@@ -130,7 +130,7 @@ README are not proof of a core registration point.
 | Concern | Current authority | Consequence for extensions |
 | --- | --- | --- |
 | Root assembly | [Config](../../../config.go), [NewServer](../../../server.go) | No plugin registry, plugin configuration list, or secrets-manager loader exists here. Resolve external values before validation/construction. |
-| Identity stores | [config](../../../pkg/ids/config.go), [dispatch/interface](../../../pkg/ids/store.go) | The shared dispatcher accepts `local` and `ldap`; implementing the interface alone does not register another kind. |
+| Identity stores | [config](../../../pkg/ids/config.go), [dispatch/interface](../../../pkg/ids/store.go) | The built-in dispatcher accepts `local` and `ldap`; root hosts declare `Config.ExternalIdentityStores` and bind configured handles through `ServerOptions.IdentityStores` without registering a factory. |
 | Identity providers | [config](../../../pkg/idp/config.go), [dispatch/interface](../../../pkg/idp/provider.go) | The shared dispatcher accepts `oauth` and `saml`; a new OAuth driver is different from a new provider kind. |
 | Direct portal composition | [PortalParameters and NewPortal](../../../pkg/authn/portal.go) | A Go host can inject configured identity stores, identity providers, and SSO providers directly, without using the shared factories. |
 | Credential records | [configuration](../../../pkg/credentials/config.go), [credential dispatch](../../../pkg/credentials/credential.go) | `credentials.Config` holds credential definitions; it is not a secrets-backend registry. |
@@ -143,8 +143,12 @@ For direct composition, construct/configure the backend and pass it through
 the current interface and any feature-specific capability checks, not just the
 constructor. The embedding host owns those injected backends: `Portal.Close`
 releases portal resources but does not close shared stores/providers. This is
-an existing injection path; adding a new `Kind` to root `Config`/`NewServer`
-or `authdb` remains separate dispatcher work.
+an existing injection path. Root identity stores additionally use validated
+external descriptors plus named options bindings; see the
+[SQLite identity owner](../sqlite-identity-store/SKILL.md) for configuration
+fingerprints, ownership and persistence. Other categories retain their own
+integration boundaries; this is not a universal loader or an `authdb` plugin
+configuration surface.
 
 A secrets provider supplies configuration values. An identity store owns account
 lookup and operations; an identity provider owns authentication evidence. A

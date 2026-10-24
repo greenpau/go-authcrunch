@@ -64,6 +64,10 @@ The following rules apply to the body of a commit message:
 - If no smoke test was run, `Tests` MUST say `not run` and include the
   reason.
 - `More info` MUST summarize the implementation details or notable decisions.
+- Do not reference `tmp/` directories or their contents anywhere in a commit
+  message, including validation commands, links and absolute paths. Summarize
+  the actual checks and decisions directly, omitting temporary output-path
+  arguments. Use tracked source or stable public references when needed.
 
 The `Links` section must contain a list of valid links or references, e.g.:
 
@@ -109,4 +113,6 @@ For every request to create or generate a commit message, write it below
 message file. A review-only request does not create a file unless asked.
 
 Commit message files in `tmp/commits` are working artifacts and should not be
-committed unless explicitly requested.
+committed unless explicitly requested. Their location and the user-facing
+`git commit -F ...` command are separate from the message contents; neither
+belongs inside the generated message.

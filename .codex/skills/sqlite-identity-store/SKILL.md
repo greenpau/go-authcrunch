@@ -8,8 +8,32 @@ description: Maintain the pure-Go SQLite password identity store, reusable parse
 `plugins/identity-stores/sqlite` implements `ids.IdentityStore` and the optional
 `WithRefreshIdentity` transaction capability. It reports kind `sqlite`, never
 `local`. Inject an open store into `authn.PortalParameters.IdentityStores` and
-select its name in `PortalConfig.IdentityStores`. Root configuration factories
-remain local/LDAP-only; embedding hosts own selection and Close.
+select its name in `PortalConfig.IdentityStores`. Root hosts describe it through
+`ids.NewExternalIdentityStoreConfig(name, "sqlite", realm, normalizedConfig)`,
+append that descriptor to `Config.ExternalIdentityStores`, and provide the open
+handle in `ServerOptions.IdentityStores[name]` to `NewServerWithOptions`. This
+preserves ordinary root assembly; built-in factories remain local/LDAP-only.
+The host owns the handle on success and on constructor failure, and closes it
+only after every sharing portal/root drains.
+
+Descriptors contain name, actual kind, realm and a SHA-256 configuration digest;
+they contain no backend path, credentials or runtime handle. Normalize backend
+configuration through its parser/Validate before deriving the descriptor. Native
+JSON retains the descriptor but requires fresh runtime bindings after decoding.
+Root validation includes external names in default portal selection, disabled
+selection filtering and name/realm collision checks. Missing/extra bindings,
+misidentified or unconfigured handles, duplicate names and built-in kind
+impersonation fail before root resources are acquired.
+
+The descriptor digest participates in persistent root compatibility. Root
+construction never attaches persistent state to an injected store or overrides
+its fresh proof epoch. Reopening SQLite invalidates restored refresh evidence;
+previously issued JWTs keep their configured lifetime. Changed backend identity
+or normalized configuration retires persisted authority through the root binding.
+Legacy local registry wiring, provider attachments and downstream OIDC local
+identity adapters do not accept this backend; profile credentials still require
+their independent capability. A password login integration does not grant those
+surfaces.
 
 ## Configuration and provisioning
 
@@ -91,9 +115,13 @@ serialized config, a real TLS portal, browser sandbox, native login client, dire
 independent JWT verification, policy rejection, backend failure and restart.
 Its mutation-after-verification fixture proves direct issuance rechecks current
 identity. Run it both in this module and the isolated external-module driver.
+Root consumer tests additionally exercise descriptor JSON restoration, native
+TLS login and refresh, current-role invalidation, stateful stop/start with fresh
+backend epochs, borrowed-handle ownership, failed construction and OIDC denial.
 
 ```
-make test TEST_DIR='./plugins/identity-stores/sqlite/... ./internal/tag'
+make test TEST_DIR='./plugins/identity-stores/sqlite/... ./pkg/ids ./internal/tag'
+make test TEST_DIR='.' TEST='ExternalIdentity|ExternalSQLite'
 make test TEST_DIR='./pkg/authn' TEST='TestE2EAuthenticationChallengeDirectTransaction|TestDirect|TestTokenIssuer'
 ```
 

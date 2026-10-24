@@ -79,7 +79,10 @@ func newRefMap() refMap {
 // Supply fresh bindings after decoding configuration; NewServer never falls
 // back to memory for a configured but missing OAuth store.
 type ServerOptions struct {
-	OAuthLoginStores map[string]oauth.LoginStore `json:"-" xml:"-" yaml:"-"`
+	// IdentityStores binds the exact names declared in Config.ExternalIdentityStores.
+	// Handles must already be configured; the root never configures or closes them.
+	IdentityStores   map[string]ids.IdentityStore `json:"-" xml:"-" yaml:"-"`
+	OAuthLoginStores map[string]oauth.LoginStore  `json:"-" xml:"-" yaml:"-"`
 }
 
 // NewServer constructs a runtime and owns its providers, stores, registries,
@@ -99,6 +102,9 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 	}
 	var authenticators []authproxy.Authenticator
 	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+	if err := validateExternalIdentityStoreBindings(config, options.IdentityStores); err != nil {
 		return nil, err
 	}
 	filter, err := logging.NewFilter(config.Logging)
@@ -177,6 +183,14 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 			}
 		}
 		srv.nameRefs.identityStores[store.GetName()] = store
+		srv.identityStores = append(srv.identityStores, store)
+	}
+
+	// External handles are borrowed. In particular, do not attach root state to
+	// them: backend proof epochs and storage ownership belong to their host.
+	for _, descriptor := range config.ExternalIdentityStores {
+		store := options.IdentityStores[descriptor.Name]
+		srv.nameRefs.identityStores[descriptor.Name] = store
 		srv.identityStores = append(srv.identityStores, store)
 	}
 
