@@ -26,6 +26,14 @@ import (
 	"go.uber.org/zap"
 )
 
+var _ authproxy.FreshAuthenticator = (*Portal)(nil)
+
+// RequireFreshAuthentication prevents gatekeepers from caching Basic or API-key
+// authentication results. Each credential request must check the current
+// backend identity, credential and authentication policy. This stable capability
+// does not change validation or caching of separately presented bearer tokens.
+func (*Portal) RequireFreshAuthentication() bool { return true }
+
 // BasicAuth performs password authentication subject to the effective policy.
 func (p *Portal) BasicAuth(r *authproxy.Request) error {
 	if p.closed.Load() || p.persistentStateErr() != nil {

@@ -3,7 +3,7 @@ files:
     cmd/authdb/main.go: 53cb8c3ca9c3df5ababb8fecb7d2b80ac96a9c0fc52d31ecf88d1e27e5772df1
     config.go: 58533796bf8fb4a62f161364a1277ca85c497606ac525520e4b893d4995db45c
     config_external_identity.go: 20dbdc346873d84ccc3e6c440b9cfb1f6b7345bdcfa0328d093a18dab1817b0d
-    config_external_identity_provider.go: 064a880adca5f41c0625fcf7242b4d5f0ac5de6f1fa1fdb405f636471aa93ee5
+    config_external_identity_provider.go: 11085389dd53aecfa261a20363616a20f071988c5c87802dc832085a15e9c9c9
     config_external_user_registry.go: bb4b6c027589c94adc7dc94727fe6fd802d68f550f3b7567ce9de731d10c6a35
     config_oauth_applications.go: c3d105f8cb5eab55866d97259bd990d3b0da25eb68412f6069b293e21c20491d
     config_oauth_authorization.go: 19e0d80bce0f703c65752ade6259436bd033bc258a420a76b83a1edb0ab6de62
@@ -50,7 +50,7 @@ files:
     pkg/authn/api_test_user_webauthn_token.go: 7c76f3193d2689da81706ae98a3be646ca63bdafa0e8f716ec14c64f39da2ac9
     pkg/authn/api_update_user_password.go: 6fdb0ab273daa401cb1c41c7342caf027b9b58814efc26dac8baae71ee2d07ff
     pkg/authn/authentication_challenges.go: 0bebc8abdabc7db5ad70e83cf04241d48959a19c5c822c0fbe164787d584af23
-    pkg/authn/authproxy_basic_auth.go: 57ca3a0c5d100c0e1b98ab316e06d3ac6d264491e00f3d1b3b929b408b10a3f0
+    pkg/authn/authproxy_basic_auth.go: 6c4b4e4c4f3c69859dd922898b13ee3b5ef1b0f87c57d6fdd516cc436fc7ce76
     pkg/authn/browser_sandbox.go: 4c2b522a5f1e3bf163ecb7e10bbd12ea131577aa04dee1db65d0b91aac0c8733
     pkg/authn/cache/sandbox.go: 022edfde741c28cefa60728190da02b0a038a9facde4c83d16c6e0e110c3b9d3
     pkg/authn/cache/session.go: 8fc8e9e5089f092f3ff1b442f4952585b95f06d08892cb80093b95ba540e565a
@@ -384,5 +384,5 @@ files:
     plugins/registration-workflows/sqlite/config.go: 9785f115b65e64aea1921465c7cbd8336964551dd8cd60dc5f16944af9f93b72
     plugins/registration-workflows/sqlite/parser/parser.go: 757678ff613256309f3a9a536ff968ed87cde46c3ee691300193d98a031fbd04
     plugins/registration-workflows/sqlite/workflow.go: 5961c32949b00a17cb4f80198839ab82d36c56d759cd71c8e8f23bc199246cd0
-    server.go: e0982dd88f1fbec4e5a2f24229d4098cafb19f97722162449a97349897dc847d
+    server.go: 089040bd8b54d5bb20c49ee061a54156d955205ea25f4caa9f9175a7401f011e
     server_persistent_state.go: 706d1920510d914041ee78a43143068a11b7294028eadb234b363073065cd371

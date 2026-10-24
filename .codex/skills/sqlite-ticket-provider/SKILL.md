@@ -65,15 +65,22 @@ provider filtering retains its existing behavior.
 Runtime bindings must match exactly by name, realm, kind and driver and pass
 Configured. Missing, extra, nil, typed-nil or unavailable bindings fail before
 root state acquisition. Optional attachment consumers must return a nonnil binding;
-an explicit StoreName must already be bound. These checks inspect existing wiring
+by default an explicit StoreName must already be bound. These checks inspect existing wiring
 without allocating an unnamed private attachment or testing broader account-store
 health. Only plugin metadata/readiness calls contain panics.
 The root keeps the original dynamic provider and its optional capabilities; it
-never calls Configure/Close or installs attachment/persistent state in borrowed
-providers. The host must complete any attachment wiring before construction.
+never calls Configure/Close or installs persistent state in borrowed providers.
+For a fresh ticket handle with an explicit attachment, the host may opt in through
+`ServerOptions.IdentityProviderAttachmentStores[providerName] = localStoreName`.
+The target must be one enabled root-owned built-in local declaration, and the
+attachment must be unbound and name that same store. The root binds its actual
+configured local store before portal publication. Preserve Attachment in the
+normalized backend descriptor, dispose the provider after a failed construction,
+and follow the [attachment ownership contract](../local-identity-database/references/external-accounts.md#configuration-and-ownership).
+Other borrowed providers retain host-completed wiring.
 `PortalParameters.IdentityAttachmentsBound` is runtime-only and means the caller
 has completed attachment wiring for every supplied store/provider. The root sets
-it after binding its owned backends; standalone portals retain automatic binding
+it after binding its owned and explicitly opted backends; standalone portals retain automatic binding
 when the flag is omitted. Drain all consumers before replacing a shared handle.
 
 ## Trusted issuance and browser flow
@@ -198,3 +205,10 @@ issuance through a separate SQLite handle, exact borrowed ownership, shared
 attachment IDs across portals, native configuration restoration, pending-ticket
 restart, new-instance ID loss, old-proof rejection, independently verified JWTs
 and local-factor policy denial after consumption.
+`TestE2EServerExternalSQLiteTicketAttachment` uses the explicit root opt-in with
+the actual configured local store. It checks same-email separation, shared IDs
+across portals, current local roles and disablement, file-backed ID and proof
+epoch continuity across fresh provider/root instances, and a consumed callback
+remaining spent after re-enable. Root units cover invalid preflight without
+resource acquisition, original dynamic provider ownership, and snapshot failures
+before and after binding; retry after binding requires a fresh provider.

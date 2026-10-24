@@ -19,6 +19,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
+	"github.com/greenpau/go-authcrunch/pkg/ids/local"
 )
 
 // Index only declaration metadata. Neither provider configuration nor runtime
@@ -55,22 +56,72 @@ func (cfg *Config) identityProviderRealms() (map[string]string, error) {
 	return realms, nil
 }
 
-func validateExternalIdentityProviderBindings(config *Config, bindings map[string]idp.IdentityProvider) error {
+// Capture the immutable attachment once during plugin metadata preflight. Later
+// wiring uses this pointer and the root's actual local store, without invoking
+// another plugin accessor after acquiring root resources.
+type identityProviderAttachmentBinding struct {
+	providerName string
+	storeName    string
+	attachment   *attachment.Attachment
+}
+
+func validateExternalIdentityProviderBindings(config *Config, bindings map[string]idp.IdentityProvider, targets map[string]string) ([]identityProviderAttachmentBinding, error) {
 	expected := make(map[string]bool, len(config.ExternalIdentityProviders))
+	var prepared []identityProviderAttachmentBinding
 	for _, descriptor := range config.ExternalIdentityProviders {
 		expected[descriptor.Name] = true
 		provider, found := bindings[descriptor.Name]
 		if !found {
-			return fmt.Errorf("external identity provider %q runtime binding is missing", descriptor.Name)
+			return nil, fmt.Errorf("external identity provider %q runtime binding is missing", descriptor.Name)
 		}
-		if err := validateExternalIdentityProviderBinding(descriptor, provider); err != nil {
-			return err
+		target, bind := targets[descriptor.Name]
+		if bind {
+			if err := validateIdentityProviderAttachmentTarget(config, target); err != nil {
+				return nil, fmt.Errorf("external identity provider %q requires a unique enabled root-owned local attachment store", descriptor.Name)
+			}
+		}
+		attached, err := validateExternalIdentityProviderBinding(descriptor, provider, target, bind)
+		if err != nil {
+			return nil, err
+		}
+		if bind {
+			prepared = append(prepared, identityProviderAttachmentBinding{providerName: descriptor.Name, storeName: target, attachment: attached})
 		}
 	}
 	for name := range bindings {
 		if !expected[name] {
-			return fmt.Errorf("external identity provider %q has no descriptor", name)
+			return nil, fmt.Errorf("external identity provider %q has no descriptor", name)
 		}
+	}
+	for name := range targets {
+		if !expected[name] {
+			return nil, fmt.Errorf("external identity provider attachment %q has no descriptor", name)
+		}
+	}
+	return prepared, nil
+}
+
+// This reference check runs before state or stores open. An external store
+// cannot impersonate the built-in local kind; opted targets are root-owned.
+func validateIdentityProviderAttachmentTarget(config *Config, target string) error {
+	if target == "" || (attachment.Config{LocalIdentityStore: target}).Validate() != nil {
+		return fmt.Errorf("invalid local attachment store name")
+	}
+	if _, disabled := config.disabledIdentityStores[target]; disabled {
+		return fmt.Errorf("local attachment store is disabled")
+	}
+	var matches int
+	for _, store := range config.IdentityStores {
+		if store.Name != target {
+			continue
+		}
+		if store.Kind != "local" {
+			return fmt.Errorf("attachment store is not local")
+		}
+		matches++
+	}
+	if matches != 1 {
+		return fmt.Errorf("attachment store is not unique")
 	}
 	return nil
 }
@@ -78,20 +129,51 @@ func validateExternalIdentityProviderBindings(config *Config, bindings map[strin
 // Contain only plugin metadata/readiness checks at this constructor boundary,
 // including typed nil interfaces. Configure, attachment binding, construction
 // and request handling are deliberately outside this recovery scope.
-func validateExternalIdentityProviderBinding(descriptor *idp.ExternalIdentityProviderConfig, provider idp.IdentityProvider) (err error) {
+func validateExternalIdentityProviderBinding(descriptor *idp.ExternalIdentityProviderConfig, provider idp.IdentityProvider, target string, bind bool) (attached *attachment.Attachment, err error) {
 	defer func() {
 		if recover() != nil {
+			attached = nil
 			err = fmt.Errorf("external identity provider %q has an invalid runtime binding", descriptor.Name)
 		}
 	}()
 	if provider == nil || provider.GetName() != descriptor.Name || provider.GetKind() != descriptor.Kind || provider.GetDriver() != descriptor.Driver || provider.GetRealm() != descriptor.Realm {
-		return fmt.Errorf("external identity provider %q runtime identifiers do not match", descriptor.Name)
+		return nil, fmt.Errorf("external identity provider %q runtime identifiers do not match", descriptor.Name)
 	}
 	if !provider.Configured() {
-		return fmt.Errorf("external identity provider %q is not configured", descriptor.Name)
+		return nil, fmt.Errorf("external identity provider %q is not configured", descriptor.Name)
+	}
+	if bind {
+		consumer, ok := provider.(attachment.Consumer)
+		if !ok {
+			return nil, fmt.Errorf("external identity provider %q has no identity attachment", descriptor.Name)
+		}
+		attached = consumer.IdentityAttachment()
+		if attached == nil || attached.StoreName() != target {
+			return nil, fmt.Errorf("external identity provider %q attachment does not match its target", descriptor.Name)
+		}
+		// A root-created local store cannot be the provider's existing pointer.
+		// Refuse reuse before Configure can touch the candidate's account files.
+		// Store on this nonempty explicit name inspects wiring without I/O.
+		if _, err := attached.Store(); err == nil {
+			return nil, fmt.Errorf("external identity provider %q attachment is already bound", descriptor.Name)
+		}
+		return attached, nil
 	}
 	if err := validateBorrowedIdentityAttachment(provider); err != nil {
-		return fmt.Errorf("external identity provider %q attachment is not ready", descriptor.Name)
+		return nil, fmt.Errorf("external identity provider %q attachment is not ready", descriptor.Name)
+	}
+	return nil, nil
+}
+
+func (srv *Server) bindExternalIdentityProviderAttachments(bindings []identityProviderAttachmentBinding) error {
+	for _, binding := range bindings {
+		store, ok := srv.nameRefs.identityStores[binding.storeName].(*local.IdentityStore)
+		if !ok || store == nil || !store.Configured() {
+			return fmt.Errorf("external identity provider %q attachment target is unavailable", binding.providerName)
+		}
+		if err := attachment.BindStore(binding.attachment, store); err != nil {
+			return fmt.Errorf("external identity provider %q attachment binding failed", binding.providerName)
+		}
 	}
 	return nil
 }

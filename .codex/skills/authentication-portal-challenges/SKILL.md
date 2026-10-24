@@ -201,6 +201,12 @@ requirements. A valid password cannot satisfy TOTP or WebAuthn. Both the public
 denied local HTTP Basic policy checks return 403, never a successful status.
 Attached LDAP's browser Basic route can redirect to the local-factor sandbox;
 that redirect must not issue access before the required checkpoints complete.
+Gatekeepers forwarding Basic or API-key credentials to a portal must repeat
+these current-policy checks on each request. The portal's stable
+`FreshAuthenticator` capability prevents an earlier successful credential result
+from bypassing a newly required factor; ordinary bearer JWT validation retains
+its existing contract. See the
+[credential authenticator boundary](../credential-authenticators/SKILL.md).
 
 API keys retain their separate legacy login behavior only when there is no
 explicit stored/portal policy and no additive requirement. Any explicit

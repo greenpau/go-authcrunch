@@ -24,6 +24,17 @@ Ordinary cacheable authenticators preserve their existing behavior. Cache keys
 separate payload class, Basic/API-key method, source address, realm, and a SHA-256
 secret digest with unambiguous field boundaries. Do not cache reusable plaintext.
 
+Authentication portals always implement this fresh capability. A gatekeeper
+delegating Basic or API-key authentication to a portal must call the backend on
+every credential request, including after a successful request with identical
+credentials. Current account status, credential validity, roles and effective
+authentication policy remain authoritative; attached directory identities also
+recheck their local identity policy. Account disablement, password reset,
+API-key deletion or a stronger factor requirement must not reuse a previous
+credential result. Budget for the password verification or directory request on
+each call. This does not change the lifetime or caching of separately presented
+bearer JWTs, or opt legacy remote/third-party authenticators into fresh checks.
+
 ## SQLite API keys
 
 `plugins/credential-authenticators/sqlite` implements API keys only; Basic always
@@ -68,6 +79,13 @@ closed-backend rejection after successful requests; repeat it externally with
 `TestE2ECredentialCacheSeparatesMethods` first fills a Basic cache and rejects the
 identical presented bytes as an API key. Context and no-cache capability tests
 also cover validator callers that explicitly invoke `CacheUser`.
+`TestPortalCredentialAuthenticationFreshness` authenticates through a real
+gatekeeper before changing local roles, factor policy and credentials.
+`TestE2EServerPortalCredentialFreshness` assembles the public root and uses
+trusted TLS plus real profile/admin APIs to prove next-request disablement,
+re-enablement, explicit password policy and password reset, while preserving
+independent bearer-token behavior. Retain the remote authenticator and ordinary
+cache regressions alongside these portal tests.
 
 ```
 make test TEST_DIR='./plugins/credential-authenticators/sqlite/... ./pkg/authproxy ./pkg/authz/... ./pkg/requests ./pkg/user ./internal/tag'

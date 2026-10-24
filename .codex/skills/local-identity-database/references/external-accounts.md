@@ -23,11 +23,40 @@ The lower-level `attachment.BindStore(attachment, concreteStorePointer)` accepts
 only a pointer implementing `attachment.Store`; typed nil pointers are rejected.
 Binding the same instance is idempotent, while a different pointer fails even
 if it wraps the same storage. Preserve this instance boundary without reflection.
-`NewServer` binds all providers and LDAP stores, including direct OAuth policies.
+`NewServer` binds its owned providers and LDAP stores, including direct OAuth policies.
 `NewPortal` also binds selected injected backends against its supplied stores.
 Only the target's existence is required for provisioning; enable its local realm
 in the portal for connection confirmation and local factor challenges.
 Do not copy the local database or silently fall back to memory for a broken name.
+
+For a borrowed provider passed through `ServerOptions.IdentityProviders`, the
+default is to preserve its attachment: unnamed memory stays lazy, and an explicit
+name must already be bound. To bind a fresh provider to a store that this root
+will construct, set `ServerOptions.IdentityProviderAttachmentStores` to a map of
+provider name to exact local-store name. Include the typed attachment in the
+normalized backend used for its external provider descriptor. This map is
+runtime-only; it does not replace that declarative persistence binding.
+
+Opt-in preflight requires a matching external provider descriptor and ready
+runtime handle, a nonnil Consumer attachment whose nonempty StoreName equals the
+target, and exactly one enabled built-in local store declaration. Missing,
+disabled, duplicate, external or wrong-kind targets fail before root resources
+open. An already-bound opted provider also fails early; its pointer cannot be the
+new root's store. The root captures the attachment once under sanitized plugin
+metadata checks, configures the actual local store and its persistent epoch, and
+binds that pointer before any portal is published. Several fresh providers may
+share that store. Binding does not enable its local realm on a portal. A target
+named `:memory:` is invalid; a named local store with path `:memory:` is valid
+for a nonpersistent root.
+
+The root still never configures or closes the borrowed provider, replaces its
+dynamic instance, or installs state in a borrowed store. A later construction
+failure can leave the provider bound to the candidate's store. Discard that
+unpublished provider and create a fresh one for retry; failed root construction
+does not undo the binding or every earlier file write. The root releases its own
+components and state lock. Drain consumers before disposing the root and then
+the host-owned provider. Without explicit opt-in, existing caller-owned bindings
+and optional non-Consumer compatibility retain their prior behavior.
 
 Omitted attachments lazily create `identity.NewDatabase(":memory:")` directly,
 without a generated administrator, file, local login realm or background worker.
@@ -169,6 +198,11 @@ attached identity transaction through current policy and signing. They retain
 the directory subject, add local roles and the immutable local ID, and report
 federated AMR. They cannot complete local factors and reject explicit local
 password requirements or MFA; directory password verification is not local proof.
+Portal-backed gatekeepers repeat this directory authentication and local policy
+check for every Basic credential request, even when the same credentials
+previously authorized a resource. The portal opts out of credential-result
+caching; see the
+[credential authenticator contract](../../credential-authenticators/SKILL.md).
 AMR includes federated plus actually completed factors, never upstream AMR/ACR.
 Credential changes and new factor requirements invalidate outstanding proof.
 Direct OAuth policies recheck the attached identity on every session request and
@@ -211,6 +245,13 @@ Keep constructor tests for absent, valid/invalid file, directory and symlink
 sentinel collisions. The implicit-store TLS OAuth journey must prove a matching
 filesystem external key and role do not enter the signed local identity, while
 repeat login retains its private ID and leaves the file unchanged.
+For root opt-in, reject bad targets and reused bound providers before opening
+files or state; a later invalid provider must not mutate an earlier valid one.
+Test failures loading identity epochs before binding and portal snapshots after
+binding, with owned resources released and borrowed providers left to their host.
+The public-root ticket TLS journey must use the actual configured local store,
+preserve file identity and evidence epoch across fresh provider/root instances,
+and recheck local roles and disablement on new verified external login.
 Keep a deterministic TLS test with a frozen clock: an earlier valid local JWT
 must fail without mutation even in the same second, and the operation's own new
 local login must still connect in that second. Close all fixture workers,

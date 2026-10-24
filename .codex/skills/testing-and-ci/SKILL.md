@@ -90,10 +90,10 @@ the failure.
 
 ## Test Lifecycle
 
-The root Go module declares Go `1.26.0`. Repository coverage uses the pinned
+Use the Go version declared by the root module. Repository coverage uses the pinned
 `github.com/greenpau/tested` tool in `go.mod`, invoked through `go tool tested`.
 It owns `-json`, `-coverprofile`, child-process status, and coherent reports.
-Version 1.1.0 streams test activity and bounded log previews by default through
+The tool streams test activity and bounded log previews by default through
 the resource supervisor; complete output remains in `test_output.jsonl`.
 Do not reintroduce `go test | tee`, log-grep success detection, richgo, tparse,
 or go-test-report into the lifecycle.
@@ -139,6 +139,17 @@ as a nonzero-profile check, matching the reference tested workflow; it is not a
 claim of a substantial coverage target. Raise it only with an intentional
 coverage policy and measured baseline.
 
+Make expands dollar signs in command-line variables even inside shell single
+quotes. For example, `TEST='^(TestA|TestB)$|^TestC'` lets Make consume `$|` as an
+automatic variable, changing the selector and potentially omitting tests while
+the process still succeeds. Prefer prefix selectors such as
+`TEST='^TestA|^TestB|^TestC'` when sufficient. If an end anchor is necessary, escape
+its dollar for Make: `TEST='^(TestA|TestB)$$|^TestC'`. Direct `go test -run` uses the
+ordinary single `$`; the extra escape is for Make. Inspect the effective `-run`
+argument in the bundle's `run.json` command and the selected test names in
+`test_output.jsonl` before claiming the intended tests passed. A zero exit status
+or aggregate test count alone does not prove selection.
+
 Direct `go test` is appropriate for a narrow debugging iteration, compile-only
 check, or fuzzing; run it under `python3 assets/scripts/test_guard.py run go test ...`
 to retain the resource guard. It is not the report lifecycle. Agents must
@@ -147,7 +158,7 @@ background duplicate suites. `make test-ui` discovers
 `pkg/authn/ui/testdata/*_client_test.cjs` and runs Node's spec reporter for login/QR
 and refresh-client simulations. Automation uses verbose Python unittest
 discovery. Both use standard-library facilities. The default Go suite also runs
-`TestE2ERefreshBrowserBootstrap` with Node 24 and headless Chrome, using a temporary
+`TestE2ERefreshBrowserBootstrap` with Node and headless Chrome, using a temporary
 profile and actual TLS portal. Supply `AUTHCRUNCH_TEST_BROWSER` when the executable
 is not discoverable. Missing browsers are a validation failure; the Node VM
 suite does not substitute for this E2E. The default suite also runs
@@ -462,8 +473,9 @@ Read [change-based testing](../scripts-and-automation/references/change-tests.md
 for ranges, impact rules, reports, and conservative fallbacks. The
 `release-and-versioning` skill owns exact annotated-tag deduplication.
 
-Go and quality jobs select Ubuntu 24.04, Go 1.26.8, Node 24, Python 3, and NSS
-utilities. Each Go shard has a 100-minute job deadline and explicit CI resource
+Go and quality jobs select the Ubuntu runner, Go and Node versions declared in
+the workflow, plus Python and NSS utilities. Each Go shard has a 100-minute job
+deadline and explicit CI resource
 budgets; quality checks retain local fixture defaults and a 45-minute job.
 Separate dependency and per-commit/per-shard build caches retain useful compiled
 outputs. Each shard verifies source cleanliness, publishes timings, and uploads

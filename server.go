@@ -80,9 +80,18 @@ func newRefMap() refMap {
 // back to memory for a configured but missing OAuth store.
 type ServerOptions struct {
 	// IdentityProviders binds Config.ExternalIdentityProviders. Handles retain
-	// their optional capabilities and attachment state. The root never configures,
-	// rebinds attachments, installs persistent state in or closes these providers.
+	// their optional capabilities. The root never configures, installs persistent
+	// state in or closes these providers. Attachment wiring is preserved unless
+	// explicitly requested through IdentityProviderAttachmentStores.
 	IdentityProviders map[string]idp.IdentityProvider `json:"-" xml:"-" yaml:"-"`
+
+	// IdentityProviderAttachmentStores opts named borrowed providers into binding
+	// to named root-owned local stores before publication. Each provider must have
+	// a fresh, unbound explicit attachment naming that store. The host must include
+	// the attachment in its normalized descriptor and dispose the provider after
+	// any failed construction: a later failure does not undo an installed binding.
+	// The root never takes ownership of the provider or replaces an existing bind.
+	IdentityProviderAttachmentStores map[string]string `json:"-" xml:"-" yaml:"-"`
 
 	// UserRegistries binds Config.ExternalUserRegistries. Providers must already
 	// be ready; the root never activates, rebinds or closes borrowed registries.
@@ -115,7 +124,8 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 	if err := validateExternalIdentityStoreBindings(config, options.IdentityStores); err != nil {
 		return nil, err
 	}
-	if err := validateExternalIdentityProviderBindings(config, options.IdentityProviders); err != nil {
+	attachmentBindings, err := validateExternalIdentityProviderBindings(config, options.IdentityProviders, options.IdentityProviderAttachmentStores)
+	if err != nil {
 		return nil, err
 	}
 	if err := validateExternalUserRegistryBindings(config, options.UserRegistries); err != nil {
@@ -222,8 +232,12 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 		}
 	}
 
-	// Borrow the original dynamic provider after binding owned attachments.
-	// Hosts own all attachment setup; no wrapper or private fallback is installed.
+	if err := srv.bindExternalIdentityProviderAttachments(attachmentBindings); err != nil {
+		return nil, err
+	}
+	// Borrow the original dynamic provider after all requested attachment wiring.
+	// No wrapper or private fallback is installed, and provider ownership remains
+	// with the host even when this root installed its explicit local binding.
 	for _, descriptor := range config.ExternalIdentityProviders {
 		provider := options.IdentityProviders[descriptor.Name]
 		srv.nameRefs.identityProviders[descriptor.Name] = provider

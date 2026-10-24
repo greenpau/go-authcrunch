@@ -60,19 +60,26 @@ For external identity providers, derive `idp.NewExternalIdentityProviderConfig`
 from normalized backend configuration and supply the descriptor through
 `Config.ExternalIdentityProviders`. Supply the exact configured handle through
 `ServerOptions.IdentityProviders`. Retain optional HTTP and attachment interfaces;
-the root does not configure, close, clone or rebind borrowed providers. Unknown
+the root does not configure, close or clone borrowed providers. Existing bindings
+are never replaced. To bind a fresh explicit attachment to a root-owned local
+store, opt in that provider through runtime-only
+`ServerOptions.IdentityProviderAttachmentStores`; include its typed attachment
+configuration in the normalized descriptor. The
+[attachment owner](../../local-identity-database/references/external-accounts.md#configuration-and-ownership)
+defines early checks, store ownership and failure disposal. Unknown
 provider selections and name/realm collisions fail pure root preflight. Omitted
 portal backend selections include external providers; explicit selections do not
 expand. See the [ticket provider owner](../../sqlite-ticket-provider/SKILL.md) for
 trusted issuance, transient implicit identities and pending-ticket durability.
 
-The root completes attachment wiring for owned backends and sets runtime-only
+The root completes attachment wiring for owned and explicitly opted backends,
+then sets runtime-only
 `PortalParameters.IdentityAttachmentsBound`. This tells the portal that its caller
-has completed wiring for every supplied store/provider; borrowed attachment setup
-remains the host's responsibility. Standalone callers retain automatic binding
+has completed wiring for every supplied store/provider. Other borrowed attachment
+setup remains the host's responsibility. Standalone callers retain automatic binding
 unless they set this flag. Configured checks backend readiness. Root additionally
 requires optional attachment consumers to return a nonnil attachment and verifies
-that an explicit StoreName is already bound; it never allocates unnamed attachment
+that a non-opted explicit StoreName is already bound; it never allocates unnamed attachment
 state during validation or claims broader account-store health. Do not install
 persistent root state in borrowed handles.
 

@@ -124,7 +124,12 @@ configuration and inject the matching ready handle through
 before acquiring resources, preserves optional interfaces and caller-owned
 attachment state, and never configures or closes the borrowed provider. Optional
 attachment consumers require a nonnil attachment and an already-bound explicit
-StoreName; unnamed private attachments remain lazy. Pure root validation checks selected names/realms, including unknown selections. Backend
+StoreName by default; unnamed private attachments remain lazy. A fresh explicit
+Consumer may instead opt in through `ServerOptions.IdentityProviderAttachmentStores`
+to bind the root's actual local store before publication. Follow the
+[attachment ownership and failure contract](../../local-identity-database/references/external-accounts.md#configuration-and-ownership);
+this does not transfer provider ownership or replace existing bindings.
+Pure root validation checks selected names/realms, including unknown selections. Backend
 factory dispatch remains limited to its existing built-in kinds.
 Other protocol extensions still require their own verification and integration;
 implementing IdentityProvider alone does not install arbitrary callback routes.
