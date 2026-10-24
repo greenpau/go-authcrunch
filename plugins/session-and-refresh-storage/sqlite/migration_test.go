@@ -21,6 +21,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -285,7 +286,7 @@ func TestSQLiteV1MigrationRejectsBeforeMutation(t *testing.T) {
 	}
 }
 
-func TestSQLiteV1MigrationCommitFailure(t *testing.T) {
+func TestSQLiteV1MigrationReaderContention(t *testing.T) {
 	original := sessionFixture("legacy")
 	cfg, old := legacyDatabase(t, []tokenrefresh.Session{original}, nil)
 	reader, err := old.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
@@ -297,16 +298,18 @@ func TestSQLiteV1MigrationCommitFailure(t *testing.T) {
 	if err := reader.QueryRow("SELECT count(*) FROM families").Scan(&n); err != nil {
 		t.Fatal(err)
 	}
-	candidate, err := New(t.Context(), &cfg)
-	if candidate != nil || !errors.Is(err, tokenrefresh.ErrCommitUncertain) {
-		t.Fatal("migration commit failure was not uncertain", err)
+	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
+	defer cancel()
+	candidate, err := New(ctx, &cfg)
+	if candidate != nil || !errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrCommitUncertain) {
+		t.Fatal("reader contention was not rejected before migration", err)
 	}
 	if err := reader.Rollback(); err != nil {
 		t.Fatal(err)
 	}
 	var version int
 	if err := old.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != 1 {
-		t.Fatal("busy migration commit was not rolled back", err)
+		t.Fatal("blocked migration changed the schema", err)
 	}
 	// Recovery opens a new handle after observation of this concrete rollback;
 	// the failed constructor did not publish a store or an activated view.
@@ -317,6 +320,41 @@ func TestSQLiteV1MigrationCommitFailure(t *testing.T) {
 	defer reopened.Close()
 	if _, err := reopened.Lookup(t.Context(), original.Current, original.Binding); err != nil {
 		t.Fatal("recovery lost legacy authority", err)
+	}
+}
+
+func TestSQLiteV1MigrationCommitFailure(t *testing.T) {
+	original := sessionFixture("legacy")
+	cfg, old := legacyDatabase(t, []tokenrefresh.Session{original}, nil)
+	info, err := os.Lstat(cfg.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Exercise initialization on a real SQLite connection with a failing COMMIT
+	// hook. Reader contention is resolved at admission, before migration begins.
+	s := &Store{db: old, config: cfg, file: info, timeout: 5 * time.Second, now: time.Now}
+	setStoreCommitHook(t, s, func() int32 { return 1 })
+	err = s.transact(t.Context(), nil, func(ctx context.Context, tx *sql.Tx) (bool, error) {
+		return true, s.initialize(ctx, tx)
+	})
+	setStoreCommitHook(t, s, nil)
+	if !errors.Is(err, ErrCommitUncertain) || !s.closed.Load() {
+		t.Fatal("migration commit failure was not quarantined", err)
+	}
+	var version, newTables int
+	if err := old.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != 1 {
+		t.Fatal("failed migration changed the schema version", err)
+	}
+	if err := old.QueryRow("SELECT count(*) FROM sqlite_schema WHERE name GLOB '*_v2'").Scan(&newTables); err != nil || newTables != 0 {
+		t.Fatal("failed migration left new schema objects", err)
+	}
+	reopened, err := New(t.Context(), &cfg)
+	if err != nil {
+		t.Fatal("reopen after rejected migration commit", err)
+	}
+	defer reopened.Close()
+	if _, err := reopened.Lookup(t.Context(), original.Current, original.Binding); err != nil {
+		t.Fatal("failed migration lost legacy authority", err)
 	}
 }
 

@@ -249,7 +249,7 @@ func TestSQLiteManagedScopeAndGlobalLimits(t *testing.T) {
 }
 
 func TestSQLiteManagedActivationFailure(t *testing.T) {
-	for _, phase := range []string{"invalid generation", "before commit", "attempted commit"} {
+	for _, phase := range []string{"invalid generation", "before commit", "reader contention", "attempted commit"} {
 		t.Run(phase, func(t *testing.T) {
 			s := testStore(t, 1, 2)
 			g := managedGeneration("a", "1")
@@ -270,7 +270,10 @@ func TestSQLiteManagedActivationFailure(t *testing.T) {
 				var cancel context.CancelFunc
 				ctx, cancel = context.WithCancel(ctx)
 				cancel()
-			case "attempted commit":
+			case "reader contention":
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(ctx, 25*time.Millisecond)
+				defer cancel()
 				var err error
 				reader, err = other.db.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
 				if err != nil {
@@ -281,6 +284,8 @@ func TestSQLiteManagedActivationFailure(t *testing.T) {
 				if err := reader.QueryRow("SELECT count(*) FROM refresh_families_v2").Scan(&n); err != nil {
 					t.Fatal(err)
 				}
+			case "attempted commit":
+				setStoreCommitHook(t, s, func() int32 { return 1 })
 			}
 			candidate, err := s.ActivateGeneration(ctx, g2)
 			if candidate != nil || err == nil {
@@ -299,14 +304,21 @@ func TestSQLiteManagedActivationFailure(t *testing.T) {
 				if ErrCommitUncertain != tokenrefresh.ErrCommitUncertain || !errors.Is(err, tokenrefresh.ErrCommitUncertain) {
 					t.Fatal("core uncertainty identity lost", err)
 				}
-				if err := reader.Rollback(); err != nil {
-					t.Fatal(err)
-				}
 				if err := s.CheckReady(t.Context()); !errors.Is(err, tokenrefresh.ErrUnavailable) {
 					t.Fatal("uncertain handle not quarantined")
 				}
+			case "reader contention":
+				if !errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrCommitUncertain) {
+					t.Fatal("reader contention was not rejected before activation", err)
+				}
+				if err := reader.Rollback(); err != nil {
+					t.Fatal(err)
+				}
+				if err := s.CheckReady(t.Context()); err != nil {
+					t.Fatal("reader contention quarantined the handle", err)
+				}
 			}
-			// This concrete busy commit rolled back; this control is not permission for
+			// These rejected operations rolled back; this control is not permission for
 			// an application to retry arbitrary ambiguous commits or issue credentials.
 			recovered := activateStore(t, other, g)
 			if _, err := recovered.Lookup(t.Context(), session.Current, session.Binding); err != nil {

@@ -483,21 +483,48 @@ func TestSQLiteLockCancellationAndCommitFailure(t *testing.T) {
 	if err := reader.QueryRow("SELECT count(*) FROM refresh_families_v2").Scan(&n); err != nil {
 		t.Fatal(err)
 	}
-	err = s.Rotate(t.Context(), first, sha256.Sum256([]byte("commit fails")), first.IdleExpiresAt, expiry)
-	if !errors.Is(err, ErrCommitUncertain) {
-		t.Fatal("failed commit not identified", err)
+	ctx, cancel = context.WithTimeout(t.Context(), 25*time.Millisecond)
+	err = s.Rotate(ctx, first, sha256.Sum256([]byte("reader blocked")), first.IdleExpiresAt, expiry)
+	cancel()
+	if !errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrCommitUncertain) {
+		t.Fatal("reader contention was not rejected safely before mutation", err)
 	}
 	if err := reader.Rollback(); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := s.Lookup(t.Context(), first.Current, first.Binding); err != nil {
+		t.Fatal("reader contention spent the credential or disabled the handle", err)
+	}
+	// Reject an actual SQLite COMMIT independently of reader contention, which
+	// must now be resolved before any transaction work begins.
+	setStoreCommitHook(t, s, func() int32 { return 1 })
+	err = s.Rotate(t.Context(), first, sha256.Sum256([]byte("commit fails")), first.IdleExpiresAt, expiry)
+	if !errors.Is(err, ErrCommitUncertain) {
+		t.Fatal("failed commit not identified", err)
+	}
 	if _, err := s.Lookup(t.Context(), first.Current, first.Binding); !errors.Is(err, tokenrefresh.ErrUnavailable) {
 		t.Fatal("uncertain handle remained usable")
 	}
-	// SQLite rolled back this concrete busy commit. Another connection observes
+	// SQLite rolled back this concrete hook rejection. Another connection observes
 	// the unchanged family; this is test evidence, not permission to retry an
 	// arbitrary ambiguous commit in an application.
 	if _, err := other.Lookup(t.Context(), first.Current, first.Binding); err != nil {
-		t.Fatal("busy commit was not rolled back", err)
+		t.Fatal("rejected commit was not rolled back", err)
+	}
+}
+
+func setStoreCommitHook(t *testing.T, s *Store, hook driver.CommitHookFn) {
+	t.Helper()
+	conn, err := s.db.Conn(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = conn.Raw(func(raw any) error {
+		raw.(interface{ RegisterCommitHook(driver.CommitHookFn) }).RegisterCommitHook(hook)
+		return nil
+	})
+	if closeErr := conn.Close(); err != nil || closeErr != nil {
+		t.Fatal("configure commit hook", err, closeErr)
 	}
 }
 
@@ -576,23 +603,10 @@ func TestSQLiteRequestFailurePreservesHealthyHandle(t *testing.T) {
 				return time.Unix(base, 0)
 			}
 			if phase == "during commit" {
-				setHook := func(hook driver.CommitHookFn) {
-					conn, err := s.db.Conn(t.Context())
-					if err != nil {
-						t.Fatal(err)
-					}
-					err = conn.Raw(func(raw any) error {
-						raw.(interface{ RegisterCommitHook(driver.CommitHookFn) }).RegisterCommitHook(hook)
-						return nil
-					})
-					if closeErr := conn.Close(); err != nil || closeErr != nil {
-						t.Fatal("configure commit hook", err, closeErr)
-					}
-				}
 				// Cancel from SQLite's actual commit hook, after database/sql has
 				// handed COMMIT to the driver. The commit itself still succeeds.
-				setHook(func() int32 { cancel(); return 0 })
-				defer setHook(nil)
+				setStoreCommitHook(t, s, func() int32 { cancel(); return 0 })
+				defer setStoreCommitHook(t, s, nil)
 			}
 			next := sha256.Sum256([]byte("request-failure-next"))
 			err := s.Rotate(ctx, first, next, base+120, base+60)

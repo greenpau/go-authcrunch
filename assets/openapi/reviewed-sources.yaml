@@ -405,6 +405,6 @@ files:
     plugins/session-and-refresh-storage/sqlite/parser/parser.go: f680c20ab6b6fb46daef4c33417dfd4080a96d40023ec46632d68df3234260eb
     plugins/session-and-refresh-storage/sqlite/record.go: 91c05fab280cd87a2a0d1316c081c2e3b839c8559eb0e381472e9b75a878a21d
     plugins/session-and-refresh-storage/sqlite/schema.go: b724a222f4a2957200645320a0c4b60488f85bf2f8913b198d53ef1c1b666053
-    plugins/session-and-refresh-storage/sqlite/store.go: bb4907e3aa5c0c19744cc3aaddb18abe0cc79975034d7b239c3a25fe0b15b946
+    plugins/session-and-refresh-storage/sqlite/store.go: 5d4070be16b13ad18483a88290d466892cb00b936629ef0522e9c3bfee728894
     server.go: 6cdfc6371f4e2ae4092f2cebb853ce80cd1a79a7c1b86378d99b99f2914d3f2d
     server_persistent_state.go: 42dfe5b07dc769781654b9dcb411b40ae883731ed8842e8385ec06c1d1fd3dbf

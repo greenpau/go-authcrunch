@@ -90,16 +90,14 @@ func (d databaseIdentity) WithIdentity(ctx context.Context, p tokenrefresh.Princ
 }
 
 type fixtureSigner struct {
-	readerContext context.Context
-	keys          *kms.CryptoKeyStore
-	fail          atomic.Bool
-	blockCommit   atomic.Bool
-	waitCancel    atomic.Bool
-	signing       chan struct{}
-	canceled      chan struct{}
-	reader        *sql.DB
-	blocked       chan *sql.Tx
-	calls         atomic.Int32
+	keys        *kms.CryptoKeyStore
+	fail        atomic.Bool
+	blockCommit atomic.Bool
+	waitCancel  atomic.Bool
+	signing     chan struct{}
+	canceled    chan struct{}
+	reader      *sql.DB
+	calls       atomic.Int32
 }
 
 func (s *fixtureSigner) Sign(ctx context.Context, claims map[string]any) (string, error) {
@@ -126,18 +124,16 @@ func (s *fixtureSigner) Sign(ctx context.Context, claims map[string]any) (string
 		return "", ctx.Err()
 	}
 	if s.blockCommit.Swap(false) {
-		// This reader permits BEGIN IMMEDIATE but prevents the later exclusive
-		// commit lock, exercising an actual SQLite commit failure after signing.
-		tx, err := s.reader.BeginTx(s.readerContext, &sql.TxOptions{ReadOnly: true})
-		if err != nil {
-			return "", err
+		// The next digest insertion succeeds, but its deferred foreign-key
+		// violation makes SQLite reject COMMIT after signing and staging rotation.
+		for _, statement := range []string{
+			"CREATE TABLE commit_failure (family TEXT REFERENCES refresh_families_v2(id) DEFERRABLE INITIALLY DEFERRED)",
+			"CREATE TRIGGER reject_commit AFTER INSERT ON refresh_digests_v2 BEGIN INSERT INTO commit_failure VALUES('missing-family'); END",
+		} {
+			if _, err := s.reader.ExecContext(ctx, statement); err != nil {
+				return "", err
+			}
 		}
-		var count int
-		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_schema").Scan(&count); err != nil {
-			_ = tx.Rollback()
-			return "", err
-		}
-		s.blocked <- tx
 	}
 	return u.Token, nil
 }
@@ -174,7 +170,7 @@ func newFixtureSigner(t *testing.T) (*fixtureSigner, ed25519.PublicKey, string) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &fixtureSigner{readerContext: t.Context(), keys: keys, blocked: make(chan *sql.Tx, 1), signing: make(chan struct{}, 1), canceled: make(chan struct{}, 1)}, pub, publicPath
+	return &fixtureSigner{keys: keys, signing: make(chan struct{}, 1), canceled: make(chan struct{}, 1)}, pub, publicPath
 }
 
 // This storage consumer receives server-held evidence from completed provider

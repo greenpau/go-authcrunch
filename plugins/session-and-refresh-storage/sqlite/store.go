@@ -77,8 +77,11 @@ func New(ctx context.Context, config *Config) (*Store, error) {
 		return nil, tokenrefresh.ErrUnavailable
 	}
 	values := url.Values{
-		"mode":    {"rw"},
-		"_txlock": {"immediate"},
+		"mode": {"rw"},
+		// Acquire every write lock before touching refresh authority. In DELETE
+		// mode, BEGIN IMMEDIATE permits readers (including competing BEGINs)
+		// that can otherwise make the later COMMIT fail with SQLITE_BUSY.
+		"_txlock": {"exclusive"},
 		"_pragma": {"busy_timeout(0)", "foreign_keys(1)", "synchronous(EXTRA)", "fullfsync(1)", "secure_delete(1)"},
 	}
 	uri := url.URL{Scheme: "file", Path: filepath.ToSlash(c.Path), RawQuery: values.Encode()}
@@ -169,7 +172,7 @@ func (s *Store) healthy() bool {
 	return true
 }
 
-// transact retries only lock acquisition before any work. After BEGIN IMMEDIATE,
+// transact retries only lock acquisition before any work. After BEGIN EXCLUSIVE,
 // all decisions use current state. Semantic replay/expiry failures can commit a
 // family deletion; ordinary failures roll back. A commit is never retried.
 func (s *Store) transact(ctx context.Context, beforeCommit func() error, action func(context.Context, *sql.Tx) (bool, error)) error {

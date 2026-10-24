@@ -209,9 +209,8 @@ func TestE2ESQLiteProcessStorage(t *testing.T) {
 			t.Fatalf("SQLite child did not initialize: %v\n%s%s", readErr, line, stderr[i].String())
 		}
 	}
-	// Open clients before racing rotation. SQLite connection setup can briefly
-	// hold read locks; overlapping setup tests commit rejection, not rotation's
-	// one-winner/replay contract. Both independent clients are now ready.
+	// Initialize both clients before racing rotation so process startup does not
+	// determine the winner. Both independent clients are now ready.
 	for _, barrier := range barriers {
 		if _, err := barrier.Write([]byte{1}); err != nil {
 			t.Fatal(err)

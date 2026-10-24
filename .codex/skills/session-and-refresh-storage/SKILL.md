@@ -192,10 +192,15 @@ Do not delete unrelated namespaces or reset markers to conceal that condition.
 
 ## Atomicity and errors
 
-Family operations and generation activation use immediate write transactions;
-readiness uses read-only queries. Lock acquisition alone is
-retried, with a context-aware bound. Decisions are made from current persisted
-state. Creation and rotation check staged access deadlines immediately before
+Family operations, initialization/migration and generation activation use
+`BEGIN EXCLUSIVE` write transactions in DELETE journal mode; readiness uses
+read-only queries. Acquire all transaction locks before inspecting or changing
+authority, so competing readers or BEGIN attempts cannot cause a later busy
+COMMIT. Lock acquisition alone is retried, with a context-aware bound. Reader
+and writer contention that exhausts that bound leaves credentials unspent and
+the handle usable. Do not substitute BEGIN IMMEDIATE or retry COMMIT to mask
+contention. Decisions are made from current persisted state. Creation and
+rotation check staged access deadlines immediately before
 and after commit; rotation also retains and rechecks the original idle deadline.
 Caller modifications to a lookup snapshot cannot change stored identity, binding,
 or absolute lifetime. Returned snapshots are independent values.
@@ -242,9 +247,11 @@ by the [managed owner](../refresh-token-implementation/references/managed-storag
 Keep unit cases in `store_test.go` for schema/config rejection, snapshots and
 large identity versions, independent-handle races, wrong bindings, oldest-spent
 replay, replacement rollback at capacity, expiry before commit, rotation bounds,
-lock cancellation, concurrent file preparation, unsafe/replaced files, and
-real failed SQLite commits. Preserve regressions for cancellation before and
-during commit, post-commit expiry, and the continued usability of unrelated
+reader/writer admission cancellation, concurrent file preparation, unsafe/replaced
+files, and real failed SQLite commits. Use a connection-scoped commit-hook
+rejection to test actual COMMIT failure independently of lock contention,
+including generation activation and migration. Preserve regressions for
+cancellation before and during commit, post-commit expiry, and the continued usability of unrelated
 families. Use the driver's commit hook to cancel inside an actual SQLite commit.
 Parser unit cases and the executable example belong in `parser/parser_test.go`.
 Register public structs in `internal/tag/tag_test.go`.
@@ -259,16 +266,17 @@ portal owner's provider E2E; this storage fixture does not claim that boundary.
 `consumer_e2e_test.go` composes the public parser, real identity database,
 refresh engine, Ed25519 KMS, and gatekeeper over TLS. Preserve successful login,
 signature and claim checks, shared capacity, canceled TLS requests, failed
-signing/locking, rejected
-reloads, reopen/refresh, replay, replacement, logout, identity revocation, and
-no credential delivery after a real failed commit. `process_e2e_test.go` uses
+signing/locking, rejected reloads, reopen/refresh, replay, replacement, logout, identity revocation, and
+continued handle/credential usability after reader and writer contention.
+A trigger introducing a deferred foreign-key violation exercises real failed
+COMMIT after signing; verify no credential delivery and handle quarantine after
+removing the fixture schema. The root form-completion fixture uses the same
+real SQLite failure boundary. `process_e2e_test.go` uses
 independent executable processes to race rotation and checks replay revocation
 after reopening. Wait for each child's initialized-store acknowledgement before
-starting the next child, then release both for concurrent rotation. Connection
-setup can briefly hold read locks and trigger a legitimate busy commit; that
-setup overlap must not contaminate the one-winner assertion. It also kills child
-processes after acknowledged admission and
-rotation, then verifies durable credentials and replay revocation on reopen.
+starting the next child, then release both for concurrent rotation so startup
+does not determine the winner. It also kills child processes after acknowledged
+admission and rotation, then verifies durable credentials and replay revocation on reopen.
 This tests process termination, not hardware power loss or torn disk writes.
 `external_module_e2e_test.go` runs these same public-only
 consumers in a separate offline module via `tests.RunExternalModule`.

@@ -70,13 +70,6 @@ func TestE2ESQLiteLoginRestartRefreshAndAuthorization(t *testing.T) {
 	}
 	defer reader.Close()
 	signer.reader = reader
-	t.Cleanup(func() {
-		select {
-		case tx := <-signer.blocked:
-			_ = tx.Rollback()
-		default:
-		}
-	})
 	var mu sync.RWMutex
 	var stores [2]*storage.Store
 	var managers [3]*tokenrefresh.Manager
@@ -325,20 +318,29 @@ func TestE2ESQLiteLoginRestartRefreshAndAuthorization(t *testing.T) {
 	}
 	current := send("/auth/refresh", "second", "", first.Refresh, 200)
 	verify(current)
-	// A real lock timeout before rotation preserves the current credential.
-	lock, err := reader.Conn(t.Context())
-	if err != nil {
-		t.Fatal(err)
+	// Reader and writer contention time out before rotation. The same handle
+	// must remain usable without a restart, with its current credential unspent.
+	for _, readOnly := range []bool{false, true} {
+		func() {
+			lock, err := reader.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: readOnly})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer lock.Rollback()
+			// This connection defaults to deferred transactions; explicitly acquire
+			// a write lock for the writer case and a shared lock for the reader.
+			statement := "SELECT count(*) FROM refresh_families_v2"
+			if !readOnly {
+				statement = "UPDATE refresh_settings_v2 SET id=id"
+			}
+			if _, err := lock.ExecContext(t.Context(), statement); err != nil {
+				t.Fatal(err)
+			}
+			send("/auth/refresh", "second", "", current.Refresh, 503)
+		}()
+		current = send("/auth/refresh", "second", "", current.Refresh, 200)
+		verify(current)
 	}
-	defer lock.Close()
-	if _, err := lock.ExecContext(t.Context(), "BEGIN IMMEDIATE"); err != nil {
-		t.Fatal(err)
-	}
-	send("/auth/refresh", "second", "", current.Refresh, 503)
-	if _, err := lock.ExecContext(t.Context(), "ROLLBACK"); err != nil {
-		t.Fatal(err)
-	}
-	_ = lock.Close()
 	restart()
 	current = send("/auth/refresh", "second", "", current.Refresh, 200)
 	nextClaims := verify(current)
@@ -386,7 +388,7 @@ func TestE2ESQLiteLoginRestartRefreshAndAuthorization(t *testing.T) {
 	restart()
 	send("/auth/refresh", "", "", current.Refresh, 401)
 	// Failed SQLite COMMIT after signing never releases the staged access/refresh
-	// credentials. This specific SQLITE_BUSY case rolls back, but callers cannot
+	// credentials. This specific deferred constraint rolls back, but callers cannot
 	// generally retry an ErrCommitUncertain; the host requires a fresh login.
 	first = send("/auth/login", "", password, "", 200)
 	before := signer.calls.Load()
@@ -395,13 +397,10 @@ func TestE2ESQLiteLoginRestartRefreshAndAuthorization(t *testing.T) {
 	if signer.calls.Load() != before+1 {
 		t.Fatal("commit failure did not follow signing")
 	}
-	select {
-	case tx := <-signer.blocked:
-		if err := tx.Rollback(); err != nil {
-			t.Fatal(err)
+	for _, statement := range []string{"DROP TRIGGER reject_commit", "DROP TABLE commit_failure"} {
+		if _, err := reader.ExecContext(t.Context(), statement); err != nil {
+			t.Fatal("remove commit failure fixture", err)
 		}
-	default:
-		t.Fatal("commit reader was not established")
 	}
 	send("/auth/refresh", "second", "", first.Refresh, 503) // poisoned handle remains closed
 	restart()

@@ -143,7 +143,7 @@ Bounded cleanup after a returned result may revoke only the newly undelivered
 family; already replaced families cannot be resurrected.
 
 Fresh native authentication has no previous browser family to replace. A concrete
-busy-COMMIT rollback can leave the old family occupying a capacity-one store;
+rejected-COMMIT rollback can leave the old family occupying a capacity-one store;
 fresh login then needs spare capacity or explicit reconciliation/logout/expiry.
 It does not prove server-side retirement. Fresh browser login may replace a
 presented matching family only after independent authentication. Client pending
@@ -171,5 +171,7 @@ SQLite process and embedding-host executable tests establish their own process
 boundaries. Preserve ordinary memory, provider/connected-account, cross-device,
 completion cleanup and OP regressions, all-severity diagnostics, tag checks,
 CGO-disabled checks and the HTTP contract/quality gates. Use actual independent
-SQLite transactions for COMMIT tests; injected joined errors test classification
+SQLite transactions with deferred constraints or commit-hook rejection for COMMIT
+tests; ordinary reader/writer contention must fail safely at admission without
+quarantining handles. Injected joined errors test classification
 only. Preserve every initial failure and guard outcome in validation evidence.

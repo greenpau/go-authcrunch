@@ -317,9 +317,8 @@ func TestE2EServerManagedRefreshPartialActivation(t *testing.T) {
 	f.login(t, "body") // old capacity-one family cannot strand the recovered root
 }
 
-// The reader holds a real SQLite SHARED lock before form completion. The writer
-// can begin and stage issuance, but actual COMMIT fails; no invented backend
-// error substitutes for the tested HTTP/store boundary.
+// A deferred SQLite constraint rejects the actual COMMIT after form issuance
+// stages credentials. No invented backend error substitutes for this boundary.
 func TestE2EServerManagedRefreshFormCommitUncertainty(t *testing.T) {
 	f := newManagedRootTLS(t)
 	// This case deliberately quarantines the borrowed store. Drain and close
@@ -378,14 +377,13 @@ func TestE2EServerManagedRefreshFormCommitUncertainty(t *testing.T) {
 	}
 	defer readerDB.Close()
 	readerDB.SetMaxOpenConns(1)
-	reader, err := readerDB.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer reader.Rollback()
-	var count int
-	if err := reader.QueryRowContext(t.Context(), "SELECT count(*) FROM refresh_families_v2").Scan(&count); err != nil {
-		t.Fatal(err)
+	for _, statement := range []string{
+		"CREATE TABLE commit_failure (family TEXT REFERENCES refresh_families_v2(id) DEFERRABLE INITIALLY DEFERRED)",
+		"CREATE TRIGGER reject_commit AFTER INSERT ON refresh_digests_v2 BEGIN INSERT INTO commit_failure VALUES('missing-family'); END",
+	} {
+		if _, err := readerDB.ExecContext(t.Context(), statement); err != nil {
+			t.Fatal("configure SQLite commit rejection", err)
+		}
 	}
 	response := form(http.MethodGet, sandbox.String(), nil)
 	if response.StatusCode != http.StatusServiceUnavailable || response.Header.Get("Cache-Control") != "no-store" || response.Header.Get("Authorization") != "" || response.Header.Get("Location") != "" {
@@ -402,6 +400,11 @@ func TestE2EServerManagedRefreshFormCommitUncertainty(t *testing.T) {
 			t.Fatal("uncertain form completion retained authentication authority")
 		}
 	}
+	for _, statement := range []string{"DROP TRIGGER reject_commit", "DROP TABLE commit_failure"} {
+		if _, err := readerDB.ExecContext(t.Context(), statement); err != nil {
+			t.Fatal("remove commit failure fixture", err)
+		}
+	}
 	if err := f.database.CheckReady(t.Context()); !errors.Is(err, tokenrefresh.ErrUnavailable) {
 		t.Fatal("attempted commit failure did not quarantine handle")
 	}
@@ -413,11 +416,9 @@ func TestE2EServerManagedRefreshFormCommitUncertainty(t *testing.T) {
 	if response := form(http.MethodGet, sandbox.String(), nil); response.StatusCode != http.StatusUnauthorized {
 		t.Fatal("failed form issuance retained reusable proof")
 	}
-	if err := reader.Rollback(); err != nil {
-		t.Fatal(err)
-	}
+	var count int
 	if err := readerDB.QueryRowContext(t.Context(), "SELECT count(*) FROM refresh_families_v2").Scan(&count); err != nil || count != 0 {
-		t.Fatal("concrete busy-COMMIT rollback left an undelivered family", err)
+		t.Fatal("rejected COMMIT left an undelivered family", err)
 	}
 	// This fixture observes the concrete rollback; ordinary clients still may not
 	// replay an uncertain exchange. Recovery replaces handles and authenticates.
