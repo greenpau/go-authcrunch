@@ -388,7 +388,7 @@ files:
     plugins/cryptographic-signing/rsapss/signer.go: fed04bafe72ebfd998bdf76a3aa19011bb28283a8a6efdb96f7186ab87c802f5
     plugins/identity-providers/sqlite/config.go: c99ae15dc81ddb7ba238ebb2480af94c12a5f9341ecceb034809b599cbaa3878
     plugins/identity-providers/sqlite/parser/parser.go: 357852632949680bccf581dcc1b11e1acda5c9779eeb8b00fe5bbb396eb646f8
-    plugins/identity-providers/sqlite/provider.go: 650f9816d48e4d4cf094de55cb2587e13141a1b73e34cbda70b49b63cd02d109
+    plugins/identity-providers/sqlite/provider.go: 3780b59e1ca61be98e5aabda7757159b3bfd79937ade6479765d516282d50a66
     plugins/messaging/sqlite/config.go: 69c8796a94b79dae329e5774ce2127e774c1a2b68e989c3f69b3b45924bff403
     plugins/messaging/sqlite/outbox.go: 4603f607fe214050eb1418e06e6263d59f50346a8d6c4ce83b6c2b52192b6531
     plugins/messaging/sqlite/parser/parser.go: e88c2cac603da0f8df3f22982a6c40de617b3196d5bb8cf27f2de62481f79657

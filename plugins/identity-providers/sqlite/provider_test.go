@@ -27,6 +27,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 )
@@ -315,6 +316,92 @@ func TestTicketsExpiryCapacityAndFailures(t *testing.T) {
 		t.Fatal("nil config accepted")
 	}
 }
+
+// Contention must stop before mutation so a healthy provider can continue once
+// the reader releases its snapshot, without losing a pending request or ticket.
+func TestTicketsReaderContention(t *testing.T) {
+	for _, operation := range []string{"begin", "issue", "consume"} {
+		t.Run(operation, func(t *testing.T) {
+			p, config := testProvider(t)
+			var state, ticket string
+			var cookie *http.Cookie
+			if operation != "begin" {
+				state, cookie = beginTicket(t, p)
+			}
+			if operation == "consume" {
+				var err error
+				ticket, err = p.Issue(t.Context(), state, ticketIdentity())
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			reader, err := sql.Open("sqlite", config.Path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer reader.Close()
+			tx, err := reader.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback()
+			var count int
+			if err := tx.QueryRowContext(t.Context(), "SELECT count(*) FROM tickets").Scan(&count); err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(t.Context(), 40*time.Millisecond)
+			defer cancel()
+			if operation == "issue" {
+				var issued string
+				issued, err = p.Issue(ctx, state, ticketIdentity())
+				if issued != "" {
+					t.Fatal("blocked issuance published a ticket")
+				}
+			} else {
+				req := httptest.NewRequest(http.MethodGet, p.CallbackURL(), nil)
+				if operation == "consume" {
+					req = callback(p, state, ticket, cookie)
+				}
+				var result *idp.HTTPLoginResult
+				result, err = p.Login(ctx, req)
+				if result != nil {
+					t.Fatal("blocked login published a result")
+				}
+			}
+			if !errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrCommitUncertain) {
+				t.Fatal("reader contention reached commit", err)
+			}
+			if err := tx.Rollback(); err != nil {
+				t.Fatal(err)
+			}
+			if !p.Configured() {
+				t.Fatal("admission timeout quarantined provider")
+			}
+			if operation == "begin" {
+				state, cookie = beginTicket(t, p)
+			}
+			if operation != "consume" {
+				ticket, err = p.Issue(t.Context(), state, ticketIdentity())
+				if err != nil {
+					t.Fatal("issuance did not recover", err)
+				}
+			}
+			result, err := p.Login(t.Context(), callback(p, state, ticket, cookie))
+			if err != nil || result == nil || result.Identity == nil || result.Identity.Subject != "alice" {
+				t.Fatal("pending login did not recover", err)
+			}
+			if result, err := p.Login(t.Context(), callback(p, state, ticket, cookie)); result != nil || !errors.Is(err, ErrDenied) {
+				t.Fatal("recovered ticket accepted twice", err)
+			}
+			if err := p.db.Read(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+				return tx.QueryRowContext(ctx, "SELECT count(*) FROM tickets").Scan(&count)
+			}); err != nil || count != 0 {
+				t.Fatal("blocked begin leaked a pending request", err)
+			}
+		})
+	}
+}
+
 func TestTicketsUncertainConsumptionWithholdsIdentity(t *testing.T) {
 	p, config := testProvider(t)
 	state, cookie := beginTicket(t, p)
@@ -322,36 +409,32 @@ func TestTicketsUncertainConsumptionWithholdsIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reader, err := New(t.Context(), config)
+	fault, err := sql.Open("sqlite", config.Path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer reader.Close()
-	locked := make(chan struct{})
-	release := make(chan struct{})
-	done := make(chan error, 1)
-	go func() {
-		done <- reader.db.Read(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
-			var count int
-			if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM tickets").Scan(&count); err != nil {
-				return err
-			}
-			close(locked)
-			<-release
-			return nil
-		})
-	}()
-	<-locked
-	result, err := p.Login(t.Context(), callback(p, state, ticket, cookie))
-	close(release)
-	if readErr := <-done; readErr != nil {
-		t.Fatal(readErr)
+	defer fault.Close()
+	// Inject a deferred constraint so DELETE succeeds but the real COMMIT fails.
+	// Ordinary reader contention must now stop before the mutation instead.
+	if _, err := fault.ExecContext(t.Context(), "CREATE TABLE commit_guard (request BLOB REFERENCES tickets(request) DEFERRABLE INITIALLY DEFERRED)"); err != nil {
+		t.Fatal(err)
 	}
+	if _, err := fault.ExecContext(t.Context(), "INSERT INTO commit_guard SELECT request FROM tickets"); err != nil {
+		t.Fatal(err)
+	}
+	result, err := p.Login(t.Context(), callback(p, state, ticket, cookie))
 	if result != nil || !errors.Is(err, ErrCommitUncertain) {
 		t.Fatal("uncertain consume published identity", err)
 	}
 	if p.Configured() {
 		t.Fatal("uncertain handle stayed active")
+	}
+	if err := p.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err := fault.QueryRowContext(t.Context(), "SELECT count(*) FROM tickets").Scan(&count); err != nil || count != 1 {
+		t.Fatal("failed commit lost pending ticket", err)
 	}
 }
 

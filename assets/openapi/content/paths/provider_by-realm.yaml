@@ -27,6 +27,10 @@ get:
     provider sub remains available for existing policies. Current local roles and factor rules
     apply; an external login alone cannot satisfy required local MFA. Use /connected-accounts
     to explicitly connect to an existing local account. Provider email never selects an account.
+    The SQLite ticket reference serializes storage access before reading or changing pending
+    evidence. Contention is bounded by the operation deadline; an admission timeout returns
+    the ordinary provider error without consuming the request or ticket. A genuine uncertain
+    commit withholds any redirect or identity and requires storage reconciliation before reuse.
     If verified identity requires interactive local factors, the portal creates an independent browser
     sandbox. Its admission returns HTML 429 when 16 canonical sandbox proof cookies are already visible,
     or HTML 503 when the shared portal sandbox cache is full, without evicting live sandboxes. Provider

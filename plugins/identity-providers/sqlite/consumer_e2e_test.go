@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -43,6 +44,178 @@ import (
 	tickets "github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite"
 	"github.com/greenpau/go-authcrunch/plugins/identity-providers/sqlite/parser"
 )
+
+// Two portals and their trusted issuer share a file through independent handles.
+// Racing the same browser evidence must publish one ticket and one signed login.
+func TestE2ESQLiteTicketConcurrentPortal(t *testing.T) {
+	const signingKey = "synthetic-concurrent-ticket-signing-key-0123456789"
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	var providers [2]*tickets.Provider
+	var portals [2]*authn.Portal
+	handle := func(r *http.Request) int {
+		if r.Header.Get("X-Test-Ticket-Handle") == "peer" {
+			return 1
+		}
+		return 0
+	}
+	issuer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if !ok || username != "alice" || password != "synthetic-issuer-password" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		p := providers[handle(r)]
+		q := r.URL.Query()
+		if r.URL.Path != "/login" || q.Get("callback") != p.CallbackURL() {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		ticket, err := p.Issue(r.Context(), q.Get("request"), &idp.LoginIdentity{Subject: "alice", Email: "alice@example.test", Roles: []string{"authp/user"}})
+		if err != nil {
+			http.Error(w, "issuance denied", http.StatusUnauthorized)
+			return
+		}
+		http.Redirect(w, r, p.CallbackURL()+"?"+url.Values{"state": {q.Get("request")}, "ticket": {ticket}}.Encode(), http.StatusSeeOther)
+	}))
+	defer issuer.Close()
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := portals[handle(r)].ServeHTTP(r.Context(), w, r, requests.NewRequest()); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+	cfg, err := parser.NewSQLiteTicketProviderConfigFromDirectives([]string{"name tickets", "realm application", fmt.Sprintf("path %q", filepath.Join(dir, "tickets.db")), "public_origin " + server.URL, "issuer_url " + issuer.URL + "/login"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range providers {
+		providers[i], err = tickets.New(t.Context(), cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer providers[i].Close()
+		portals[i], err = authn.NewPortal(authn.PortalParameters{Config: &authn.PortalConfig{Name: "concurrent-tickets", IdentityProviders: []string{"tickets"}, RawCryptoKeyStoreConfig: []string{"crypto key sign-verify " + signingKey}}, Logger: zap.NewNop(), IdentityProviders: []idp.IdentityProvider{providers[i]}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer portals[i].Close()
+	}
+	client := server.Client()
+	client.Timeout = 10 * time.Second
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	begin, err := client.Get(providers[0].CallbackURL())
+	if err != nil {
+		t.Fatal("begin request failed")
+	}
+	begin.Body.Close()
+	if begin.StatusCode != http.StatusFound {
+		t.Fatal("begin", begin.StatusCode)
+	}
+	var binding *http.Cookie
+	for _, cookie := range begin.Cookies() {
+		if cookie.Name == providers[0].GetLoginCookieName() {
+			binding = cookie
+		}
+	}
+	if binding == nil {
+		t.Fatal("begin omitted browser binding")
+	}
+	race := func(target string, authenticate bool) []*http.Response {
+		t.Helper()
+		responses := make([]*http.Response, 2)
+		failures := make([]error, 2)
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		for i := range responses {
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, target, nil)
+			if err != nil {
+				t.Fatal("prepare concurrent request failed")
+			}
+			if i == 1 {
+				req.Header.Set("X-Test-Ticket-Handle", "peer")
+			}
+			if authenticate {
+				req.SetBasicAuth("alice", "synthetic-issuer-password")
+			} else {
+				req.AddCookie(binding)
+			}
+			wg.Go(func() {
+				<-start
+				responses[i], failures[i] = client.Do(req)
+				if responses[i] != nil {
+					responses[i].Body.Close()
+				}
+			})
+		}
+		close(start)
+		wg.Wait()
+		for _, err := range failures {
+			if err != nil {
+				t.Fatal("concurrent request failed")
+			}
+		}
+		return responses
+	}
+	callback := ""
+	for _, resp := range race(begin.Header.Get("Location"), true) {
+		switch resp.StatusCode {
+		case http.StatusSeeOther:
+			if callback != "" {
+				t.Fatal("concurrent issuer published two tickets", resp.StatusCode)
+			}
+			callback = resp.Header.Get("Location")
+		case http.StatusUnauthorized:
+			if resp.Header.Get("Location") != "" {
+				t.Fatal("losing issuer published a redirect", resp.StatusCode)
+			}
+		default:
+			t.Fatal("concurrent issuer", resp.StatusCode)
+		}
+	}
+	if callback == "" {
+		t.Fatal("concurrent issuer published no ticket")
+	}
+	winners := 0
+	for _, resp := range race(callback, false) {
+		if resp.StatusCode == http.StatusUnauthorized && resp.Header.Get("Authorization") == "" {
+			for _, cookie := range resp.Cookies() {
+				// The portal also tracks unauthenticated browsers with a session ID.
+				if cookie.Name != "AUTHP_SESSION_ID" && cookie.Value != "" && cookie.MaxAge >= 0 {
+					t.Fatal("losing callback published credentials", resp.StatusCode)
+				}
+			}
+			continue
+		}
+		if resp.StatusCode != http.StatusSeeOther {
+			t.Fatal("concurrent callback", resp.StatusCode)
+		}
+		token, err := jwt.Parse(strings.TrimPrefix(resp.Header.Get("Authorization"), "Bearer "), func(*jwt.Token) (any, error) { return []byte(signingKey), nil }, jwt.WithValidMethods([]string{"HS512"}))
+		if err != nil || !token.Valid {
+			t.Fatal("concurrent callback returned an invalid JWT")
+		}
+		claims := token.Claims.(jwt.MapClaims)
+		if claims["sub"] != "alice" || claims["origin"] != "application" || claims["id"] == nil || claims["id"] == "" {
+			t.Fatal("concurrent callback authenticated the wrong identity")
+		}
+		winners++
+	}
+	if winners != 1 {
+		t.Fatal("concurrent callbacks did not publish exactly one login")
+	}
+	for _, resp := range race(callback, false) {
+		if resp.StatusCode != http.StatusUnauthorized || resp.Header.Get("Authorization") != "" {
+			t.Fatal("callback replay authenticated", resp.StatusCode)
+		}
+	}
+	for _, p := range providers {
+		if !p.Configured() {
+			t.Fatal("concurrent login quarantined a healthy provider")
+		}
+	}
+}
 
 func TestE2ESQLiteTicketPortal(t *testing.T) {
 	const secret = "synthetic-ticket-portal-signing-key-0123456789"

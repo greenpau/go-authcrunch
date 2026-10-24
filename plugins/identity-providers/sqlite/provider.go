@@ -83,7 +83,9 @@ func New(ctx context.Context, config *Config) (*Provider, error) {
 	}
 	data, _ := json.Marshal([]string{c.Name, c.Realm, c.PublicOrigin, c.BasePath, c.IssuerURL, c.CookieName})
 	binding := sha256.Sum256(data)
-	db, err := sqlitedb.Open(ctx, c.Path, c.Timeout, 1094931288, map[string]string{"tickets": "CREATE TABLE tickets (request BLOB PRIMARY KEY, binding BLOB NOT NULL, browser BLOB NOT NULL, expires INTEGER NOT NULL, ticket BLOB, ticket_expires INTEGER NOT NULL, identity BLOB)"})
+	// Acquire all transaction locks before touching single-use evidence. Competing
+	// clients then wait at admission instead of causing a busy COMMIT afterward.
+	db, err := sqlitedb.OpenExclusive(ctx, c.Path, c.Timeout, 1094931288, map[string]string{"tickets": "CREATE TABLE tickets (request BLOB PRIMARY KEY, binding BLOB NOT NULL, browser BLOB NOT NULL, expires INTEGER NOT NULL, ticket BLOB, ticket_expires INTEGER NOT NULL, identity BLOB)"})
 	if err != nil {
 		return nil, err
 	}

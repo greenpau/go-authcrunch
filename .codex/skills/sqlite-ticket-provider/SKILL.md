@@ -102,7 +102,7 @@ when the flag is omitted. Drain all consumers before replacing a shared handle.
 4. Return the browser to CallbackURL with exactly one `state` and `ticket` query
    parameter. Exact HTTPS host/path, canonical token encoding, one binding
    cookie, request/issuer/realm/configuration binding and both deadlines must
-   pass before an immediate transaction consumes the ticket.
+   pass before an exclusive transaction consumes the ticket.
 5. Only successful commit releases the authenticated identity. Replays cannot
    authenticate, including concurrent callbacks through separate handles. A
    signing/policy failure afterward does not restore the consumed ticket; start
@@ -117,6 +117,14 @@ begin replaces that browser's cookie; older pending requests expire naturally.
 There is no sliding grace, background cleanup or automatic retry after uncertain
 commit. Never publish an uncertain redirect, ticket or identity. Drain/reopen a
 quarantined handle and reconcile; a fresh login is the normal recovery path.
+
+Ticket storage uses exclusive admission for reads and writes, including readiness
+checks. Independent handles serialize before accessing pending evidence. Reader
+or writer contention waits only within the operation deadline; an admission
+timeout publishes no result, preserves pending evidence and keeps the handle
+usable. Do not replace exclusive admission with immediate transactions: even
+competing BEGIN attempts can cause commit-time BUSY and quarantine a healthy
+provider. Real COMMIT failures still withhold results and quarantine the handle.
 
 ## Portal capability and security boundaries
 
@@ -189,6 +197,14 @@ make test TEST_DIR='. ./pkg/idp ./internal/tag' TEST='ExternalIdentityProvider|E
 Units cover single issuance/consumption across independent handles, wrong browser,
 issuer and destination, duplicates, expiry, capacity, cancellation, detached
 identity, typed/parser validation and actual commit failure withholding identity.
+`TestTicketsReaderContention` holds a real external read snapshot across initiation,
+issuance and consumption, then verifies bounded refusal and single-use recovery.
+The commit-failure fixture injects a deferred foreign-key constraint so it fails
+at actual COMMIT rather than treating ordinary reader contention as a commit fault.
+`TestE2ESQLiteTicketConcurrentPortal` races authenticated issuance and TLS callbacks
+through two portals with independent SQLite handles: exactly one ticket and one
+independently verified signed login may be published, with healthy handles and
+replay rejection afterward. It also runs through the external-module driver.
 The public-only TLS consumer runs a locally authenticated issuer application,
 real portal, separate cookie jars, config roundtrip/restart, wrong credentials,
 Host and query negotiation, invalid-port reload rejection without spending a
