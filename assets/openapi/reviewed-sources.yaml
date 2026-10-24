@@ -1,8 +1,9 @@
 module: github.com/greenpau/go-authcrunch
 files:
     cmd/authdb/main.go: 53cb8c3ca9c3df5ababb8fecb7d2b80ac96a9c0fc52d31ecf88d1e27e5772df1
-    config.go: 361b4b8fd1ad348cedbc94d25511fe9420fb5b2869df81a6158baa653ef91edb
-    config_external_identity.go: 78a95078289c4b13d88f7ee21d96594f1fdccc437cbd4a569f3898d037a42ac9
+    config.go: 58533796bf8fb4a62f161364a1277ca85c497606ac525520e4b893d4995db45c
+    config_external_identity.go: 20dbdc346873d84ccc3e6c440b9cfb1f6b7345bdcfa0328d093a18dab1817b0d
+    config_external_identity_provider.go: 064a880adca5f41c0625fcf7242b4d5f0ac5de6f1fa1fdb405f636471aa93ee5
     config_external_user_registry.go: bb4b6c027589c94adc7dc94727fe6fd802d68f550f3b7567ce9de731d10c6a35
     config_oauth_applications.go: c3d105f8cb5eab55866d97259bd990d3b0da25eb68412f6069b293e21c20491d
     config_oauth_authorization.go: 19e0d80bce0f703c65752ade6259436bd033bc258a420a76b83a1edb0ab6de62
@@ -136,11 +137,11 @@ files:
     pkg/authn/password_attempt_limiter.go: 0001de3e6eb4ec0b94652c785817fdfe687b67179c6c3b62d077101893f1c900
     pkg/authn/password_form_validator.go: 1e30735fcc1abc71b9f36d752c315ff0aff3514bdfbc8d9cac66edd973817456
     pkg/authn/persistent_state.go: ab02a3eedc07766e061e4cdbc9cfae12036efbb9b9819df3a1a20fabeae4d062
-    pkg/authn/portal.go: e9a038e3b847ddfe5d42987fb6cebb652589b4f781823cc6ae26ece846c0a053
+    pkg/authn/portal.go: fe77f5e025be2ecaf7fd9b5fab0fbecd7124d1105263c502d739e538388464d9
     pkg/authn/profile_auth_challenges.go: d016b39d03224bc98eb22d6f46698093637f41b126b0d9f65a6a219cc7b9a115
     pkg/authn/profile_identity.go: 0dbaf1f77b62c1042ff920d5d0d15d9090309a858d9ce16e9a93cb25d811120f
     pkg/authn/respond_api.go: 62e482b84494029222fdb59ad669719b85f5d69173db813d20f57b2d3c87e3de
-    pkg/authn/respond_http.go: e58906e1ba381565e50ad0c57629334896c80c3f1c01209648b945c3e3a515d7
+    pkg/authn/respond_http.go: 0a5cd47f3728d9e65053ab5d2a5c3da43223094c01c41d352a54e7ff9a747d9f
     pkg/authn/respond_json.go: 7e2f654801e337f6597d647e9fc0bd374b3dda1ea7bcfa6e92fe3301f2af5edd
     pkg/authn/respond_qrcode.go: b7a4842de4572629ccfde8f342e5d5b2db11ce4571708f252255ad39c51b451e
     pkg/authn/sandbox_user.go: 21a84ee260344cf4a40ec335f876b7443f61c379f4b68d61c3d4dc77388e908d
@@ -242,6 +243,7 @@ files:
     pkg/identity/webauthn.go: 2a4de706f345a19a0ad2eeefd748a433638e8a5e5d6132ace12dc9772498dd75
     pkg/identity/webauthn_registration.go: 1834687586845126446f605bfff0a50349636f462bb0e6a47f36cefbd5cb73f6
     pkg/idp/config.go: 56106e4dd8463e5e8490751c9b991dc5b3af0fef17c17501b836bcf82a326f7c
+    pkg/idp/external_config.go: cf688a39ebb00c550be7446aead8820b331f853d36fe9617abfb51769d80c1c5
     pkg/idp/http_login.go: 7df093922ca3f1cc75e0e1b156c1ded198fb49f540b014fbba41664309d0e57a
     pkg/idp/method.go: 534e2a5518aa774a073476334e0109af40abdfc00a15494c1115eba9f1d99a36
     pkg/idp/oauth/authenticate.go: f8c0f1f9fdc0287b30c76fe2dd330b39b6b47927d21a37f43d4cb757ae4c3f5d
@@ -375,5 +377,5 @@ files:
     plugins/registration-workflows/sqlite/config.go: 17c42cd759d1092d178e1eb983d134cbfc03d1123e222e9a91505970b95554b5
     plugins/registration-workflows/sqlite/parser/parser.go: 757678ff613256309f3a9a536ff968ed87cde46c3ee691300193d98a031fbd04
     plugins/registration-workflows/sqlite/workflow.go: 5961c32949b00a17cb4f80198839ab82d36c56d759cd71c8e8f23bc199246cd0
-    server.go: 5bddaad852caab4e4e3f933636052dcb0336c04c64029d0447ec2585de4d62e2
+    server.go: e0982dd88f1fbec4e5a2f24229d4098cafb19f97722162449a97349897dc847d
     server_persistent_state.go: 706d1920510d914041ee78a43143068a11b7294028eadb234b363073065cd371

@@ -62,9 +62,10 @@ func validateExternalIdentityStoreBindings(config *Config, bindings map[string]i
 	return nil
 }
 
-// Contain only plugin metadata checks at this constructor boundary. An interface
+// Contain only plugin metadata/readiness checks at this constructor boundary. An interface
 // can contain a typed nil pointer; calling its methods must not panic the host.
-// No backend work, runtime construction or HTTP request is covered by recovery.
+// Configuration, attachment binding, runtime construction and HTTP requests
+// remain outside recovery; optional attachment checks only inspect existing wiring.
 func validateExternalIdentityStoreBinding(descriptor *ids.ExternalIdentityStoreConfig, store ids.IdentityStore) (err error) {
 	defer func() {
 		if recover() != nil {
@@ -76,6 +77,9 @@ func validateExternalIdentityStoreBinding(descriptor *ids.ExternalIdentityStoreC
 	}
 	if store.GetName() != descriptor.Name || store.GetKind() != descriptor.Kind || store.GetRealm() != descriptor.Realm {
 		return fmt.Errorf("external identity store %q runtime identifiers do not match", descriptor.Name)
+	}
+	if err := validateBorrowedIdentityAttachment(store); err != nil {
+		return fmt.Errorf("external identity store %q attachment is not ready", descriptor.Name)
 	}
 	return nil
 }

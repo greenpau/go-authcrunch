@@ -277,8 +277,15 @@ func (p *Portal) authorizeRequest(ctx context.Context, w http.ResponseWriter, r 
 				// must not remove it from every tab of the browser.
 				return nil, errLoginElsewhereNotAdmitted
 			}
+			staticAsset := strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon")
+			if usr != nil && staticAsset {
+				// A background asset request must not delete a valid token that
+				// another gatekeeper admits. It grants no portal authority;
+				// restricted assets still see an unauthenticated request.
+				return nil, nil
+			}
 			w.Header().Add("Set-Cookie", p.cookie.GetDeleteAccessTokenCookie(addrutil.GetSourceHost(r)))
-			if strings.Contains(r.URL.Path, "/assets/") || strings.Contains(r.URL.Path, "/favicon") {
+			if staticAsset {
 				return nil, nil
 			}
 			p.logger.Debug(

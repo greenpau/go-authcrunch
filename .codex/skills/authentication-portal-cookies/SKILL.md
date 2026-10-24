@@ -60,6 +60,15 @@ Keep name, host-only/Domain, Path, Secure, HttpOnly, and SameSite consistent.
 Deletion strings now use Go's standard cookie serialization; consumers should
 parse attributes instead of depending on attribute order or trailing semicolons.
 
+An automatic static-asset or favicon request must preserve a valid access token
+that the portal's ACL refuses but another gatekeeper may accept. Keep the request
+unauthenticated so restricted assets remain denied. Malformed or expired tokens
+found by the validator still trigger deletion; token discovery is unchanged.
+Ordinary portal admission such as `whoami` retains
+its rejection behavior. The login-page `whoami?probe=login` has its own existing
+non-destructive refusal contract. Cover root and nested mounts: browsers may
+request a root favicon after returning to an otherwise authorized application.
+
 Return-cookie consumption in `grantAccess` and `handleHTTPPortalScreen` uses
 `GetDeleteRefererCookie` once for each consumed cookie, including ignored or
 malformed return destinations. Do not construct an additional deletion by
@@ -174,6 +183,11 @@ Consumer coverage includes the real TLS OIDC consent/logout journey in
 `pkg/authn/token_refresh_config_parser_e2e_test.go`, upstream identity-cookie
 Whoami/logout in `pkg/authn/oauth_cookie_e2e_test.go`, and portal-factory cookies
 accepted by a gatekeeper in `pkg/authz/cookie_names_test.go`.
+`pkg/authn/cookie_static_authorization_test.go` distinguishes admitted, refused,
+invalid, expired and absent credentials without granting restricted assets.
+`pkg/authn/cookie_static_authorization_e2e_test.go` uses real OAuth TLS login and
+gatekeeper requests to preserve the exact browser token after missing favicons
+and public assets, while ordinary `whoami` still denies portal admission.
 `pkg/authn/cookie/factory_e2e_test.go` verifies configured domain stripping,
 path boundaries, sharing between subdomains, and matching deletion with a TLS
 listener and a public-suffix-aware cookie jar.

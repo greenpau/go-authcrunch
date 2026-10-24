@@ -118,6 +118,14 @@ a typed Login result and a declared browser-cookie name through the canonical
 validated identity; the backend owns protocol verification, expiry and replay.
 The [SQLite ticket provider](../../sqlite-ticket-provider/SKILL.md) implements this
 capability with trusted application issuance and browser-bound consumption.
+Root embedders derive `idp.ExternalIdentityProviderConfig` from normalized backend
+configuration and inject the matching ready handle through
+`ServerOptions.IdentityProviders`. The root validates exact metadata and readiness
+before acquiring resources, preserves optional interfaces and caller-owned
+attachment state, and never configures or closes the borrowed provider. Optional
+attachment consumers require a nonnil attachment and an already-bound explicit
+StoreName; unnamed private attachments remain lazy. Pure root validation checks selected names/realms, including unknown selections. Backend
+factory dispatch remains limited to its existing built-in kinds.
 Other protocol extensions still require their own verification and integration;
 implementing IdentityProvider alone does not install arbitrary callback routes.
 

@@ -75,10 +75,15 @@ func newRefMap() refMap {
 }
 
 // ServerOptions contains runtime dependencies excluded from declarative JSON.
-// The host owns injected stores and closes them only after all runtimes drain.
+// The host owns injected dependencies and closes them after all runtimes drain.
 // Supply fresh bindings after decoding configuration; NewServer never falls
 // back to memory for a configured but missing OAuth store.
 type ServerOptions struct {
+	// IdentityProviders binds Config.ExternalIdentityProviders. Handles retain
+	// their optional capabilities and attachment state. The root never configures,
+	// rebinds attachments, installs persistent state in or closes these providers.
+	IdentityProviders map[string]idp.IdentityProvider `json:"-" xml:"-" yaml:"-"`
+
 	// UserRegistries binds Config.ExternalUserRegistries. Providers must already
 	// be ready; the root never activates, rebinds or closes borrowed registries.
 	UserRegistries map[string]registry.Provider `json:"-" xml:"-" yaml:"-"`
@@ -108,6 +113,9 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 		return nil, err
 	}
 	if err := validateExternalIdentityStoreBindings(config, options.IdentityStores); err != nil {
+		return nil, err
+	}
+	if err := validateExternalIdentityProviderBindings(config, options.IdentityProviders); err != nil {
 		return nil, err
 	}
 	if err := validateExternalUserRegistryBindings(config, options.UserRegistries); err != nil {
@@ -206,9 +214,20 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 		}
 	}
 	for _, store := range srv.identityStores {
+		if _, borrowed := options.IdentityStores[store.GetName()]; borrowed {
+			continue
+		}
 		if err := ids.BindIdentityAttachment(store, srv.identityStores); err != nil {
 			return nil, err
 		}
+	}
+
+	// Borrow the original dynamic provider after binding owned attachments.
+	// Hosts own all attachment setup; no wrapper or private fallback is installed.
+	for _, descriptor := range config.ExternalIdentityProviders {
+		provider := options.IdentityProviders[descriptor.Name]
+		srv.nameRefs.identityProviders[descriptor.Name] = provider
+		srv.identityProviders = append(srv.identityProviders, provider)
 	}
 
 	for _, cfg := range config.SingleSignOnProviders {
@@ -248,11 +267,12 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 
 	for _, cfg := range config.AuthenticationPortals {
 		params := authn.PortalParameters{
-			Config:                cfg,
-			Logger:                logger,
-			IdentityStores:        srv.identityStores,
-			IdentityProviders:     srv.identityProviders,
-			SingleSignOnProviders: srv.ssoProviders,
+			IdentityAttachmentsBound: true,
+			Config:                   cfg,
+			Logger:                   logger,
+			IdentityStores:           srv.identityStores,
+			IdentityProviders:        srv.identityProviders,
+			SingleSignOnProviders:    srv.ssoProviders,
 		}
 
 		portal, err := authn.NewPortal(params)

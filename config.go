@@ -41,17 +41,18 @@ type Config struct {
 	// Logging configures diagnostic suppression for this runtime's components.
 	Logging *logging.Config `json:"logging,omitempty" xml:"logging,omitempty" yaml:"logging,omitempty"`
 	// State enables host-independent durable keys and authenticated sessions.
-	State                  *state.Config                          `json:"state,omitempty" xml:"state,omitempty" yaml:"state,omitempty"`
-	Credentials            *credentials.Config                    `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
-	Messaging              *messaging.Config                      `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
-	ExternalUserRegistries []*registry.ExternalUserRegistryConfig `json:"external_user_registries,omitempty" xml:"external_user_registries,omitempty" yaml:"external_user_registries,omitempty"`
-	UserRegistration       *registry.Config                       `json:"user_registration,omitempty" xml:"user_registration,omitempty" yaml:"user_registration,omitempty"`
-	AuthenticationPortals  []*authn.PortalConfig                  `json:"authentication_portals,omitempty" xml:"authentication_portals,omitempty" yaml:"authentication_portals,omitempty"`
-	AuthorizationPolicies  []*authz.PolicyConfig                  `json:"authorization_policies,omitempty" xml:"authorization_policies,omitempty" yaml:"authorization_policies,omitempty"`
-	IdentityStores         []*ids.IdentityStoreConfig             `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
-	ExternalIdentityStores []*ids.ExternalIdentityStoreConfig     `json:"external_identity_stores,omitempty" xml:"external_identity_stores,omitempty" yaml:"external_identity_stores,omitempty"`
-	IdentityProviders      []*idp.IdentityProviderConfig          `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
-	SingleSignOnProviders  []*sso.SingleSignOnProviderConfig      `json:"sso_providers,omitempty" xml:"sso_providers,omitempty" yaml:"sso_providers,omitempty"`
+	State                     *state.Config                          `json:"state,omitempty" xml:"state,omitempty" yaml:"state,omitempty"`
+	Credentials               *credentials.Config                    `json:"credentials,omitempty" xml:"credentials,omitempty" yaml:"credentials,omitempty"`
+	Messaging                 *messaging.Config                      `json:"messaging,omitempty" xml:"messaging,omitempty" yaml:"messaging,omitempty"`
+	ExternalUserRegistries    []*registry.ExternalUserRegistryConfig `json:"external_user_registries,omitempty" xml:"external_user_registries,omitempty" yaml:"external_user_registries,omitempty"`
+	UserRegistration          *registry.Config                       `json:"user_registration,omitempty" xml:"user_registration,omitempty" yaml:"user_registration,omitempty"`
+	AuthenticationPortals     []*authn.PortalConfig                  `json:"authentication_portals,omitempty" xml:"authentication_portals,omitempty" yaml:"authentication_portals,omitempty"`
+	AuthorizationPolicies     []*authz.PolicyConfig                  `json:"authorization_policies,omitempty" xml:"authorization_policies,omitempty" yaml:"authorization_policies,omitempty"`
+	IdentityStores            []*ids.IdentityStoreConfig             `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
+	ExternalIdentityStores    []*ids.ExternalIdentityStoreConfig     `json:"external_identity_stores,omitempty" xml:"external_identity_stores,omitempty" yaml:"external_identity_stores,omitempty"`
+	ExternalIdentityProviders []*idp.ExternalIdentityProviderConfig  `json:"external_identity_providers,omitempty" xml:"external_identity_providers,omitempty" yaml:"external_identity_providers,omitempty"`
+	IdentityProviders         []*idp.IdentityProviderConfig          `json:"identity_providers,omitempty" xml:"identity_providers,omitempty" yaml:"identity_providers,omitempty"`
+	SingleSignOnProviders     []*sso.SingleSignOnProviderConfig      `json:"sso_providers,omitempty" xml:"sso_providers,omitempty" yaml:"sso_providers,omitempty"`
 	// OAuthApplications stores named, provisioned registrations for provider
 	// configuration. It contains credentials; persist it only in private storage.
 	OAuthApplications         []*oidc.OAuthApplicationConfig `json:"oauth_applications,omitempty" xml:"oauth_applications,omitempty" yaml:"oauth_applications,omitempty"`
@@ -137,6 +138,10 @@ func (cfg *Config) Validate() error {
 	if err != nil {
 		return err
 	}
+	providerRealms, err := cfg.identityProviderRealms()
+	if err != nil {
+		return err
+	}
 	if cfg.Logging != nil {
 		if err := cfg.Logging.Validate(); err != nil {
 			return err
@@ -185,6 +190,9 @@ func (cfg *Config) Validate() error {
 
 	// Validate auth portal configurations.
 	for _, portalCfg := range cfg.AuthenticationPortals {
+		if portalCfg == nil {
+			return fmt.Errorf("authentication portal configuration is nil")
+		}
 		// If there are no excplicitly specified identity stores and providers in a portal, add all of them.
 		if len(portalCfg.IdentityStores) == 0 && len(portalCfg.IdentityProviders) == 0 {
 			for _, entry := range cfg.IdentityStores {
@@ -194,6 +202,9 @@ func (cfg *Config) Validate() error {
 				portalCfg.IdentityStores = append(portalCfg.IdentityStores, entry.Name)
 			}
 			for _, entry := range cfg.IdentityProviders {
+				portalCfg.IdentityProviders = append(portalCfg.IdentityProviders, entry.Name)
+			}
+			for _, entry := range cfg.ExternalIdentityProviders {
 				portalCfg.IdentityProviders = append(portalCfg.IdentityProviders, entry.Name)
 			}
 		}
@@ -271,30 +282,18 @@ func (cfg *Config) Validate() error {
 
 			authByName[providerName] = "another identity provider"
 
-			var providerConfig *idp.IdentityProviderConfig
-			for _, entry := range cfg.IdentityProviders {
-				providerConfig = entry
-				if entry.Name == providerName {
-					break
-				}
+			realmName, found := providerRealms[providerName]
+			if !found {
+				return fmt.Errorf("identity provider %q configuration not found", providerName)
 			}
-			if providerConfig == nil {
-				continue
+			if realmName == "" {
+				return fmt.Errorf("identity provider %q realm is required", providerName)
 			}
-			if providerConfig.Params == nil {
-				continue
+			if previous, exists := authByRealm[realmName]; exists {
+				return fmt.Errorf("identity provider %q has the same %q realm as %q", providerName, realmName, previous)
 			}
-			if v, exists := providerConfig.Params["realm"]; exists {
-				realmName := v.(string)
-				if prevProviderName, exists := authByRealm[realmName]; exists {
-					return fmt.Errorf(
-						"identity provider %q has the same %q realm as %q",
-						providerName, realmName, prevProviderName,
-					)
-				}
-				authByRealm[realmName] = providerName
-				authByName[providerName] = "identity provider in " + realmName + " realm"
-			}
+			authByRealm[realmName] = providerName
+			authByName[providerName] = "identity provider in " + realmName + " realm"
 		}
 
 		// Iterate over SSO providers.

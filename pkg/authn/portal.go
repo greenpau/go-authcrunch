@@ -92,6 +92,11 @@ type Portal struct {
 
 // PortalParameters are input parameters for NewPortal.
 type PortalParameters struct {
+	// IdentityAttachmentsBound means the caller has completed attachment wiring
+	// for every supplied store and provider. Skip automatic binding so borrowed
+	// handles retain their caller-owned state. Standalone callers may omit it.
+	IdentityAttachmentsBound bool `json:"-" xml:"-" yaml:"-"`
+
 	Config                *PortalConfig              `json:"config,omitempty" xml:"config,omitempty" yaml:"config,omitempty"`
 	Logger                *zap.Logger                `json:"logger,omitempty" xml:"logger,omitempty" yaml:"logger,omitempty"`
 	IdentityStores        []ids.IdentityStore        `json:"identity_stores,omitempty" xml:"identity_stores,omitempty" yaml:"identity_stores,omitempty"`
@@ -184,14 +189,16 @@ func NewPortal(params PortalParameters) (*Portal, error) {
 		return nil, errors.ErrNewPortal.WithArgs(errors.ErrPortalConfigBackendsNotFound)
 	}
 
-	for _, provider := range p.identityProviders {
-		if err := ids.BindIdentityAttachment(provider, params.IdentityStores); err != nil {
-			return nil, err
+	if !params.IdentityAttachmentsBound {
+		for _, provider := range p.identityProviders {
+			if err := ids.BindIdentityAttachment(provider, params.IdentityStores); err != nil {
+				return nil, err
+			}
 		}
-	}
-	for _, store := range p.identityStores {
-		if err := ids.BindIdentityAttachment(store, params.IdentityStores); err != nil {
-			return nil, err
+		for _, store := range p.identityStores {
+			if err := ids.BindIdentityAttachment(store, params.IdentityStores); err != nil {
+				return nil, err
+			}
 		}
 	}
 

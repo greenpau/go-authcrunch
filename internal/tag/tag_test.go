@@ -329,6 +329,11 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
+			name:  "test idp.ExternalIdentityProviderConfig struct",
+			entry: &idp.ExternalIdentityProviderConfig{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test ids.ExternalIdentityStoreConfig struct",
 			entry: &ids.ExternalIdentityStoreConfig{},
 			opts:  &Options{},

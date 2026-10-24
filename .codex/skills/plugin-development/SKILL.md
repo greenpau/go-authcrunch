@@ -36,7 +36,8 @@ provide concrete evidence of that boundary. Their registration and provisioning
 are host-framework behavior, not capabilities exported by the backend modules.
 
 Use [sqlite-ticket-provider](../sqlite-ticket-provider/SKILL.md) to maintain
-trusted ticket issuance, browser binding and the optional portal HTTP login hook.
+trusted ticket issuance, browser binding, the optional portal HTTP login hook,
+and caller-owned root injection with preserved attachment capabilities.
 
 Use [sqlite-registration](../sqlite-registration/SKILL.md) to maintain durable
 email confirmation, recoverable account creation and the optional portal hook.

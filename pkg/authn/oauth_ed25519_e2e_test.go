@@ -279,6 +279,7 @@ type oidcE2ETrustConfig struct {
 	attached                                               bool
 	configurePortal                                        func(*authn.PortalConfig)
 	loginRedirects                                         []*redirects.RedirectURIMatchConfig
+	gatekeeperCookies                                      []string
 }
 
 func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode string, trust ...oidcE2ETrustConfig) *oidcE2EPortal {
@@ -415,7 +416,7 @@ func newOIDCE2EPortal(t *testing.T, issuer *oidcE2EIssuer, base, signer, mode st
 		t.Fatal("construct OAuth E2E portal", err)
 	}
 	t.Cleanup(portal.Close)
-	gatekeeper, err := authz.NewGatekeeper(&authz.PolicyConfig{Name: "oauth-e2e", AuthURLPath: base + "/login", ValidateBearerHeader: true, RawCryptoKeyStoreConfig: keys, AccessListRules: []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer editor userinfo-user"}, Action: "allow stop"}}}, logger)
+	gatekeeper, err := authz.NewGatekeeper(&authz.PolicyConfig{Name: "oauth-e2e", AuthURLPath: base + "/login", ValidateBearerHeader: true, AccessTokenCookieNames: settings.gatekeeperCookies, RawCryptoKeyStoreConfig: keys, AccessListRules: []*acl.RuleConfiguration{{Conditions: []string{"match roles viewer editor userinfo-user"}, Action: "allow stop"}}}, logger)
 	if err != nil {
 		t.Fatal("construct OAuth E2E gatekeeper", err)
 	}

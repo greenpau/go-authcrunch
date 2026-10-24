@@ -36,10 +36,37 @@ The parser covers all fields and returns no partial result or sensitive echoes.
 `New(ctx, config)` snapshots configuration and opens a private local POSIX file.
 Read the [shared SQLite contract](../plugin-development/references/sqlite-backends.md)
 for pure-Go storage, permissions, schema ownership, uncertainty and Close. Inject
-through `authn.PortalParameters.IdentityProviders` and select the instance in
-PortalConfig.IdentityProviders. Root config/standalone authdb dispatch remains
-OAuth/SAML-only. Hosts own provision/reload/Close; Portal.Close does not close a
-shared provider. Configure/Configured check current storage health.
+through `authn.PortalParameters.IdentityProviders` or the root's runtime options,
+and select the instance in `PortalConfig.IdentityProviders`. The built-in factory
+and standalone authdb declarations remain OAuth/SAML-only. Hosts own
+provision/reload/Close; Portal.Close does not close a shared provider.
+Configure/Configured check current ticket storage health, not attachment setup.
+
+For root composition, derive `idp.NewExternalIdentityProviderConfig(name, kind,
+driver, realm, normalizedBackendConfig)` after the backend parser/Validate. Put
+that descriptor in `Config.ExternalIdentityProviders` and the exact ready handle
+in `ServerOptions.IdentityProviders`. Descriptors contain a lowercase SHA-256
+digest, not runtime handles or private backend fields; they participate in root
+state binding. The backend's parser owns operator grammar. The derived descriptor
+does not add a second parser or register arbitrary kinds with the built-in factory.
+Root pure preflight rejects unknown selections, duplicate names and selected
+store/provider name or realm collisions. Omitted portal store/provider lists
+include external providers; explicit selections remain unchanged. Disabled
+provider filtering retains its existing behavior.
+
+Runtime bindings must match exactly by name, realm, kind and driver and pass
+Configured. Missing, extra, nil, typed-nil or unavailable bindings fail before
+root state acquisition. Optional attachment consumers must return a nonnil binding;
+an explicit StoreName must already be bound. These checks inspect existing wiring
+without allocating an unnamed private attachment or testing broader account-store
+health. Only plugin metadata/readiness calls contain panics.
+The root keeps the original dynamic provider and its optional capabilities; it
+never calls Configure/Close or installs attachment/persistent state in borrowed
+providers. The host must complete any attachment wiring before construction.
+`PortalParameters.IdentityAttachmentsBound` is runtime-only and means the caller
+has completed attachment wiring for every supplied store/provider. The root sets
+it after binding its owned backends; standalone portals retain automatic binding
+when the flag is omitted. Drain all consumers before replacing a shared handle.
 
 ## Trusted issuance and browser flow
 
@@ -108,16 +135,40 @@ not sign tokens or reuse a supplied access token.
 
 Portal logout clears ordinary portal credentials; this provider has no upstream
 logout, identity token, refresh token or account introspection API. Pending tickets
-remain valid until consumed/expired; logout is not ticket revocation. Cross-device
-transfer and downstream OIDC/refresh identity adapters are separate capabilities
-and are not supplied by this reference. Issued access tokens retain their normal
-lifetime; upstream account revocation is outside this simple ticket contract.
+remain valid until consumed/expired; logout is not ticket revocation. Provider
+snapshot refresh still requires OAuth, and downstream local OP completion rejects
+external proof. Neither authority follows from a ticket's local identity ID.
+The generic connected-login path can perform cross-device transfer when enabled;
+it rechecks the attachment and transfers access-only evidence bounded by the
+approving login's expiry. It creates no ticket refresh family. Issued access
+tokens retain their normal lifetime; upstream account revocation is outside this
+simple ticket contract.
+
+## Implicit identity lifetime
+
+The provider always owns an `attachment.Attachment`, even when `attach` is omitted.
+After committed ticket consumption it resolves the pinned issuer and verified
+subject against that attachment and returns current external identity evidence.
+Preserve `attachment.Consumer` when adapting the provider: the portal must recheck
+that same attachment, rather than create another private fallback. The signed
+`id` is a local immutable identifier distinct from upstream `sub`; `origin`,
+timestamps, nonce and `amr` remain server-owned. The implicit identity has no
+password, local roles or local MFA proof.
+
+Without an explicit attachment, the private memory identity database lives for
+one provider instance. Shared portals and reconstructed roots borrowing that same
+instance retain the same ID. A new compatible provider restores pending tickets
+from SQLite but creates new implicit IDs, and old external proof fails its live
+identity recheck. Equal configuration digests do not preserve memory identities.
+Explicit persistent attachment is required for durable local identity continuity;
+root session serialization and ordinary stateless JWT expiry are separate matters.
 
 ## Acceptance
 
 ```
 make test TEST_DIR='./plugins/identity-providers/sqlite/... ./pkg/idp ./pkg/authn/cookie/... ./internal/tag'
 make test TEST_DIR=./pkg/authn TEST='TestProviderLogin|TestExtractBasePath|TestCrossDeviceMount|TestExternalLoginSeparatesReturnURL'
+make test TEST_DIR='. ./pkg/idp ./internal/tag' TEST='ExternalIdentityProvider|E2EServerExternalSQLiteTicket|StructTag'
 ```
 
 Units cover single issuance/consumption across independent handles, wrong browser,
@@ -133,3 +184,9 @@ precedence and unchanged OAuth/SAML redirects.
 `TestE2ESQLiteTicketPortalLoginPageDestination` starts the login from a login page
 that carries a destination and lands on it. Run public units/parser/consumer
 with CGO_ENABLED=0, excluding the external driver which enables the race detector.
+
+The public root TLS consumer covers root and nested mounts, authenticated trusted
+issuance through a separate SQLite handle, exact borrowed ownership, shared
+attachment IDs across portals, native configuration restoration, pending-ticket
+restart, new-instance ID loss, old-proof rejection, independently verified JWTs
+and local-factor policy denial after consumption.

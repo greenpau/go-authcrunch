@@ -56,6 +56,26 @@ The descriptor participates in persistent configuration binding. The
 [registration owner](../../sqlite-registration/SKILL.md) defines signup metadata,
 legacy defaults, confirmation and post-registration navigation.
 
+For external identity providers, derive `idp.NewExternalIdentityProviderConfig`
+from normalized backend configuration and supply the descriptor through
+`Config.ExternalIdentityProviders`. Supply the exact configured handle through
+`ServerOptions.IdentityProviders`. Retain optional HTTP and attachment interfaces;
+the root does not configure, close, clone or rebind borrowed providers. Unknown
+provider selections and name/realm collisions fail pure root preflight. Omitted
+portal backend selections include external providers; explicit selections do not
+expand. See the [ticket provider owner](../../sqlite-ticket-provider/SKILL.md) for
+trusted issuance, transient implicit identities and pending-ticket durability.
+
+The root completes attachment wiring for owned backends and sets runtime-only
+`PortalParameters.IdentityAttachmentsBound`. This tells the portal that its caller
+has completed wiring for every supplied store/provider; borrowed attachment setup
+remains the host's responsibility. Standalone callers retain automatic binding
+unless they set this flag. Configured checks backend readiness. Root additionally
+requires optional attachment consumers to return a nonnil attachment and verifies
+that an explicit StoreName is already bound; it never allocates unnamed attachment
+state during validation or claims broader account-store health. Do not install
+persistent root state in borrowed handles.
+
 Read the feature's owning skill for its exact grammar, defaults, and exclusions.
 Keep downstream handlers thin; do not copy field allowlists or parse the same
 settings independently. Do not route upstream OAuth settings into `pkg/oidc`.
