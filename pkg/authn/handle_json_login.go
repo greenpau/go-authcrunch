@@ -520,10 +520,10 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 			}
 			authResp, err = p.handleIssueTokens(ctx, w, r, rr, proof)
 			if err != nil {
-				if errors.Is(err, tokenrefresh.ErrDenied) {
+				if errors.Is(err, tokenrefresh.ErrDenied) && !errors.Is(err, tokenrefresh.ErrCommitUncertain) {
 					return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Reauthentication required")
 				}
-				if p.refreshRealm(proof.Authenticator.Realm) || errors.Is(err, tokenrefresh.ErrUnavailable) || errors.Is(err, state.ErrCapacity) {
+				if p.refreshRealm(proof.Authenticator.Realm) || errors.Is(err, tokenrefresh.ErrCommitUncertain) || errors.Is(err, tokenrefresh.ErrUnavailable) || errors.Is(err, state.ErrCapacity) {
 					return p.refreshError(ctx, w, err)
 				}
 				p.logger.Warn(

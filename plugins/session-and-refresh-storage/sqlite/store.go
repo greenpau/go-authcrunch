@@ -52,7 +52,7 @@ var (
 // published. The token may be spent. Do not retry the exchange; require fresh
 // authentication. Database commit or file-health failures also disable the
 // affected handle; request cancellation or expiry alone leaves it usable.
-var ErrCommitUncertain = errors.New("SQLite refresh commit outcome is uncertain")
+var ErrCommitUncertain = tokenrefresh.ErrCommitUncertain
 
 // New opens or initializes a dedicated database, snapshotting validated config.
 // Existing databases must have this plugin's schema and identical limits. Failed
@@ -167,93 +167,6 @@ func (s *Store) healthy() bool {
 		}
 	}
 	return true
-}
-
-var schema = [...]struct{ name, sql string }{
-	{"settings", "CREATE TABLE settings (id INTEGER PRIMARY KEY CHECK(id=1), max_sessions INTEGER NOT NULL, max_rotations INTEGER NOT NULL)"},
-	{"families", "CREATE TABLE families (id TEXT PRIMARY KEY NOT NULL, payload BLOB NOT NULL CHECK(length(payload)<=65536), expires_at INTEGER NOT NULL)"},
-	{"families_expiry", "CREATE INDEX families_expiry ON families(expires_at)"},
-	{"digests", "CREATE TABLE digests (digest BLOB PRIMARY KEY NOT NULL CHECK(length(digest)=32), family TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE)"},
-	{"digests_family", "CREATE INDEX digests_family ON digests(family)"},
-}
-
-func (s *Store) initialize(ctx context.Context, tx *sql.Tx) error {
-	var journal string
-	if err := tx.QueryRowContext(ctx, "PRAGMA journal_mode").Scan(&journal); err != nil || journal != "delete" {
-		return tokenrefresh.ErrUnavailable
-	}
-	var app, version int
-	if err := tx.QueryRowContext(ctx, "PRAGMA application_id").Scan(&app); err != nil {
-		return err
-	}
-	if err := tx.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
-		return err
-	}
-	// GLOB treats the underscore in SQLite's reserved prefix literally. LIKE
-	// would also hide unrelated tables such as sqliteX_foreign.
-	if app == 0 && version == 0 {
-		var count int
-		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_schema WHERE name NOT GLOB 'sqlite_*'").Scan(&count); err != nil {
-			return err
-		}
-		if count != 0 {
-			return tokenrefresh.ErrUnavailable
-		}
-		for _, statement := range []string{"PRAGMA application_id = 1094931014", "PRAGMA user_version = 1"} {
-			if _, err := tx.ExecContext(ctx, statement); err != nil {
-				return err
-			}
-		}
-		for _, object := range schema {
-			if _, err := tx.ExecContext(ctx, object.sql); err != nil {
-				return err
-			}
-		}
-		_, err := tx.ExecContext(ctx, "INSERT INTO settings VALUES(1, ?, ?)", s.config.MaxSessions, s.config.MaxRotations)
-		return err
-	}
-	if app != 1094931014 || version != 1 {
-		return tokenrefresh.ErrUnavailable
-	}
-	var capacity, rotations int
-	if err := tx.QueryRowContext(ctx, "SELECT max_sessions, max_rotations FROM settings WHERE id=1").Scan(&capacity, &rotations); err != nil {
-		return err
-	}
-	if capacity != s.config.MaxSessions || rotations != s.config.MaxRotations {
-		return tokenrefresh.ErrUnavailable
-	}
-	// Schema version 1 has exact definitions: changed constraints, triggers or
-	// missing indexes must fail construction, before any runtime is published.
-	rows, err := tx.QueryContext(ctx, "SELECT name,sql FROM sqlite_schema WHERE name NOT GLOB 'sqlite_*'")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	count := 0
-	for rows.Next() {
-		var name, definition string
-		if err := rows.Scan(&name, &definition); err != nil {
-			return err
-		}
-		found := false
-		for _, object := range schema {
-			if object.name == name && object.sql == definition {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return tokenrefresh.ErrUnavailable
-		}
-		count++
-	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	if count != len(schema) {
-		return tokenrefresh.ErrUnavailable
-	}
-	return nil
 }
 
 // transact retries only lock acquisition before any work. After BEGIN IMMEDIATE,

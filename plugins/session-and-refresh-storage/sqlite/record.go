@@ -40,7 +40,12 @@ type principalRecord struct {
 	ProviderSnapshot                []byte                       `json:",omitempty"`
 }
 
-type bindingRecord struct{ Portal, Origin, BasePath, Transport string }
+type bindingRecord struct {
+	Portal, Origin, BasePath, Transport string
+	// Empty scope retains the exact legacy encoding, including records already
+	// at the payload limit. Managed scopes always carry both fields.
+	Namespace, Generation string `json:",omitempty"`
+}
 
 type externalIdentityRecord struct {
 	Provider, Kind, Issuer, Subject string
@@ -121,6 +126,9 @@ func decodeSession(data []byte) (tokenrefresh.Session, error) {
 }
 
 func validSession(s tokenrefresh.Session) bool {
+	if !validScope(tokenrefresh.Generation{Namespace: s.Binding.Namespace, ID: s.Binding.Generation}) {
+		return false
+	}
 	if proof := s.Principal.ExternalIdentity; proof != (requests.ExternalIdentity{}) {
 		if s.Principal.Source != tokenrefresh.ProviderSnapshotSource || proof.Provider != s.Principal.Backend || proof.Kind != s.Principal.BackendKind || attachment.ExternalAccount(proof).Validate() != nil || !validText(proof.Evidence.UserID, 4096) || !validText(proof.Evidence.BackendVersion, 4096) || proof.Evidence.AuthenticatedAt <= 0 || proof.Evidence.Method != "federated" || proof.Evidence.APIKeyID != "" {
 			return false

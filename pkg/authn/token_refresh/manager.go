@@ -69,7 +69,8 @@ func NewManager(store Store, identity Identity, signer Signer, policy Policy, bi
 	if policy.AccessLifetime < time.Second || policy.IdleTimeout < time.Second || policy.AbsoluteTimeout < time.Second || policy.AccessLifetime > policy.AbsoluteTimeout || policy.IdleTimeout > policy.AbsoluteTimeout {
 		return nil, fmt.Errorf("invalid refresh lifetimes")
 	}
-	if binding.Portal == "" || binding.Origin == "" || binding.BasePath == "" {
+	if binding.Portal == "" || binding.Origin == "" || binding.BasePath == "" ||
+		((binding.Namespace != "" || binding.Generation != "") && !validGeneration(Generation{Namespace: binding.Namespace, ID: binding.Generation})) {
 		return nil, fmt.Errorf("refresh binding is required")
 	}
 	return &Manager{store: store, identity: identity, signer: signer, policy: policy, binding: binding, now: time.Now}, nil
@@ -251,6 +252,9 @@ func (m *Manager) refresh(ctx context.Context, token, transport, sessionID strin
 		}
 		return m.store.Rotate(ctx, s, next, result.RefreshExpiresAt, result.AccessExpiresAt)
 	})
+	if errors.Is(err, ErrCommitUncertain) {
+		return nil, err
+	}
 	if errors.Is(err, ErrDenied) {
 		if revokeErr := m.store.Revoke(ctx, d, b); revokeErr != nil {
 			return nil, revokeErr

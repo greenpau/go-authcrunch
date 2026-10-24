@@ -24,7 +24,8 @@ and core verification boundaries. The HTTP JSON authorizer is implemented at
 contracts. The SQLite refresh store is implemented at
 `plugins/session-and-refresh-storage/sqlite`; its
 [owner](../../session-and-refresh-storage/SKILL.md) defines local database durability,
-atomic operations, and public refresh-engine composition. The SQLite API-key authenticator at
+atomic operations, managed generation/migration rules, and public refresh-engine
+and portal composition. The SQLite API-key authenticator at
 `plugins/credential-authenticators/sqlite` has real gatekeeper composition; its
 [owner](../../credential-authenticators/SKILL.md) defines freshness and revocation.
 The SQLite password store at `plugins/identity-stores/sqlite` is owned by

@@ -49,7 +49,7 @@ func TestE2EMakeOpenAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
-	for _, pattern := range []string{"*.go", "go.mod", "go.sum", "VERSION", "Makefile", ".github/workflows/test.yml", "internal/openapi/*", "internal/sqlitedb", "internal/accessclaims", "plugins/cryptographic-signing/rsapss", "plugins/identity-providers/sqlite", "plugins/messaging/sqlite", "plugins/registration-workflows/sqlite", "plugins/oauth-login-storage/sqlite", "cmd/openapi/*", "cmd/authdb/main.go", "cmd/authdbctl/main.go", "pkg", "assets/scripts/version.py", "assets/openapi/*", "assets/openapi/content"} {
+	for _, pattern := range []string{"*.go", "go.mod", "go.sum", "VERSION", "Makefile", ".github/workflows/test.yml", "internal/openapi/*", "internal/sqlitedb", "internal/accessclaims", "plugins/cryptographic-signing/rsapss", "plugins/session-and-refresh-storage/sqlite", "plugins/identity-providers/sqlite", "plugins/messaging/sqlite", "plugins/registration-workflows/sqlite", "plugins/oauth-login-storage/sqlite", "cmd/openapi/*", "cmd/authdb/main.go", "cmd/authdbctl/main.go", "pkg", "assets/scripts/version.py", "assets/openapi/*", "assets/openapi/content"} {
 		matches, err := filepath.Glob(filepath.Join(repository, pattern))
 		if err != nil {
 			t.Fatal(err)
@@ -220,7 +220,7 @@ func TestE2EMakeOpenAPI(t *testing.T) {
 	runMake(true, artifactTarget)
 	checkArtifact(t, artifactDirectory, original)
 	// Source drift must fail before touching an otherwise valid bundle.
-	for _, relative := range []string{"pkg/portalpath/path.go", "plugins/identity-providers/sqlite/config.go", "pkg/messaging/email_send.go", "plugins/messaging/sqlite/outbox.go", "plugins/oauth-login-storage/sqlite/store.go", "pkg/authn/documents/client/crypto.mjs", "plugins/registration-workflows/sqlite/workflow.go", "internal/sqlitedb/database.go", "internal/accessclaims/claims.go", "plugins/cryptographic-signing/rsapss/signer.go", "pkg/authn/serve_http.go", "pkg/redirects/redirect_match.go", "pkg/util/addr/utils.go", "pkg/util/redirect.go", "pkg/util/sanitizer.go", "pkg/waf/malformed_input_check.go"} {
+	for _, relative := range []string{"pkg/portalpath/path.go", "plugins/identity-providers/sqlite/config.go", "pkg/messaging/email_send.go", "plugins/messaging/sqlite/outbox.go", "plugins/oauth-login-storage/sqlite/store.go", "pkg/authn/documents/client/crypto.mjs", "plugins/registration-workflows/sqlite/workflow.go", "internal/sqlitedb/database.go", "internal/accessclaims/claims.go", "plugins/cryptographic-signing/rsapss/signer.go", "plugins/session-and-refresh-storage/sqlite/managed.go", "plugins/session-and-refresh-storage/sqlite/migration.go", "pkg/authn/serve_http.go", "pkg/redirects/redirect_match.go", "pkg/util/addr/utils.go", "pkg/util/redirect.go", "pkg/util/sanitizer.go", "pkg/waf/malformed_input_check.go"} {
 		trackedSource := filepath.Join(dir, relative)
 		originalSource, err := os.ReadFile(trackedSource)
 		if err != nil {

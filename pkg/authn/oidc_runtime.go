@@ -33,7 +33,12 @@ import (
 )
 
 // GetOIDCProvider returns the configured provider, or nil when OIDC is disabled.
-func (p *Portal) GetOIDCProvider() oidc.OpenIDProvider { return p.oidc }
+func (p *Portal) GetOIDCProvider() oidc.OpenIDProvider {
+	if p.closed.Load() || p.managedRefreshUnavailable() {
+		return nil
+	}
+	return p.oidc
+}
 
 func validateOIDCPortalConfig(config *oidc.Config) error {
 	if err := config.Validate(); err != nil {
@@ -80,7 +85,7 @@ func (p *Portal) configureOIDC() error {
 		}
 	}
 	options := oidc.Options{Language: p.ui.Language, RenderPage: p.renderOIDCPage, SessionCookieName: p.cookie.OIDCSessionIDCookieName, RequestCookieName: p.cookie.OIDCRequestIDCookieName}
-	if p.refresh != nil {
+	if p.config.RefreshTokens != nil && p.config.RefreshTokens.Enabled {
 		issuer, _ := url.Parse(config.Issuer)
 		if p.config.RefreshTokens.PublicOrigin != issuer.Scheme+"://"+issuer.Host || strings.TrimSuffix(p.config.RefreshTokens.BasePath, "/") != issuer.Path {
 			return fmt.Errorf("oidc issuer and refresh origin/mount must agree")

@@ -3,29 +3,37 @@ get:
   tags:
   - External Authentication
   summary: Start upstream OAuth login
-  description: Start a configured upstream OAuth/OIDC login. The browser follows the provider redirect
-    and returns with state and its binding cookie. Keep browser HTML negotiation; provider configuration
-    controls availability. The portal binds a UUID state to its initiating session cookie and callback
-    for five minutes; only one callback can claim that state. PKCE/nonce behavior follows provider configuration.
-    A configured shared login store preserves the whole transaction across compatible replicas;
-    omitted storage stays private to the provider. Storage unavailability returns HTML 503 without
-    an authorization redirect or authenticated credential. Other portal/identity state remains separate.
-    Presence of state, code, error or access_token switches the provider into callback processing even
-    on this login URL. Missing/unknown providers produce HTML 400; upstream validation failures produce
-    HTML 401. A trusted redirect_url on the start request is bound to this login's state; only a successful callback of that login returns it. An empty or rejected destination selects the portal. Callback query values and shared cookies cannot replace it.
-    Selected provider snapshot renewal is configured per realm in refresh_tokens; the verified
-    callback creates the family. An initial redirect or an existing access JWT cannot create one.
-    Verified external authentication resolves or automatically provisions an identity in its
-    attached local store before portal issuance. Without an explicit attachment the provider
-    uses a private in-memory local store. The signed id claim is the local immutable ID;
-    provider sub remains available for existing policies. Current local roles and factor rules
-    apply; an external login alone cannot satisfy required local MFA. Use /connected-accounts
-    to explicitly connect to an existing local account. Provider email never selects an account.
-    When a verified callback needs interactive local factors, it starts an independent browser sandbox
-    carrying the bound destination. Admission returns HTML 429 if 16 canonical sandbox proof cookies are
-    already visible, or HTML 503 if the shared portal sandbox cache is full. Existing live sandboxes
-    remain usable. The admitted upstream transaction has already been consumed; restart external login
+  description: >-
+    Start a configured upstream OAuth/OIDC login. The browser follows the provider redirect and
+    returns with state and its binding cookie. Keep browser HTML negotiation; provider configuration
+    controls availability. The portal binds a UUID state to its initiating session cookie and
+    callback for five minutes; only one callback can claim that state. PKCE/nonce behavior follows
+    provider configuration. A configured shared login store preserves the whole transaction across
+    compatible replicas; omitted storage stays private to the provider. Storage unavailability
+    returns HTML 503 without an authorization redirect or authenticated credential. Other
+    portal/identity state remains separate. Presence of state, code, error or access_token switches
+    the provider into callback processing even on this login URL. Missing/unknown providers produce
+    HTML 400; upstream validation failures produce HTML 401. A trusted redirect_url on the start
+    request is bound to this login's state; only a successful callback of that login returns it. An
+    empty or rejected destination selects the portal. Callback query values and shared cookies
+    cannot replace it. Selected provider snapshot renewal is configured per realm in refresh_tokens;
+    the verified callback creates the family. An initial redirect or an existing access JWT cannot
+    create one. Verified external authentication resolves or automatically provisions an identity in
+    its attached local store before portal issuance. Without an explicit attachment the provider
+    uses a private in-memory local store. The signed id claim is the local immutable ID; provider
+    sub remains available for existing policies. Current local roles and factor rules apply; an
+    external login alone cannot satisfy required local MFA. Use /connected-accounts to explicitly
+    connect to an existing local account. Provider email never selects an account. When a verified
+    callback needs interactive local factors, it starts an independent browser sandbox carrying the
+    bound destination. Admission returns HTML 429 if 16 canonical sandbox proof cookies are already
+    visible, or HTML 503 if the shared portal sandbox cache is full. Existing live sandboxes remain
+    usable. The admitted upstream transaction has already been consumed; restart external login
     after a capacity refusal instead of replaying that callback.
+
+    If completed login issues a provider-snapshot refresh family or replaces an old browser family
+    and the storage commit is uncertain, the portal returns 503 HTML without positive credentials or
+    a success redirect. Uncertainty takes priority over a combined denial. Start a new independent
+    login after storage recovery; initiating the upstream redirect itself is unchanged.
   security: []
   responses:
     '200':

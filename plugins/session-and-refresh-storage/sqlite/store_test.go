@@ -293,7 +293,7 @@ func TestSQLiteAdmissionAndReplacement(t *testing.T) {
 	if err := s.Rotate(t.Context(), first, next, first.IdleExpiresAt, expiry); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.db.Exec("CREATE TRIGGER reject_insert BEFORE INSERT ON digests BEGIN SELECT RAISE(ABORT,'private-canary'); END"); err != nil {
+	if _, err := s.db.Exec("CREATE TRIGGER reject_insert BEFORE INSERT ON refresh_digests_v2 BEGIN SELECT RAISE(ABORT,'private-canary'); END"); err != nil {
 		t.Fatal(err)
 	}
 	err := other.CreateReplacing(t.Context(), second, expiry, [][32]byte{first.Current})
@@ -425,7 +425,7 @@ func TestSQLiteBoundsExpiryAndRejection(t *testing.T) {
 					t.Fatal(err)
 				}
 			case "corrupt record":
-				if _, err := s.db.Exec("UPDATE families SET payload=?", []byte("{}")); err != nil {
+				if _, err := s.db.Exec("UPDATE refresh_families_v2 SET payload=?", []byte("{}")); err != nil {
 					t.Fatal(err)
 				}
 			case "missing file":
@@ -443,7 +443,7 @@ func TestSQLiteBoundsExpiryAndRejection(t *testing.T) {
 			}
 			if scenario == "rotation limit" || scenario == "idle" || scenario == "absolute" {
 				var count int
-				if err := s.db.QueryRow("SELECT count(*) FROM digests").Scan(&count); err != nil || count != 0 {
+				if err := s.db.QueryRow("SELECT count(*) FROM refresh_digests_v2").Scan(&count); err != nil || count != 0 {
 					t.Fatal("terminal family retained history", count, err)
 				}
 			}
@@ -480,7 +480,7 @@ func TestSQLiteLockCancellationAndCommitFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	var n int
-	if err := reader.QueryRow("SELECT count(*) FROM families").Scan(&n); err != nil {
+	if err := reader.QueryRow("SELECT count(*) FROM refresh_families_v2").Scan(&n); err != nil {
 		t.Fatal(err)
 	}
 	err = s.Rotate(t.Context(), first, sha256.Sum256([]byte("commit fails")), first.IdleExpiresAt, expiry)
@@ -705,12 +705,12 @@ func TestSQLiteRotationRechecksOriginalIdleDeadline(t *testing.T) {
 
 func TestSQLiteRejectsAlteredSchema(t *testing.T) {
 	for _, statement := range []string{
-		"DROP INDEX digests_family",
-		"ALTER TABLE families ADD COLUMN unexpected TEXT",
+		"DROP INDEX refresh_digests_family_v2",
+		"ALTER TABLE refresh_families_v2 ADD COLUMN unexpected TEXT",
 		"CREATE TABLE sqliteX_extra(value TEXT)",
-		"CREATE TRIGGER unexpected AFTER INSERT ON families BEGIN DELETE FROM digests; END",
+		"CREATE TRIGGER unexpected AFTER INSERT ON refresh_families_v2 BEGIN DELETE FROM refresh_digests_v2; END",
 		"PRAGMA application_id=7",
-		"PRAGMA user_version=2",
+		"PRAGMA user_version=99",
 	} {
 		s := testStore(t, 2, 8)
 		if _, err := s.db.Exec(statement); err != nil {
@@ -753,8 +753,8 @@ func TestSQLiteProviderEvidence(t *testing.T) {
 			t.Fatal("invalid source evidence accepted")
 		}
 	}
-	// Existing local records retain their canonical JSON bytes: optional source
-	// fields are omitted, so this format extension needs no destructive migration.
+	// Optional provider-source fields remain omitted for local records. The
+	// schema migration separately upgrades the explicit binding-scope fields.
 	local := sessionFixture("legacy")
 	encoded, err := encodeSession(local)
 	if err != nil {

@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+	tokenrefresh "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/credentials"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -39,7 +40,8 @@ import (
 
 // Config is a configuration of Server.
 type Config struct {
-	ExternalAccessSigners []*kms.ExternalAccessSignerConfig `json:"external_access_signers,omitempty" xml:"external_access_signers,omitempty" yaml:"external_access_signers,omitempty"`
+	ExternalRefreshStores []*tokenrefresh.ExternalStoreConfig `json:"external_refresh_stores,omitempty" xml:"external_refresh_stores,omitempty" yaml:"external_refresh_stores,omitempty"`
+	ExternalAccessSigners []*kms.ExternalAccessSignerConfig   `json:"external_access_signers,omitempty" xml:"external_access_signers,omitempty" yaml:"external_access_signers,omitempty"`
 	// Logging configures diagnostic suppression for this runtime's components.
 	Logging *logging.Config `json:"logging,omitempty" xml:"logging,omitempty" yaml:"logging,omitempty"`
 	// State enables host-independent durable keys and authenticated sessions.
@@ -135,6 +137,9 @@ func (cfg *Config) AddAuthorizationPolicy(p *authz.PolicyConfig) error {
 func (cfg *Config) Validate() error {
 	if cfg == nil {
 		return fmt.Errorf("config is nil")
+	}
+	if err := cfg.validateExternalRefreshStores(); err != nil {
+		return err
 	}
 	if err := cfg.validateExternalAccessSigners(); err != nil {
 		return err

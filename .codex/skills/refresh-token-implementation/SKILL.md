@@ -9,7 +9,10 @@ The implementation is opt-in under `authn.PortalConfig.RefreshTokens`. The
 reusable token/session engine lives at `pkg/authn/token_refresh`, with Go package
 identifier `tokenrefresh`. Use that import path and qualifier in consumers. Read
 [configuration and client contract](references/configuration-and-clients.md)
-when exposing settings, integrating clients, or changing public behavior.
+when exposing settings, integrating clients, or changing public behavior. Read the
+[managed storage contract](references/managed-storage.md) when selecting a borrowed
+refresh backend, assembling a root or standalone portal, or changing generation
+activation and readiness.
 Use [refresh-token-identity](../refresh-token-identity/SKILL.md) to change login
 proof, MFA completion, sandbox redemption, credential-version revalidation, and
 captured upstream provider evidence.
@@ -42,8 +45,12 @@ directories for consumer integration; those repositories are updated separately.
   its external-package unit tests; the portal model remains in `pkg/authn`.
   Additional `authn.TokenRefreshConfig` settings need corresponding grammar in
   this constructor and consumer coverage through `PortalConfig.RefreshTokens`.
-- `pkg/authn/portal.go`: configured-realm capability checks, manager creation,
-  failed-construction cleanup, and `Portal.Close()`.
+- `pkg/authn/portal.go`: configured-realm capability checks, selected-store
+  preflight, pending publication, failed-construction cleanup, and `Portal.Close()`.
+- `pkg/authn/token_refresh_managed.go`, `persistent_state.go`: persistent
+  namespace/generation initialization, managed activation and publication.
+- `pkg/authn/token_refresh/managed.go`: typed descriptors, immutable prepared
+  bindings, managed metadata/readiness and borrowed generation views.
 - `pkg/authn/token_issuer.go`: shared access/refresh issuance. HTTP and JSON
   sandbox login must call the same issuer; `grantAccess` only delivers signed output.
 - `pkg/authn/token_refresh_runtime.go`: portal adapters, current transformations,
@@ -76,7 +83,9 @@ copy owned slices, including provider snapshot bytes; caller mutation must not
 change stored grants. The legacy empty principal source means identity store;
 the explicit provider source cannot enter a local backend or profile adapter.
 
-Keep the family binding fixed: portal, exact origin, mount, and transport.
+Keep the family binding fixed: portal, exact origin, mount, and transport, plus
+exact namespace/generation for managed storage. Empty scope retains the legacy
+engine contract; it cannot adopt a managed family.
 Retain immutable backend/user identity, original authentication evidence,
 original audience/scope grant, current and spent digests, revision, and idle and
 absolute deadlines. Every renewal has a new `jti`, `iat`, `nbf`, and `exp`;
@@ -124,7 +133,10 @@ and such a lookup would revoke an otherwise healthy family.
 
 ## Lifetime and Extension
 
-The portal constructs its bounded `MemoryStore`. Capacity fails closed; exhausted
+With `TokenRefreshConfig.Store` empty, the portal constructs its bounded
+`MemoryStore`. A selected store instead follows the
+[managed lifecycle](references/managed-storage.md), with no fallback or duplicate
+memory snapshot. Capacity fails closed; exhausted
 rotation limits require login. Cleanup occurs on creation, not through an extra
 refresh goroutine. Without `Config.State`, restart, portal replacement, and local
 identity database reload require fresh authentication. Opt-in
@@ -134,7 +146,7 @@ epoch. Storage errors fail closed; Close discards memory but preserves snapshots
 `Portal.Close()`; failed construction must stop and await owned cache workers as
 well. `Server.Close()` owns portal disposal and reverse construction cleanup;
 standalone portal consumers still call Close themselves after draining requests.
-Closed portal HTTP/BasicAuth entry points reject new work. See the
+Closed portal HTTP/BasicAuth/API-key entry points reject new work. See the
 [embedding lifecycle](../coding-directives/references/embedding-integration.md)
 for host ownership and replacement boundaries.
 
@@ -191,10 +203,10 @@ access JWTs. Local restart continuity is supplied by the runtime-state integrati
 not by the Store interface alone.
 
 Use [session-and-refresh-storage](../session-and-refresh-storage/SKILL.md) to
-maintain the optional SQLite adapter, its public parser, local cross-process
-atomicity, and engine-level consumer fixtures. Portal backend selection remains
-a separate integration; SQLite persistence does not preserve identity epochs or
-signing keys by itself.
+maintain the SQLite adapter, its public parser, generation-scoped operations,
+transactional migration and local consumer fixtures. Selected portal/root assembly
+is defined by the managed storage reference; SQLite alone does not preserve
+identity epochs or signing keys.
 
 ## Validation
 
@@ -215,3 +227,9 @@ other portal cookie role. `TestE2ETokenRefreshCookieLifecycle` uses a real cooki
 jar for default/custom names, legacy-path cleanup, rotation, and logout.
 Fuzz token grammar with the guarded command in
 [refresh validation](references/configuration-and-clients.md#validation).
+
+The [managed storage acceptance map](references/managed-storage.md#acceptance-map)
+adds root and standalone readiness, durable generation, omission/reintroduction,
+partial activation and real SQLite COMMIT-failure controls. Retain the unselected
+memory-store, provider snapshot, connected-account, cross-device and downstream
+OIDC regressions alongside those selected-backend cases.

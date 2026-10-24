@@ -23,6 +23,11 @@ get:
     independent cookie while preserving other live flow cookies; the deletion also survives a later token
     delivery rollback. A consumed flow cannot be replayed with its original secret. Never place a sandbox
     secret in a URL, form field, JavaScript or browser storage.
+
+    If final issuance or replacement of an old refresh family has an uncertain storage commit,
+    completion returns 503 HTML without positive credentials or a success redirect. The consumed
+    sandbox proof remains consumed; begin a fresh login. Ordinary checkpoint and denial responses
+    remain unchanged.
   security: []
   responses:
     '200':
@@ -77,6 +82,11 @@ post:
     another tab or a checkpoint query parameter. Completion and terminal failure expire the selected
     independent cookie, including when later credential delivery fails. Other live flow cookies remain usable, and
     replay of the consumed flow with its original proof is denied.
+
+    If final issuance or replacement of an old refresh family has an uncertain storage commit,
+    completion returns 503 HTML without positive credentials or a success redirect. The consumed
+    sandbox proof remains consumed; begin a fresh login. Ordinary checkpoint and denial responses
+    remain unchanged.
   security: []
   responses:
     '200':

@@ -26,7 +26,12 @@ post:
     session, and cannot extend the approving login expiry. Current local identity and factor checks,
     the expiry bound and signing occur in one identity transaction.
     An external access signer must return a verified signature over the exact approved claims before
-    credentials are published. Its configured lifetime cannot extend the original approving login expiry.'
+    credentials are published. Its configured lifetime cannot extend the original approving login expiry.
+
+    An uncertain managed refresh-store commit during redemption or issuance returns the existing 503
+    JSON unavailable result and withholds credentials. Uncertainty takes priority over an ordinary
+    denial. Redemption has consumed the approval, so start an independent transfer after recovery;
+    never silently repeat the token exchange.'
   security: []
   responses:
     '200':

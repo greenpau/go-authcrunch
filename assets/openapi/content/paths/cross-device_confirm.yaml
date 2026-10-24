@@ -10,7 +10,12 @@ get:
     are required. All responses are no-store.
 
 
-    Requires fresh completed login bound to this transfer; shows account and display code.'
+    Requires fresh completed login bound to this transfer; shows account and display code.
+
+    Approving-session validation returns 503 JSON when managed refresh storage is unavailable or its
+    commit outcome is uncertain, even if the error also denotes an invalid session. This
+    availability refusal is distinct from a missing or expired approval (410); successful GET still
+    renders HTML.'
   security:
   - CrossDeviceBinding: []
   responses:
@@ -107,7 +112,12 @@ post:
     A separate explicit decision is required after fresh login. Clears the binding cookie after a decision.
     Content-Type parameters such as charset=utf-8 are accepted. Form fields are read from the body, without
     trimming; query fields cannot supply code, secret or csrf. Repeated body fields fail, including unrecognized
-    fields.'
+    fields.
+
+    Approving-session validation returns 503 JSON when managed refresh storage is unavailable or its
+    commit outcome is uncertain, even if the error also denotes an invalid session. This
+    availability refusal is distinct from a missing or expired approval (410); successful GET still
+    renders HTML.'
   security:
   - CrossDeviceBinding: []
   responses:

@@ -110,7 +110,12 @@ post:
     fields fail, but case aliases and repeated fields follow Go string decoding. Null optional strings
     retain their zero/default value; empty unused fields are allowed. The 1024-byte bound applies to the
     decoder reader, not a promise that all trailing body bytes are read. A second JSON value or trailing
-    garbage after a complete first object is not examined. Refresh transport checks still apply independently.'
+    garbage after a complete first object is not examined. Refresh transport checks still apply independently.
+
+    An uncertain managed refresh-store commit returns 503 and withholds staged access and refresh
+    credentials, including when uncertainty is combined with an identity denial or cancellation. The
+    submitted exchange must not be retried automatically. Reconcile unavailable storage and obtain
+    fresh authentication; a session lookup cannot resolve an ambiguous rotation.'
   security: []
   responses:
     '200':

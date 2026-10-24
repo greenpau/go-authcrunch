@@ -1,6 +1,6 @@
 ---
 name: session-and-refresh-storage
-description: Maintain the local SQLite refresh-storage plugin, its public parser, atomic rotation and replacement, replay history, durability and lifecycle, and refresh-engine consumer tests. Excludes automatic portal backend selection and storage for OIDC or OAuth sessions.
+description: Maintain SQLite refresh storage, its parser, managed generation views, atomic rotation and replay, schema migration, durability and lifecycle. Portal selection belongs to refresh-token-implementation; downstream OIDC and OAuth session storage remain separate.
 ---
 
 # Session and Refresh Storage
@@ -9,13 +9,15 @@ description: Maintain the local SQLite refresh-storage plugin, its public parser
 
 The reference backend is
 [`plugins/session-and-refresh-storage/sqlite`](../../../plugins/session-and-refresh-storage/sqlite).
-It implements `tokenrefresh.Store`, `ReplacementStore`, and `SessionValidator`.
-Pass the result of `sqlite.New(ctx, config)` directly to
-`tokenrefresh.NewManager(store, identity, signer, policy, binding)`. Importing the
-plugin does not register a portal configuration kind. The portal still owns a
-concrete `MemoryStore`; its sessions, OIDC grants, OAuth sessions, and persistent
-runtime state have independent storage. This backend establishes engine-level
-composition for a local host, not a distributed authentication service.
+It implements the compatible empty-scope `tokenrefresh.Store`,
+`ReplacementStore` and `SessionValidator` APIs, plus `ManagedStore` metadata,
+readiness and generation activation. Plain engine callers can pass
+`sqlite.New(ctx, config)` to `tokenrefresh.NewManager` with an empty scope.
+Named root/portal selection uses borrowed immutable `ActiveStore` views through
+the [managed assembly contract](../refresh-token-implementation/references/managed-storage.md).
+Importing the plugin does not register a host configuration kind. Portal sessions,
+OIDC grants, OAuth sessions and root runtime state retain their own storage.
+This is a local-host backend, not a distributed authentication service.
 
 The [refresh engine](../refresh-token-implementation/SKILL.md) owns issuance,
 rotation, and publication ordering. The
@@ -48,7 +50,8 @@ singleton; only `path` is required. Unknown settings, duplicates, malformed
 arity, nonpositive explicit limits, control characters, and invalid UTF-8 fail.
 Limits default to 10,000 live families and 1,024 rotations per family; each is
 bounded to 1–100,000. Timeout defaults to one second and is bounded to 1ms–30s.
-It limits context-aware work and connection-pool/lock waits. Filesystem calls,
+Equivalent valid timeout spellings normalize with `time.Duration.String()` before
+descriptor hashing. The timeout limits context-aware work and connection-pool/lock waits. Filesystem calls,
 driver connection setup, and an in-progress commit may outlast that budget;
 credentials are withheld if cancellation is observed after commit. Direct typed
 configs use
@@ -95,8 +98,8 @@ serializes to no fields. Older readers reject records containing this extension.
 Private principal records also retain typed provider source, backend kind and
 bounded canonical ProviderSnapshot bytes for opt-in upstream snapshot families.
 Limit the snapshot to 32 KiB and reject mixed local/provider or unknown source
-evidence. Deep-copy its bytes on input, lookup and result boundaries. The three
-new DTO fields are omitted for legacy local records, preserving their canonical
+evidence. Deep-copy its bytes on input, lookup and result boundaries. These three
+DTO fields are omitted for legacy local records, preserving their canonical
 encoding; older readers reject provider records. The 64 KiB record limit still
 applies after JSON/base64 encoding. Provider snapshots are private identity data,
 not upstream credentials. Authentication and current policy verification belong
@@ -120,11 +123,13 @@ across clients. Unsupported schemas, altered constraints/indexes/triggers,
 SQLite errors, unsafe files, and incompatible limits fail construction with no
 runtime. Only genuine SQLite internal objects are exempt from schema checks;
 similarly named foreign objects must be rejected at initialization and reopen.
-Construction does not scan every record or perform a full integrity check;
-malformed records fail closed when accessed. No automatic schema migration is
-supplied. A failed first construction
-can leave an empty private file. Existing active handles survive a rejected
-configuration reload. Runtime checks reject missing or replaced database files.
+Reopening the current schema does not scan every record or perform a full integrity
+check; malformed records fail closed when accessed. Migration does scan every
+old record and its digest history. The supported preceding schema
+migrates transactionally after exact definitions and identical limits are checked.
+A failed first construction can leave an empty private file. Rejected configuration does not transfer ownership or close borrowed handles.
+A completed earlier generation retirement can still invalidate their old views
+if a later startup step fails. Runtime checks reject missing or replaced database files.
 
 The host owns `Close`: drain requests, close every old handle, then rebuild
 managers with newly opened handles. Close is idempotent and preserves committed
@@ -139,9 +144,56 @@ or scopes list has at most 128 entries, and methods must be nonempty. Replacemen
 accepts at most 128 previous digests. These bounds apply in addition to the
 configured capacity and rotation limits; excess input is rejected before commit.
 
+## Managed generations and migration
+
+`Metadata` attests the initialized immutable normalized configuration and file-wide
+limits without reading keys or opening another database. `CheckReady(ctx)` uses
+bounded read-only schema/limit/health queries; it never writes a family or
+namespace probe. Neither method grants ownership to the caller. Nil/closed
+handles and incompatible storage fail closed.
+
+`ActivateGeneration(ctx, tokenrefresh.Generation)` returns an immutable borrowed
+view. Namespace and generation are independent 32-byte lower-hex identities
+supplied by the managed portal lifecycle. Each operation checks its captured
+marker in the same transaction before replay, deletion, rotation, replacement or
+admission. Caller binding and stored payload scope must match exact SQL ownership.
+Changing one namespace's generation removes all its old families and spent
+history, including removed portals, while preserving other namespaces. Family
+IDs, credential digests and capacity remain file-wide.
+
+The original concrete `Store` methods accept only both-empty namespace/generation.
+They cannot bypass a marker with a managed binding or reach managed rows through
+an empty binding. A managed view cannot silently adopt a legacy family. Repeated
+same-generation activation preserves families; stale views cannot mutate the
+current generation. Close retains committed rows and never deletes a namespace.
+
+The new private schema uses distinct names for every table and index, including
+settings, generation markers, families and digests. Migration validates the exact
+old schema and configured limits first, then streams bounded canonical old DTOs,
+copies every current/spent digest and preserves original identity/provider proof.
+Rows remain in empty legacy scope. Scope fields are omitted when empty so valid
+legacy bytes, including a full 64 KiB payload, remain representable. Reconstruct
+canonical proof through Session before byte comparison; explicit zero proof
+objects that the old encoder omitted must stay invalid.
+
+Missing or extra history, orphan digests, invalid proof/payload, mismatched expiry,
+limits or altered schema reject the migration without partial DDL or row changes.
+Drop old table/index names and change the schema marker within the same commit.
+A version check on reopen alone is insufficient: an already-open old SQL writer
+must lose its old mutation surface too. Old readers reject the new format; no
+downgrade or mixed-version writing contract is provided. A real failed migration
+COMMIT returns uncertainty and publishes no store; reconcile before reopening.
+
+Several databases are not one atomic startup transaction. Successful early
+retirement remains committed if later activation fails. Root state and identity
+preservation still belong to the [managed lifecycle](../refresh-token-implementation/references/managed-storage.md);
+losing a root namespace can strand its live capacity in a retained database.
+Do not delete unrelated namespaces or reset markers to conceal that condition.
+
 ## Atomicity and errors
 
-Every operation uses an immediate write transaction; lock acquisition alone is
+Family operations and generation activation use immediate write transactions;
+readiness uses read-only queries. Lock acquisition alone is
 retried, with a context-aware bound. Decisions are made from current persisted
 state. Creation and rotation check staged access deadlines immediately before
 and after commit; rotation also retains and rechecks the original idle deadline.
@@ -153,8 +205,9 @@ even after restart. Unknown credentials and any wrong binding cannot revoke it.
 Retain all spent digests while descendants are live. Reaching the rotation limit
 revokes the family rather than dropping its history. Admission, duplicate
 replacements, collision checks, capacity, retirement, and creation are one
-transaction. Failed replacement preserves every live family, including at full
-capacity. Only fresh authenticated issuance can use old credentials as
+transaction. Replacement rejected before attempted commit preserves every live family,
+including at full capacity; an uncertain or post-commit failure may already
+have retired the old families. Only fresh authenticated issuance can use old credentials as
 replacement targets. Logout accepts current or spent credentials and is
 idempotent for unknown credentials. Session-ID liveness is not authentication.
 
@@ -162,16 +215,29 @@ idempotent for unknown credentials. Session-ID liveness is not authentication.
 Ordinary unavailable/canceled operations roll back without spending a current
 credential. Raw SQL errors and paths are not returned. A commit attempt whose
 outcome or post-commit deadline/health cannot be confirmed returns the distinct
-`sqlite.ErrCommitUncertain` and must never publish staged credentials. It may
+`tokenrefresh.ErrCommitUncertain` (also exposed as the alias
+`sqlite.ErrCommitUncertain`) and must never publish staged credentials. It may
 already have spent the token: do not blindly retry; require fresh authentication.
 An actual database commit failure or failed post-commit file-health check disables
 the handle: reconcile storage health, close that handle, and reopen. Cancellation rejected by
 `database/sql` before it calls the driver is rollback-safe and returns the context
 error. Cancellation or grant expiry after a successful commit withholds only that
 request's credentials; it must not disable storage for unrelated families. Do not
-translate an uncertain outcome into the engine's retry-safe `ErrUnavailable`.
+translate an uncertain outcome into the engine's retry-safe `ErrUnavailable`
+or let a joined denial/cancellation hide its classification. A native fresh login
+without a presented replacement family still needs capacity; a concrete rollback
+does not imply that the server retired the old family.
 
 ## Acceptance and verification
+
+`managed_test.go` covers normalized metadata/read-only readiness, nil/closed
+handles, repeated activation, stale-view rejection before every operation,
+namespace isolation, global limits/collisions, legacy-method containment and
+actual activation COMMIT failure. `migration_test.go` covers exact supported old
+schema/limits, preserved local/provider proof and spent history, maximum-sized
+canonical records, rollback rejection, already-open old SQL mutations and
+capacity-one generation retirement. Root and standalone TLS coverage is mapped
+by the [managed owner](../refresh-token-implementation/references/managed-storage.md#acceptance-map).
 
 Keep unit cases in `store_test.go` for schema/config rejection, snapshots and
 large identity versions, independent-handle races, wrong bindings, oldest-spent

@@ -87,6 +87,17 @@ Use the status contract: 400 malformed/ambiguous request, 401 login required,
 415 wrong content type, and 503 transient signing/storage/backend failure.
 No response delivers credentials before the store commits.
 
+`tokenrefresh.ErrCommitUncertain` takes precedence over joined denial and context
+errors. Refresh/native JSON, provider completion, form sandbox final issuance,
+and cross-device redemption return unavailable outcomes without publishing staged
+credentials. Keep ordinary non-uncertain status behavior unchanged. Pending or
+failed selected-store portal publication returns no-store 503 before dispatch;
+its lifecycle is defined by the [managed storage contract](../refresh-token-implementation/references/managed-storage.md).
+No uncertainty-specific response field or retry permission is added. A client
+cannot distinguish rollback from committed-but-undelivered credentials merely
+from 503, cancellation or a lost response; require independent fresh login.
+
+
 After a cookie rotation commits, failure to reconstruct or cache the user must
 discard the undelivered family with bounded cleanup independent of request
 cancellation. Keep the current HTTP request context for reconstruction so
@@ -258,3 +269,14 @@ and access-only completion, including preservation of the prior OIDC session.
 provider/local replacement, cookie-only renewal, replay, logout and deadline
 coverage. Keep its cross-site navigation headers and independent expired-access
 authorization check.
+
+Preserve `TestManagedRefreshHTTPUncertaintyPrecedence` for joined-error provider
+and cross-device classification, `TestManagedRefreshAccessOnlyReplacementUncertainty`
+and `TestManagedRefreshCallbackReplacementUncertainty` for terminal old-family
+revocation through form, provider and Basic handlers, and
+`TestE2EServerManagedRefreshFormCommitUncertainty`
+for a real TLS form flow blocked at actual SQLite COMMIT. The latter observes one
+concrete rollback, replaces unhealthy handles and authenticates afresh; it does
+not authorize clients to replay ambiguous exchanges. Unit fake errors alone do
+not establish database atomicity. Browser/CLI pending-state tests must retain
+blocked state across reload and never recover by looking up an uncertain token.

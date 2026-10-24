@@ -22,15 +22,10 @@ import (
 	tokenrefresh "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 )
 
-// Create atomically admits a staged family after validating its access deadline.
-func (s *Store) Create(ctx context.Context, session tokenrefresh.Session, accessExpiry int64) error {
-	return s.CreateReplacing(ctx, session, accessExpiry, nil)
-}
-
 // CreateReplacing atomically retires matching previous families and creates the
 // new one. Failure preserves every live family, even at capacity. Only trusted
 // fresh-login callers may use previous credentials as replacement targets.
-func (s *Store) CreateReplacing(ctx context.Context, session tokenrefresh.Session, accessExpiry int64, previous [][32]byte) error {
+func (s *Store) createReplacing(ctx context.Context, scope tokenrefresh.Generation, session tokenrefresh.Session, accessExpiry int64, previous [][32]byte) error {
 	if session.Revision != 0 || len(previous) > 128 {
 		return tokenrefresh.ErrInvalid
 	}
@@ -45,15 +40,15 @@ func (s *Store) CreateReplacing(ctx context.Context, session tokenrefresh.Sessio
 		}
 		return nil
 	}
-	return s.transact(ctx, check, func(ctx context.Context, tx *sql.Tx) (bool, error) {
+	return s.transactScope(ctx, scope, check, func(ctx context.Context, tx *sql.Tx) (bool, error) {
 		if err := check(); err != nil {
 			return false, err
 		}
-		if _, err := tx.ExecContext(ctx, "DELETE FROM families WHERE expires_at<=?", s.now().Unix()); err != nil {
+		if _, err := tx.ExecContext(ctx, "DELETE FROM refresh_families_v2 WHERE expires_at<=?", s.now().Unix()); err != nil {
 			return false, err
 		}
 		var count int
-		if err := tx.QueryRowContext(ctx, "SELECT (SELECT count(*) FROM families WHERE id=?) + (SELECT count(*) FROM digests WHERE digest=?)", session.ID, session.Current[:]).Scan(&count); err != nil {
+		if err := tx.QueryRowContext(ctx, "SELECT (SELECT count(*) FROM refresh_families_v2 WHERE id=?) + (SELECT count(*) FROM refresh_digests_v2 WHERE digest=?)", session.ID, session.Current[:]).Scan(&count); err != nil {
 			return false, err
 		}
 		// Check collisions before removing replacement targets.
@@ -62,7 +57,7 @@ func (s *Store) CreateReplacing(ctx context.Context, session tokenrefresh.Sessio
 		}
 		retired := make(map[string]bool)
 		for _, digest := range previous {
-			old, err := loadDigest(ctx, tx, digest)
+			old, err := loadDigest(ctx, tx, digest, scope)
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
 			}
@@ -73,47 +68,48 @@ func (s *Store) CreateReplacing(ctx context.Context, session tokenrefresh.Sessio
 				retired[old.ID] = true
 			}
 		}
-		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM families").Scan(&count); err != nil {
+		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM refresh_families_v2").Scan(&count); err != nil {
 			return false, err
 		}
 		if count-len(retired) >= s.config.MaxSessions {
 			return false, tokenrefresh.ErrUnavailable
 		}
 		for id := range retired {
-			if err := deleteFamily(ctx, tx, id); err != nil {
+			if err := deleteFamily(ctx, tx, id, scope); err != nil {
 				return false, err
 			}
 		}
-		if _, err := tx.ExecContext(ctx, "INSERT INTO families(id,payload,expires_at) VALUES(?,?,?)", session.ID, data, session.IdleExpiresAt); err != nil {
+		if _, err := tx.ExecContext(ctx, "INSERT INTO refresh_families_v2(id,namespace,generation,payload,expires_at) VALUES(?,?,?,?,?)", session.ID, scope.Namespace, scope.ID, data, session.IdleExpiresAt); err != nil {
 			return false, err
 		}
-		_, err := tx.ExecContext(ctx, "INSERT INTO digests(digest,family) VALUES(?,?)", session.Current[:], session.ID)
+		_, err := tx.ExecContext(ctx, "INSERT INTO refresh_digests_v2(digest,family) VALUES(?,?)", session.Current[:], session.ID)
 		return err == nil, err
 	})
 }
 
-func loadDigest(ctx context.Context, tx *sql.Tx, digest [32]byte) (tokenrefresh.Session, error) {
+func loadDigest(ctx context.Context, tx *sql.Tx, digest [32]byte, scope tokenrefresh.Generation) (tokenrefresh.Session, error) {
 	var id string
 	var data []byte
-	if err := tx.QueryRowContext(ctx, "SELECT f.id,f.payload FROM families f JOIN digests d ON d.family=f.id WHERE d.digest=?", digest[:]).Scan(&id, &data); err != nil {
+	var expiry int64
+	if err := tx.QueryRowContext(ctx, "SELECT f.id,f.payload,f.expires_at FROM refresh_families_v2 f JOIN refresh_digests_v2 d ON d.family=f.id WHERE d.digest=? AND f.namespace=? AND f.generation=?", digest[:], scope.Namespace, scope.ID).Scan(&id, &data, &expiry); err != nil {
 		return tokenrefresh.Session{}, err
 	}
 	session, err := decodeSession(data)
-	if err != nil || session.ID != id {
+	if err != nil || session.ID != id || bindingScope(session.Binding) != scope || session.IdleExpiresAt != expiry {
 		return tokenrefresh.Session{}, tokenrefresh.ErrUnavailable
 	}
 	return session, nil
 }
 
-func deleteFamily(ctx context.Context, tx *sql.Tx, id string) error {
-	_, err := tx.ExecContext(ctx, "DELETE FROM families WHERE id=?", id)
+func deleteFamily(ctx context.Context, tx *sql.Tx, id string, scope tokenrefresh.Generation) error {
+	_, err := tx.ExecContext(ctx, "DELETE FROM refresh_families_v2 WHERE id=? AND namespace=? AND generation=?", id, scope.Namespace, scope.ID)
 	return err
 }
 
 // lookup commits deletion on a matching spent/expired credential. A wrong
 // binding or unknown digest can never revoke an unrelated family's authority.
-func (s *Store) lookup(ctx context.Context, tx *sql.Tx, digest [32]byte, binding tokenrefresh.Binding) (tokenrefresh.Session, bool, error) {
-	session, err := loadDigest(ctx, tx, digest)
+func (s *Store) lookup(ctx context.Context, tx *sql.Tx, scope tokenrefresh.Generation, digest [32]byte, binding tokenrefresh.Binding) (tokenrefresh.Session, bool, error) {
+	session, err := loadDigest(ctx, tx, digest, scope)
 	if errors.Is(err, sql.ErrNoRows) {
 		return tokenrefresh.Session{}, false, tokenrefresh.ErrInvalid
 	}
@@ -125,7 +121,7 @@ func (s *Store) lookup(ctx context.Context, tx *sql.Tx, digest [32]byte, binding
 	}
 	now := s.now().Unix()
 	if session.Current != digest || now >= session.IdleExpiresAt || now >= session.AbsoluteExpiresAt {
-		if err := deleteFamily(ctx, tx, session.ID); err != nil {
+		if err := deleteFamily(ctx, tx, session.ID, scope); err != nil {
 			return tokenrefresh.Session{}, false, err
 		}
 		return tokenrefresh.Session{}, true, tokenrefresh.ErrInvalid
@@ -134,9 +130,9 @@ func (s *Store) lookup(ctx context.Context, tx *sql.Tx, digest [32]byte, binding
 }
 
 // Lookup returns an independent snapshot and durably revokes replayed families.
-func (s *Store) Lookup(ctx context.Context, digest [32]byte, binding tokenrefresh.Binding) (tokenrefresh.Session, error) {
+func (s *Store) lookupScope(ctx context.Context, scope tokenrefresh.Generation, digest [32]byte, binding tokenrefresh.Binding) (tokenrefresh.Session, error) {
 	var session tokenrefresh.Session
-	err := s.transact(ctx, func() error {
+	err := s.transactScope(ctx, scope, func() error {
 		if s.now().Unix() >= session.IdleExpiresAt {
 			return tokenrefresh.ErrInvalid
 		}
@@ -144,7 +140,7 @@ func (s *Store) Lookup(ctx context.Context, digest [32]byte, binding tokenrefres
 	}, func(ctx context.Context, tx *sql.Tx) (bool, error) {
 		var commit bool
 		var err error
-		session, commit, err = s.lookup(ctx, tx, digest, binding)
+		session, commit, err = s.lookup(ctx, tx, scope, digest, binding)
 		return commit || err == nil, err
 	})
 	if err != nil {
@@ -155,7 +151,7 @@ func (s *Store) Lookup(ctx context.Context, digest [32]byte, binding tokenrefres
 
 // Rotate rechecks stored authority under a write transaction. Caller changes to
 // principal or deadlines in the previous snapshot never change the stored grant.
-func (s *Store) Rotate(ctx context.Context, previous tokenrefresh.Session, next [32]byte, idleExpiry, accessExpiry int64) error {
+func (s *Store) rotate(ctx context.Context, scope tokenrefresh.Generation, previous tokenrefresh.Session, next [32]byte, idleExpiry, accessExpiry int64) error {
 	var absolute, previousIdle int64
 	check := func() error {
 		now := s.now().Unix()
@@ -170,8 +166,8 @@ func (s *Store) Rotate(ctx context.Context, previous tokenrefresh.Session, next 
 		}
 		return nil
 	}
-	return s.transact(ctx, check, func(ctx context.Context, tx *sql.Tx) (bool, error) {
-		current, commit, err := s.lookup(ctx, tx, previous.Current, previous.Binding)
+	return s.transactScope(ctx, scope, check, func(ctx context.Context, tx *sql.Tx) (bool, error) {
+		current, commit, err := s.lookup(ctx, tx, scope, previous.Current, previous.Binding)
 		if err != nil {
 			return commit, err
 		}
@@ -184,13 +180,13 @@ func (s *Store) Rotate(ctx context.Context, previous tokenrefresh.Session, next 
 			return false, err
 		}
 		if current.Revision >= uint64(s.config.MaxRotations) {
-			if err := deleteFamily(ctx, tx, current.ID); err != nil {
+			if err := deleteFamily(ctx, tx, current.ID, scope); err != nil {
 				return false, err
 			}
 			return true, tokenrefresh.ErrInvalid
 		}
 		var count int
-		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM digests WHERE digest=?", next[:]).Scan(&count); err != nil {
+		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM refresh_digests_v2 WHERE digest=?", next[:]).Scan(&count); err != nil {
 			return false, err
 		}
 		if count != 0 {
@@ -202,18 +198,18 @@ func (s *Store) Rotate(ctx context.Context, previous tokenrefresh.Session, next 
 		if err != nil {
 			return false, err
 		}
-		if _, err := tx.ExecContext(ctx, "INSERT INTO digests(digest,family) VALUES(?,?)", next[:], current.ID); err != nil {
+		if _, err := tx.ExecContext(ctx, "INSERT INTO refresh_digests_v2(digest,family) VALUES(?,?)", next[:], current.ID); err != nil {
 			return false, err
 		}
-		_, err = tx.ExecContext(ctx, "UPDATE families SET payload=?,expires_at=? WHERE id=?", data, idleExpiry, current.ID)
+		_, err = tx.ExecContext(ctx, "UPDATE refresh_families_v2 SET payload=?,expires_at=? WHERE id=? AND namespace=? AND generation=?", data, idleExpiry, current.ID, scope.Namespace, scope.ID)
 		return err == nil, err
 	})
 }
 
 // Revoke accepts a current or spent digest and is idempotent for unknown tokens.
-func (s *Store) Revoke(ctx context.Context, digest [32]byte, binding tokenrefresh.Binding) error {
-	return s.transact(ctx, nil, func(ctx context.Context, tx *sql.Tx) (bool, error) {
-		session, err := loadDigest(ctx, tx, digest)
+func (s *Store) revoke(ctx context.Context, scope tokenrefresh.Generation, digest [32]byte, binding tokenrefresh.Binding) error {
+	return s.transactScope(ctx, scope, nil, func(ctx context.Context, tx *sql.Tx) (bool, error) {
+		session, err := loadDigest(ctx, tx, digest, scope)
 		if errors.Is(err, sql.ErrNoRows) {
 			return true, nil
 		}
@@ -223,14 +219,14 @@ func (s *Store) Revoke(ctx context.Context, digest [32]byte, binding tokenrefres
 		if session.Binding != binding {
 			return true, nil
 		}
-		err = deleteFamily(ctx, tx, session.ID)
+		err = deleteFamily(ctx, tx, session.ID, scope)
 		return err == nil, err
 	})
 }
 
 // ValidateSession checks a trusted session reference without rotating it or
 // touching replay history. The session ID alone is not authentication evidence.
-func (s *Store) ValidateSession(ctx context.Context, id string, binding tokenrefresh.Binding) error {
+func (s *Store) validateSession(ctx context.Context, scope tokenrefresh.Generation, id string, binding tokenrefresh.Binding) error {
 	var session tokenrefresh.Session
 	check := func() error {
 		if s.now().Unix() >= session.IdleExpiresAt {
@@ -238,9 +234,10 @@ func (s *Store) ValidateSession(ctx context.Context, id string, binding tokenref
 		}
 		return nil
 	}
-	return s.transact(ctx, check, func(ctx context.Context, tx *sql.Tx) (bool, error) {
+	return s.transactScope(ctx, scope, check, func(ctx context.Context, tx *sql.Tx) (bool, error) {
 		var data []byte
-		if err := tx.QueryRowContext(ctx, "SELECT payload FROM families WHERE id=?", id).Scan(&data); err != nil {
+		var expiry int64
+		if err := tx.QueryRowContext(ctx, "SELECT payload,expires_at FROM refresh_families_v2 WHERE id=? AND namespace=? AND generation=?", id, scope.Namespace, scope.ID).Scan(&data, &expiry); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return false, tokenrefresh.ErrInvalid
 			}
@@ -251,7 +248,7 @@ func (s *Store) ValidateSession(ctx context.Context, id string, binding tokenref
 		if err != nil {
 			return false, err
 		}
-		if session.ID != id {
+		if session.ID != id || bindingScope(session.Binding) != scope || session.IdleExpiresAt != expiry {
 			return false, tokenrefresh.ErrUnavailable
 		}
 		if session.Binding != binding {

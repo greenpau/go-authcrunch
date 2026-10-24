@@ -8,7 +8,8 @@ description: Maintain host-independent persistent runtime state, its reusable di
 ## Configuration and ownership
 
 `authcrunch.Config.State` (`state`) opts the root runtime into persistence with
-`*state.Config`. Omission keeps the previous volatile behavior. A present empty
+`*state.Config`. Omission keeps the previous volatile behavior unless a portal
+selects a managed refresh store, which requires root state. A present empty
 configuration is invalid. The only setting is `Directory` (`directory`), an
 absolute non-root path. Validation normalizes it without filesystem writes.
 
@@ -101,7 +102,8 @@ not change this directory's ownership or share the other runtime components.
 | `pkg/kms` | `CryptoKeyStoreConfig.SetStateStore`; generated ES512/EdDSA/Ed25519 material is bound to generation tag and algorithm family; no process-global key sharing in persistent mode |
 | `pkg/user` | `MarshalSession` / `UnmarshalSession` retain canonical identity and private login proof, rebuild derived maps, and exclude unfinished authenticator secrets |
 | `pkg/authn/cache` | `SessionCache.ConfigurePersistentState` restores only unexpired completed users; Add/Delete commit synchronously |
-| `pkg/authn/token_refresh` | `MemoryStore.ConfigurePersistentState` retains complete families, original authentication time/deadlines, current digest and every spent digest |
+| `pkg/authn/token_refresh` | Without a named store, `MemoryStore.ConfigurePersistentState` retains complete families, original authentication time/deadlines, current digest and every spent digest |
+| `pkg/authn` managed refresh | `Portal.ConfigurePersistentState` records a private namespace and generation, then activates the borrowed view; families and spent digests remain exclusively in the selected backend |
 | `pkg/authz` | `Gatekeeper.ConfigurePersistentState` restores completed direct OAuth sessions; origin binding and current ACL evaluation remain mandatory |
 | `pkg/identity`, `pkg/ids/local` | `ConfigurePersistentState` retains the backend epoch only for the exact recorded identity-file digest; transactions update that digest under the existing file lock |
 | `pkg/oidc` | `Provider.ConfigurePersistentState` retains browser sessions, consent, codes and complete access/refresh families; issuance commits inside the current-identity transaction |
@@ -112,7 +114,21 @@ configure components before exposing them, and close storage after draining all
 consumers. A custom binding must cover issuer, providers, policies, clients,
 identity and signing configuration. Directly configured standalone components
 must also invalidate removed/reintroduced namespaces; root `NewServer` supplies
-that configuration-epoch behavior automatically.
+that configuration-epoch behavior automatically. For selected managed refresh,
+the binding must be a durably changing whole-configuration epoch covering loaded
+trust material and every transition, including complete portal/store omission.
+A reusable deterministic configuration digest is insufficient. Keep the same state
+directory enabled throughout an omitted phase; private generation records cannot
+observe a transition while their state is disabled or elsewhere. Read the
+[managed refresh contract](../refresh-token-implementation/references/managed-storage.md)
+for pending publication, borrowed ownership and partial activation failures.
+
+Root state and a managed refresh database are separate durable resources. Root
+construction does not atomically commit across databases: if one generation is
+retired before a later activation fails, that retirement remains effective. The
+failed root is never published. Closing it does not close borrowed stores or
+restore earlier generations, and it does not duplicate managed families into a
+`portal-refresh` snapshot.
 
 External identity-store, provider and registration descriptors participate in root
 configuration binding through their normalized backend digests. Runtime handles
@@ -213,6 +229,11 @@ parser in root TLS consumers and the actual `authdb` executable fixture.
   session/profile, native refresh, OIDC consent/code/access/refresh and replay;
   interrupted commit recovery, failed final login commits, and failed construction
   releasing exclusive ownership.
+- `server_refresh_store_e2e_test.go`: real TLS managed-refresh continuity, replay
+  and logout after replacement, whole-component removal with state retained,
+  loaded trust changes, partial multi-store activation and actual COMMIT failure.
+- `pkg/authn/token_refresh_managed_e2e_test.go`: standalone caller-owned durable
+  epochs across removal/reintroduction; root replacement is not an OS restart.
 - `cmd/authdb/persistent_state_e2e_test.go`: built executable, real browser login,
   SIGKILL, same-address restart, identical JWKS and surviving old credentials.
 

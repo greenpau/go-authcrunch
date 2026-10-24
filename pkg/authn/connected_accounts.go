@@ -175,6 +175,9 @@ func (p *Portal) authorizeConnectedLogin(ctx context.Context, w http.ResponseWri
 }
 
 func (p *Portal) signConnectedUser(ctx context.Context, rr *requests.Request, claims map[string]any, methods []string) (*user.User, error) {
+	if p.managedRefreshUnavailable() {
+		return nil, tokenrefresh.ErrUnavailable
+	}
 	claims["amr"] = append([]string(nil), methods...)
 	claims["auth_time"] = rr.ExternalIdentity.Evidence.AuthenticatedAt
 	claims["nonce"] = util.GetRandomString(32)
@@ -292,6 +295,9 @@ func (p *Portal) issueConnectedSandbox(ctx context.Context, r *http.Request, rr 
 
 // Renewal preserves the upstream snapshot and the actual local checkpoints.
 func (p *Portal) issueConnectedSandboxTokens(ctx context.Context, r *http.Request, rr *requests.Request, proof *user.User) (*user.User, *tokenrefresh.Result, error) {
+	if p.managedRefreshUnavailable() {
+		return nil, nil, tokenrefresh.ErrUnavailable
+	}
 	issued, err := p.issueConnectedSandbox(ctx, r, rr, proof, 0)
 	if err != nil {
 		return nil, nil, err

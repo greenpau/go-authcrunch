@@ -274,7 +274,7 @@ func (p *Portal) validateCrossDeviceSession(ctx context.Context, proof *crossDev
 }
 
 func crossDeviceSessionErrorStatus(err error, denied int) int {
-	if errors.Is(err, tokenrefresh.ErrUnavailable) || errors.Is(err, state.ErrUnavailable) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+	if errors.Is(err, tokenrefresh.ErrCommitUncertain) || errors.Is(err, tokenrefresh.ErrUnavailable) || errors.Is(err, state.ErrUnavailable) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return http.StatusServiceUnavailable
 	}
 	return denied
@@ -344,7 +344,7 @@ func (p *Portal) redeemCrossDevice(ctx context.Context, w http.ResponseWriter, r
 		maps.Copy(w.Header(), headers)
 		rr.Response.Authenticated = false
 		status := http.StatusUnauthorized
-		if errors.Is(err, state.ErrCapacity) || errors.Is(err, state.ErrUnavailable) || cleanupErr != nil {
+		if errors.Is(err, tokenrefresh.ErrCommitUncertain) || errors.Is(err, state.ErrCapacity) || errors.Is(err, state.ErrUnavailable) || cleanupErr != nil {
 			status = http.StatusServiceUnavailable
 		}
 		rr.Response.Code = status
@@ -365,6 +365,9 @@ func (p *Portal) redeemCrossDevice(ctx context.Context, w http.ResponseWriter, r
 }
 
 func (p *Portal) issueCrossDeviceProvider(ctx context.Context, r *http.Request, rr *requests.Request, proof *crossDeviceProof) (*user.User, error) {
+	if p.managedRefreshUnavailable() {
+		return nil, tokenrefresh.ErrUnavailable
+	}
 	if proof.user.ExternalIdentity.Evidence.UserID != "" {
 		candidate := proof.user.Clone()
 		if len(proof.providerClaims) > 0 {

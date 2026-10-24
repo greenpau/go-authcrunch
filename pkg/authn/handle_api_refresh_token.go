@@ -116,6 +116,9 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 	p.disableClientCache(w)
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
+	if p.managedRefreshUnavailable() {
+		return p.handleJSONError(ctx, w, http.StatusServiceUnavailable, "Refresh temporarily unavailable")
+	}
 	// The embedded profile client uses a top-level navigation here after a
 	// rejected session. Credential changes require a fresh login, even when
 	// refresh is disabled. Keep API requests on the POST-only refresh path.
@@ -248,6 +251,9 @@ func (p *Portal) handleAPIRefreshToken(ctx context.Context, w http.ResponseWrite
 }
 
 func (p *Portal) refreshError(ctx context.Context, w http.ResponseWriter, err error) error {
+	if errors.Is(err, tokenrefresh.ErrCommitUncertain) {
+		return p.handleJSONError(ctx, w, http.StatusServiceUnavailable, "Refresh temporarily unavailable")
+	}
 	if !errors.Is(err, tokenrefresh.ErrUnavailable) && (errors.Is(err, tokenrefresh.ErrInvalid) || errors.Is(err, tokenrefresh.ErrDenied)) {
 		return p.handleJSONError(ctx, w, http.StatusUnauthorized, "Reauthentication required")
 	}
@@ -314,7 +320,7 @@ func (p *Portal) revokeRefreshOnLogin(ctx context.Context, w http.ResponseWriter
 		return nil
 	}
 	for _, c := range r.CookiesNamed(p.cookie.RefreshTokenCookieName) {
-		if err := p.refresh.Logout(ctx, c.Value, tokenrefresh.CookieTransport); err != nil && !errors.Is(err, tokenrefresh.ErrInvalid) {
+		if err := p.refresh.Logout(ctx, c.Value, tokenrefresh.CookieTransport); err != nil && (errors.Is(err, tokenrefresh.ErrCommitUncertain) || !errors.Is(err, tokenrefresh.ErrInvalid)) {
 			return err
 		}
 	}

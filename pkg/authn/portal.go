@@ -16,9 +16,15 @@ package authn
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path"
 	"slices"
 	"sort"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
 	"github.com/greenpau/go-authcrunch/pkg/authn/cache"
@@ -40,13 +46,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/state"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
 
-	"fmt"
-	"path"
-	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
-
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -66,6 +65,9 @@ type Portal struct {
 	oidc                oidc.OpenIDProvider
 	refresh             *tokenrefresh.Manager
 	refreshStore        *tokenrefresh.MemoryStore
+	refreshBinding      *tokenrefresh.ExternalStoreBinding
+	refreshState        atomic.Uint32
+	refreshConfigureMu  sync.Mutex
 	id                  string
 	config              *PortalConfig
 	userRegistries      map[string]registry.Provider
@@ -94,7 +96,10 @@ type Portal struct {
 
 // PortalParameters are input parameters for NewPortal.
 type PortalParameters struct {
-	AccessSigner *kms.AccessSignerBinding `json:"-" xml:"-" yaml:"-"`
+	// RefreshStore is borrowed. Selected portals remain pending until successful
+	// ConfigurePersistentState before publication; no memory fallback is created.
+	RefreshStore *tokenrefresh.ExternalStoreBinding `json:"-" xml:"-" yaml:"-"`
+	AccessSigner *kms.AccessSignerBinding           `json:"-" xml:"-" yaml:"-"`
 	// IdentityAttachmentsBound means the caller has completed attachment wiring
 	// for every supplied store and provider. Skip automatic binding so borrowed
 	// handles retain their caller-owned state. Standalone callers may omit it.
@@ -130,13 +135,34 @@ func NewPortal(params PortalParameters) (*Portal, error) {
 			return nil, err
 		}
 	}
+	var refreshBinding *tokenrefresh.ExternalStoreBinding
+	selectedRefresh := params.Config.RefreshTokens != nil && params.Config.RefreshTokens.Store != ""
+	if selectedRefresh != (params.RefreshStore != nil) {
+		return nil, fmt.Errorf("selected refresh store requires its runtime binding")
+	}
+	if params.RefreshStore != nil {
+		var err error
+		refreshBinding, err = params.RefreshStore.Prepare(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		c := params.Config.RefreshTokens
+		descriptor := refreshBinding.Config
+		if c.Store != descriptor.Name || c.MaxSessions != descriptor.MaxSessions || c.MaxRotations != descriptor.MaxRotations {
+			return nil, fmt.Errorf("portal refresh store does not match declaration")
+		}
+	}
 	p := &Portal{
-		accessSigner: accessSigner,
-		id:           uuid.New().String(),
-		config:       params.Config,
-		logger:       params.Logger,
+		accessSigner:   accessSigner,
+		refreshBinding: refreshBinding,
+		id:             uuid.New().String(),
+		config:         params.Config,
+		logger:         params.Logger,
 	}
 
+	if refreshBinding != nil {
+		p.refreshState.Store(managedRefreshPending)
+	}
 	for _, storeName := range params.Config.IdentityStores {
 		var storeFound bool
 		for _, store := range params.IdentityStores {
@@ -234,6 +260,8 @@ func (p *Portal) Close() {
 	}
 	p.closeOnce.Do(func() {
 		p.closed.Store(true)
+		p.refreshConfigureMu.Lock()
+		defer p.refreshConfigureMu.Unlock()
 		p.accountConnections.mu.Lock()
 		clear(p.accountConnections.pending)
 		p.accountConnections.mu.Unlock()

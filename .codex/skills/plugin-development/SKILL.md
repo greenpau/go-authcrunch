@@ -72,8 +72,10 @@ injectable upstream OAuth transaction storage, atomic callback claims, root
 bindings and the SQLite login-storage reference.
 
 Use [session-and-refresh-storage](../session-and-refresh-storage/SKILL.md) to maintain
-the SQLite refresh store, its parser, atomic durability contracts, and engine
-consumer tests.
+the SQLite refresh store, its parser, managed generations, strict migration,
+atomic durability contracts, and engine/root consumer tests. Portal selection
+and pending publication belong to
+[refresh-token-implementation](../refresh-token-implementation/SKILL.md).
 
 Read the [development blueprint](references/development-blueprint.md) when
 starting a plugin, introducing a category, or reviewing whether an extension
@@ -119,7 +121,7 @@ A category or repository name alone does not establish an implementation.
 | [Credential authenticators](references/plugin-categories.md#credential-authenticators) | Validate Basic credentials or API keys | SQLite API keys and `authproxy.Authenticator` through `Gatekeeper.AddAuthenticators` |
 | [Messaging](references/plugin-categories.md#messaging) | Deliver registration or notification messages | SQLite outbox and `messaging.Config.AddProvider` runtime injection |
 | [Registration workflows](references/plugin-categories.md#registration-workflows) | Manage enrollment, confirmation, approval, and account creation | SQLite enrollment and optional `ConfirmationProvider` via `Portal.AddUserRegistry`; root dispatch is local-only |
-| [Session and refresh storage](references/plugin-categories.md#session-and-refresh-storage) | Store token families and enforce atomic rotation/revocation | SQLite plugin and `tokenrefresh.Store` engine injection; portal selection needs wiring |
+| [Session and refresh storage](references/plugin-categories.md#session-and-refresh-storage) | Store token families and enforce atomic rotation/revocation | `tokenrefresh.Store` engine injection plus `ManagedStore`/`ActiveStore`, root `ServerOptions.RefreshStores` and optional portal selection |
 | [Cryptographic signing](references/plugin-categories.md#cryptographic-signing) | Sign approved claims with a selected key | `kms.AccessSigner` for selected root/portal access signing, strict profiles and `tokenrefresh.Signer` at engine level; downstream OIDC signing is separate |
 | [External authorization](references/plugin-categories.md#external-authorization) | Evaluate an authenticated subject's access to a resource | Public decision interface and gatekeeper/validator attachment; HTTP JSON plugin available |
 | [Claims enrichment](references/plugin-categories.md#claims-enrichment) | Retrieve and validate additional identity attributes | `enrichment.Backend` and validator/gatekeeper attachment; static claims plugin available |
@@ -216,8 +218,10 @@ task-specific Caddy implementation handoffs still belong only in ignored `tmp/`.
   skill routed from this skill. It does not inherit secrets-only methods.
 - Messaging/registration interfaces are traced through their concrete config
   containers and consumers before claiming a configurable backend exists.
-- Engine-level storage/signing injection is distinguished from full portal
-  integration; request-time claims enrichment has explicit validator/gatekeeper
+- Engine-level storage/signing injection is distinguished from configured portal
+  integration. Managed refresh requires immutable generation views and prepublication
+  root/standalone activation; sharing the store does not distribute other state.
+  Request-time claims enrichment has explicit validator/gatekeeper
   attachment, and external authorization has a required-decision hook and HTTP JSON backend.
 - Documentation distinguishes inspected source, tests actually executed, desired
   new behavior, and integration that remains unavailable.

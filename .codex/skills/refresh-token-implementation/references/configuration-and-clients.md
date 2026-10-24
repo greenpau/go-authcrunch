@@ -39,6 +39,11 @@ Add `refresh_tokens` to the authentication portal configuration:
 ```
 
 The example shows defaults except for the required realm, origin, and mount.
+An omitted or empty typed `store` selects the owned memory backend. A nonempty
+`store` names a declared managed backend; it requires enabled refresh, matching
+file-wide capacity/rotation limits and persistent root state. Runtime handles
+never belong in JSON. See [managed storage](managed-storage.md) for assembly and
+standalone publication requirements.
 Omitting `cookie_name` inherits `cookie_config.refresh_token_cookie_name` from
 the portal cookie factory, defaulting to `AUTHP_REFRESH_TOKEN`. Setting
 `cookie_config.cookie_name_prefix` to `TENANT` gives `TENANT_REFRESH_TOKEN`
@@ -63,7 +68,7 @@ absolute path (`/` is supported), visible ASCII requiring no URL escaping,
 no semicolons, and no reserved portal word/prefix in any segment. Read the
 [mount rules](../../coding-directives/references/portal-routing.md) when adding
 paths; they preserve both endpoint ownership and browser cookie Path scope.
-Disabled refresh retains its semantic opt-out. Use a unique cookie name or
+Disabled refresh retains its semantic opt-out except that a nonempty managed-store selection must be enabled. Use a unique cookie name or
 prefix for portals with overlapping mounts on the same host.
 Names do not require browser security prefixes or hashes. All refresh cookies
 remain host-only and scoped to the portal mount, with Secure, HttpOnly, and
@@ -129,7 +134,8 @@ settings each accept one value, except `provider revalidation REALM snapshot`.
 That directive is repeatable once per distinct realm, which must be listed in
 `realms`. For a mixed portal use `realms local zitadel` and
 `provider revalidation zitadel snapshot`. Unsupported modes and duplicate realms
-are errors. Optional `cookie name CUSTOM_REFRESH_TOKEN`
+are errors. Optional `store NAME` selects a named managed backend; it accepts one
+nonempty value and cannot accompany `disabled`. Optional `cookie name CUSTOM_REFRESH_TOKEN`
 overrides the portal factory's refresh-cookie name. Numeric settings are decimal
 integers; durations are seconds, and zero
 selects the existing default. The JSON/XML/YAML configuration keys retain their
@@ -148,7 +154,7 @@ newlines, noninteger numeric values, and integer overflow fail parsing. An empty
 statement list is invalid. Leave `PortalConfig.RefreshTokens` nil when token
 refresh is absent; a `disabled` directive explicitly disables it. Disabled
 configs still check directive grammar and retain the validator's existing
-semantic opt-out.
+semantic opt-out except that a nonempty managed-store selection must be enabled.
 
 The embedding application owns block-header validation, duplicate block
 detection, and rejection of additional block arguments or nested blocks. Reject
@@ -311,6 +317,10 @@ Never automatically retry an ambiguous network failure. The server may have
 committed rotation even if the response was lost. The browser client records a
 pending exchange before sending and requires login after an uncertain result,
 including after a tab reload. There is no grace period accepting spent tokens.
+`tokenrefresh.ErrCommitUncertain` takes precedence over joined denial/cancellation
+errors and produces the existing unavailable response without credentials.
+Fresh authentication is the recovery boundary; a failed exchange is never
+permission to replay the same credential.
 
 Status codes: `200` success; `400` malformed/ambiguous request; `401`
 reauthentication required; `403` origin/transport violation; `404` disabled or
@@ -346,12 +356,17 @@ require a separate authorization-time session/version check.
 
 ## Storage and lifecycle
 
-The portal owns a bounded `MemoryStore`. Without root `Config.State`, restart,
+With no store selection, the portal owns a bounded `MemoryStore`. Without root
+`Config.State`, restart,
 portal replacement, or identity-store reload requires reauthentication. Opt-in
 [runtime-state](../../runtime-state/SKILL.md) attaches durable snapshots of complete
 live families, spent digests, and identity epochs before publication. Unchanged
 configuration and matching identity-file bindings permit restart continuity;
-configuration or identity changes still invalidate old authority.
+configuration or identity changes still invalidate old authority. Selecting a
+managed backend uses its durable rows directly while root state retains keys,
+identity epochs, completed portal/OP state and private generation identities.
+No duplicate family snapshot is written. The [managed contract](managed-storage.md)
+defines exact borrowed bindings, pending/failed publication and generation retirement.
 
 Call `Portal.Close()` after quiescing requests; it stops workers and clears live
 memory without deleting committed persistent snapshots. Failed construction
@@ -379,14 +394,15 @@ Reusable consumers can use `Manager.IssueReplacing` with an optional
 issuance/rotation. Replacement requires the optional atomic method when a valid
 old credential is supplied; unsupported adapters return `ErrUnavailable`.
 Never recreate old session snapshots or reuse old IDs/credential material.
-The portal constructs `MemoryStore`, which implements both interfaces.
+The default `MemoryStore` implements both interfaces; selected managed views
+require both atomic replacement and non-rotating session validation.
 
-This remains a single-owner runtime, including with local persistence.
-`tokenrefresh.Store` defines atomic creation, lookup, rotation, and revocation
-for alternative adapters; implementing that interface alone does not make an
-adapter configurable through the portal. Shared/distributed storage and upstream
-provider-token renewal are unsupported. Local restart continuity is implemented
-by the runtime-state integration and its restart/replay tests.
+The root state directory remains single-owner. Named selection additionally
+requires `tokenrefresh.ManagedStore` and an immutable `ActiveStore` view; merely
+implementing `Store` is insufficient for root/portal selection. A local SQLite
+file may serve compatible engine clients without sharing the root
+configuration/session/identity ownership. This does not establish distributed
+portal availability or upstream provider-token renewal.
 
 ## Validation
 

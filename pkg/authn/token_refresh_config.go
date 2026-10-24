@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/greenpau/go-authcrunch/pkg/portalpath"
 )
@@ -35,6 +37,8 @@ const (
 // TokenRefreshConfig enables portal refresh for explicitly supported realms. All
 // durations are seconds. Nil or disabled configurations preserve access lifetimes.
 type TokenRefreshConfig struct {
+	// Store selects declared managed storage. Empty retains the owned memory store.
+	Store   string   `json:"store,omitempty" xml:"store,omitempty" yaml:"store,omitempty"`
 	Enabled bool     `json:"enabled,omitempty" xml:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Realms  []string `json:"realms,omitempty" xml:"realms,omitempty" yaml:"realms,omitempty"`
 	// ProviderRevalidation explicitly selects snapshot renewal per provider realm.
@@ -67,7 +71,13 @@ const TokenRefreshProviderSnapshot = "snapshot"
 
 // Validate normalizes enabled refresh configuration and rejects ambiguous mounts.
 func (c *TokenRefreshConfig) Validate() error {
-	if c == nil || !c.Enabled {
+	if c == nil {
+		return nil
+	}
+	if c.Store != "" && (!c.Enabled || len(c.Store) > 128 || !utf8.ValidString(c.Store) || strings.TrimSpace(c.Store) != c.Store || strings.ContainsFunc(c.Store, unicode.IsControl)) {
+		return fmt.Errorf("invalid or disabled managed refresh store selection")
+	}
+	if !c.Enabled {
 		return nil
 	}
 	u, err := url.Parse(c.PublicOrigin)

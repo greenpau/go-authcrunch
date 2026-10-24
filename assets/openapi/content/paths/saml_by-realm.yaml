@@ -60,23 +60,32 @@ post:
   tags:
   - External Authentication
   summary: Process the upstream SAML response
-  description: Receive the signed SAML response from the external IdP at the configured assertion consumer
-    URL. Binding cookie, signature, request correlation and IdP trust are validated by the provider. This
-    is not the portal-provided SSO app metadata route. Keep browser HTML negotiation; provider configuration
-    controls availability. Requires Content-Length between 500 and 30000 bytes inclusive and exactly application/x-www-form-urlencoded
-    with no charset parameter; unknown/chunked length fails. Both SAMLResponse and RelayState must occur
-    exactly once in the body. Admission, missing/duplicate proof, expired/replayed state or invalid signatures
-    return HTML 401. Browser/callback mismatches do not consume another browser's state, but an admitted
-    response consumes it before XML validation. Success deletes only the matching transaction cookie, releases its bound destination and continues
-    portal authorization; authorization policy can still deny login. Azure additionally requires Origin
-    to contain login.microsoftonline.com or Referer to contain windowsazure.com (case-sensitive substring
-    checks). These driver-specific hints never replace signature validation; the generic driver does not
-    require them. Callback query destinations and shared redirect cookies cannot replace the bound destination; empty or rejected destinations select the portal.
-    If the verified attached account requires interactive local factors, the portal creates an independent
-    browser sandbox retaining that destination. Admission returns HTML 429 when 16 canonical sandbox proof
-    cookies are already visible, or HTML 503 when the shared portal sandbox cache is full, without evicting
-    existing live sandboxes. The signed transaction has already been consumed; restart SAML login after
-    this refusal instead of replaying its response.
+  description: >-
+    Receive the signed SAML response from the external IdP at the configured assertion consumer URL.
+    Binding cookie, signature, request correlation and IdP trust are validated by the provider. This
+    is not the portal-provided SSO app metadata route. Keep browser HTML negotiation; provider
+    configuration controls availability. Requires Content-Length between 500 and 30000 bytes
+    inclusive and exactly application/x-www-form-urlencoded with no charset parameter;
+    unknown/chunked length fails. Both SAMLResponse and RelayState must occur exactly once in the
+    body. Admission, missing/duplicate proof, expired/replayed state or invalid signatures return
+    HTML 401. Browser/callback mismatches do not consume another browser's state, but an admitted
+    response consumes it before XML validation. Success deletes only the matching transaction
+    cookie, releases its bound destination and continues portal authorization; authorization policy
+    can still deny login. Azure additionally requires Origin to contain login.microsoftonline.com or
+    Referer to contain windowsazure.com (case-sensitive substring checks). These driver-specific
+    hints never replace signature validation; the generic driver does not require them. Callback
+    query destinations and shared redirect cookies cannot replace the bound destination; empty or
+    rejected destinations select the portal. If the verified attached account requires interactive
+    local factors, the portal creates an independent browser sandbox retaining that destination.
+    Admission returns HTML 429 when 16 canonical sandbox proof cookies are already visible, or HTML
+    503 when the shared portal sandbox cache is full, without evicting existing live sandboxes. The
+    signed transaction has already been consumed; restart SAML login after this refusal instead of
+    replaying its response.
+
+    Replacing an old browser refresh family can return 503 HTML if its revocation commit is
+    uncertain. No positive access, refresh or OP credential or success redirect is published. Begin
+    a fresh provider login after storage recovery. SAML authentication does not itself gain
+    provider-snapshot refresh authority.
   security:
   - SAMLBrowserBinding: []
   responses:

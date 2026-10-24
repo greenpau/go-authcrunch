@@ -17,6 +17,7 @@ package authn
 import (
 	"context"
 	"errors"
+	tokenrefresh "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"net/http"
 	"slices"
 	"time"
@@ -95,6 +96,9 @@ func (p *Portal) withDirectConnectedIdentity(ctx context.Context, rr *requests.R
 // issueDirectAuthenticationToken is shared by the public Basic/API-key proxy
 // entry points. Completed methods are supplied only after credential validation.
 func (p *Portal) issueDirectAuthenticationToken(ctx context.Context, rr *requests.Request, issuer, address string, completed []string) (*user.User, error) {
+	if p.managedRefreshUnavailable() {
+		return nil, tokenrefresh.ErrUnavailable
+	}
 	var usr *user.User
 	err := p.withDirectAuthenticationIdentity(ctx, rr, func() error {
 		now := time.Now().Unix()

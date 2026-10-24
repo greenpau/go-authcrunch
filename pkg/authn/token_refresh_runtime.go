@@ -90,19 +90,31 @@ func (p *Portal) configureRefresh() error {
 	if strings.HasPrefix(strings.ToLower(accessCookie.Name), "__host-") && (accessCookie.Path != "/" || accessCookie.Domain != "") {
 		return fmt.Errorf("__Host- access cookies require root path and no domain")
 	}
+	if p.refreshBinding != nil {
+		return nil
+	} // Activation follows persistent epoch restoration.
 	store, err := tokenrefresh.NewMemoryStore(c.MaxSessions, c.MaxRotations)
 	if err != nil {
 		return err
 	}
 	p.refreshStore = store
+	return p.configureRefreshManager(store, tokenrefresh.Generation{})
+}
+
+func (p *Portal) configureRefreshManager(store tokenrefresh.Store, generation tokenrefresh.Generation) error {
+	c := p.config.RefreshTokens
 	adapter := &portalRefreshAdapter{portal: p}
 	policy := tokenrefresh.Policy{
 		AccessLifetime:  time.Duration(min(c.AccessLifetimeSeconds, p.accessLifetimeSeconds())) * time.Second,
 		IdleTimeout:     time.Duration(c.IdleTimeoutSeconds) * time.Second,
 		AbsoluteTimeout: time.Duration(c.AbsoluteTimeoutSeconds) * time.Second,
 	}
-	p.refresh, err = tokenrefresh.NewManager(store, adapter, adapter, policy, tokenrefresh.Binding{Portal: p.config.Name, Origin: c.PublicOrigin, BasePath: c.BasePath})
-	return err
+	manager, err := tokenrefresh.NewManager(store, adapter, adapter, policy, tokenrefresh.Binding{Portal: p.config.Name, Origin: c.PublicOrigin, BasePath: c.BasePath, Namespace: generation.Namespace, Generation: generation.ID})
+	if err != nil {
+		return err
+	}
+	p.refresh = manager
+	return nil
 }
 
 func (p *Portal) refreshRealm(realm string) bool {

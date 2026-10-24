@@ -60,6 +60,7 @@ func (c *Config) Validate() error {
 	if err != nil || d < time.Millisecond || d > 30*time.Second {
 		return fmt.Errorf("SQLite refresh storage timeout must be within 1ms-30s")
 	}
+	c.Timeout = d.String()
 	return nil
 }
 

@@ -31,6 +31,9 @@ var (
 	ErrInvalid = errors.New("invalid refresh credential")
 	// ErrDenied indicates a definitive identity or authentication-policy denial.
 	ErrDenied = errors.New("refresh requires reauthentication")
+	// ErrCommitUncertain means a commit may have spent the credential. Withhold
+	// all staged credentials and require fresh authentication; never retry it.
+	ErrCommitUncertain = errors.New("refresh commit outcome is uncertain")
 	// ErrUnavailable indicates a temporary failure; the current token is unspent.
 	ErrUnavailable = errors.New("refresh temporarily unavailable")
 )

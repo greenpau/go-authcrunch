@@ -98,6 +98,10 @@ func TestTagCompliance(t *testing.T) {
 		shouldErr bool
 		err       error
 	}{
+		{name: "test tokenrefresh.StoreMetadata struct", entry: &tokenrefresh.StoreMetadata{}, opts: &Options{}},
+		{name: "test tokenrefresh.ExternalStoreConfig struct", entry: &tokenrefresh.ExternalStoreConfig{}, opts: &Options{}},
+		{name: "test tokenrefresh.Generation struct", entry: &tokenrefresh.Generation{}, opts: &Options{}},
+		{name: "test tokenrefresh.ExternalStoreBinding struct", entry: &tokenrefresh.ExternalStoreBinding{}, opts: &Options{}},
 		{name: "test kms.AccessSignerPolicy struct", entry: &kms.AccessSignerPolicy{}, opts: &Options{}},
 		{name: "test kms.ExternalAccessSignerConfig struct", entry: &kms.ExternalAccessSignerConfig{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"policy": true}}},
 		{name: "test kms.AccessSignerMetadata struct", entry: &kms.AccessSignerMetadata{}, opts: &Options{AllowFieldMismatch: true, AllowedFields: map[string]any{"policy": true}}},

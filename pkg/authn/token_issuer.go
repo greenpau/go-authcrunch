@@ -32,6 +32,9 @@ import (
 
 // issueSandboxTokens is shared by browser and JSON login after atomic redemption.
 func (p *Portal) issueSandboxTokens(ctx context.Context, r *http.Request, rr *requests.Request, proof *user.User) (*user.User, *tokenrefresh.Result, error) {
+	if p.managedRefreshUnavailable() {
+		return nil, nil, tokenrefresh.ErrUnavailable
+	}
 	if proof.ExternalIdentity.Evidence.UserID != "" {
 		return p.issueConnectedSandboxTokens(ctx, r, rr, proof)
 	}

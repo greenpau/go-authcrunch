@@ -316,21 +316,29 @@ is insufficient for the required atomic semantics.
 defines `Create`, `Lookup`, `Rotate`, and `Revoke` with contexts.
 `tokenrefresh.NewManager(store, identity, signer, policy, binding)` accepts a
 custom store. Optional `ReplacementStore` and `SessionValidator` add atomic
-fresh-login replacement and non-rotating liveness checks.
+fresh-login replacement and non-rotating liveness checks. Configured portal
+selection requires `ManagedStore` metadata/readiness/generation activation and
+an immutable `ActiveStore` combining those capabilities. Root descriptors
+(`Config.ExternalRefreshStores`) and runtime handles
+(`ServerOptions.RefreshStores`) remain separate; handles are borrowed.
 
 The working [SQLite reference](../../session-and-refresh-storage/SKILL.md) lives
 at `plugins/session-and-refresh-storage/sqlite`. Its public parser configures a
 dedicated local database shared by compatible clients and processes. It supports
 atomic rotation, fresh-login replacement, liveness checks, and durable replay
-revocation. TLS, process, and external-module consumers exercise engine injection.
+revocation. TLS, process, and external-module consumers exercise engine injection;
+public root/standalone TLS consumers exercise optional managed selection.
 
-The [portal integration](../../../../pkg/authn/token_refresh_runtime.go) constructs
-`MemoryStore` itself and retains that concrete type. Configurable portal backend
-selection needs new typed configuration/parser/application wiring and lifecycle
-handling. [Persistent state](../../../../pkg/state/store.go) uses a concrete
-filesystem store; OIDC grants and portal-free OAuth sessions have their own
-state. A refresh-store implementation does not automatically distribute all
-portal sessions or replace those independent stores.
+The [portal integration](../../../../pkg/authn/token_refresh_runtime.go) owns a
+`MemoryStore` when `TokenRefreshConfig.Store` is empty. A named selection requires
+enabled refresh, exact limits and root state, or an equivalent standalone
+persisted changing epoch. There is no memory fallback. Follow the
+[managed storage contract](../../refresh-token-implementation/references/managed-storage.md)
+for preparation, pending publication, failed activation and ownership.
+[Persistent state](../../../../pkg/state/store.go) uses a concrete filesystem
+store; OIDC grants and portal-free OAuth sessions have their own state. A
+refresh-store implementation does not distribute all portal sessions or replace
+those independent stores.
 
 **Implementation contract:** implement the atomic and binding rules on the
 `Store` declaration across all clients/processes. Rotation must recheck revision,
@@ -348,7 +356,11 @@ does not establish consistent identity policy or cross-instance signing keys.
 **Acceptance:** use independent clients against the same local backend fixture;
 race rotations and replacements, replay a spent token, restart a client, revoke
 from another client, and simulate failed commits. Assert family isolation,
-retained replay history, and no credentials issued from failed operations. The
+retained replay history, and no credentials issued from failed operations. For
+managed selection, also prove transaction-local generation checks, exact legacy
+migration, old-handle exclusion, pending/failed publication, borrowed ownership,
+complete removal and partial multi-store activation. Real COMMIT uncertainty
+requires a real storage failure; synthetic joined errors test classification only. The
 [refresh owner](../../refresh-token-implementation/SKILL.md) and
 [identity owner](../../refresh-token-identity/SKILL.md) define issuance/identity
 ordering; [capacity tests](../../../../pkg/authn/token_refresh/capacity_test.go)

@@ -53,7 +53,13 @@ post:
     requests alone do not. Provider browser callbacks issue only cookie-transport families.
     With an external access signer, the current selected access-token profile supplies the single
     audience and approved expiry bound. Signature and exact claims verification precede refresh commit
-    and credential publication; signing failure neither spends the refresh token nor publishes credentials.'
+    and credential publication; signing failure neither spends the refresh token nor publishes credentials.
+
+    A managed store binds each family to its persistent root namespace and active configuration
+    generation. A retired generation is invalid (401); quarantined or unavailable storage is 503.
+    Commit uncertainty has priority even when joined with invalid-credential, denial or cancellation
+    errors. No staged access or refresh token is published. Never repeat the same exchange or use
+    session lookup to infer its outcome; recover storage and authenticate afresh.'
   security:
   - RefreshCookie: []
   - {}

@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	tokenrefresh "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/identity/qr"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -205,7 +206,11 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 		p.deleteBrowserSandboxCookie(w, rr.Upstream.BasePath, sandboxID)
 		issued, tokens, err := p.issueSandboxTokens(ctx, r, rr, proof)
 		if err != nil {
-			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
+			status := http.StatusUnauthorized
+			if errors.Is(err, tokenrefresh.ErrCommitUncertain) {
+				status = http.StatusServiceUnavailable
+			}
+			return p.handleHTTPError(ctx, w, r, rr, status)
 		}
 		// The issued user is built afresh; the destination stays on the sandbox.
 		rr.Response.ReturnURL = proof.LoginReturnURL
@@ -219,7 +224,7 @@ func (p *Portal) handleHTTPSandbox(ctx context.Context, w http.ResponseWriter, r
 			}
 			rr.Response.Authenticated = false
 			status := http.StatusUnauthorized
-			if errors.Is(err, state.ErrCapacity) || cleanupErr != nil {
+			if errors.Is(err, tokenrefresh.ErrCommitUncertain) || errors.Is(err, state.ErrCapacity) || cleanupErr != nil {
 				status = http.StatusServiceUnavailable
 			}
 			return p.handleHTTPError(ctx, w, r, rr, status)

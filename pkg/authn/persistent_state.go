@@ -15,9 +15,12 @@
 package authn
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"time"
 
+	tokenrefresh "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/state"
 )
 
@@ -25,7 +28,25 @@ import (
 // The binding must cover the complete normalized configuration and upstream
 // trust settings. The caller owns store; requests must drain before it closes.
 // Pending authentication, MFA challenges and upstream exchanges are not restored.
-func (p *Portal) ConfigurePersistentState(store *state.Store, binding string) error {
+// Selected managed refresh requires a durable changing whole-configuration epoch,
+// including transitions that remove the portal/store and actual loaded trust.
+// A deterministic reusable configuration digest is insufficient. The portal stays
+// unavailable until this call succeeds; a failed selected setup cannot be retried
+// on the same portal. The caller owns the managed store and activated view.
+func (p *Portal) ConfigurePersistentState(store *state.Store, binding string) (err error) {
+	p.refreshConfigureMu.Lock()
+	defer p.refreshConfigureMu.Unlock()
+	selected := p.refreshBinding != nil
+	if selected {
+		if p.refreshState.Load() != managedRefreshPending {
+			return fmt.Errorf("managed refresh persistence is already configured or failed")
+		}
+		defer func() {
+			if err != nil {
+				p.refreshState.Store(managedRefreshFailed)
+			}
+		}()
+	}
 	if store == nil || p.state != nil || p.closed.Load() {
 		return fmt.Errorf("portal persistence must be configured before use")
 	}
@@ -54,11 +75,35 @@ func (p *Portal) ConfigurePersistentState(store *state.Store, binding string) er
 			return err
 		}
 	}
+	if selected {
+		generation, err := managedRefreshGeneration(store, binding)
+		if err != nil {
+			return err
+		}
+		activationCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		view, err := p.refreshBinding.Activate(activationCtx, generation)
+		if err != nil {
+			return err
+		}
+		if err := p.configureRefreshManager(view, generation); err != nil {
+			return err
+		}
+	}
+	if p.closed.Load() {
+		return tokenrefresh.ErrUnavailable
+	}
 	p.state = store
+	if selected {
+		p.refreshState.Store(managedRefreshReady)
+	}
 	return nil
 }
 
 func (p *Portal) persistentStateErr() error {
+	if p.managedRefreshUnavailable() {
+		return tokenrefresh.ErrUnavailable
+	}
 	if p.state == nil {
 		return nil
 	}

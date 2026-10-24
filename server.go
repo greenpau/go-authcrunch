@@ -23,6 +23,7 @@ import (
 	"sync/atomic"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn"
+	tokenrefresh "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/authproxy"
 	"github.com/greenpau/go-authcrunch/pkg/authz"
 	"github.com/greenpau/go-authcrunch/pkg/errors"
@@ -80,6 +81,9 @@ func newRefMap() refMap {
 // Supply fresh bindings after decoding configuration; NewServer never falls
 // back to memory for a configured but missing OAuth store.
 type ServerOptions struct {
+	// RefreshStores are borrowed managed handles for exactly the declared stores.
+	// Their activated views remain borrowed and are never closed by the root.
+	RefreshStores map[string]tokenrefresh.ManagedStore `json:"-" xml:"-" yaml:"-"`
 	// AccessSigners are borrowed runtimes for exactly the declared descriptors.
 	AccessSigners map[string]kms.AccessSigner `json:"-" xml:"-" yaml:"-"`
 	// IdentityProviders binds Config.ExternalIdentityProviders. Handles retain
@@ -122,6 +126,10 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 	}
 	var authenticators []authproxy.Authenticator
 	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+	refreshStores, err := prepareExternalRefreshStores(config, options.RefreshStores)
+	if err != nil {
 		return nil, err
 	}
 	accessSigners, err := prepareExternalAccessSigners(config, options.AccessSigners)
@@ -297,6 +305,9 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 			SingleSignOnProviders:    srv.ssoProviders,
 		}
 
+		if cfg.RefreshTokens != nil {
+			params.RefreshStore = refreshStores[cfg.RefreshTokens.Store]
+		}
 		portal, err := authn.NewPortal(params)
 		if err != nil {
 			return nil, err

@@ -27,6 +27,7 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/authchal"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
+	tokenrefresh "github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/idp"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
@@ -337,6 +338,9 @@ func (p *Portal) authorizeLoginRequest(ctx context.Context, w http.ResponseWrite
 }
 
 func (p *Portal) authorizeLoginUser(ctx context.Context, r *http.Request, rr *requests.Request) (*user.User, error) {
+	if p.managedRefreshUnavailable() {
+		return nil, tokenrefresh.ErrUnavailable
+	}
 	backend := p.getAuthenticatorByRealm(rr.Upstream.Realm)
 	if backend == nil {
 		rr.Response.Code = http.StatusBadRequest
@@ -447,6 +451,10 @@ func (p *Portal) grantAccess(ctx context.Context, w http.ResponseWriter, r *http
 		return fmt.Errorf("access token has not been issued")
 	}
 	if err := p.revokeRefreshOnLogin(ctx, w, r); err != nil {
+		if stderrors.Is(err, tokenrefresh.ErrCommitUncertain) {
+			rr.Response.Authenticated = false
+			rr.Response.Code = http.StatusServiceUnavailable
+		}
 		return err
 	}
 	if err := p.replaceOIDCBrowserSession(w, r); err != nil {

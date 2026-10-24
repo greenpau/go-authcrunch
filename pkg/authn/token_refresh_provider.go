@@ -52,6 +52,9 @@ func (p *Portal) refreshProviderMode(realm string) string {
 // Only a successfully redeemed upstream callback enters this issuer. Neither
 // access JWTs nor cross-device claim transfers are authentication for this path.
 func (p *Portal) issueProviderRefresh(ctx context.Context, r *http.Request, rr *requests.Request) (*user.User, *tokenrefresh.Result, error) {
+	if p.managedRefreshUnavailable() {
+		return nil, nil, tokenrefresh.ErrUnavailable
+	}
 	provider := p.getIdentityProviderByRealm(rr.Upstream.Realm)
 	if provider == nil || provider.GetKind() != "oauth" || rr.Upstream.Method != "oauth2" || rr.Response.Code != http.StatusOK || !rr.Response.ReturnURLBound {
 		return nil, nil, tokenrefresh.ErrDenied
@@ -389,7 +392,7 @@ func (p *Portal) authorizeProviderRefresh(ctx context.Context, w http.ResponseWr
 		maps.Copy(w.Header(), headers)
 		rr.Response.Authenticated = false
 		status := http.StatusServiceUnavailable
-		if errors.Is(err, tokenrefresh.ErrDenied) && !errors.Is(err, tokenrefresh.ErrUnavailable) {
+		if errors.Is(err, tokenrefresh.ErrDenied) && !errors.Is(err, tokenrefresh.ErrUnavailable) && !errors.Is(err, tokenrefresh.ErrCommitUncertain) {
 			status = http.StatusUnauthorized
 			if rr.Response.Code == http.StatusForbidden {
 				status = http.StatusForbidden

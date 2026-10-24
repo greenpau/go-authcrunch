@@ -45,6 +45,9 @@ func (p *Portal) ServeHTTPAt(ctx context.Context, w http.ResponseWriter, r *http
 		http.Error(w, http.StatusText(status), status)
 		return nil
 	}
+	if p.managedRefreshUnavailable() {
+		return p.rejectManagedRefresh(w, rr)
+	}
 	if portalpath.Validate(basePath) != nil {
 		return reject(http.StatusInternalServerError)
 	}

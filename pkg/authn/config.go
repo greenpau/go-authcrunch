@@ -227,6 +227,11 @@ func (cfg *PortalConfig) Validate() error {
 		}
 	}
 
+	if cfg.RefreshTokens != nil && cfg.RefreshTokens.Store != "" {
+		if err := cfg.RefreshTokens.Validate(); err != nil {
+			return err
+		}
+	}
 	if cfg.validated {
 		return nil
 	}

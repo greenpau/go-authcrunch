@@ -59,6 +59,9 @@ type Principal struct {
 // Binding is stable across compatible portal instances and fixes transport.
 type Binding struct {
 	Portal, Origin, BasePath, Transport string `json:"-" xml:"-" yaml:"-"`
+	// Empty namespace and generation retain legacy standalone storage. Managed
+	// views require both exact values and reject a retired generation.
+	Namespace, Generation string `json:"-" xml:"-" yaml:"-"`
 }
 
 // Session is a value snapshot. Stores must not retain caller-owned slices.

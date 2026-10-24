@@ -15,7 +15,11 @@ post:
     logout. X-Authcrunch-Refresh-Session is not accepted. For cookie transport, optional Sec-Fetch-Site
     must be same-origin, Sec-Fetch-Mode must be cors or same-origin, and Sec-Fetch-Dest must be empty
     (or each header may have an empty value). Native transport rejects these headers even with empty values.
-    Duplicate refresh cookies fail with 400. Transport checks run before token validity checks.'
+    Duplicate refresh cookies fail with 400. Transport checks run before token validity checks.
+
+    An uncertain managed-store commit returns 503 even when combined with an invalid-credential or
+    denial error. Such a response does not acknowledge durable logout. A retired configuration
+    generation remains invalid; store quarantine or unavailability is a service failure.'
   security:
   - RefreshCookie: []
   - {}

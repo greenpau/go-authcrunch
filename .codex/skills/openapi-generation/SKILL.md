@@ -52,6 +52,25 @@ completion and confirmation-to-login navigation.
 The shared bounded access-claims codec and RSA-PSS signing backend are included
 because selected signing affects portal issuance, strict verification and public
 discovery. Keep ordinary KMS and selected-profile behavior distinct in the YAML.
+The managed SQLite refresh backend is also an HTTP contract owner: exact schema
+migration, generation retirement and commit uncertainty affect whether login,
+renewal, logout and cross-device completion may acknowledge authority. Review
+its parser, metadata, active views, private DTO and migration alongside core
+publication and transport handlers; include it in the isolated CLI checkout and
+source-drift controls. Root/portal borrowed ownership and changing configuration
+epochs are specified by the
+[managed refresh contract](../refresh-token-implementation/references/managed-storage.md).
+
+An uncertain refresh-store commit is an unavailable result even when joined with
+invalid-credential, denial or cancellation errors. Keep JSON login/refresh/Basic,
+HTML sandbox/provider callbacks and cross-device JSON response media distinct.
+No staged credential or successful logout/redirect may escape that result, while
+consumed sandbox and provider-binding tombstones can remain. Preserve ordinary
+invalid-credential success/denial controls and prohibit automatic exchange retry.
+A selected standalone portal pending or failed activation returns generic
+no-store plain-text 503 before routing and content negotiation, including public
+JWKS and OP paths. Describe that lifecycle envelope separately from normal
+operation responses; root construction never publishes a pending candidate.
 The Documents Web Crypto module
 `pkg/authn/documents/client/crypto.mjs` is also fingerprinted: its key schedule
 and encrypted wire encodings are part of the HTTP contract. Keep the CLI E2E isolated checkout and its source-drift cases aligned with new

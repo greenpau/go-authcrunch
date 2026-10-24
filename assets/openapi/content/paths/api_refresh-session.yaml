@@ -10,7 +10,12 @@ post:
     and query strings are not accepted. Optional Sec-Fetch-Site must be same-origin, Sec-Fetch-Mode must
     be cors or same-origin, and Sec-Fetch-Dest must be the literal empty (or each header may have an empty
     value). Duplicate refresh cookies fail with 400; transport checks run before token validity checks.
-    Responses are no-store.'
+    Responses are no-store.
+
+    A retired managed-store generation is invalid (401). Unavailable or quarantined storage and
+    commit uncertainty return 503, including uncertainty combined with an ordinary
+    invalid-credential error. This lookup cannot resolve the outcome of an earlier ambiguous refresh
+    rotation and must not be used to retry it.'
   security:
   - RefreshCookie: []
   responses:

@@ -32,6 +32,11 @@ get:
     or HTML 503 when the shared portal sandbox cache is full, without evicting live sandboxes. Provider
     verification may already have consumed its one-use evidence; follow its restart contract rather than
     assuming the same callback can be retried.
+
+    Completed access-only login can replace an old browser refresh family. If that revocation commit
+    is uncertain, the portal returns 503 HTML without positive credentials or a success redirect,
+    even if the error also denotes invalid old credentials. Protocol binding-cookie tombstones may
+    still be sent. This does not enable provider-snapshot refresh for the injected provider.
   security: []
   parameters:
   - name: realm

@@ -32,6 +32,9 @@ func (p *Portal) APIKeyAuth(r *authproxy.Request) error {
 // apiKeyAuth preserves the caller's policy context. HTTP login supplies its
 // current issuer URL and cancellation; the public proxy API has no HTTP request.
 func (p *Portal) apiKeyAuth(ctx context.Context, r *authproxy.Request, issuer string) error {
+	if p.closed.Load() || p.persistentStateErr() != nil {
+		return errors.ErrAPIKeyAuthFailed
+	}
 	if r.Realm == "" {
 		return errors.ErrAPIKeyAuthFailedRealmNotSet
 	}

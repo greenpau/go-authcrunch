@@ -81,6 +81,9 @@ func (p *Portal) newAccessUser(claims map[string]any) (*user.User, error) {
 	return user.NewUser(normalized)
 }
 func (p *Portal) signAccessUser(ctx context.Context, usr *user.User) error {
+	if p.managedRefreshUnavailable() {
+		return tokenrefresh.ErrUnavailable
+	}
 	if p.accessSigner == nil {
 		return p.keystore.SignToken(nil, nil, usr)
 	}

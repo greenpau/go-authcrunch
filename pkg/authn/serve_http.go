@@ -29,6 +29,11 @@ func (p *Portal) ServeHTTP(ctx context.Context, w http.ResponseWriter, r *http.R
 }
 
 func (p *Portal) serveHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request) (err error) {
+	// Read the publication flag before state/session/manager fields. Selected
+	// standalone portals may be called while their one setup call is pending.
+	if p.managedRefreshUnavailable() {
+		return p.rejectManagedRefresh(w, rr)
+	}
 	if p.state != nil {
 		response := &persistentResponseWriter{ResponseWriter: w, health: p.persistentStateErr}
 		defer func() {

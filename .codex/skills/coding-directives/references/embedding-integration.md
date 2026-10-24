@@ -18,7 +18,8 @@ that a downstream configuration language already recognizes a directive.
 | Standalone HTTP listener body | `pkg/httpserver/parser.NewHTTPServerConfigFromDirectives(statements)` | `httpserver.Serve` with the root security configuration |
 | `oauth application <nickname>` | `pkg/oidc/parser.NewOAuthApplicationConfigFromDirectives(header, statements, persisted)` | `Config.AddOAuthApplication` |
 | OIDC provider body | `pkg/oidc/parser.NewOIDCProviderConfigFromDirectives(statements, applications)` | `PortalConfig.ConfigureOIDCProvider`; root `Config.ConfigureOIDCProvider` resolves registered applications through this parser |
-| `token refresh` body | `pkg/authn/token_refresh/parser.NewTokenRefreshConfigFromDirectives(statements)` | `PortalConfig.RefreshTokens` |
+| `token refresh` body | `pkg/authn/token_refresh/parser.NewTokenRefreshConfigFromDirectives(statements)` | `PortalConfig.RefreshTokens`; optional `store NAME` selects a prepared managed binding |
+| SQLite refresh backend body | `plugins/session-and-refresh-storage/sqlite/parser.NewSQLiteRefreshStorageConfigFromDirectives(statements)` | Normalize backend configuration before deriving `tokenrefresh.ExternalStoreConfig` and opening its host-owned runtime |
 | Cross-device login statements | `pkg/authn/cross_device/parser.NewCrossDeviceLoginConfigFromDirectives(statements)` | `PortalConfig.CrossDeviceLogin` |
 | Admin API statements | `pkg/authn/admin_api/parser.NewAdminAPIConfigFromDirectives(statements)` | `PortalConfig.ConfigureAdminAPI` preserves profile API configuration |
 | Complete `cookie ...` statements | `pkg/authn/cookie/parser.NewCookieConfigFromDirectives(statements)` | `PortalConfig.ConfigureCookies` |
@@ -33,6 +34,19 @@ Missing bindings fail closed. Draining/closing a root never closes these borrowe
 clients; the host must close them after every consumer drains. The provider's
 [login storage contract](../../oauth-identity-provider/references/login-storage.md)
 defines atomicity, errors and the separate boundaries of full portal HA.
+
+For managed portal refresh, derive `tokenrefresh.ExternalStoreConfig` from the
+normalized backend and put it in `Config.ExternalRefreshStores`. Supply the exact
+ready handle in `ServerOptions.RefreshStores`. All declarations require valid
+bindings, including unused declarations; only selected stores activate. A portal
+selection requires enabled refresh, matching limits and root `Config.State`.
+Root construction captures metadata/readiness before opening owned resources,
+then activates a generation after final configuration and loaded trust binding.
+It never closes the borrowed handle or duplicates its families into root state.
+Standalone callers inject `PortalParameters.RefreshStore`; the returned portal
+remains pending until its one `ConfigurePersistentState` call succeeds. Follow
+the [managed refresh contract](../../refresh-token-implementation/references/managed-storage.md)
+for the caller-owned changing epoch, failed-publication latch and disposal order.
 
 For an external identity store, normalize its backend configuration through the
 backend parser, derive `ids.ExternalIdentityStoreConfig` with
@@ -107,7 +121,8 @@ the same canonical HTTPS origin and mount. Provider signing keys must remain
 separate from ordinary access-token verification keys.
 
 Persisted configuration alone is not session persistence. Omitted `Config.State`
-keeps volatile runtime behavior. Opt-in [runtime state](../../runtime-state/SKILL.md)
+keeps volatile runtime behavior when no managed refresh store is selected.
+A selected store requires it. Opt-in [runtime state](../../runtime-state/SKILL.md)
 retains generated keys, completed portal/direct-OAuth sessions, refresh families
 and OIDC grants. Pending interactions still require fresh login. It is local
 single-owner storage: drain and close the old runtime before opening its
@@ -134,7 +149,9 @@ Coordinate shared identity-file writers during replacement; lifecycle ownership
 does not add multi-process database transactions or a live configuration editor.
 
 `Portal.Close` stops and awaits its session, sandbox, and token-validator caches,
-and closes refresh/OIDC state. `Gatekeeper.Close` owns its validator and direct OAuth session/login state, not
+and closes its owned memory refresh/OIDC state. Selected managed refresh handles
+and immutable active views remain caller-owned and must outlive drained consumers.
+`Gatekeeper.Close` owns its validator and direct OAuth session/login state, not
 shared authenticators or identity providers. `oauth.IdentityProvider.Close` cancels and awaits owned delayed
 or synchronous discovery, metadata/JWKS requests, retries, and state maintenance.
 A closed provider cannot restart or publish readiness afterward. Cache Run/Stop
@@ -155,6 +172,10 @@ purposes, private export opt-in, browser refresh/logout, and volatile state loss
 on root replacement with persistence omitted.
 `server_persistent_state_e2e_test.go` covers opt-in durable state, configuration
 changes, removed/reintroduced policies, and replay protection after replacement.
+`server_refresh_store_e2e_test.go` and
+`pkg/authn/token_refresh_managed_e2e_test.go` cover selected-store root/standalone
+publication, complete removal with state retained, replay/logout, trust changes
+and partial activation without claiming cross-database atomicity.
 The upstream fixture checks explicit issuer and access-token audience after
 shared parser adaptation and JSON restoration. An invalid identity token fails
 login; an unusable supplemental access token contributes no claims, preserving

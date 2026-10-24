@@ -36,7 +36,7 @@ import (
 // name and prefix. An explicit name overrides its refresh-token cookie setting.
 //
 // Each setting may occur once. "realms" takes one or more values. "public
-// origin", "base path", and "cookie name" each take one value. "access lifetime",
+// origin", "base path", "cookie name", and "store" each take one value. "access lifetime",
 // "idle timeout", "absolute timeout", "max sessions", and "max rotations" take
 // one decimal integer; durations are seconds and zero retains Validate's defaults.
 // "enabled" and "disabled" are mutually exclusive standalone directives. "body
@@ -60,6 +60,7 @@ func NewTokenRefreshConfigFromDirectives(statements []string) (*authn.TokenRefre
 		"public origin": &config.PublicOrigin,
 		"base path":     &config.BasePath,
 		"cookie name":   &config.CookieName,
+		"store":         &config.Store,
 	}
 	boolsByKey := map[string]*bool{
 		"enabled":        &config.Enabled,
@@ -93,7 +94,7 @@ func NewTokenRefreshConfigFromDirectives(statements []string) (*authn.TokenRefre
 			// Both spellings configure the same setting; even conflicting states
 			// must be detected as duplicates rather than overwrite one another.
 			key, values = "enabled", args
-		case "realms":
+		case "realms", "store":
 		default:
 			if len(args) < 2 {
 				return nil, fmt.Errorf("invalid token refresh directive at line %d", i+1)

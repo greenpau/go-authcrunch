@@ -44,7 +44,12 @@ get:
     Admission returns HTML 429 when 16 canonical sandbox proof cookies are already visible, or HTML 503
     when the shared portal sandbox cache is full. Neither refusal evicts an existing live sandbox.
     The upstream transaction has already been consumed; restart external login after admission refusal,
-    rather than replaying its callback.'
+    rather than replaying its callback.
+
+    Uncertain commit of a provider-snapshot refresh family, or uncertain revocation of an old
+    browser family during access-only replacement, returns 503 HTML with no positive credentials or
+    success redirect. A combined denial cannot downgrade uncertainty. The claimed provider
+    transaction remains consumed; recover storage and begin a new login.'
   security: []
   responses:
     '200':

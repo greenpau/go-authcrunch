@@ -22,7 +22,10 @@ when moving or upgrading the application.
 
 A text adapter encodes the one statement `directory /var/lib/authcrunch/runtime`
 and calls `pkg/state/parser.NewStateConfigFromDirectives`; assign its result to
-`Config.State`. Omit `State` to use memory only. Do not treat an empty block or
+`Config.State`. With no named managed refresh store, omit `State` to retain
+volatile runtime behavior. A selected managed refresh store requires `State`;
+its database does not replace root session, identity-epoch or generated-key
+persistence. Do not treat an empty block or
 invalid path as a request for volatile fallback. Parsing and validation perform
 no storage I/O. Creation/restoration happens in `NewServer`.
 
@@ -34,7 +37,7 @@ no storage I/O. Creation/restoration happens in `NewServer`.
 | Generated access-token signing keys | Reuses generated KMS material by tag and algorithm family; old valid JWT signatures remain verifiable |
 | Completed portal users | Restores unexpired browser sessions, canonical login identity, authentication time and verified methods |
 | Direct OAuth without a portal | Restores completed opaque sessions without a new upstream exchange; checks the same origin and current ACL on every request |
-| Portal refresh | Preserves families, absolute/idle expiry, rotations and spent-token replay detection |
+| Portal refresh | Preserves families, absolute/idle expiry, rotations and spent-token replay detection through an owned memory snapshot or a selected managed database; the latter also needs root generation records |
 | Downstream OIDC | Preserves browser sessions, consent, unredeemed/spent codes, opaque access grants and complete rotating refresh families |
 | Local account security | Preserves the backend proof epoch only for the matching identity database; current account and credential versions are still checked |
 | Logout/revocation | Successful direct OAuth, refresh and OIDC revocations remain effective after restart |
@@ -79,6 +82,18 @@ The storage path and diagnostic-only logging rules are excluded, so a coherent
 directory move or logging-only change can retain sessions. Removing and later reintroducing a component
 cannot revive its old sessions. Generated KMS keys persist independently across
 configuration changes; explicit key-configuration changes still apply normally.
+Managed refresh activation retires complete families and spent history within
+the root namespace when its generation changes. It never revives an old
+generation when configuration is restored. Keep this same state directory enabled
+during a phase that omits the portal or store. Standalone callers must persist
+an equivalent changing whole-configuration epoch themselves; hashing the current
+configuration alone cannot detect an intervening omission.
+
+Multiple managed databases do not share one startup transaction. An early
+successful retirement remains committed if a later activation fails. Dispose
+the unpublished root, reconcile failed handles and construct a fresh candidate;
+do not attempt to restore retired authority. See the
+[managed refresh contract](../../refresh-token-implementation/references/managed-storage.md).
 
 A directory records only configurations opened against it. Temporarily omitting
 persistence or using another directory does not revoke credentials in a dormant
@@ -101,7 +116,9 @@ A response lost after a successful commit remains ambiguous to the client:
 refresh retries still follow the existing strict replay rules.
 
 Back up the entire state directory together with configuration, identity databases
-and explicit key files while the host is drained/stopped. Restore a coherent set,
+and explicit key files while the host is drained/stopped. Include every selected
+refresh database and its required SQLite storage state in this coherent backup.
+Drain and close consumers before closing host-owned backend handles. Restore a coherent set,
 preserve permissions, and retain the matching master key. Do not merge individual
 snapshots from different points in time or edit internal files. The key is stored
 beside the ciphertext: encrypt and restrict complete backups as credentials.
@@ -113,8 +130,19 @@ matching database and state backup can restore old authority; preventing an
 operator/storage rollback requires an external monotonic authority. Restore
 backups deliberately, with an explicit revocation/relogin plan when needed.
 
+Losing root state while retaining a managed refresh database can strand old
+namespace capacity. New root state cannot discover or safely adopt that authority.
+There is no automatic deletion/reset operation or promise that restoring one
+resource independently recovers the other. A failed attempted SQLite COMMIT can
+quarantine its handle: withhold all resulting credentials, reconcile/reopen, and
+perform independent fresh authentication. An uncertain response is never an
+instruction to replay the old refresh token.
+
 Snapshots are synchronous local files, not a database optimized for very large
 session populations. Mutations encode each affected component's live snapshot;
 individual record payloads are limited to 64 MiB. Existing component capacities
 still apply. Do not increase capacity without measuring write latency and storage
-size under the intended load.
+size under the intended load. Managed refresh families live outside those
+component snapshots and obey their backend
+[record and file-wide capacity limits](../../session-and-refresh-storage/SKILL.md);
+selecting that backend does not remove limits from portal sessions or OIDC state.
