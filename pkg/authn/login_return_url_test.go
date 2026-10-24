@@ -258,7 +258,8 @@ func TestGrantAccessPrefersLoginFlowDestination(t *testing.T) {
 // signed in elsewhere and submitted again. The shared cookie is neither written
 // nor read; it is removed only when it holds that destination, which nothing
 // else would consume, and another tab's is kept. Without this portal's session,
-// or a fresh login, the tab keeps the destination on its portal continuation.
+// the tab keeps the destination on its portal continuation. A fresh GET renders
+// the login page; a fresh POST requires an identity before starting a sandbox.
 // A rejected destination chooses the portal without consulting the cookie.
 func TestHandleHTTPLoginSignedInReturnsToOwnDestination(t *testing.T) {
 	trusted := newLoginReturnTrust(t)
@@ -278,7 +279,7 @@ func TestHandleHTTPLoginSignedInReturnsToOwnDestination(t *testing.T) {
 	}{
 		{name: "post with destination", method: http.MethodPost, query: "?redirect_url=" + url.QueryEscape(destination), wantStatus: http.StatusSeeOther, wantLocation: destination},
 		{name: "post with destination the cookie holds", method: http.MethodPost, query: "?redirect_url=" + url.QueryEscape(destination), cookie: destination, wantStatus: http.StatusSeeOther, wantLocation: destination, wantCookie: "delete"},
-		{name: "fresh post with destination", method: http.MethodPost, query: "?fresh=1&redirect_url=" + url.QueryEscape(destination), wantStatus: http.StatusFound, wantLocation: portal + "?redirect_url=" + url.QueryEscape(destination)},
+		{name: "fresh post without identity", method: http.MethodPost, query: "?fresh=1&redirect_url=" + url.QueryEscape(destination), wantStatus: http.StatusUnauthorized},
 		{name: "post with untrusted destination", method: http.MethodPost, query: "?redirect_url=" + url.QueryEscape("https://evil.example.test/"), wantStatus: http.StatusSeeOther, wantLocation: portal + "?redirect_url="},
 		{name: "post with malformed destination", method: http.MethodPost, query: "?redirect_url=%zz", wantStatus: http.StatusSeeOther, wantLocation: portal + "?redirect_url="},
 		{name: "post without destination", method: http.MethodPost, wantStatus: http.StatusFound, wantLocation: portal},

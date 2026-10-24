@@ -20,6 +20,8 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -47,6 +49,40 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
+
+func TestE2EHTTPServerRejectsNullExternalConfiguration(t *testing.T) {
+	for _, field := range []string{
+		"external_refresh_stores", "external_access_signers", "external_user_registries",
+		"external_identity_stores", "external_identity_providers",
+	} {
+		t.Run(field, func(t *testing.T) {
+			transport, err := serverparser.NewHTTPServerConfigFromDirectives([]string{
+				"insecure http enabled", "portal portal /auth",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var security authcrunch.Config
+			body := fmt.Sprintf(`{"authentication_portals":[{"name":"portal"}],%q:[{"name":"SECRET"},null]}`, field)
+			if err := json.Unmarshal([]byte(body), &security); err != nil {
+				t.Fatal(err)
+			}
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = listener.Close() })
+			err = httpserver.Serve(t.Context(), listener, transport, &security, zap.NewNop())
+			want := fmt.Sprintf("security.%s[1] must not be null", field)
+			if err == nil || err.Error() != want {
+				t.Fatalf("startup validation error = %v, want %q", err, want)
+			}
+			if _, err := listener.Accept(); !errors.Is(err, net.ErrClosed) {
+				t.Fatal("rejected configuration left its listener open")
+			}
+		})
+	}
+}
 
 func TestE2EHTTPServerSessions(t *testing.T) {
 	dir := t.TempDir()

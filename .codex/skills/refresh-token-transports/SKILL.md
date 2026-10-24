@@ -170,6 +170,11 @@ and the portal template load the client conditionally. Expired portal access
 can renew through top-level continuation; `fresh=1` starts a new login without
 looping back to renewal. Fresh login also works on access-only portals and
 deletes the old access cookie so the next form submission can start a sandbox.
+Every `fresh=1` form POST enters interactive authentication even if another tab
+has since signed in. An empty submission returns 401; a valid identity starts a
+new sandbox and must complete its credential checkpoints before returning to
+the bound destination. `TestE2ELoginRedirectFreshPostRequiresAuthentication`
+checks that sequence over TLS with shared browser cookies.
 Retain refresh cookies until login completion can revoke the previous family.
 Preserve CSP and trusted destination checks. External
 apps must explicitly integrate this flow; a same-origin portal client does not

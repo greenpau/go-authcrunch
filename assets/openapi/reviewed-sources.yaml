@@ -210,7 +210,7 @@ files:
     pkg/authz/validator/validator.go: 7d8bb341490aaa70c8ba3a1bc6d038a2058ed35f623fef145e5fb6be0daf18b9
     pkg/httpserver/config.go: 4b12e53da66325d452a820cfa4f41b0c75bf020b9ff7c30344a82590a8553e7b
     pkg/httpserver/parser/parser.go: 88c6be1fd559d173d02b077e8f6a154a0bb6ab898dae7c7a73849bf626b31543
-    pkg/httpserver/security_config.go: 39ee36498bc00f868b1d3d4812a9330a5bf8863b1afc10c106c7eef03db140b5
+    pkg/httpserver/security_config.go: af622ed5665cca6ab4b2a1e05c081c5441a1974579196f12c0cd2a1e8a7208a8
     pkg/httpserver/server.go: 9dbe0f99314a6a54ae7428dd854f282be170794f7a57812b28f0f42023909dd0
     pkg/identity/api_key.go: 9e84a099cfcac8f1b70c7e9cbacce8a2a13671308607312afb8a40a63acb35fb
     pkg/identity/attachment/attachment.go: 4058c8646fb51ac3bc20bae376ffc2009a15a63bca0e20c0fe7d9e23ae553caf

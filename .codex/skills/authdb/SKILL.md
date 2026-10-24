@@ -34,8 +34,11 @@ Use explicit typed traversal and generic pointer-collection checks, without
 runtime reflection. `TestSecurityConfigurationObjectCoverage` discovers the
 declared JSON model in test code and checks concrete/null objects at every
 collection path. Extend the typed traversal whenever that model adds a new
-object collection, including policy `access_list_fields`. Keep provider `params`
-values owned by their validators. Errors identify field paths and indices,
+object collection, including external refresh stores, access signers, registries,
+identity stores/providers and policy `access_list_fields`. Reject null external
+entries before runtime provisioning and release the owned listener on failure;
+`TestE2EHTTPServerRejectsNullExternalConfiguration` checks the public host API.
+Keep provider `params` values owned by their validators. Errors identify field paths and indices,
 never map keys or configured values. Guard incomplete raw crypto statements before
 calling the legacy KMS decoder. Initialization errors expose a redacted message;
 their wrapped causes are available to embedding code for private diagnostics

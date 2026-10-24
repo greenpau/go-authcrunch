@@ -54,9 +54,14 @@ func validateConfigurationObjects(config *authcrunch.Config) error {
 		return nil
 	}
 	for _, err := range []error{
+		validateObjectList(config.ExternalRefreshStores, "security.external_refresh_stores"),
+		validateObjectList(config.ExternalAccessSigners, "security.external_access_signers"),
+		validateObjectList(config.ExternalUserRegistries, "security.external_user_registries"),
 		validateObjectList(config.AuthenticationPortals, "security.authentication_portals"),
 		validateObjectList(config.AuthorizationPolicies, "security.authorization_policies"),
 		validateObjectList(config.IdentityStores, "security.identity_stores"),
+		validateObjectList(config.ExternalIdentityStores, "security.external_identity_stores"),
+		validateObjectList(config.ExternalIdentityProviders, "security.external_identity_providers"),
 		validateObjectList(config.IdentityProviders, "security.identity_providers"),
 		validateObjectList(config.SingleSignOnProviders, "security.sso_providers"),
 		validateObjectList(config.OAuthApplications, "security.oauth_applications"),

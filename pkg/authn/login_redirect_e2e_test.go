@@ -206,6 +206,54 @@ func TestE2ELoginRedirectSignedInTabs(t *testing.T) {
 	}
 }
 
+// A fresh form left open while another tab logs in must still authenticate its
+// own submission before returning to its bound destination.
+func TestE2ELoginRedirectFreshPostRequiresAuthentication(t *testing.T) {
+	f := newLoginRedirectFixture(t)
+	destination := f.server.URL + "/_test/allowed/fresh?view=one%26two"
+	target := f.server.URL + "/login?fresh=1&redirect_url=" + url.QueryEscape(destination)
+	page := f.request(t, http.MethodGet, target, nil)
+	if page.StatusCode != http.StatusOK {
+		t.Fatalf("open fresh login: HTTP %d", page.StatusCode)
+	}
+	// The same cookie jar represents the browser after login in another tab.
+	otherDestination := f.server.URL + "/_test/allowed/other"
+	otherStart := f.request(t, http.MethodPost, f.server.URL+"/login?redirect_url="+url.QueryEscape(otherDestination), url.Values{"username": {"alice"}, "realm": {"local"}})
+	otherSandbox, err := otherStart.Location()
+	if err != nil || otherStart.StatusCode != http.StatusSeeOther || !strings.HasPrefix(otherSandbox.Path, "/sandbox/") {
+		t.Fatalf("start login in another tab: HTTP %d, want 303 to sandbox", otherStart.StatusCode)
+	}
+	otherPassword := f.request(t, http.MethodPost, otherSandbox.String(), url.Values{"secret": {tests.TestPwd1}})
+	if otherPassword.StatusCode != http.StatusSeeOther {
+		t.Fatalf("complete password in another tab: HTTP %d, want 303", otherPassword.StatusCode)
+	}
+	otherCompleted := f.request(t, http.MethodGet, otherSandbox.String(), nil)
+	if got := f.follow(t, otherCompleted); got != otherDestination {
+		t.Fatal("login in another tab did not return to its bound destination")
+	}
+	empty := f.request(t, http.MethodPost, target, nil)
+	if empty.StatusCode != http.StatusUnauthorized || empty.Header.Get("Location") != "" {
+		t.Fatalf("fresh login without identity: HTTP %d, want 401 without redirect", empty.StatusCode)
+	}
+	start := f.request(t, http.MethodPost, target, url.Values{"username": {"alice"}, "realm": {"local"}})
+	sandbox, err := start.Location()
+	if err != nil || start.StatusCode != http.StatusSeeOther || !strings.HasPrefix(sandbox.Path, "/sandbox/") {
+		t.Fatalf("start fresh authentication: HTTP %d, want 303 to sandbox", start.StatusCode)
+	}
+	checkpoint := f.request(t, http.MethodGet, sandbox.String(), nil)
+	if checkpoint.StatusCode != http.StatusOK {
+		t.Fatalf("fresh password checkpoint: HTTP %d, want 200", checkpoint.StatusCode)
+	}
+	password := f.request(t, http.MethodPost, sandbox.String(), url.Values{"secret": {tests.TestPwd1}})
+	if password.StatusCode != http.StatusSeeOther {
+		t.Fatalf("complete fresh password checkpoint: HTTP %d, want 303", password.StatusCode)
+	}
+	completed := f.request(t, http.MethodGet, sandbox.String(), nil)
+	if got := f.follow(t, completed); got != destination {
+		t.Fatal("fresh authentication did not return to its bound destination")
+	}
+}
+
 // The browser, not Go's URL parser, is the independent oracle for the final
 // path. Both the explicit flow destination and the legacy cookie must respect
 // the configured path restriction after browser URL normalization.
