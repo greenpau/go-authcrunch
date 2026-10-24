@@ -97,6 +97,15 @@ func (o *Outbox) Validate() error {
 	return c.Validate()
 }
 
+// CheckReady checks the opened queue without changing messages or leases.
+// Admission and the empty transaction are bounded by ctx and the queue timeout.
+func (o *Outbox) CheckReady(ctx context.Context) error {
+	if o == nil || o.db == nil {
+		return ErrUnavailable
+	}
+	return o.db.Read(ctx, func(context.Context, *sql.Tx) error { return nil })
+}
+
 // Kind identifies durable queue acceptance, not final message delivery.
 func (o *Outbox) Kind() string { return "sqlite" }
 

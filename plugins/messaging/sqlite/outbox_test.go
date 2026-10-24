@@ -351,3 +351,37 @@ func TestOutboxValidationAndFailures(t *testing.T) {
 		}
 	}
 }
+
+func TestOutboxCheckReady(t *testing.T) {
+	out, _ := testOutbox(t)
+	if err := out.Send(testMessage()); err != nil {
+		t.Fatal(err)
+	}
+	if err := out.CheckReady(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := out.CheckReady(canceled); !errors.Is(err, context.Canceled) {
+		t.Fatal("readiness ignored cancellation", err)
+	}
+	message, err := out.Claim(t.Context())
+	if err != nil {
+		t.Fatal("readiness consumed queued work", err)
+	}
+	if err := out.CheckReady(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if err := out.Acknowledge(t.Context(), message.ID, message.Lease); err != nil {
+		t.Fatal("readiness changed lease", err)
+	}
+	if err := out.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := out.CheckReady(t.Context()); !errors.Is(err, ErrUnavailable) {
+		t.Fatal("closed queue ready", err)
+	}
+	if err := (*Outbox)(nil).CheckReady(t.Context()); !errors.Is(err, ErrUnavailable) {
+		t.Fatal("nil queue ready", err)
+	}
+}

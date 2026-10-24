@@ -79,6 +79,9 @@ func newRefMap() refMap {
 // Supply fresh bindings after decoding configuration; NewServer never falls
 // back to memory for a configured but missing OAuth store.
 type ServerOptions struct {
+	// UserRegistries binds Config.ExternalUserRegistries. Providers must already
+	// be ready; the root never activates, rebinds or closes borrowed registries.
+	UserRegistries map[string]registry.Provider `json:"-" xml:"-" yaml:"-"`
 	// IdentityStores binds the exact names declared in Config.ExternalIdentityStores.
 	// Handles must already be configured; the root never configures or closes them.
 	IdentityStores   map[string]ids.IdentityStore `json:"-" xml:"-" yaml:"-"`
@@ -105,6 +108,9 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 		return nil, err
 	}
 	if err := validateExternalIdentityStoreBindings(config, options.IdentityStores); err != nil {
+		return nil, err
+	}
+	if err := validateExternalUserRegistryBindings(config, options.UserRegistries); err != nil {
 		return nil, err
 	}
 	filter, err := logging.NewFilter(config.Logging)
@@ -234,6 +240,12 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 		srv.userRegistries = append(srv.userRegistries, userRegistry)
 	}
 
+	for _, descriptor := range config.ExternalUserRegistries {
+		provider := options.UserRegistries[descriptor.Name]
+		srv.nameRefs.userRegistries[descriptor.Name] = provider
+		srv.userRegistries = append(srv.userRegistries, provider)
+	}
+
 	for _, cfg := range config.AuthenticationPortals {
 		params := authn.PortalParameters{
 			Config:                cfg,
@@ -249,6 +261,11 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 		}
 
 		srv.own(portal)
+		for _, name := range cfg.UserRegistries {
+			if err := portal.AddUserRegistry(srv.nameRefs.userRegistries[name]); err != nil {
+				return nil, errors.ErrNewServer.WithArgs("failed adding registry to portal", err)
+			}
+		}
 		if _, exists := srv.nameRefs.portals[cfg.Name]; exists {
 			return nil, errors.ErrNewServer.WithArgs("duplicate authentication portal name", cfg.Name)
 		}
@@ -296,18 +313,6 @@ func NewServerWithOptions(config *Config, logger *zap.Logger, options ServerOpti
 		}
 		if err := gatekeeper.HasAuthProxies(); err != nil {
 			return nil, err
-		}
-	}
-
-	for _, portal := range srv.portals {
-		enabledIdentityStores := portal.GetIdentityStoreNames()
-		for _, userRegistry := range srv.userRegistries {
-			if _, exists := enabledIdentityStores[userRegistry.GetIdentityStoreName()]; !exists {
-				continue
-			}
-			if err := portal.AddUserRegistry(userRegistry); err != nil {
-				return nil, errors.ErrNewServer.WithArgs("failed adding registry to portal", err)
-			}
 		}
 	}
 

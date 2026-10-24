@@ -250,16 +250,19 @@ includes validation/activation, credential and messaging binding, pending-entry
 operations, policy presentation, notifications, and `AddUser`. Direct consumers
 can attach an initialized provider through
 [Portal.AddUserRegistry](../../../../pkg/authn/portal.go). The portal config must
-have user registries configured; attachment maps the provider by its identity
-store name and refuses multiple registries for the same store. The method does
-not construct or activate the plugin. Validate the configured registry name,
-store, and realm associations in the embedding layer before attachment.
+select that registry by name; attachment validates its selected identity store
+and realm and refuses multiple registries for the same store. It recomputes
+portal-owned signup metadata without changing shared store icons. The method
+does not construct or activate the plugin; callers supply a ready provider.
 
 [registry.Config](../../../../pkg/registry/config.go) stores only local provider
 configurations, and [NewServer](../../../../server.go) constructs their runtimes
-with `NewRuntime`. A custom provider therefore needs root configuration and
-construction changes if it must be selected through that path. Directly attached
-providers remain caller-owned; `Portal.Close` does not close registries.
+with `NewRuntime`. Custom providers use `Config.ExternalUserRegistries` derived
+descriptors and borrowed `ServerOptions.UserRegistries` bindings. The
+[SQLite registration owner](../../sqlite-registration/SKILL.md) describes pure
+validation, explicit selection, readiness, fingerprints and ownership. Both root
+injections and directly attached providers remain caller-owned; `Portal.Close`
+does not close registries.
 
 The portal's [confirmation handler](../../../../pkg/authn/handle_register.go)
 uses optional `registry.ConfirmationProvider` before any legacy pending-entry

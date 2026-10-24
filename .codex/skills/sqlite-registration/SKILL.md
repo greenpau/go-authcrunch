@@ -37,10 +37,33 @@ All three files must be distinct. This plugin uses pure Go and no background job
 
 Select the identity store and registry names in PortalConfig, inject the store
 through PortalParameters.IdentityStores, then call Portal.AddUserRegistry before
-serving. Root registry dispatch remains local-only. Embedding adapters must verify
-configured registry names and store/realm associations. GetRealmName is immutable;
+serving. Portal attachment checks the explicitly selected registry name and its
+store/realm, rejects duplicate attachments, and updates detached login icons so
+only attached registrations expose signup. Shared store icons remain unchanged.
+Realm lookup during requests is read-only; omitted legacy local realms are bound
+during setup. GetRealmName is immutable;
 legacy SetRealmName cannot rebind it. SetMessaging accepts only the existing
 outbox pointer under its configured binding. No transport credentials are accepted.
+
+For root construction, derive `registry.ExternalUserRegistryConfig` through
+`NewExternalUserRegistryConfig(name, kind, identityStore, realm, emailProvider,
+normalizedBackendConfig)` and append it to `Config.ExternalUserRegistries`.
+Pass the already opened workflow in `ServerOptions.UserRegistries`. Pure root
+validation checks names, store/realm associations and portal selection without
+opening a backend. External registries require explicit `PortalConfig.UserRegistries`
+selection; when that list is empty only eligible legacy local registries default.
+Explicit selection is never expanded. Disabled stores cannot receive attachments.
+Runtime validation checks exact descriptor/binding names and metadata, final
+messaging availability, and readiness before acquiring root resources. The root
+never activates, rebinds or closes borrowed workflows, including on partial
+construction failure. Descriptors enter the root persistence fingerprint; hosts
+regenerate them after resolving/normalizing backend configuration.
+
+`Workflow.Validate` checks opened pending/account/outbox readiness with bounded
+operations; `Config.Validate` remains filesystem-independent. Constructor and
+validation reject an unavailable outbox through `Outbox.CheckReady`, which does
+not claim messages or change leases. Hosts still own drain/reopen reconciliation
+after uncertain commits. Configuration validity alone does not imply readiness.
 
 ## Enrollment state and recovery
 
@@ -125,6 +148,12 @@ extraction, workflow/portal restart, invalid/duplicate/query-only codes, replay,
 native login and independent JWT verification. Run its isolated external-module
 driver. Core TLS coverage
 checks the legacy path and that a failed capability cannot fall through.
+Root consumer coverage must serialize descriptors, use `NewServerWithOptions`,
+follow the rendered signup link at root and nested mounts, confirm after restart,
+validate the resulting JWT independently, and preserve caller ownership on root
+success/failure/shutdown. Changing the workflow descriptor retires persistent
+sessions. Check explicit and omitted selection, shared-store icon isolation,
+read-only registry lookup and closed dependency rejection.
 Also run public units/parser/consumer with CGO_ENABLED=0, excluding the
 external-module driver which intentionally runs Go's race detector.
 

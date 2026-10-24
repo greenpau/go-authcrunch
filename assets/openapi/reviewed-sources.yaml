@@ -1,8 +1,9 @@
 module: github.com/greenpau/go-authcrunch
 files:
     cmd/authdb/main.go: 53cb8c3ca9c3df5ababb8fecb7d2b80ac96a9c0fc52d31ecf88d1e27e5772df1
-    config.go: 3f3715e00c4b0ad1497c5c1f62cca7d8fb1356015ef8e7977bf7199617d6197e
+    config.go: 361b4b8fd1ad348cedbc94d25511fe9420fb5b2869df81a6158baa653ef91edb
     config_external_identity.go: 78a95078289c4b13d88f7ee21d96594f1fdccc437cbd4a569f3898d037a42ac9
+    config_external_user_registry.go: bb4b6c027589c94adc7dc94727fe6fd802d68f550f3b7567ce9de731d10c6a35
     config_oauth_applications.go: c3d105f8cb5eab55866d97259bd990d3b0da25eb68412f6069b293e21c20491d
     config_oauth_authorization.go: 19e0d80bce0f703c65752ade6259436bd033bc258a420a76b83a1edb0ab6de62
     internal/sqlitedb/database.go: 2960aa0fc3f1307e133c8a68e95bf12313e11913ab63359512b7b1c606fc86bb
@@ -135,7 +136,7 @@ files:
     pkg/authn/password_attempt_limiter.go: 0001de3e6eb4ec0b94652c785817fdfe687b67179c6c3b62d077101893f1c900
     pkg/authn/password_form_validator.go: 1e30735fcc1abc71b9f36d752c315ff0aff3514bdfbc8d9cac66edd973817456
     pkg/authn/persistent_state.go: ab02a3eedc07766e061e4cdbc9cfae12036efbb9b9819df3a1a20fabeae4d062
-    pkg/authn/portal.go: 3d3df91e3eb55ff6e8a8efd8e3b6f2c0eb06aea57e685fa13ff2d6563ed6ba65
+    pkg/authn/portal.go: e9a038e3b847ddfe5d42987fb6cebb652589b4f781823cc6ae26ece846c0a053
     pkg/authn/profile_auth_challenges.go: d016b39d03224bc98eb22d6f46698093637f41b126b0d9f65a6a219cc7b9a115
     pkg/authn/profile_identity.go: 0dbaf1f77b62c1042ff920d5d0d15d9090309a858d9ce16e9a93cb25d811120f
     pkg/authn/respond_api.go: 62e482b84494029222fdb59ad669719b85f5d69173db813d20f57b2d3c87e3de
@@ -334,6 +335,7 @@ files:
     pkg/registry/domain_restriction_check.go: 5f9c9b8ee7947bc025dd6c401a9da22f7ce9d28fb74f8bcdd9e3db08252b7cf6
     pkg/registry/domain_restriction_rule.go: a39f522c7caa4738964b89355b657e6a6e3c5ff6de14804a9ba8d81eb62f4df4
     pkg/registry/domain_restriction_ruleset.go: c8c1817e9535c0da76c0b5d89decfb5cadb956cf22b98a43e32f79ccba46e14a
+    pkg/registry/external_config.go: 23bcd1fd0e90711ed4cb3e5f58cd00511caca2a7ae5fe56ebbb9579cf4056933
     pkg/registry/local_user_registry.go: 31f5c77be688328310e2c6ffddece1c4b0d487c0c7d2150a4e9ee9fdfc67d104
     pkg/registry/provider.go: d80c9ccbd8e3bdf04d81cac93ee9878e3d49f83658f0498fbd71eb83abc8b7c7
     pkg/registry/ui.go: 80049e0d92f764757baeaa2bfd795d715149f82dca817872c831db3fb44f13bb
@@ -365,13 +367,13 @@ files:
     pkg/util/validate/login_hint.go: 0f415460fec2fdb3047635b8d8b6d703790fad279fc171fc67f8614c27e199eb
     pkg/waf/malformed_input_check.go: eaf3b3f2b24f741257709fa61f09f192efbb43b785b51e72b5ee26c597663785
     plugins/messaging/sqlite/config.go: 69c8796a94b79dae329e5774ce2127e774c1a2b68e989c3f69b3b45924bff403
-    plugins/messaging/sqlite/outbox.go: acc9b1b9b62bb07741dcad6b8d2415ac18bb546976034e9742773bc41db54201
+    plugins/messaging/sqlite/outbox.go: 4603f607fe214050eb1418e06e6263d59f50346a8d6c4ce83b6c2b52192b6531
     plugins/messaging/sqlite/parser/parser.go: e88c2cac603da0f8df3f22982a6c40de617b3196d5bb8cf27f2de62481f79657
     plugins/oauth-login-storage/sqlite/config.go: 98209c1750171fd425144fff4e928fd53391ffa294a3815c5953eccef43f1626
     plugins/oauth-login-storage/sqlite/parser/parser.go: 35534e0835a0b160f111033e6afc7d489372e4ae451087631ceaa4abcb2e8ffb
     plugins/oauth-login-storage/sqlite/store.go: 93a5fa57f10de9d62794be6711ab6bb7e96cc616d825f39dca5cc710dccfddb8
     plugins/registration-workflows/sqlite/config.go: 17c42cd759d1092d178e1eb983d134cbfc03d1123e222e9a91505970b95554b5
     plugins/registration-workflows/sqlite/parser/parser.go: 757678ff613256309f3a9a536ff968ed87cde46c3ee691300193d98a031fbd04
-    plugins/registration-workflows/sqlite/workflow.go: 4ddedd74461407312ebd4b0b4839eb28c0044dddbab3d945c859e5a3a45419a7
-    server.go: 5a18a83adc2c8165ff92fbb240a340060fd05c3f3efa0e57ec5d6d0071c4daec
+    plugins/registration-workflows/sqlite/workflow.go: 5961c32949b00a17cb4f80198839ab82d36c56d759cd71c8e8f23bc199246cd0
+    server.go: 5bddaad852caab4e4e3f933636052dcb0336c04c64029d0447ec2585de4d62e2
     server_persistent_state.go: 706d1920510d914041ee78a43143068a11b7294028eadb234b363073065cd371

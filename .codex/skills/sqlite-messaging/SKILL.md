@@ -26,6 +26,9 @@ excluded from JSON/XML/YAML. Duplicate names and reserved built-in kinds fail.
 when raw declarations are absent it preserves and validates typed native email
 and file providers instead. Duplicate names across built-in kinds and runtime
 injections fail; unsuccessful validation retains the previous published lists.
+`Outbox.CheckReady(ctx)` checks the opened queue through a bounded empty read
+transaction without consuming messages or altering leases. Configuration-only
+Validate remains pure; workflow/root hosts use readiness before publication.
 The factory remains email/file-only: hosts must reconstruct injections on reload.
 AsMap returns only name/kind. Configured names select logical queues; the file's
 capacity is shared across those queues. Drain producers/workers before Close.

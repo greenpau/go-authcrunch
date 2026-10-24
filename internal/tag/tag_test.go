@@ -706,6 +706,11 @@ func TestTagCompliance(t *testing.T) {
 			opts:  &Options{},
 		},
 		{
+			name:  "test registry.ExternalUserRegistryConfig struct",
+			entry: &registry.ExternalUserRegistryConfig{},
+			opts:  &Options{},
+		},
+		{
 			name:  "test registry.Config struct",
 			entry: &registry.Config{},
 			opts: &Options{

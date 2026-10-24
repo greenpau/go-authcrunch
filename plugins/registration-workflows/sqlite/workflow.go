@@ -89,7 +89,7 @@ func New(ctx context.Context, config *Config, store *accounts.Store, outbox *not
 	if err := c.Validate(); err != nil {
 		return nil, err
 	}
-	if store.GetName() != c.IdentityStore || store.GetRealm() != c.Realm || !store.Configured() || outbox.Validate() != nil {
+	if store.GetName() != c.IdentityStore || store.GetRealm() != c.Realm || !store.Configured() || outbox.Validate() != nil || outbox.CheckReady(ctx) != nil {
 		return nil, ErrInvalid
 	}
 	messagingConfig := &messaging.Config{}
@@ -303,7 +303,16 @@ func (w *Workflow) Validate() error {
 		return ErrInvalid
 	}
 	c := w.config
-	return c.Validate()
+	if err := c.Validate(); err != nil {
+		return err
+	}
+	if !w.store.Configured() {
+		return ErrUnavailable
+	}
+	if err := w.outbox.CheckReady(context.Background()); err != nil {
+		return err
+	}
+	return w.db.Read(context.Background(), func(context.Context, *sql.Tx) error { return nil })
 }
 
 // Activate validates an already opened workflow; it starts no workers.

@@ -44,6 +44,18 @@ external stores. Descriptors join the root persistence binding while backend
 proof epochs remain backend-owned. This derived descriptor is not an additional
 operator grammar: the backend's public parser owns its configuration.
 
+For an external registration workflow, use
+`registry.NewExternalUserRegistryConfig` after backend normalization and put the
+descriptor in `Config.ExternalUserRegistries`. Inject its ready handle in
+`ServerOptions.UserRegistries`; select its name explicitly in each portal's
+`UserRegistries`. Root validation is pure until runtime bindings arrive, then
+checks metadata/readiness before resource acquisition. The root does not mutate
+or close borrowed workflows. Backend constructors and the host own exact account
+and messaging handle correspondence and deployment origin/mount alignment.
+The descriptor participates in persistent configuration binding. The
+[registration owner](../../sqlite-registration/SKILL.md) defines signup metadata,
+legacy defaults, confirmation and post-registration navigation.
+
 Read the feature's owning skill for its exact grammar, defaults, and exclusions.
 Keep downstream handlers thin; do not copy field allowlists or parse the same
 settings independently. Do not route upstream OAuth settings into `pkg/oidc`.

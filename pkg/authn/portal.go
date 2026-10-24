@@ -17,6 +17,7 @@ package authn
 import (
 	"context"
 	"os"
+	"slices"
 	"sort"
 
 	"github.com/greenpau/go-authcrunch/pkg/acl"
@@ -38,7 +39,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/sso"
 	"github.com/greenpau/go-authcrunch/pkg/state"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
-	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 
 	"fmt"
 	"path"
@@ -523,8 +523,17 @@ func (p *Portal) configureLoginIcons() error {
 	httpLogin := make(map[*icons.LoginIcon]bool)
 
 	for _, store := range p.identityStores {
-		icon := store.GetLoginIcon()
-		entries = append(entries, icon)
+		source := store.GetLoginIcon()
+		if source == nil {
+			return fmt.Errorf("identity store login icon missing")
+		}
+		icon := *source
+		icon.SetRealm(store.GetRealm())
+		icon.RegistrationEnabled = p.userRegistries[store.GetName()] != nil
+		if store.GetKind() == "local" || store.GetKind() == "ldap" {
+			icon.UsernameRecoveryEnabled = false
+		}
+		entries = append(entries, &icon)
 	}
 
 	for _, provider := range p.identityProviders {
@@ -624,19 +633,6 @@ func (p *Portal) configureIdentityStoreLogin() error {
 	if len(stores) > 1 {
 		p.loginOptions["realm_dropdown_required"] = "yes"
 		p.loginOptions["authenticators_required"] = "yes"
-	}
-
-	for _, store := range p.identityStores {
-		icon := store.GetLoginIcon()
-		icon.SetRealm(store.GetRealm())
-		switch store.GetKind() {
-		case "local":
-			icon.RegistrationEnabled = false
-			icon.UsernameRecoveryEnabled = false
-		case "ldap":
-			icon.RegistrationEnabled = false
-			icon.UsernameRecoveryEnabled = false
-		}
 	}
 
 	return nil
@@ -876,29 +872,42 @@ func (p *Portal) configureUserTransformer() error {
 	return nil
 }
 
-// AddUserRegistry adds registry.Provider instance to Portal.
+// AddUserRegistry attaches a selected, ready registry before the portal serves
+// requests. The caller retains its lifecycle. External providers are immutable;
+// the legacy local provider may acquire its omitted realm during this setup.
 func (p *Portal) AddUserRegistry(userRegistry registry.Provider) error {
-	p.config.UserRegistries = cfgutil.DedupStrArr(p.config.UserRegistries)
-
-	if len(p.config.UserRegistries) < 1 {
-		return fmt.Errorf("auth portal has no user registries configured")
+	if userRegistry == nil {
+		return fmt.Errorf("user registry is nil")
 	}
-
+	if !slices.Contains(p.config.UserRegistries, userRegistry.GetName()) {
+		return fmt.Errorf("user registry is not selected by auth portal")
+	}
+	storeName := userRegistry.GetIdentityStoreName()
+	realm, found := p.GetIdentityStoreNames()[storeName]
+	if !found {
+		return fmt.Errorf("user registry identity store is not selected by auth portal")
+	}
+	if _, exists := p.userRegistries[storeName]; exists {
+		return fmt.Errorf("auth portal has multiple user registries supporting the same identity store")
+	}
+	if local, ok := userRegistry.(*registry.LocalUserRegistryProvider); ok && local.RealmName == "" {
+		local.SetRealmName(realm)
+	}
+	if userRegistry.GetRealmName() != realm {
+		return fmt.Errorf("user registry realm does not match identity store")
+	}
 	if p.userRegistries == nil {
 		p.userRegistries = make(map[string]registry.Provider)
 	}
-	if _, exists := p.userRegistries[userRegistry.GetIdentityStoreName()]; exists {
-		return fmt.Errorf("auth portal has multiple user registries supporting the same identity store: %v", p.config.UserRegistries)
+	p.userRegistries[storeName] = userRegistry
+	if err := p.configureLoginIcons(); err != nil {
+		delete(p.userRegistries, storeName)
+		return err
 	}
-	p.userRegistries[userRegistry.GetIdentityStoreName()] = userRegistry
-
-	p.logger.Debug(
-		"Configured user registration",
+	p.logger.Debug("Configured user registration",
 		zap.String("portal_name", p.config.Name),
 		zap.String("portal_id", p.id),
-		zap.Any("user_registry", userRegistry.AsMap()),
-	)
-
+		zap.Any("user_registry", userRegistry.AsMap()))
 	return nil
 }
 
@@ -929,7 +938,6 @@ func (p *Portal) GetUserRegistryByRealmName(realmName string) registry.Provider 
 			if identityStore.GetRealm() != realmName {
 				continue
 			}
-			userRegistry.SetRealmName(realmName)
 			return userRegistry
 		}
 	}

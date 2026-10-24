@@ -576,3 +576,36 @@ func TestRegistrationDestinationSurvivesRestart(t *testing.T) {
 		t.Fatal("completed registration retained navigation metadata", err)
 	}
 }
+
+func TestRegistrationRuntimeReadiness(t *testing.T) {
+	for _, dependency := range []string{"pending", "accounts", "outbox"} {
+		t.Run(dependency, func(t *testing.T) {
+			w, cfg := setupWorkflow(t)
+			if err := w.Validate(); err != nil {
+				t.Fatal(err)
+			}
+			switch dependency {
+			case "pending":
+				w.Close()
+			case "accounts":
+				w.store.Close()
+			case "outbox":
+				w.outbox.Close()
+			}
+			if err := w.Validate(); !errors.Is(err, ErrUnavailable) {
+				t.Fatal("unavailable dependency accepted", err)
+			}
+			if err := cfg.Validate(); err != nil {
+				t.Fatal("pure configuration depends on runtime health", err)
+			}
+			if dependency == "pending" && (!w.store.Configured() || w.outbox.CheckReady(t.Context()) != nil) {
+				t.Fatal("workflow closed borrowed dependencies")
+			}
+			if dependency == "outbox" {
+				if candidate, err := New(t.Context(), cfg, w.store, w.outbox); candidate != nil || err == nil {
+					t.Fatal("constructor accepted closed outbox")
+				}
+			}
+		})
+	}
+}

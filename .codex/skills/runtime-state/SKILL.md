@@ -106,6 +106,13 @@ identity and signing configuration. Directly configured standalone components
 must also invalidate removed/reintroduced namespaces; root `NewServer` supplies
 that configuration-epoch behavior automatically.
 
+External identity-store and registration descriptors participate in root
+configuration binding through their normalized backend digests. Runtime handles
+remain excluded. Hosts regenerate descriptors after configuration resolution;
+changing an enrollment destination or policy must not silently retain prior
+session authority. Independent pending-enrollment persistence still belongs to
+the workflow, with its own origin/mount binding and reconciliation contract.
+
 Preserve spent credentials until no descendant remains live. Restoring only
 current refresh hashes or clearing replay history at restart is a security bug.
 Validate restored sessions and grants in detached maps, then publish them together.

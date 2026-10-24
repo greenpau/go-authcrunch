@@ -147,7 +147,10 @@ releases portal resources but does not close shared stores/providers. This is
 an existing injection path. Root identity stores additionally use validated
 external descriptors plus named options bindings; see the
 [SQLite identity owner](../sqlite-identity-store/SKILL.md) for configuration
-fingerprints, ownership and persistence. Other categories retain their own
+fingerprints, ownership and persistence. Root external registries likewise use
+explicit descriptors and borrowed options, with the
+[SQLite registration owner](../sqlite-registration/SKILL.md) defining selection,
+readiness and portal signup visibility. Other categories retain their own
 integration boundaries; this is not a universal loader or an `authdb` plugin
 configuration surface.
 
