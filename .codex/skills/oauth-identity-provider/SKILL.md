@@ -19,6 +19,14 @@ snapshot mode captures claims before transformations and never renews upstream
 tokens. Keep callback state/nonce/PKCE and signature verification in this owner;
 selected snapshot providers must disable upstream identity-token cookies.
 
+The portal's external-provider `Successful login` INFO event records provider
+acceptance with request/session correlation, `auth_method` and `auth_realm`.
+It omits the arbitrary identity payload because complete UserInfo enrichment can
+contain nested credentials before snapshot sanitation. Do not move this event
+to final issuance or treat it as proof of delivered credentials. Preserve the
+separate explicit Debug diagnostics and the
+[authentication event contract](../logging/SKILL.md#authentication-event-attribution).
+
 ## Ownership and Entry Points
 
 `pkg/idp/config.go` validates the shared provider parameter allowlist;

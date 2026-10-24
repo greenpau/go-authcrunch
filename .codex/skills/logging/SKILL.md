@@ -40,6 +40,17 @@ factor discovery, sandbox limits and malformed/origin-rejected WebAuthn can
 fail before the three backend warnings. Assert actual HTTP outcomes separately;
 some browser factor failures render an error page with HTTP 200.
 
+The external-provider `Successful login` INFO event retains `session_id`,
+`request_id`, `auth_method` and `auth_realm` after the provider accepts its
+callback. It omits the arbitrary response payload: OAuth UserInfo enrichment can
+contain nested credentials before snapshot sanitation. Preserve this omission
+without adding a field-name redaction walker or changing provider claims.
+The event still precedes portal authorization and issuance, including cases
+where later claim validation fails. Other events with the same message have
+different fields and boundaries; do not merge them into this event contract.
+Explicit Debug diagnostics and other accepted structured diagnostics retain
+their separate [logging policy](../threat-hunting/references/debug-logging.md).
+
 Request and session IDs are correlation, not authenticated provenance. The
 session ID is the portal correlation cookie value or a generated value, distinct
 from sandbox secrets and refresh-family identity. Jar-free checkpoint requests
@@ -178,9 +189,18 @@ root construction and TLS to distinguish one username across two realms and
 portals, filter their field values independently, authorize actual issued tokens,
 and scan captured diagnostics for passwords and returned login credentials.
 
+`pkg/authn/external_login_logging_test.go` checks the provider-acceptance event's
+four metadata fields for OAuth and SAML, including subsequent claim rejection,
+redirects and provider failures. `TestE2EProviderLoginLogMetadata` in
+`pkg/authn/external_login_logging_e2e_test.go` uses the public TLS provider-refresh
+fixture with complete UserInfo enrichment, real callback/rotation/replay and
+independent portal signature verification. It preserves benign nested claims
+while checking INFO diagnostics for captured upstream and portal credentials.
+
 ```sh
 make test TEST_DIR='./pkg/logging/... . ./internal/tag' TEST='Test.*Logging|ExampleNewLogging|TagCompliance' COVERAGE_DIR=.coverage/logging
 make test TEST_DIR='./pkg/authn .' TEST='^(TestAuthenticationEvent.*|TestTokenRefreshJSONCompletionDiscard|TestTokenRefreshJSONOIDCCapacityRecovery|TestE2EServerAuthenticationEvents)$' COVERAGE_DIR=.coverage/authentication-events
+make test TEST_DIR='./pkg/authn' TEST='^(TestExternalLoginEventMetadata|TestE2EProviderLoginLogMetadata)$' COVERAGE_DIR=.coverage/external-login-events
 make ci-check
 gopls check -severity=hint config.go server.go server_persistent_state.go config_logging_test.go server_logging_e2e_test.go pkg/logging/config.go pkg/logging/filter.go pkg/logging/config_test.go pkg/logging/filter_test.go pkg/logging/parser/config.go pkg/logging/parser/config_test.go
 ```

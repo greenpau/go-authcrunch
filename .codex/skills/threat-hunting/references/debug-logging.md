@@ -99,6 +99,15 @@ globally sanitize claims or user objects; other destinations and queries,
 including log injection, remain in scope. This policy preserves intentional
 diagnostics and does not authorize adding new secrets to user payloads.
 
+The external-provider `Successful login` event in
+`pkg/authn/handle_external_login.go` has a narrower event contract: its INFO fields
+contain only session/request correlation and authentication method/realm. Keep
+the arbitrary provider response payload omitted there; complete UserInfo
+enrichment can carry nested credentials before renewal snapshot sanitation.
+This event-specific omission leaves the diagnostic exceptions and explicit Debug
+visibility elsewhere unchanged. A sink exception is not a requirement to retain
+or reintroduce that payload into this event.
+
 ## Claims and individual claim fields
 
 Claims and the fields inside them are accepted troubleshooting diagnostics at

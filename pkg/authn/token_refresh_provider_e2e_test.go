@@ -54,6 +54,7 @@ import (
 type providerRefreshE2EOptions struct {
 	access, idle, absolute int
 	unselected, persistent bool
+	logger                 *zap.Logger
 	excludeLocal           bool
 	attached               bool
 	transforms             []string
@@ -174,7 +175,11 @@ func newProviderRefreshE2E(t *testing.T, options providerRefreshE2EOptions) *pro
 		t.Fatal(err)
 	}
 	cfg = &restored
-	params := authn.PortalParameters{Config: cfg, Logger: zap.NewNop(), IdentityStores: []ids.IdentityStore{store}, IdentityProviders: []idp.IdentityProvider{provider}}
+	logger := options.logger
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	params := authn.PortalParameters{Config: cfg, Logger: logger, IdentityStores: []ids.IdentityStore{store}, IdentityProviders: []idp.IdentityProvider{provider}}
 	var storage *state.Store
 	stateDir := filepath.Join(t.TempDir(), "state")
 	construct := func() error {

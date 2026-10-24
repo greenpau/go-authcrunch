@@ -126,7 +126,6 @@ func (p *Portal) handleHTTPExternalLogin(ctx context.Context, w http.ResponseWri
 			zap.String("request_id", rr.ID),
 			zap.String("auth_method", rr.Upstream.Method),
 			zap.String("auth_realm", rr.Upstream.Realm),
-			zap.Any("user", rr.Response.Payload),
 		)
 	case http.StatusFound:
 		if authMethod == "saml" {
