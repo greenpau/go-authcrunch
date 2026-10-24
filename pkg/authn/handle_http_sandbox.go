@@ -357,6 +357,8 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 						rr.Response.Code = http.StatusUnauthorized
 						p.logger.Warn(
 							"password authentication failed",
+							zap.String("portal_name", p.config.Name),
+							zap.String("realm", usr.Authenticator.Realm),
 							zap.String("session_id", rr.Upstream.SessionID),
 							zap.String("request_id", rr.ID),
 							zap.Int("checkpoint_id", checkpoint.ID),
@@ -501,6 +503,8 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 				backend.Request(operator.IncrementMfaFailedAttempts, rr)
 				p.logger.Warn(
 					"totp passcode authentication failed",
+					zap.String("portal_name", p.config.Name),
+					zap.String("realm", usr.Authenticator.Realm),
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 					zap.Int("checkpoint_id", checkpoint.ID),
@@ -537,6 +541,8 @@ func (p *Portal) nextSandboxCheckpoint(r *http.Request, rr *requests.Request, us
 						backend.Request(operator.IncrementMfaFailedAttempts, rr)
 						p.logger.Warn(
 							"u2f authentication failed",
+							zap.String("portal_name", p.config.Name),
+							zap.String("realm", usr.Authenticator.Realm),
 							zap.String("session_id", rr.Upstream.SessionID),
 							zap.String("request_id", rr.ID),
 							zap.Int("checkpoint_id", checkpoint.ID),

@@ -1,15 +1,56 @@
 ---
 name: logging
-description: Maintain AuthCrunch logging skip rules, the reusable logging directive parser, immutable Zap filters, root server logger wiring, and TLS log-output tests. Excludes host-specific access-log configuration and changes to authentication decisions.
+description: Maintain AuthCrunch authentication event attribution, logging skip rules, the reusable directive parser, immutable Zap filters, root logger wiring, and TLS log-output tests. Excludes host-specific access-log configuration and changes to authentication decisions.
 ---
 
-# Logging Filters
+# Logging and Authentication Events
 
 `pkg/logging` owns diagnostic suppression; `pkg/logging/parser` owns the logging
 block grammar. `authcrunch.Config.Logging` persists `*logging.Config`, and
 `NewServer` wraps its supplied logger before constructing every component.
 The caller's original logger remains unchanged. Filtering never changes returned
 authentication errors, authorization flags, redirects, or HTTP responses.
+
+## Authentication event attribution
+
+Password, TOTP and backend WebAuthn failures in JSON and browser sandbox flows
+emit WARN messages `password authentication failed`,
+`totp passcode authentication failed`, and `u2f authentication failed`.
+They include `portal_name`, canonical `realm` and `username`, `session_id`,
+`request_id`, numeric `checkpoint_id`, `checkpoint_name`, `checkpoint_type`,
+`src_ip` and `src_conn_ip`. The portal name comes from the selected portal config;
+the realm comes from the server-held sandbox authenticator, paired with its
+canonical backend account. Email aliases and transformed display/subject claims
+must not replace that identity. Connected LDAP can move subsequent MFA into an
+attached local account; its factor realm is that local realm, not necessarily
+the originally submitted federation realm.
+
+The INFO message `user was successfully authenticated` records final JSON
+checkpoint login after token issuance and applicable session/OP admission
+succeed. It includes the same portal/realm/account attribution, request/session
+correlation, and `authentication_flow=api`. Incomplete factors and failed
+issuance must not emit it. The call precedes HTTP serialization/write and cannot
+prove network delivery. API-key, provider and refresh flows are separate; this
+message is not a universal successful-authentication counter.
+
+Preserve exact messages, levels and timing when adding fields. Browser
+`user passed all authorization checkpoints` and `Successful login` describe
+earlier boundaries, not final credential delivery. Rate limiting, invalid forms,
+factor discovery, sandbox limits and malformed/origin-rejected WebAuthn can
+fail before the three backend warnings. Assert actual HTTP outcomes separately;
+some browser factor failures render an error page with HTTP 200.
+
+Request and session IDs are correlation, not authenticated provenance. The
+session ID is the portal correlation cookie value or a generated value, distinct
+from sandbox secrets and refresh-family identity. Jar-free checkpoint requests
+need not retain the same value. Embedding hosts own forwarded-address trust.
+Never add passwords, passcodes, factor seeds, assertions, sandbox secrets,
+private keys or issued credentials to these events.
+
+Added realm and portal strings participate in existing textual field-value
+filtering. A rule matches any equal textual value, not a named field key; use
+distinct values when demonstrating selective suppression. Filtering a diagnostic
+must leave failures, successful authorization and unrelated events unchanged.
 
 ## Configuration and Public APIs
 
@@ -127,8 +168,19 @@ reads actual JSON log files from component and host loggers. Keep all five
 matchers and omitted/empty/combined cases in the default test suite.
 The same file verifies persistent OAuth sessions across logging-only reloads.
 
+`pkg/authn/authentication_event_logging_test.go` drives all six real local
+factor-failure branches, including enrolled WebAuthn with a wrong-key signature
+and a valid same-checkpoint control. It checks canonical attribution despite
+aliases/transformed claims and conflicting request realm metadata. Existing
+completion cancellation and bounded OP-capacity tests verify the final JSON
+success boundary. `server_authentication_event_logging_e2e_test.go` uses public
+root construction and TLS to distinguish one username across two realms and
+portals, filter their field values independently, authorize actual issued tokens,
+and scan captured diagnostics for passwords and returned login credentials.
+
 ```sh
 make test TEST_DIR='./pkg/logging/... . ./internal/tag' TEST='Test.*Logging|ExampleNewLogging|TagCompliance' COVERAGE_DIR=.coverage/logging
+make test TEST_DIR='./pkg/authn .' TEST='^(TestAuthenticationEvent.*|TestTokenRefreshJSONCompletionDiscard|TestTokenRefreshJSONOIDCCapacityRecovery|TestE2EServerAuthenticationEvents)$' COVERAGE_DIR=.coverage/authentication-events
 make ci-check
 gopls check -severity=hint config.go server.go server_persistent_state.go config_logging_test.go server_logging_e2e_test.go pkg/logging/config.go pkg/logging/filter.go pkg/logging/config_test.go pkg/logging/filter_test.go pkg/logging/parser/config.go pkg/logging/parser/config_test.go
 ```

@@ -113,13 +113,13 @@ files:
     pkg/authn/handle_http_logout.go: 0789fffec9fb5fe1744a40006e1b25a5053cfc92ad235a067cb533b7f5a8568d
     pkg/authn/handle_http_portal.go: 031de7d2efea4bccd76eb3a0dffb651a19faaa79c19f4b08d1ce50dc420bbdce
     pkg/authn/handle_http_recover.go: 7e6e67dabc77df0d89834e17c83ccb762088c7d3c605df9aead2135f05d58e8f
-    pkg/authn/handle_http_sandbox.go: 0ee2d2fabfa6e87bb1002638a9d8c2ba2d367ed2b69058bc8850a1f68fa7679a
+    pkg/authn/handle_http_sandbox.go: 63d9a9b8c1a223bf7f072699b1e39898bc71e9b4f2db964b3bc0d0fd9f8fbaf4
     pkg/authn/handle_http_session.go: e0008010d8c50f59e198844cd029b39f37dda3ae69f702db6817803d44d377f5
     pkg/authn/handle_http_static.go: 7ec4085cf0ca4cce149360b21a6f169298c0ba87051f6a0d74c90fa7d7676f5f
     pkg/authn/handle_http_whoami.go: a4a610129c66e4a8ec42cc5e7131c8d2ef59a3f68381d9c3eb27830b143aff33
     pkg/authn/handle_json_api_key_login.go: b6e3206dc92c7a855d68f649989a47b8bd62577b9e38122548822eb57308cf7c
     pkg/authn/handle_json_beacon.go: 12437e60e60371daec59e75b75eb9f770bb39a83824b32526568dbd06174190a
-    pkg/authn/handle_json_login.go: 5df1b432ec66bcd3849aef2c734e24fc9a0b59e81eaaab2f3442ad1784e1a6f3
+    pkg/authn/handle_json_login.go: a4d58454adecba36a6432bcd5529ab26ec9d7db510376aa9931ed7bbcf160621
     pkg/authn/handle_json_whoami.go: 52d7d318065dcb3e9689ef95ecee61729d32b9ee11b5bfd3ada58650b7b10d56
     pkg/authn/handle_provider_login.go: c479a51947d063a8fc955d73b548c56fbe1b9e670e2c918f03f09050516f8186
     pkg/authn/handle_register.go: d67fd72ac6e20cd543fa54af0822e05ba6a0e0f343dc824b6b3102dc35d22dba

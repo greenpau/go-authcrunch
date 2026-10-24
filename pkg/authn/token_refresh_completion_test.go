@@ -18,16 +18,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/greenpau/go-authcrunch/internal/tests"
-	"github.com/greenpau/go-authcrunch/pkg/apiauth"
-	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
-	"github.com/greenpau/go-authcrunch/pkg/oidc"
-	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
+
+	"github.com/greenpau/go-authcrunch/internal/tests"
+	"github.com/greenpau/go-authcrunch/pkg/apiauth"
+	"github.com/greenpau/go-authcrunch/pkg/authn/token_refresh"
+	"github.com/greenpau/go-authcrunch/pkg/oidc"
+	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 type canceledOIDCCompletion struct {
@@ -59,6 +63,8 @@ func TestTokenRefreshJSONCompletionDiscard(t *testing.T) {
 		t.Run(fmt.Sprintf("cleanup unavailable=%t", unavailable), func(t *testing.T) {
 			f := newRefreshPortal(t, true, false)
 			p := f.portal
+			core, logs := observer.New(zap.InfoLevel)
+			p.logger = zap.New(core)
 			p.refreshStore.Close()
 			p.config.RefreshTokens.MaxSessions = 1
 			if err := p.configureRefresh(); err != nil {
@@ -100,6 +106,7 @@ func TestTokenRefreshJSONCompletionDiscard(t *testing.T) {
 			if w.Code != http.StatusServiceUnavailable || ctx.Err() != context.Canceled {
 				t.Fatalf("failed completion returned %d", w.Code)
 			}
+			assertAuthenticationSuccessEvents(t, logs, 0)
 			for _, c := range w.Result().Cookies() {
 				if (c.Name == p.cookie.AccessTokenCookieName || c.Name == p.cookie.RefreshTokenCookieName || c.Name == p.cookie.OIDCSessionIDCookieName) && c.MaxAge >= 0 && c.Value != "" && (c.Expires.IsZero() || c.Expires.After(time.Now())) {
 					t.Fatal("failed completion delivered a credential")
@@ -113,6 +120,7 @@ func TestTokenRefreshJSONCompletionDiscard(t *testing.T) {
 			}
 			p.oidc = provider
 			decodeAuth(t, f.login(t, "cookie"))
+			assertAuthenticationSuccessEvents(t, logs, 1)
 		})
 	}
 }
@@ -120,6 +128,8 @@ func TestTokenRefreshJSONCompletionDiscard(t *testing.T) {
 func TestTokenRefreshJSONOIDCCapacityRecovery(t *testing.T) {
 	f := newRefreshPortal(t, true, false)
 	p := f.portal
+	core, logs := observer.New(zap.InfoLevel)
+	p.logger = zap.New(core)
 	p.refreshStore.Close()
 	p.config.RefreshTokens.MaxSessions = 1
 	if err := p.configureRefresh(); err != nil {
@@ -133,6 +143,8 @@ func TestTokenRefreshJSONOIDCCapacityRecovery(t *testing.T) {
 	}
 	first := f.login(t, "cookie")
 	decodeAuth(t, first)
+	assertAuthenticationSuccessEvents(t, logs, 1)
+	logs.TakeAll()
 	old := responseCookie(t, first, p.cookie.RefreshTokenCookieName)
 	oc := responseCookie(t, first, p.cookie.OIDCSessionIDCookieName)
 	if err := p.refresh.Logout(t.Context(), old.Value, tokenrefresh.CookieTransport); err != nil {
@@ -142,6 +154,7 @@ func TestTokenRefreshJSONOIDCCapacityRecovery(t *testing.T) {
 	if failed.Code == http.StatusOK {
 		t.Fatal("OIDC capacity did not reject login")
 	}
+	assertAuthenticationSuccessEvents(t, logs, 0)
 	r := httptest.NewRequest(http.MethodPost, refreshTestOrigin+"/auth/api/logout", nil)
 	r.AddCookie(oc)
 	p.oidc.Logout(httptest.NewRecorder(), r)
@@ -149,6 +162,7 @@ func TestTokenRefreshJSONOIDCCapacityRecovery(t *testing.T) {
 	if retry.Code != http.StatusOK {
 		t.Fatalf("login after capacity recovery returned %d", retry.Code)
 	}
+	assertAuthenticationSuccessEvents(t, logs, 1)
 }
 
 func TestTokenRefreshJSONSessionCacheCapacityRecovery(t *testing.T) {

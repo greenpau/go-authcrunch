@@ -158,6 +158,8 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				}
 				p.logger.Warn(
 					"password authentication failed",
+					zap.String("portal_name", p.config.Name),
+					zap.String("realm", usr.Authenticator.Realm),
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 					zap.Int("checkpoint_id", checkpoint.ID),
@@ -220,6 +222,8 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				backend.Request(operator.IncrementMfaFailedAttempts, rr)
 				p.logger.Warn(
 					"totp passcode authentication failed",
+					zap.String("portal_name", p.config.Name),
+					zap.String("realm", usr.Authenticator.Realm),
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 					zap.Int("checkpoint_id", checkpoint.ID),
@@ -348,6 +352,8 @@ func (p *Portal) handleSandboxCheckpointVerification(_ context.Context, r *http.
 				backend.Request(operator.IncrementMfaFailedAttempts, rr)
 				p.logger.Warn(
 					"u2f authentication failed",
+					zap.String("portal_name", p.config.Name),
+					zap.String("realm", usr.Authenticator.Realm),
 					zap.String("session_id", rr.Upstream.SessionID),
 					zap.String("request_id", rr.ID),
 					zap.Int("checkpoint_id", checkpoint.ID),
@@ -528,6 +534,8 @@ func (p *Portal) handleJSONLogin(ctx context.Context, w http.ResponseWriter, r *
 			}
 			p.logger.Info(
 				"user was successfully authenticated",
+				zap.String("portal_name", p.config.Name),
+				zap.String("realm", proof.Authenticator.Realm),
 				zap.String("session_id", rr.Upstream.SessionID),
 				zap.String("request_id", rr.ID),
 				zap.String("authentication_flow", "api"),
