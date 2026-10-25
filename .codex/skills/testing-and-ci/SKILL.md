@@ -1,11 +1,50 @@
 ---
 name: testing-and-ci
-description: Require corresponding tests for every Go code change, E2E coverage whenever developing tests, and immediate diagnostic remediation while agents edit code; select, run, and maintain AuthCrunch tests through pinned tested, browser tests, automation fixtures, coverage artifacts, and CI gates.
+description: Scope AuthCrunch validation to changed behavior and affected consumers, require corresponding Go and E2E coverage, remediate diagnostics, and maintain pinned tested reports and CI gates.
 ---
 
 # Testing and CI
 
 Use [openapi-generation](../openapi-generation/SKILL.md) to validate YAML/examples, generator/server units, native HTTP contracts and real Scalar browser journeys after API changes.
+
+## Scope Validation to the Change
+
+Choose the smallest set of checks that covers the changed behavior, its
+meaningful boundaries, and affected consumers. Identify that scope from the
+diff and package/workflow ownership before executing validation. Keep local
+feedback proportional to the change; a focused passing run does not require
+an automatic full-suite or `make ci-check` follow-up.
+
+- For a contained Go change, select the owning package and affected unit and
+  E2E cases with `make test TEST_DIR=... TEST=...`. In a large package such as
+  `pkg/authn`, use explicit test-name prefixes when their coverage is known.
+  Shared APIs, helpers, configuration, and wiring also need their affected
+  caller journeys. Prefer package-wide selection when test-level impact is
+  uncertain.
+- For changes spanning packages, use `make change-test CHANGE_DRY_RUN=1` to
+  inspect impact and `make change-test` when its package selection is suitable.
+  Check runtime assets and indirect consumers that import analysis cannot see.
+- For automation, select the affected Python fixture file or test case;
+  workflow edits also need syntax validation. For UI changes, select the
+  affected Node tests and browser journeys. Guidance-only edits need metadata,
+  link, and content checks, not application tests.
+- Broaden only for a concrete reason: shared/global impact, unknown ownership,
+  a failure suggesting wider effects, a release/full reproduction, or an
+  explicit request. Use the full suite or `make ci-check` when that scope is
+  justified, rather than as a routine completion ritual.
+
+Preserve race detection, coverage reporting, resource guards, and relevant E2E
+coverage within the selected scope. Reuse passing evidence for unchanged code;
+rerun after further edits or unresolved failures, not merely to repeat a result.
+Inspect bounded summaries and failure details first; retain complete reports
+without dumping unrelated logs into the conversation.
+
+Honor explicit execution limits. If the user requests no tests or defers them
+to GitHub Actions, prepare the corresponding tests and report what remains
+unverified without running tests, compiling test binaries, or starting a local
+CI job. Such a request overrides execution steps in this and routed skills.
+Static checks may still be used when permitted; label them separately from
+test results. Hosted CI retains its complete coverage gate.
 
 ## Corresponding Tests
 
@@ -28,8 +67,8 @@ Assertions must verify observable behavior or invariants rather than mirror the
 implementation. A successful build, lint check, unrelated test run, or aggregate
 coverage percentage does not establish corresponding test coverage. Run the
 relevant tests through the lifecycle below and report the commands and results.
-If execution is blocked, report the exact blocker and the tests left unverified;
-do not claim validation passed.
+If execution is blocked or explicitly deferred, report the reason and tests left
+unverified; do not claim validation passed.
 
 ## Required End-to-End Coverage
 
@@ -83,10 +122,10 @@ HTTP status; avoid dumping credential-bearing response bodies, cookies or
 sandbox URLs. Compare Go elapsed durations with event wall timestamps when a
 time-sensitive journey fails. A suspend/resume or wall-clock step can expire a
 live sandbox despite a short measured execution. On macOS, use
-`caffeinate -i make ci-check` for sustained local TLS/browser validation, retain
-failed timing evidence, and repeat the affected journey before the complete
-gate. Preserve production expiry checks and avoid per-request retries that hide
-the failure.
+`caffeinate -i` around the selected command for sustained local TLS/browser
+validation, retain failed timing evidence, and repeat the affected journey.
+Broaden only when its failure indicates wider impact. Preserve production expiry
+checks and avoid per-request retries that hide the failure.
 
 ## Test Lifecycle
 
@@ -448,22 +487,22 @@ asset counts, paths, content types, and rendering expectations in
 `pkg/authn/ui` tests. If assets were regenerated, review source diffs
 separately from test/report artifacts.
 
-Run the focused package test first, then a broader command:
+Select the affected package and unit/E2E journeys, for example:
 
 ```bash
-make test TEST_DIR='./pkg/<package>' TEST='<TestName>'
-make test
+make test TEST_DIR='./pkg/<package>' TEST='^TestAffected|^TestE2EAffected'
 ```
 
-Use `make test` for the repository coverage lifecycle after a narrow diagnostic
-iteration. Use `make test-ui` for embedded login/QR and refresh-client JavaScript;
-it complements the Chrome E2E journeys and does not replace them.
+Keep the coverage lifecycle scoped with `TEST_DIR` and `TEST`; broaden according
+to [validation scope](#scope-validation-to-the-change). Use the affected Node
+client tests for embedded JavaScript, or `make test-ui` when the whole client
+suite is relevant; these complement the affected Chrome E2E journeys.
 
 ## CI Workflow
 
 `.github/workflows/test.yml` runs on pushes/PRs to main, manual dispatch, and
 reusable workflow calls. Its lightweight selection skips known non-code changes.
-Code changes run the full Go suite once across four disjoint portal test groups,
+Code changes run the full Go suite once across six disjoint portal test groups,
 one identity package group, and three remaining-package groups, alongside
 `make ci-quality`. Portal inventories and terminal events prove that every
 top-level portal test runs exactly once; shared coverage counters are summed.
@@ -492,7 +531,10 @@ The release workflow calls the same gate before GoReleaser; the exact version
 and tag contract belongs to `release-and-versioning`. CLA automation remains
 separate.
 
-Automation changes run `make test-automation`. Its version tests exercise
+Automation changes run the affected fixtures, for example
+`python3 -m unittest discover -s assets/scripts/tests -p ci_shards_test.py -v`
+for CI sharding. Use `make test-automation` when automation-wide impact warrants
+the complete fixture suite. Its version tests exercise
 namespace rejection, synchronization drift, and exact artifact tag binding;
 release tests use isolated fixture repositories and local bare remotes to
 verify patch/minor bumps, failure gates, exact tags, and atomic push behavior.

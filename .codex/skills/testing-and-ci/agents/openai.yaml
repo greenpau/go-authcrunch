@@ -1,4 +1,4 @@
 interface:
   display_name: "Testing and CI"
-  short_description: "AuthCrunch tests, E2E, scoped diagnostics, and CI"
-  default_prompt: "Use $testing-and-ci to remediate applicable diagnostics immediately while editing agent-owned code, develop corresponding tests and E2E coverage, and run the right AuthCrunch validation workflow."
+  short_description: "Change-scoped AuthCrunch tests, E2E, diagnostics, and CI"
+  default_prompt: "Use $testing-and-ci to scope validation to changed behavior and affected consumers, remediate applicable diagnostics, develop corresponding tests and E2E coverage, and honor execution limits."

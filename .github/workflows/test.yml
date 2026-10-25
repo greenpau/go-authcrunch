@@ -40,7 +40,7 @@ jobs:
         if: ${{ steps.selection.outputs.run_tests == 'true' }}
         id: artifact
         run: make artifact-id
-      - name: Select complete shard matrix
+      - name: Select parallel test and package shards
         id: shards
         run: |
           matrix=$(python3 assets/scripts/ci_tests.py matrix)
@@ -118,6 +118,7 @@ jobs:
     strategy:
       # Preserve every shard's evidence if one fails.
       fail-fast: false
+      # ci_tests.py splits portal-core across contracts, accounts, and core VMs.
       matrix: ${{ fromJSON(needs.selection.outputs.matrix) }}
     env:
       GOTOOLCHAIN: local

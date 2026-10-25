@@ -13,7 +13,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[3]
-PORTAL_SHARDS = ('portal-challenges', 'portal-sessions', 'portal-protocols', 'portal-core')
+PORTAL_SHARDS = ('portal-challenges', 'portal-sessions', 'portal-protocols',
+                 'portal-contracts', 'portal-accounts', 'portal-core')
 SHARDS = (*PORTAL_SHARDS, 'identity', 'other-server', 'other-providers', 'other-core')
 MODULE = 'example.invalid/cishards'
 
@@ -85,12 +86,16 @@ class CIShardsTests(unittest.TestCase):
                 for name in ('Value', 'Challenge', 'Session', 'Protocol', 'Unused')))
         (portal_source / 'value_test.go').write_text('''package fixture
 import ("fmt"; "os"; "testing")
-func TestE2EAuthenticationChallengeValue(t *testing.T) {
+func TestE2EAuthenticationChallengeProfileValue(t *testing.T) {
  if Challenge() != 42 { t.Fatal("challenge") }
  t.Run("nested/Session", func(t *testing.T) { Challenge() })
 }
-func TestE2ERefreshValue(t *testing.T) { Session() }
-func TestE2EOIDCValue(t *testing.T) { Protocol() }
+func TestE2ERefreshProfileValue(t *testing.T) { Session() }
+func TestE2EOIDCProfileValue(t *testing.T) { Protocol() }
+func TestE2EOpenAPIValue(t *testing.T) { Value() }
+func TestE2EI18NProfileValue(t *testing.T) { Value() }
+func TestE2EProfileValue(t *testing.T) { Value() }
+func TestE2EIdentityValue(t *testing.T) { Value() }
 func TestE2EValue(t *testing.T) {
  Value()
  if os.Getenv("SHARD_FAIL") == "fail:pkg/authn" { t.Fatal("fixture failure") }
@@ -121,7 +126,18 @@ func FuzzSessionSeeds(f *testing.F) {
         matrix = json.loads(self.cli('matrix').stdout)['include']
         self.assertEqual([row['shard'] for row in matrix], list(SHARDS))
         self.assertEqual([row['cache_group'] for row in matrix],
-                         ['portal'] * 4 + ['identity'] + ['other'] * 3)
+                         ['portal'] * 3 + ['portal-core'] * 2 + ['portal', 'identity']
+                         + ['other'] * 3)
+        expected_portal_tests = {
+            'portal-challenges': ['TestE2EAuthenticationChallengeProfileValue'],
+            'portal-sessions': ['FuzzSessionSeeds', 'TestE2ERefreshProfileValue',
+                                'TestE2EValueSession'],
+            'portal-protocols': ['TestE2EOIDCProfileValue'],
+            'portal-contracts': ['TestE2EI18NProfileValue', 'TestE2EOpenAPIValue'],
+            'portal-accounts': ['TestE2EIdentityValue', 'TestE2EProfileValue'],
+            'portal-core': ['ExampleValue', 'TestE2ENewFeature', 'TestE2EValue',
+                            'TestE2EValueLonger', 'TestExternalNewFeature'],
+        }
         base = self.root / 'reports with spaces'
         for shard in SHARDS:
             if shard == 'portal-core':
@@ -144,7 +160,7 @@ func FuzzSessionSeeds(f *testing.F) {
                 self.assertTrue(pattern.startswith('^(') and pattern.endswith(')$'), pattern)
                 selection = json.loads((output / 'selection.json').read_text())
                 names = selection['selected_tests']
-                self.assertTrue(names)
+                self.assertEqual(names, expected_portal_tests[shard])
                 self.assertEqual([n for n in selection['portal_tests'] if re.search(pattern, n)],
                                  names)
                 events = [json.loads(line) for line in
@@ -166,7 +182,7 @@ func FuzzSessionSeeds(f *testing.F) {
         combined = base / 'combined'
         summary = json.loads((combined / 'summary.json').read_text())
         self.assertEqual(summary['packages'], 13)
-        self.assertEqual(summary['portal_tests'], 10)
+        self.assertEqual(summary['portal_tests'], 14)
         self.assertEqual(summary['covered'], 15)
         self.assertEqual(summary['statements'], 17)
         self.assertAlmostEqual(summary['percent'], 100 * 15 / 17)
@@ -237,7 +253,7 @@ func FuzzSessionSeeds(f *testing.F) {
                 (events + [dict(terminal, Action='fail')], 'Failed test evidence'),
                 ([e for e in events if e != test], 'Not every selected portal test'),
                 (events + [test], 'Unexpected or duplicate portal test'),
-                (events + [dict(test, Test='TestE2ERefreshValue')],
+                (events + [dict(test, Test='TestE2ERefreshProfileValue')],
                  'Not every selected portal test')):
             reject(events_path, ''.join(json.dumps(e) + '\n' for e in changed).encode(), reason)
         profile = portal / 'coverage.out'

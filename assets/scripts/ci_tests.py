@@ -14,7 +14,8 @@ import sys
 from change_tests import ROOT, packages
 
 
-PORTAL_SHARDS = ('portal-challenges', 'portal-sessions', 'portal-protocols', 'portal-core')
+PORTAL_SHARDS = ('portal-challenges', 'portal-sessions', 'portal-protocols',
+                 'portal-contracts', 'portal-accounts', 'portal-core')
 SHARDS = (*PORTAL_SHARDS, 'identity', 'other-server', 'other-providers', 'other-core')
 TESTED_FILES = {'coverage.html', 'coverage.out', 'index.html', 'junit.xml', 'run.json',
                 'stderr.log', 'summary.json', 'test_output.html', 'test_output.jsonl'}
@@ -60,6 +61,11 @@ def portal_partition(names):
             shard = 'portal-sessions'
         elif any(word in name for word in ('OIDC', 'OAuth', 'SAML', 'JWKS', 'PrivateKeys')):
             shard = 'portal-protocols'
+        elif any(word in name for word in ('OpenAPI', 'I18N')):
+            shard = 'portal-contracts'
+        elif any(word in name for word in ('Connected', 'Profile', 'MFA', 'TOTP', 'WebAuthn',
+                                          'Password', 'Argon2', 'Identity', 'Credential')):
+            shard = 'portal-accounts'
         else:
             shard = 'portal-core'
         groups[shard].append(name)
@@ -349,8 +355,10 @@ def main():
     commands.add_parser('merge')
     args = parser.parse_args()
     if args.command == 'matrix':
-        print(json.dumps(dict(include=[dict(shard=name, cache_group=name.split('-')[0])
-                                       for name in SHARDS])))
+        # New core groups can reuse the existing race/coverage compilation cache.
+        parents = {'portal-contracts': 'portal-core', 'portal-accounts': 'portal-core'}
+        print(json.dumps(dict(include=[dict(shard=name, cache_group=parents.get(
+            name, name.split('-')[0])) for name in SHARDS])))
     elif args.command == 'inventory':
         inventory(args.package, args.output)
     elif args.command == 'plan':

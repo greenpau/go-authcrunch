@@ -8,7 +8,9 @@ description: Maintain go-authcrunch Make targets, pinned Go tools, build/test or
 Use [openapi-generation](../openapi-generation/SKILL.md) to maintain `make openapi`, `make serve-openapi`, source-review checks and Scalar tooling.
 
 The root Makefile is the public automation surface. Helper scripts live under
-`assets/scripts/`. Apply `testing-and-ci` for test selection and report evidence.
+`assets/scripts/`. Apply `testing-and-ci` for change-scoped test selection,
+execution limits, and report evidence. Select affected targets or fixture files
+for local validation; reserve `make ci-check` for justified full-gate work.
 Use [release-and-versioning](../release-and-versioning/SKILL.md) to maintain the
 fixed `1.<minor>.<patch>` version namespace, synchronize versions, validate CI
 artifact identity, and publish requested patch/minor releases.
@@ -46,7 +48,7 @@ boundary for these workflows.
 | `make generate-acl` | Regenerate the four ACL condition/rule source and test files from the local Python generator |
 | `make ci-check` | Complete sequential quality gates and full Go tests |
 | `make ci-quality` | Version, OpenAPI/source review/bootstrap, brand assets, automation, lint, UI tests, and both executable builds |
-| `make ci-test-shard CI_SHARD=portal-core` | Run one of eight portal-test or package shards; see parallel CI validation |
+| `make ci-test-shard CI_SHARD=portal-core` | Run one of ten portal-test or package shards; see parallel CI validation |
 | `make version-check` / `make version-sync` | Check or explicitly synchronize Go metadata and OpenAPI YAML with VERSION |
 | `make artifact-id` | Validate and print the versioned artifact identity |
 | `make docs` | Generate ignored `.doc/index.txt` from `go doc -all` |
@@ -190,7 +192,7 @@ guard applies only to custom list comparisons. The
 [ACL owner](../authorization-policy-acl/SKILL.md) defines claim projection,
 type validation, public parser APIs, and independent runtime coverage.
 
-Run `make test-automation` and
+Run `python3 -m unittest discover -s assets/scripts/tests -p generate_acl_test.py -v` and
 `make test TEST_DIR='./pkg/acl' COVERAGE_DIR='.coverage/acl'` after changes.
 `assets/scripts/tests/generate_acl_test.py` exercises the real Make target in an
 isolated checkout with spaces in its path, reconstructs all four deleted files,

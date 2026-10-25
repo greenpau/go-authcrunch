@@ -5,7 +5,7 @@ manual invocation, and release tag. Selection still skips known non-code
 changes and duplicate branch validation owned by an exact annotated release
 tag. It does not run an overlapping selected suite before the full suite.
 
-`assets/scripts/ci_tests.py matrix` owns the eight Go jobs; selection emits it
+`assets/scripts/ci_tests.py matrix` owns the ten Go jobs; selection emits it
 for the Actions matrix so the workflow and runner cannot drift. Package discovery
 uses the shared read-only Go graph in `change_tests.py`.
 
@@ -14,6 +14,8 @@ uses the shared read-only Go graph in `change_tests.py`.
 | `portal-challenges` | Top-level `pkg/authn` tests containing `AuthenticationChallenge` |
 | `portal-sessions` | Remaining portal tests containing `Refresh`, `Session`, or `Cookie` |
 | `portal-protocols` | Remaining portal tests containing `OIDC`, `OAuth`, `SAML`, `JWKS`, or `PrivateKeys` |
+| `portal-contracts` | Remaining portal tests containing `OpenAPI` or `I18N` |
+| `portal-accounts` | Remaining portal tests containing `Connected`, `Profile`, `MFA`, `TOTP`, `WebAuthn`, `Password`, `Argon2`, `Identity`, or `Credential` |
 | `portal-core` | Every remaining top-level portal test, example, and fuzz target |
 | `identity` | `pkg/identity` and descendants |
 | `other-server` | Root package, `cmd`, `pkg/authclient`, and `pkg/httpserver` trees |
@@ -34,6 +36,13 @@ all its subtests together; semantic substring matches choose a group, never a
 subtest filter. New names automatically enter an existing group or the fallback.
 Do not use a hand-maintained test allowlist, silently drop unknown tests, or
 split fixtures by parsing Go source with regular expressions.
+
+Contracts and account/credential journeys run independently of the core fallback
+to keep expensive integration tests from accumulating on one runner. Preserve
+the earlier challenge/session/protocol ownership when names overlap these new
+categories. Use hosted top-level timings to rebalance groups as the suite grows;
+test counts alone do not predict duration. Keep the matrix unrestricted so its
+independent jobs can start together subject to hosted runner availability.
 
 Every other package runs once with all tests. Portal helper packages live in
 `other-core`, where no portal name filter can omit their tests. Race detection,
@@ -72,6 +81,8 @@ dependency graph; a successful new commit saves updated compilation outputs.
 Broader toolchain/workload prefixes seed caches after dependency changes. New
 portal/other groups can also restore their original parent group cache, so
 unchanged modules and compilations can still be reused.
+`portal-contracts` and `portal-accounts` restore the `portal-core` build cache
+when their own cache is cold; the matrix declares this parent explicitly.
 Do not key mutable build outputs only by `go.sum`: an exact immutable cache hit
 otherwise keeps restoring an old partial build cache and never updates it.
 The first run after a toolchain/dependency change can still compile from cold.
@@ -104,10 +115,10 @@ rerunning only failed jobs can reuse successful sibling artifacts. Downloads
 match this exact identity and shard prefix, excluding previous full attempts
 and the combined bundle. Keep this distinction when changing artifact names.
 
-The final check downloads all eight shards and verifies identical package plans,
+The final check downloads all ten shards and verifies identical package plans,
 successful resource/test status, complete package terminal events, and each
 tested manifest's file hashes. Only the portal package may appear in multiple
-shards. Its four inventories must match; their selections must be an exhaustive,
+shards. Its six inventories must match; their selections must be an exhaustive,
 disjoint partition, and every selected top-level name must have exactly one
 pass/skip terminal event in its assigned shard. A package-level pass alone does
 not prove that a filtered run executed its assigned tests.
@@ -132,6 +143,8 @@ make ci-quality
 make ci-test-shard CI_SHARD=portal-challenges
 make ci-test-shard CI_SHARD=portal-sessions
 make ci-test-shard CI_SHARD=portal-protocols
+make ci-test-shard CI_SHARD=portal-contracts
+make ci-test-shard CI_SHARD=portal-accounts
 make ci-test-shard CI_SHARD=portal-core
 make ci-test-shard CI_SHARD=identity
 make ci-test-shard CI_SHARD=other-server
@@ -141,7 +154,10 @@ python3 assets/scripts/ci_tests.py merge
 go tool cover -html=.coverage/combined/coverage.out -o .coverage/combined/source.html
 ```
 
-Run the shards sequentially locally. Use a fresh `COVERAGE_DIR` to retain
+These commands describe a full reproduction, not the default local validation
+scope. For a contained change, select the affected fixtures or shard. When a
+full reproduction is necessary, run the shards sequentially locally.
+Use a fresh `COVERAGE_DIR` to retain
 incident evidence; the shard subdirectories are appended automatically.
 Relative output paths resolve against the checkout, including direct script
 invocations from another working directory.
@@ -149,12 +165,20 @@ For exact CI resource reproduction use a separate VM with sufficient RAM,
 then pass the workflow's explicit `TEST_*` settings. Do not apply its 7-GiB
 budget to an 8-GiB laptop. `make ci-check` is still a simpler local full gate.
 
-Run `make test-automation` and actionlint after workflow changes.
+For shard runner or matrix changes, select
+`python3 -m unittest discover -s assets/scripts/tests -p ci_shards_test.py -v`
+and actionlint for workflow syntax. Include selection/release fixtures when
+their contracts change; use `make test-automation` for automation-wide impact.
+Honor user-requested test deferral and report hosted timing as unverified until
+Actions runs.
+
 `ci_shards_test.py` exercises real temporary Go packages through Make, the
 guard, and pinned tested; it compares split coverage with an actual unsplit
-run, verifies complete discovery (including examples, fuzz seeds, and external
-tests), exact test selection, future-package inclusion, source preservation,
+run, verifies category priority and parent cache selection, complete discovery
+(including examples, fuzz seeds, and external tests), exact test selection,
+future-package inclusion, source preservation,
 failure/build-failure propagation, stale rerun rejection, missing/duplicate test
-rejection, coverage integrity, and the required-check status matrix. Selection/release fixtures cover documentation skips, missing history,
+rejection, coverage integrity, and the required-check status matrix.
+Selection/release fixtures cover documentation skips, missing history,
 PR merge bases, and annotated-tag ownership. Full hosted duration and the
 higher CI resource profile require a subsequent Actions run to measure.
