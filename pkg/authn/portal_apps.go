@@ -16,6 +16,7 @@ package authn
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -40,8 +41,17 @@ func portalAppRoute(path string) (string, int) {
 	return "", -1
 }
 
+// portalAppPath compares decoded paths while BasePath remains safe for URLs.
+func portalAppPath(r *http.Request, rr *requests.Request) (string, bool) {
+	mount, err := url.PathUnescape(rr.Upstream.BasePath)
+	if err != nil {
+		return "", false
+	}
+	return strings.CutPrefix(r.URL.Path, mount)
+}
+
 func portalAppName(r *http.Request, rr *requests.Request) string {
-	relative, ok := strings.CutPrefix(r.URL.Path, rr.Upstream.BasePath)
+	relative, ok := portalAppPath(r, rr)
 	if !ok {
 		return ""
 	}

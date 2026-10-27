@@ -53,11 +53,14 @@ async function eventually(tab, fn, args, label) {
     const { sessionId: tab } = await command('Target.attachToTarget', { targetId, flatten: true });
     for (const method of ['Page.enable', 'Network.enable', 'Runtime.enable']) await command(method, {}, tab);
     await command('Network.setCookies', { cookies: config.cookies }, tab);
-    for (const app of [
+    const applications = [
       { slug: 'profile', page: 'info', heading: 'alice', endpoint: '/api/profile', text: 'alice@example.test' },
       { slug: 'operator', page: 'users', heading: 'Users', endpoint: '/api/server/users', text: 'alice' },
       { slug: 'documents', page: 'vault', heading: 'Vault', endpoint: '/api/documents/bootstrap', text: 'Create a recovery key' },
-    ]) {
+    ];
+    const selected = config.apps || applications.map((app) => app.slug);
+    assert.ok(selected.length && selected.every((slug) => applications.some((app) => app.slug === slug)), 'invalid browser app selection');
+    for (const app of applications.filter((app) => selected.includes(app.slug))) {
       responses = [];
       const base = config.issuer + '/' + app.slug + '/';
       await command('Page.navigate', { url: base + app.page + '?mount-test=1#kept' }, tab);

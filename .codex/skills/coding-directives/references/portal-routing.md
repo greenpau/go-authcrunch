@@ -241,7 +241,16 @@ check authorization before conditional asset responses, and keep app HTML free
 of mount-independent ETags. Render every deep link with the same canonical base.
 
 `TestPortalAppRoutes` covers inferred extraction and competing namespace
-ownership. `TestE2EEmbeddedApplications` uses real TLS login and Chrome against
+ownership. Inferred app mounts keep `Upstream.BasePath` URL escaped; decode that
+prefix once when comparing against `r.URL.Path` or looking up app assets. Keep
+the original request unchanged and retain the escaped-path app boundary check.
+This compatibility behavior does not relax declared-mount validation.
+`TestE2EEmbeddedApplicationsEscapedMount` signs in through a canonical mount,
+then verifies app serving and real Chrome navigation on inferred aliases with
+encoded spaces and literal percent escapes. It checks asset lookup, redirects,
+exact public manifests and rejection of encoded app-name/boundary aliases.
+
+`TestE2EEmbeddedApplications` uses real TLS login and Chrome against
 all three shipped bundles at root, `/auth`, `/xauth`, nested and lookalike mounts
 through both public serving entry points. Cover deep-link reload, APIs, lazy
 chunks, fonts, locale catalogs, Preferences, role denial, method/HEAD/ETag

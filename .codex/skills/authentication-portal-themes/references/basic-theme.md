@@ -230,9 +230,9 @@ with explicit opacity, so recoloring does not require editing individual stops.
 Use six-digit hex values and update the complete palette for a new color scheme.
 Recheck foreground/background contrast after recoloring.
 
-`assets/scripts/update_brand_assets.py` regenerates the four core SVGs, their
-three profile copies, the marked color block in `basic.css`, and profile theme
-metadata. It preserves the rest of the CSS and profile HTML. `--check` reports
+`assets/scripts/update_brand_assets.py` regenerates the four core SVGs and the
+marked color block in `basic.css`. It preserves the rest of the CSS and leaves
+embedded app assets and metadata unchanged. `--check` reports
 drift without writing; `make ci-check` includes this check. Inputs are validated
 and all outputs rendered before writing. Generated SVGs contain native paths
 and explicit colors, with no embedded raster image or external dependency.
@@ -319,6 +319,13 @@ exercise palette validation, native path preservation, executable recoloring,
 read-only drift detection, and rejection before any output is rewritten. They
 also verify that decorative paint uses the supplied palette and all local SVG
 paint references resolve uniquely, without external resources.
+
+Keep portal decoration checks under `/assets/images/`. The embedded Profile
+has its own `logo.svg` and `favicon.svg`; `/profile/images/banner.svg` is absent
+and must return 404. `TestE2EOIDCPortalTemplates` verifies both asset surfaces
+after real TLS login at root and nested mounts with built-in and custom themes.
+Report the requested asset path on status/MIME failures so bundle refreshes can
+be distinguished from portal theme failures.
 
 `TestE2EOIDCThemedBrowser` runs the real TLS portal with default branding and a
 custom palette/logo/favicon/banner/background. Its Chrome driver checks login,

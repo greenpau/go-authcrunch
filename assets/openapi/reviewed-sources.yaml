@@ -92,7 +92,7 @@ files:
     pkg/authn/documents_http.go: 1589eb4a309034e037ea74d6ff0554428f3746530a65ec45705944d10ad8a7e7
     pkg/authn/enums/operator/operator.go: baade7cce4c965d2fb7e67d8cc27b7a39da231bef0a42455e7ad189331f2d576
     pkg/authn/enums/role/role.go: 7780fa2dfbbb8fbc1cd50c99a6839a88b64b1f34bad5b2f708f671e42ee45fc1
-    pkg/authn/extract_base_path.go: 493ab2c9dec675eda455d741327a9fae688224f81ac74ffe119de6a18e0e4f1d
+    pkg/authn/extract_base_path.go: a5045cd6a3dfc7cc78fd508d231b1d0ae5b468f74cdc87796df1ab6b534a8e5d
     pkg/authn/gatekeeper.go: 2b6e8aafd96198fa6139bcd6df27732204b3910a139d0c44e873425be996acad
     pkg/authn/handle_api_admin.go: b86fd22d5eddeb8424698f1e2b80417225b4145f5a1e9606e2e53bc08d0894c4
     pkg/authn/handle_api_crud_user.go: 893a81b6c4d0d23a2bd13fd5f0a252860811b02eee105eb048e5c20b0faa0997
@@ -110,7 +110,7 @@ files:
     pkg/authn/handle_basic_login.go: 776a4cab72ce30511232983af36c5fe7bbe191c3378d09053f833ba79873dab2
     pkg/authn/handle_external_http_logout.go: f53443cef20c3d5356058e6c55f8061a14726134176029ed3636e5e1f5ab12cb
     pkg/authn/handle_external_login.go: ebc0125a4549ee0ccefed80b5ef0d2f2fd948e73ee62eb9bf3f8dfe398c5d753
-    pkg/authn/handle_http_apps.go: bdb30becc744d38513ade5818b9fb19b8c594fd7e04d5e5773a33c395ff73563
+    pkg/authn/handle_http_apps.go: 1c8dd7f3601fd1f564f2ce76f1a9395e5811ff2827fe71aae62166ca7245a897
     pkg/authn/handle_http_apps_mobile_access.go: 31a1836d567ecc292a7aa6654393b6c3f63a06fd1ffc070a9450dafc0d5bdcb5
     pkg/authn/handle_http_apps_sso.go: 1c7239fa4bf201a7d93b68b93f7ed7f46ecb1ecf3e55d388429ff20ec281b77c
     pkg/authn/handle_http_barcode.go: d4edecd20670268ea1fe808b499cb08366828e681d1c3a5992a9d2608ef52727
@@ -144,7 +144,7 @@ files:
     pkg/authn/password_form_validator.go: 1e30735fcc1abc71b9f36d752c315ff0aff3514bdfbc8d9cac66edd973817456
     pkg/authn/persistent_state.go: 1ea4bfeaa135f1fa1be0af8d31cb8c06a55f73b9439ad103d52a8a03bb3169f8
     pkg/authn/portal.go: a30e64a247ebbb6d8cb56b687e48170d5b6740dfffed41b0e0f8b550ce7b89f7
-    pkg/authn/portal_apps.go: 8cd611eec34d4684bf2dc3064a6262b2e46beb195d78eb7c1fed68a2433692ae
+    pkg/authn/portal_apps.go: 246e33e9640dc3a054b64f9c25f1843121a9e1328c8d85a5cbc4da6967a00b4d
     pkg/authn/portal_mount.go: e78c00bf122df8c4e77a19af674e2df74de43b770bd95d2670fca2f3977f37c8
     pkg/authn/profile_auth_challenges.go: d016b39d03224bc98eb22d6f46698093637f41b126b0d9f65a6a219cc7b9a115
     pkg/authn/profile_identity.go: 0dbaf1f77b62c1042ff920d5d0d15d9090309a858d9ce16e9a93cb25d811120f

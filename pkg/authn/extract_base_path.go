@@ -17,6 +17,7 @@ package authn
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
@@ -71,7 +72,7 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 		rr.Upstream.BasePath = "/auth/"
 	case appIndex >= 0:
 		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
-		rr.Upstream.BasePath = r.URL.Path[:appIndex] + "/"
+		rr.Upstream.BasePath = (&url.URL{Path: r.URL.Path[:appIndex] + "/"}).EscapedPath()
 	case connectedAccountsRouteIndex(r.URL.Path) >= 0:
 		request := *r
 		requestURL := *r.URL

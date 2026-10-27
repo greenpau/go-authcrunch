@@ -156,7 +156,53 @@ func TestE2EEmbeddedApplicationsDisabled(t *testing.T) {
 	}
 }
 
-func runEmbeddedApplicationsBrowser(t *testing.T, f *oidcE2EFixture) {
+// Inferred mounts retain URL escaping; declared mounts keep their stricter policy.
+func TestE2EEmbeddedApplicationsEscapedMount(t *testing.T) {
+	for _, mount := range []string{"/tenant%20name/auth", "/tenant%2520name/auth"} {
+		t.Run(mount, func(t *testing.T) {
+			f, _, _ := newLoginIdentityConfiguredE2E(t, false, false, false, "", func(cfg *authn.PortalConfig) {
+				cfg.UserTransformerConfigs = nil
+			})
+			t.Cleanup(func() {
+				f.server.Close()
+				requireEmbeddedAppPortClosed(t, f.server.Listener.Addr().String())
+			})
+			webAuthnEnrollmentLogin(t, f, "alice", tests.TestPwd1)
+			// Sign in through the canonical mount, then request compatibility aliases
+			// on this same portal; declared mounts still reject escaped declarations.
+			f.issuer = f.server.URL + mount
+			for _, child := range []string{"/", "/preferences", "/cross-device", "/api/server/user"} {
+				response := f.request(t, http.MethodGet, "/profile"+child, nil, nil)
+				oidcE2EStatus(t, response, http.StatusOK)
+				if !strings.Contains(html.UnescapeString(string(response.body)), `<base href="`+mount+`/profile/" />`) {
+					t.Fatalf("profile route %s lost its escaped mount", child)
+				}
+			}
+			asset := f.request(t, http.MethodGet, "/profile/logo.svg", nil, nil)
+			oidcE2EStatus(t, asset, http.StatusOK)
+			if asset.header.Get("Content-Type") != "image/svg+xml" {
+				t.Fatal("app asset lookup did not strip the escaped mount")
+			}
+			for _, invalid := range []string{"/%70rofile/preferences", "/profile%2Fpreferences", "/profile/assets/missing.js"} {
+				oidcE2EStatus(t, f.request(t, http.MethodGet, invalid, nil, nil), http.StatusNotFound)
+			}
+			anonymous := *f.client
+			anonymous.Jar = nil
+			unsigned := *f
+			unsigned.client = &anonymous
+			oidcE2EStatus(t, unsigned.request(t, http.MethodGet, "/profile/manifest.json", nil, nil), http.StatusOK)
+			oidcE2EStatus(t, unsigned.request(t, http.MethodGet, "/profile/nested/profile/manifest.json", nil, nil), http.StatusUnauthorized)
+			redirect := f.request(t, http.MethodGet, "/profile?q=kept", nil, nil)
+			oidcE2EStatus(t, redirect, http.StatusPermanentRedirect)
+			if redirect.header.Get("Location") != mount+"/profile/?q=kept" {
+				t.Fatal("app redirect lost its escaped mount or query")
+			}
+			runEmbeddedApplicationsBrowser(t, f, "profile")
+		})
+	}
+}
+
+func runEmbeddedApplicationsBrowser(t *testing.T, f *oidcE2EFixture, apps ...string) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 90*time.Second)
 	defer cancel()
@@ -181,7 +227,7 @@ func runEmbeddedApplicationsBrowser(t *testing.T, f *oidcE2EFixture) {
 	for _, cookie := range f.client.Jar.Cookies(origin) {
 		cookies = append(cookies, map[string]any{"name": cookie.Name, "value": cookie.Value, "url": f.issuer + "/portal", "path": "/", "secure": true, "httpOnly": true, "sameSite": "Lax"})
 	}
-	data, err := json.Marshal(map[string]any{"issuer": f.issuer, "cookies": cookies})
+	data, err := json.Marshal(map[string]any{"issuer": f.issuer, "cookies": cookies, "apps": apps})
 	if err != nil {
 		t.Fatal(err)
 	}

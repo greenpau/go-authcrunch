@@ -39,7 +39,10 @@ func (p *Portal) handleHTTPApps(ctx context.Context, w http.ResponseWriter, r *h
 		w.Header().Set("Allow", "GET, HEAD")
 		return p.handleHTTPError(ctx, w, r, rr, http.StatusMethodNotAllowed)
 	}
-	assetPath := strings.TrimPrefix(r.URL.Path, rr.Upstream.BasePath)
+	assetPath, ok := portalAppPath(r, rr)
+	if !ok {
+		return p.handleHTTPError(ctx, w, r, rr, http.StatusNotFound)
+	}
 	appRoot := rr.Upstream.BasePath + appName
 	if path.Clean(r.URL.Path) != strings.TrimSuffix(r.URL.Path, "/") ||
 		(r.URL.EscapedPath() != appRoot && !strings.HasPrefix(r.URL.EscapedPath(), appRoot+"/")) {

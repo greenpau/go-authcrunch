@@ -17,28 +17,37 @@ package authn
 import (
 	"context"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
 
 func TestPortalAppRoutes(t *testing.T) {
-	for _, mount := range []string{"", "/auth", "/xauth", "/tenant/security", "/documents-team", "/team-profile"} {
+	for _, mount := range []string{"", "/auth", "/xauth", "/tenant/security", "/documents-team", "/team-profile", "/tenant%20name/auth", "/tenant%2520name/auth", "/tenant/a,b"} {
+		decodedMount, err := url.PathUnescape(mount)
+		if err != nil {
+			t.Fatal(err)
+		}
 		for _, app := range []string{"profile", "operator", "documents"} {
 			for _, child := range []string{"", "/", "/preferences", "/users/local/alice", "/api/server/user", "/provider/local", "/cross-device", "/connected-accounts/"} {
 				pathname := mount + "/" + app + child
-				name, index := portalAppRoute(pathname)
-				if name != app || index != len(mount) {
+				request := httptest.NewRequest("GET", "https://example.test"+pathname, nil)
+				original := *request.URL
+				name, index := portalAppRoute(request.URL.Path)
+				if name != app || index != len(decodedMount) {
 					t.Fatalf("wrong app boundary for %s", pathname)
 				}
-				request := httptest.NewRequest("GET", "https://example.test"+pathname, nil)
 				rr := requests.NewRequest()
 				extractBasePath(context.Background(), request, rr)
 				if rr.Upstream.BasePath != mount+"/" || portalAppName(request, rr) != app {
 					t.Fatalf("wrong app mount for %s", pathname)
 				}
-				if crossDeviceRouteIndex(pathname) >= 0 || providerLoginRouteIndex(pathname) >= 0 || connectedAccountsRouteIndex(pathname) >= 0 {
+				if crossDeviceRouteIndex(request.URL.Path) >= 0 || providerLoginRouteIndex(request.URL.Path) >= 0 || connectedAccountsRouteIndex(request.URL.Path) >= 0 {
 					t.Fatalf("another namespace stole %s", pathname)
+				}
+				if *request.URL != original {
+					t.Fatal("app mount extraction mutated the request URL")
 				}
 			}
 		}

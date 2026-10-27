@@ -80,15 +80,17 @@ func TestE2EOIDCPortalTemplates(t *testing.T) {
 					{"/assets/images/logo.svg", "image/svg+xml"}, {"/assets/images/favicon.svg", "image/svg+xml"},
 					{"/assets/images/banner.svg", "image/svg+xml"}, {"/assets/images/background.svg", "image/svg+xml"},
 					{"/favicon.svg", "image/svg+xml"}, {"/profile/favicon.svg", "image/svg+xml"},
-					{"/profile/logo.svg", "image/svg+xml"}, {"/profile/images/banner.svg", "image/svg+xml"},
+					{"/profile/logo.svg", "image/svg+xml"},
 				} {
 					response := f.request(t, "GET", asset.path, nil, nil)
-					oidcE2EStatus(t, response, 200)
+					if response.status != http.StatusOK {
+						t.Fatalf("page asset %s: HTTP %d, expected %d", asset.path, response.status, http.StatusOK)
+					}
 					if !strings.HasPrefix(response.header.Get("Content-Type"), asset.kind) {
-						t.Fatal("page asset MIME type incorrect")
+						t.Fatalf("page asset %s: incorrect MIME type", asset.path)
 					}
 				}
-				for _, retired := range []string{"/assets/images/favicon.png", "/assets/images/favicon.ico", "/profile/favicon.ico", "/profile/logo192.png", "/profile/logo512.png"} {
+				for _, retired := range []string{"/assets/images/favicon.png", "/assets/images/favicon.ico", "/profile/favicon.ico", "/profile/logo192.png", "/profile/logo512.png", "/profile/images/banner.svg"} {
 					oidcE2EStatus(t, f.request(t, "GET", retired, nil, nil), http.StatusNotFound)
 				}
 				profile := f.request(t, "GET", "/profile/", nil, nil)
