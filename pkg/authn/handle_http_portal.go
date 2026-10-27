@@ -18,8 +18,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
+	"github.com/greenpau/go-authcrunch/pkg/authn/enums/role"
+	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/identity/attachment"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/translate"
@@ -90,6 +93,7 @@ func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWrit
 		w.Header().Add("Set-Cookie", p.cookie.GetDeleteRefererCookie(rr.Upstream.BasePath))
 	}
 	resp := p.ui.GetArgs()
+	resp.PrivateLinks = slices.Clone(resp.PrivateLinks)
 	for _, provider := range p.identityProviders {
 		if consumer, ok := provider.(attachment.Consumer); ok && consumer.IdentityAttachment().StoreName() != "" {
 			resp.Data["connected_accounts_enabled"] = true
@@ -112,6 +116,30 @@ func (p *Portal) handleHTTPPortalScreen(ctx context.Context, w http.ResponseWrit
 	if len(usr.FrontendLinks) > 0 {
 		// Add additional frontend links.
 		resp.AddFrontendLinks(usr.FrontendLinks)
+	}
+	// Built-in app links are computed per request, never saved on the shared UI factory.
+	for _, app := range []struct {
+		name, title, icon string
+		roles             []role.Kind
+	}{
+		{"profile", "User Profile", "las la-user", []role.Kind{role.Admin, role.User}},
+		{"operator", "Security Manager", "las la-shield-alt", []role.Kind{role.Admin}},
+		{"documents", "File Vault", "las la-folder", []role.Kind{role.Admin, role.User}},
+	} {
+		if !p.portalAppEnabled(app.name) || p.authorizedRole(usr, app.roles, true) != nil {
+			continue
+		}
+		destination := rr.Upstream.BasePath + app.name + "/"
+		exists := false
+		for _, link := range resp.PrivateLinks {
+			if link.Link == destination || link.Link == rr.Upstream.BaseURL+destination {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			resp.PrivateLinks = append(resp.PrivateLinks, &ui.Link{Link: destination, Title: app.title, IconName: app.icon, IconEnabled: true})
+		}
 	}
 	resp.Data["i18n_access_services_instruction"] = translate.Translate("access_services_instruction", p.ui.Language, nil)
 	resp.Data["i18n_sign_out"] = translate.Translate("sign_out", p.ui.Language, nil)

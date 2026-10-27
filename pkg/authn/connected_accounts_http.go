@@ -53,7 +53,7 @@ func connectedAccountsRouteIndex(path string) int {
 		return -1
 	}
 	prefix := path[:i] + "/"
-	for _, namespace := range []string{"/provider/", "/cross-device/", "/api/", "/qrcode/", "/profile/", "/sandbox/", "/register/", "/apps/", "/barcode/", "/saml/", "/oauth2/", "/basic/", "/assets/", "/favicon"} {
+	for _, namespace := range []string{"/provider/", "/cross-device/", "/api/", "/qrcode/", "/profile/", "/operator/", "/documents/", "/sandbox/", "/register/", "/apps/", "/barcode/", "/saml/", "/oauth2/", "/basic/", "/assets/", "/favicon"} {
 		if strings.Contains(prefix, namespace) {
 			return -1
 		}

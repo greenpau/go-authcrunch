@@ -61,6 +61,7 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 	}
 
 	crossDeviceIndex := crossDeviceRouteIndex(r.URL.Path)
+	_, appIndex := portalAppRoute(r.URL.Path)
 	switch {
 	case r.URL.Path == "/":
 		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
@@ -68,6 +69,9 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 	case r.URL.Path == "/auth":
 		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
 		rr.Upstream.BasePath = "/auth/"
+	case appIndex >= 0:
+		rr.Upstream.BaseURL = util.GetCurrentBaseURL(r)
+		rr.Upstream.BasePath = r.URL.Path[:appIndex] + "/"
 	case connectedAccountsRouteIndex(r.URL.Path) >= 0:
 		request := *r
 		requestURL := *r.URL
@@ -90,8 +94,6 @@ func extractBasePath(ctx context.Context, r *http.Request, rr *requests.Request)
 		extractBaseURLPath(ctx, r, rr, "/api/")
 	case strings.Contains(r.URL.Path, "/qrcode/"):
 		extractBaseURLPath(ctx, r, rr, "/qrcode/")
-	case strings.Contains(r.URL.Path, "/profile/"):
-		extractBaseURLPath(ctx, r, rr, "/profile")
 	case strings.HasSuffix(r.URL.Path, "/portal"):
 		extractBaseURLPath(ctx, r, rr, "/portal")
 	case strings.Contains(r.URL.Path, "/sandbox/"):

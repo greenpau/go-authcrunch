@@ -142,3 +142,16 @@ compatibility when revisiting a newer revision.
 The HTTP API reference is maintained as YAML under `assets/openapi/content/`.
 Run `make openapi` to generate its ignored JSON bundle, or `make serve-openapi`
 to browse it at `http://127.0.0.1:8080`. Its version follows `VERSION`.
+
+## Embedded applications
+
+The portal ships User Profile (`profile`), Security Manager (`operator`), and
+File Vault (`documents`). They use the portal's configured mount, including
+root, `/auth`, `/xauth`, and nested prefixes. Security Manager requires the
+Admin API and a portal administrator role. File Vault requires the Documents
+API and matching public-origin/base-path storage settings.
+
+Use `make ui-apps` to import a portable UI export, then rebuild the consuming
+Go binary. See the [UI import workflow](.codex/skills/scripts-and-automation/SKILL.md#other-assets-and-security-scripts)
+for export location, overrides, and validation. Portal template branding and
+embedded app branding have separate owners.

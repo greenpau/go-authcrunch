@@ -41,6 +41,7 @@ boundary for these workflows.
 | `make openapi-check` / `make openapi-test` | Check source/freshness or run unit/native HTTP/CLI/bootstrap contracts |
 | `make openapi-artifact` | Export standalone JSON/YAML specifications for the separate CI artifact |
 | `make openapi-browser-test` | Qualify the real pinned Scalar viewer in Chrome |
+| `make ui-apps` | Import a portable three-app UI export into embedded assets |
 | `make test-ui` | Node spec-reported login and refresh client tests (`*_client_test.cjs`) |
 | `make test-automation` | Verbose Python automation/version/release fixture tests |
 | `make test-codeql` | Real CodeQL fixture scan verifying scoped query exceptions and retained alerts; requires CodeQL CLI |
@@ -204,20 +205,34 @@ build/test commands never regenerate the working checkout's ACL files.
 
 ### Other Assets and Security Scripts
 
-`assets/scripts/update_brand_assets.py` owns the palette-driven core/profile
-SVG artwork, the marked color block in `basic.css`, and profile theme metadata.
+`assets/scripts/update_brand_assets.py` owns the palette-driven portal
+SVG artwork and the marked color block in `basic.css`. Embedded React apps own
+their monochrome branding independently.
 Run it through `make brand-assets` after editing `assets/branding/palette.json`
 or the source mark. `make brand-assets-check` is read-only and runs in the CI
 gate. Its unit and executable regeneration tests run under `test-automation`.
 Use the [theme owner](../authentication-portal-themes/references/basic-theme.md#changing-the-default-palette-and-svg-artwork)
 for palette fields, output ownership, and deployment overrides.
 
-`assets/scripts/update_ui_apps.sh` rewrites `pkg/authn/ui/apps.go`, replaces
-`pkg/authn/ui/profile`, and formats the asset inventory. Run it only for an
-explicit embedded-profile asset refresh with a frontend build available at
-`../../authcrunch/authcrunch-ui/frontend/profile/build` relative to this root.
-It does not own the handwritten login or refresh scripts under
-`pkg/authn/ui/core/js` or the shared portal theme styles.
+`make ui-apps` invokes `assets/scripts/update_ui_apps.py` to import all three
+portable applications: User Profile (`profile`), Security Manager (`operator`),
+and File Vault (`documents`). The default source is
+`../../authcrunch/authcrunch-ui/dist/embedded`; override `UI_APPS_SOURCE` for an
+export elsewhere. Produce it with `npm run export::apps` in an independently
+authorized UI task. This importer only reads the export, validates all app
+entries and required assets before replacement, rejects symlinks and unsupported
+files, removes stale assets, and rolls back replacement failures. It never
+builds or writes the source checkout. Rebuild the embedding binary afterward.
+`apps.go` embeds the three directories; `NewAppAssetLibrary` inventories all
+assets, including split chunks, fonts and translations, without a generated map.
+Run `python3 -m unittest discover -s assets/scripts/tests -p ui_apps_test.py -v`
+for the real Make/import workflow and rejection/preservation checks.
+
+Every entry uses the literal HTML base marker `__AUTHCRUNCH_APP_BASE_PATH__`;
+the portal substitutes its canonical app root on each HTML response. Other
+assets remain byte-identical across mounts. The importer does not touch portal
+login/refresh scripts or theme styles. Use the portal routing reference for
+app namespace, feature gates, authorization and TLS/Chrome acceptance.
 
 `assets/scripts/run_codeql_scan.sh` scans this checkout with the same Go query
 configuration as `.github/workflows/codeql.yml`. It uses `CODEQL` or `codeql`

@@ -1,0 +1,1 @@
+import{n as e}from"./rolldown-runtime-WkwZ5CU-.js";import{g as t}from"./check-4prDadbd.js";import{o as n}from"./index-V8BrutFD.js";var r=e(t(),1),i=()=>{let e=(0,r.useContext)(n);if(!e)throw Error(`useTheme requires ThemeProvider`);return e};export{i as t};

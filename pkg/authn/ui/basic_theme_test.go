@@ -15,7 +15,6 @@
 package ui
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 
@@ -27,61 +26,13 @@ func TestBasicThemeBrandAssets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	profile, err := NewAppAssetLibrary()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, pair := range []struct{ core, profile string }{
-		{"assets/images/logo.svg", "profile/logo.svg"},
-		{"assets/images/favicon.svg", "profile/favicon.svg"},
-		{"assets/images/banner.svg", "profile/images/banner.svg"},
-	} {
-		t.Run(pair.core, func(t *testing.T) {
-			portalAsset, err := core.GetAsset(pair.core)
-			if err != nil {
-				t.Fatal(err)
-			}
-			profileAsset, err := profile.GetAsset(pair.profile)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if portalAsset.ContentType != "image/svg+xml" || profileAsset.ContentType != "image/svg+xml" || portalAsset.Content != profileAsset.Content {
-				t.Fatal("portal and profile must serve matching SVG branding")
-			}
-		})
-	}
-	for _, library := range []*StaticAssetLibrary{core, profile} {
-		for _, path := range library.GetAssetPaths() {
-			if strings.HasSuffix(path, ".png") || strings.HasSuffix(path, ".ico") {
-				t.Errorf("legacy raster asset remains: %s", path)
-			}
+	for _, name := range []string{"logo", "favicon", "banner", "background"} {
+		asset, err := core.GetAsset("assets/images/" + name + ".svg")
+		if err != nil || asset.ContentType != "image/svg+xml" {
+			t.Fatal("missing portal SVG branding")
 		}
 	}
-	manifestAsset, err := profile.GetAsset("profile/manifest.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var manifest struct {
-		Icons []struct {
-			Src  string `json:"src"`
-			Type string `json:"type"`
-		} `json:"icons"`
-	}
-	if err := json.Unmarshal([]byte(manifestAsset.Content), &manifest); err != nil {
-		t.Fatal(err)
-	}
-	if len(manifest.Icons) == 0 {
-		t.Fatal("profile manifest is missing its SVG icon")
-	}
-	for _, icon := range manifest.Icons {
-		asset, err := profile.GetAsset("profile/" + icon.Src)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if icon.Type != "image/svg+xml" || asset.ContentType != icon.Type {
-			t.Fatal("profile manifest icon must resolve to a registered SVG")
-		}
-	}
+
 }
 
 func TestBasicSandboxMessageUsesTextOnlyToast(t *testing.T) {

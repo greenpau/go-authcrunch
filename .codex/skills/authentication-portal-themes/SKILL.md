@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-themes
-description: Build, customize, or update AuthCrunch authentication portal themes using Go HTML templates, CSS, and SVG branding. Use for responsive layouts, login QR controls, cross-device approval views, filesystem overrides, UI/static-asset configuration, internationalization, and OIDC page styling. The embedded React profile application has a separate build.
+description: Build, customize, or update AuthCrunch authentication portal themes using Go HTML templates, CSS, and SVG branding. Use for responsive layouts, login QR controls, cross-device approval views, filesystem overrides, UI/static-asset configuration, internationalization, and OIDC page styling. The embedded React applications have a separate build.
 ---
 
 # Authentication Portal Themes
@@ -43,7 +43,7 @@ the ordinary login QR bookmark remains a separate view.
   `pkg/authn/ui/page_templates/basic` changes the library's default UI and is
   appropriate only when that is the requested scope.
 
-The React profile app under `pkg/authn/ui/profile` is a separate asset surface;
+The React apps under `pkg/authn/ui/{profile,operator,documents}` are separate asset surfaces;
 portal template overrides do not rebuild or restyle it automatically.
 
 For language settings, translated templates/scripts, RTL layout and multilingual
@@ -135,7 +135,7 @@ Paths below are relative to the repository root:
   branding tokens, vector logo, favicon, decorative banner, and background.
 - `assets/branding/palette.json` and `assets/branding/soft-square.svg`: default
   colors and source geometry; `make brand-assets` regenerates the related SVGs,
-  CSS colors, and profile metadata. `make brand-assets-check` checks drift.
+  CSS colors. Embedded app branding is maintained in the UI source. `make brand-assets-check` checks drift.
 - `pkg/authn/handle_http_static.go`: public asset routing and caching.
 - `pkg/authn/handle_http_session.go`: session rendering and response policy.
 - `pkg/authn/oidc_ui.go`: OIDC page snapshots passed to the portal UI factory;

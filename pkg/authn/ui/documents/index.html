@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <base href="__AUTHCRUNCH_APP_BASE_PATH__" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Keep documents encrypted, private, and securely shared." />
+    <meta name="project:name" content="File Vault" />
+    <meta name="project:company" content="AuthCrunch" />
+    <meta name="project:app_id" content="documents" />
+    <meta name="project:app_suite_id" content="auc" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#171717" />
+    <script>
+      (() => {
+        let theme;
+        try {
+          const raw =
+            localStorage.getItem("auc-ui-theme") ||
+            localStorage.getItem("auc-prf-User-Profile-Theme-Mode-Name") ||
+            localStorage.getItem("Theme-Mode-Name");
+          try {
+            theme = JSON.parse(raw);
+          } catch {
+            theme = raw;
+          }
+        } catch {
+          /* The application remains usable when browser storage is unavailable. */
+        }
+        const dark = theme === "dark" || (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      })();
+    </script>
+    <title>File Vault · AuthCrunch</title>
+    <script type="module" crossorigin src="./assets/index-GWwW_jCJ.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-WkwZ5CU-.js">
+    <link rel="modulepreload" crossorigin href="./assets/button-DOMpr_e6.js">
+    <link rel="modulepreload" crossorigin href="./assets/use-page-DWGjCeh4.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-BJA7sqsi.css">
+    <meta name="project:version" content="1.1.5">
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Enable JavaScript to use File Vault.</noscript>
+  </body>
+</html>

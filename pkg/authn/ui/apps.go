@@ -14,32 +14,16 @@
 
 package ui
 
-import (
-	"embed"
-)
+import "embed"
 
-var (
-	//go:embed profile
-	embedFileSystem embed.FS
-	embedPages      = map[string]string{
-		"profile/":                           "profile/index.html",
-		"profile/fonts/Inter-Black.ttf":      "profile/fonts/Inter-Black.ttf",
-		"profile/fonts/Inter-Bold.ttf":       "profile/fonts/Inter-Bold.ttf",
-		"profile/fonts/Inter-ExtraBold.ttf":  "profile/fonts/Inter-ExtraBold.ttf",
-		"profile/fonts/Inter-ExtraLight.ttf": "profile/fonts/Inter-ExtraLight.ttf",
-		"profile/fonts/Inter-Light.ttf":      "profile/fonts/Inter-Light.ttf",
-		"profile/fonts/Inter-Medium.ttf":     "profile/fonts/Inter-Medium.ttf",
-		"profile/fonts/Inter-Regular.ttf":    "profile/fonts/Inter-Regular.ttf",
-		"profile/fonts/Inter-SemiBold.ttf":   "profile/fonts/Inter-SemiBold.ttf",
-		"profile/fonts/Inter-Thin.ttf":       "profile/fonts/Inter-Thin.ttf",
-		"profile/fonts/fonts.css":            "profile/fonts/fonts.css",
-		"profile/images/banner.svg":          "profile/images/banner.svg",
-		"profile/assets/index-Dg1KKZmD.css":  "profile/assets/index-Dg1KKZmD.css",
-		"profile/assets/index-YxE65L9G.js":   "profile/assets/index-YxE65L9G.js",
-		"profile/favicon.svg":                "profile/favicon.svg",
-		"profile/logo.svg":                   "profile/logo.svg",
-		"profile/manifest.json":              "profile/manifest.json",
-		"profile/robots.txt":                 "profile/robots.txt",
-		"profile/index.html":                 "profile/index.html",
-	}
-)
+// These directories are imported by make ui-apps from a portable UI export.
+// all: also retains Vite assets whose basenames begin with an underscore.
+//
+//go:embed all:profile all:operator all:documents
+var embedFileSystem embed.FS
+
+// ApplicationBaseMarker is replaced only in an app's HTML entry by the portal.
+const ApplicationBaseMarker = "__AUTHCRUNCH_APP_BASE_PATH__"
+
+// ApplicationBaseTag is the sole deployment-dependent fragment in app exports.
+const ApplicationBaseTag = `<base href="` + ApplicationBaseMarker + `" />`

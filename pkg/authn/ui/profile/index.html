@@ -1,39 +1,49 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <base href="/auth/profile/" />
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta charset="UTF-8" />
+    <base href="__AUTHCRUNCH_APP_BASE_PATH__" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#245bca" />
-    <meta name="title" property="og:title" content="AuthCrunch User Profile Management" />
-    <meta name="author" content="AuthCrunch" />
-    <meta name="description" property="og:description" content="Profile Management Made Easy" />
-    <meta name="website:name" content="User Profile" />
-    <meta name="website:description" content="Profile Management Made Easy" />
-    <meta name="website:environment" content="prod" />
+    <meta name="description" content="Manage your AuthCrunch identity, credentials, and account security." />
     <meta name="project:name" content="User Profile" />
-    <meta name="project:slogan" content="Profile Management Made Easy" />
     <meta name="project:company" content="AuthCrunch" />
-    <meta name="project:version" content="1.1.2" />
     <meta name="project:app_id" content="prf" />
     <meta name="project:app_suite_id" content="auc" />
-    <meta property="og:image" content="/auth/profile/images/banner.svg" />
-    <meta property="og:image:type" content="image/svg+xml" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="160" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="manifest" href="./manifest.json" />
-    <link rel="stylesheet" href="./fonts/fonts.css" />
-    <title>User Profile</title>
-    <script type="module" crossorigin src="/auth/profile/assets/index-YxE65L9G.js"></script>
-    <link rel="stylesheet" crossorigin href="/auth/profile/assets/index-Dg1KKZmD.css">
-  </head>
-
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <meta name="theme-color" content="#171717" />
     <script>
-      const global = globalThis;
+      (() => {
+        let theme;
+        try {
+          const raw =
+            localStorage.getItem("auc-ui-theme") ||
+            localStorage.getItem("auc-prf-User-Profile-Theme-Mode-Name") ||
+            localStorage.getItem("Theme-Mode-Name");
+          try {
+            theme = JSON.parse(raw);
+          } catch {
+            theme = raw;
+          }
+        } catch {
+          /* The application remains usable when browser storage is unavailable. */
+        }
+        const dark = theme === "dark" || (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      })();
     </script>
+    <title>User Profile · AuthCrunch</title>
+    <script type="module" crossorigin src="./assets/index-BxOkXBEB.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-WkwZ5CU-.js">
+    <link rel="modulepreload" crossorigin href="./assets/use-localization-CG6-xxTq.js">
+    <link rel="modulepreload" crossorigin href="./assets/dist-Cr7WUBfl.js">
+    <link rel="modulepreload" crossorigin href="./assets/PageProvider-BkA0p6BB.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-BJA7sqsi.css">
+    <meta name="project:version" content="1.1.5">
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Enable JavaScript to manage your AuthCrunch profile.</noscript>
   </body>
 </html>

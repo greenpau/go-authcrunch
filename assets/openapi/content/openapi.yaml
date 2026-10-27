@@ -29,7 +29,7 @@ servers:
       description: >-
         Actual portal mount without a trailing slash; empty for a root-mounted portal.
         Use a neutral mount such as /auth, /xauth or /tenant/auth. Do not use reserved
-        route namespaces such as saml or oauth2 as mount segments, including inside
+        route namespaces such as saml, oauth2, operator or documents as mount segments, including inside
         nested mounts. Legacy endpoint prefixes such as login-service and profile-ui
         are also reserved. The standalone host and configured portal feature mounts use the shared
         canonical mount validator, requiring ASCII cookie paths without semicolons,

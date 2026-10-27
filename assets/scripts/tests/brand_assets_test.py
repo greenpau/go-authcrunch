@@ -26,8 +26,7 @@ class BrandAssetsTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         for name in ("assets/scripts/update_brand_assets.py", "assets/branding/palette.json",
-                     "assets/branding/soft-square.svg", "pkg/authn/ui/core/css/basic.css",
-                     "pkg/authn/ui/profile/manifest.json", "pkg/authn/ui/profile/index.html"):
+                     "assets/branding/soft-square.svg", "pkg/authn/ui/core/css/basic.css"):
             destination = self.root / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(REPO / name, destination)
@@ -71,7 +70,10 @@ class BrandAssetsTests(unittest.TestCase):
                     if "href" in node.attrib:
                         self.assertTrue(node.attrib["href"].startswith("#"))
 
-    def test_e2e_palette_recolors_artwork_css_and_profile_without_geometry_drift(self):
+    def test_e2e_palette_recolors_portal_without_changing_embedded_apps(self):
+        app = self.root / "pkg/authn/ui/profile/logo.svg"
+        app.parent.mkdir(parents=True)
+        app.write_text("app-owned monochrome asset")
         self.assertEqual(self.command().returncode, 0)
         self.assertEqual(self.command("--check").returncode, 0)
         palette_path = self.root / "assets/branding/palette.json"
@@ -85,7 +87,7 @@ class BrandAssetsTests(unittest.TestCase):
         result = self.command()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.command("--check").returncode, 0)
-        for path in (self.root / "pkg/authn/ui").rglob("*.svg"):
+        for path in (self.root / "pkg/authn/ui/core").rglob("*.svg"):
             svg = ET.parse(path)
             if path.name in ("banner.svg", "background.svg"):
                 paints = {value for node in svg.iter() for key, value in node.attrib.items()
@@ -99,11 +101,7 @@ class BrandAssetsTests(unittest.TestCase):
         css = (self.root / "pkg/authn/ui/core/css/basic.css").read_text()
         self.assertIn("--brand-primary: #6238a8;", css)
         self.assertIn("--brand-ink: #302040;", css)
-        manifest = json.loads((self.root / "pkg/authn/ui/profile/manifest.json").read_text())
-        self.assertEqual(manifest["theme_color"], "#6238a8")
-        self.assertEqual(manifest["background_color"], "#f5f0fb")
-        self.assertEqual(manifest["icons"][0]["type"], "image/svg+xml")
-        self.assertIn('name="theme-color" content="#6238a8"', (self.root / "pkg/authn/ui/profile/index.html").read_text())
+        self.assertEqual(app.read_text(), "app-owned monochrome asset")
 
     def test_svg_paint_references_resolve_without_external_resources(self):
         for path, content in branding.render(self.root).items():

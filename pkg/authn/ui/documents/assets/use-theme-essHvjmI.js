@@ -1,0 +1,1 @@
+import{n as e}from"./rolldown-runtime-WkwZ5CU-.js";import{h as t}from"./button-DOMpr_e6.js";import{n}from"./index-GWwW_jCJ.js";var r=e(t(),1),i=()=>{let e=(0,r.useContext)(n);if(!e)throw Error(`useTheme requires ThemeProvider`);return e};export{i as t};

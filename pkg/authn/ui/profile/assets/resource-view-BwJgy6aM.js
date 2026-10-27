@@ -1,0 +1,1 @@
+import{h as e}from"./use-localization-CG6-xxTq.js";import{c as t,l as n}from"./PageProvider-BkA0p6BB.js";var r=e(),i=({resource:e,children:i})=>e.loading?(0,r.jsx)(`div`,{"aria-busy":`true`,children:(0,r.jsx)(n,{})},`loading`):e.error||e.data===null?(0,r.jsx)(`div`,{children:(0,r.jsx)(t,{retry:e.reload})},`error`):(0,r.jsx)(`div`,{children:i(e.data)},`ready`);export{i as t};

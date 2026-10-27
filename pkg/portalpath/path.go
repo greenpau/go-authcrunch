@@ -49,7 +49,7 @@ func Validate(basePath string) error {
 			}
 		}
 		switch segment {
-		case "connected-accounts", ".well-known", "api", "apps", "assets", "barcode", "basic", "cross-device", "oauth2", "oidc", "provider", "qrcode", "saml", "sandbox":
+		case "operator", "documents", "connected-accounts", ".well-known", "api", "apps", "assets", "barcode", "basic", "cross-device", "oauth2", "oidc", "provider", "qrcode", "saml", "sandbox":
 			return ErrReservedSegment
 		}
 	}

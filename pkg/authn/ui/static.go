@@ -110,7 +110,12 @@ func getContentType(filePath string) (string, error) {
 func NewAppAssetLibrary() (*StaticAssetLibrary, error) {
 	sal := &StaticAssetLibrary{}
 	sal.items = make(map[string]*StaticAsset)
-	for path, embedPath := range embedPages {
+	paths, err := EnumerateEmbedFs(embedFileSystem)
+	if err != nil {
+		return nil, fmt.Errorf("failed to enumerate app file system: %w", err)
+	}
+	for _, embedPath := range paths {
+		path := embedPath
 		b, err := embedFileSystem.ReadFile(embedPath)
 		if err != nil {
 			return nil, fmt.Errorf("app asset %s reading error: %s", embedPath, err)
@@ -128,6 +133,16 @@ func NewAppAssetLibrary() (*StaticAssetLibrary, error) {
 		io.WriteString(h, item.Content)
 		item.Checksum = base64.URLEncoding.EncodeToString(h.Sum(nil))
 		sal.items[path] = item
+	}
+	for _, app := range []string{"profile", "operator", "documents"} {
+		entry, err := sal.GetAsset(app + "/index.html")
+		if err != nil {
+			return nil, err
+		}
+		if strings.Count(entry.Content, ApplicationBaseTag) != 1 {
+			return nil, fmt.Errorf("app %s requires one portable HTML base", app)
+		}
+		sal.items[app+"/"] = entry
 	}
 	return sal, nil
 }

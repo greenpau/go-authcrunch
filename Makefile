@@ -98,6 +98,11 @@ run-reports:
 test-ui:
 	@node --test --test-reporter=spec pkg/authn/ui/testdata/*_client_test.cjs
 
+.PHONY: ui-apps
+UI_APPS_SOURCE ?= ../../authcrunch/authcrunch-ui/dist/embedded
+ui-apps:
+	@$(PYTHON) assets/scripts/update_ui_apps.py --source "$(UI_APPS_SOURCE)"
+
 test-automation:
 	@$(PYTHON) -m unittest discover -s assets/scripts/tests -p '*_test.py' -v
 

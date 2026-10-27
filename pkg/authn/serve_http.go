@@ -80,6 +80,11 @@ func (p *Portal) serveHTTP(ctx context.Context, w http.ResponseWriter, r *http.R
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return nil
 	}
+	if app := portalAppName(r, rr); app != "" {
+		p.injectSessionID(ctx, w, r, rr)
+		usr, _ := p.authorizeRequest(ctx, w, r, rr)
+		return p.handleHTTPApps(ctx, w, r, rr, usr, app)
+	}
 	if connectedAccountsRouteIndex(r.URL.Path) >= 0 {
 		return p.handleConnectedAccounts(ctx, w, r, rr)
 	}

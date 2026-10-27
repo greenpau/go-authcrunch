@@ -1,4 +1,4 @@
-"""Generate the portal/profile SVG artwork and shared colors from one palette."""
+"""Generate the portal SVG artwork and shared colors from one palette."""
 
 import argparse
 import copy
@@ -23,7 +23,6 @@ CSS_COLORS = (
 )
 UI = Path("pkg/authn/ui")
 CSS = UI / "core/css/basic.css"
-PROFILE = UI / "profile"
 
 
 def read_palette(root):
@@ -152,9 +151,6 @@ def render(root):
         "background.svg": serialize(ET.fromstring(background)),
     }
     output = {UI / "core/images" / name: content for name, content in images.items()}
-    output.update({PROFILE / "logo.svg": images["logo.svg"],
-                   PROFILE / "favicon.svg": images["favicon.svg"],
-                   PROFILE / "images/banner.svg": images["banner.svg"]})
 
     colors = ["  /* BEGIN BRAND COLORS */", "  /* Generated from assets/branding/palette.json. */"]
     colors.extend(f"  --brand-{key.replace('_', '-')}: {palette[key]};" for key in CSS_COLORS)
@@ -163,15 +159,6 @@ def render(root):
                "  /* END BRAND COLORS */"]
     output[CSS] = replace_once(r"  /\* BEGIN BRAND COLORS \*/.*?/\* END BRAND COLORS \*/",
                                "\n".join(colors), (root / CSS).read_text(), "CSS palette block")
-    manifest_path = PROFILE / "manifest.json"
-    manifest = json.loads((root / manifest_path).read_text())
-    manifest["icons"] = [{"src": "logo.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any"}]
-    manifest["theme_color"], manifest["background_color"] = palette["primary"], palette["page"]
-    output[manifest_path] = json.dumps(manifest, indent=2) + "\n"
-    index_path = PROFILE / "index.html"
-    output[index_path] = replace_once(r'<meta name="theme-color" content="[^"]*"\s*/>',
-                                      f'<meta name="theme-color" content="{palette["primary"]}" />',
-                                      (root / index_path).read_text(), "profile theme-color meta tag")
     return output
 
 

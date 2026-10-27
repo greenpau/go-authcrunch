@@ -48,7 +48,7 @@ func crossDeviceRouteIndex(path string) int {
 		return -1
 	}
 	prefix := path[:i] + "/"
-	for _, namespace := range []string{"/connected-accounts/", "/provider/", "/api/", "/qrcode/", "/profile/", "/sandbox/", "/register/", "/apps/sso", "/apps/mobile-access", "/barcode/mfa/", "/saml/", "/oauth2/", "/basic/login", "/assets/", "/favicon"} {
+	for _, namespace := range []string{"/connected-accounts/", "/provider/", "/api/", "/qrcode/", "/profile/", "/operator/", "/documents/", "/sandbox/", "/register/", "/apps/sso", "/apps/mobile-access", "/barcode/mfa/", "/saml/", "/oauth2/", "/basic/login", "/assets/", "/favicon"} {
 		if strings.Contains(prefix, namespace) {
 			return -1
 		}

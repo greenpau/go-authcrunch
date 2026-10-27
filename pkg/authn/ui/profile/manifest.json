@@ -1,16 +1,12 @@
 {
+  "id": ".",
   "short_name": "Profile",
   "name": "AuthCrunch User Profile",
-  "icons": [
-    {
-      "src": "logo.svg",
-      "type": "image/svg+xml",
-      "sizes": "any",
-      "purpose": "any"
-    }
-  ],
+  "description": "Manage your AuthCrunch identity and account security.",
+  "icons": [{ "src": "logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }],
   "start_url": ".",
+  "scope": ".",
   "display": "standalone",
-  "theme_color": "#245bca",
-  "background_color": "#edf3fc"
+  "theme_color": "#171717",
+  "background_color": "#ffffff"
 }

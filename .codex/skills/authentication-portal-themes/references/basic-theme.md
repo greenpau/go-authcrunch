@@ -240,12 +240,9 @@ This workflow changes build-time defaults, not portal configuration or runtime
 CSS inheritance. Deployment overrides can still use `custom.css` and registered
 replacement SVGs without rebuilding the library.
 
-The embedded profile's `logo.svg`, `favicon.svg`, and `images/banner.svg` use
-the same artwork. Its manifest points to the SVG logo with `sizes: any`, and
-its head declares the SVG favicon. The PNG Apple touch-icon link is removed.
-Maintain `pkg/authn/ui/apps.go` registrations and these metadata links when
-refreshing the embedded profile assets; this command does not rebuild its React
-application. Old profile PNG/ICO icons and the JPEG banner are no longer bundled.
+The embedded React apps use their own monochrome logo, favicon and neutral
+metadata from the UI export. `make ui-apps` imports these independently; palette
+regeneration never overwrites app branding or requires frontend changes.
 
 ## Deployment example without template copies
 
@@ -315,9 +312,8 @@ ordering, single/multiple-authenticator forms and links, and the session
 DOM/script contract. `static_test.go` verifies all
 embedded asset paths, MIME types, and counts.
 
-`TestBasicThemeBrandAssets` checks that the portal and profile libraries serve
-matching SVG artwork, the profile manifest resolves to a registered SVG icon,
-and retired PNG/ICO files are absent. The portal template E2E checks the real
+`TestBasicThemeBrandAssets` checks portal SVG availability.
+`TestEmbeddedApplications` checks app entries, manifests and asset inventory. The portal template E2E checks the real
 mounted asset URLs and removal of the old files. The branding automation tests
 exercise palette validation, native path preservation, executable recoloring,
 read-only drift detection, and rejection before any output is rewritten. They

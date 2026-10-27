@@ -216,3 +216,43 @@ combinations; naming review and feature-specific E2E remain required.
 make test TEST_DIR='./pkg/portalpath ./pkg/authn ./pkg/httpserver/...' TEST='PortalPath|PortalMount|PortalExplicitMount|PortalReservedRoute|PortalRouteContract|ReservedMount|ExtractBasePath|OIDCIssuerMount|E2EHTTPServerSessions' COVERAGE_DIR=.coverage/portal-routing
 make test TEST_DIR=./cmd/authdb TEST=E2EAuthdb COVERAGE_DIR=.coverage/portal-mount-executable
 ```
+
+## Embedded browser applications
+
+User Profile (`profile`), Security Manager (`operator`) and File Vault
+(`documents`) each own an exact top-level namespace under the portal mount.
+Match these before content negotiation and child marker matching, so app-owned
+routes containing `api`, `provider`, `connected-accounts` or `cross-device` remain
+in the SPA. API resources and provider realms named after an app remain with
+their original namespace. Reserve `operator` and `documents` as whole mount
+segments; lookalikes such as `documents-team` remain valid.
+
+The exact manifest is public for an enabled app. Other app assets require portal
+user/admin admission; Security Manager requires portal admin admission. Admin
+and Documents app availability follows the corresponding API enablement. Profile
+retains its independently gated API. App links on the portal are request-local,
+role-aware and mount-relative; never modify shared UI configuration to add them.
+
+Only GET/HEAD serve app assets. A bare app path redirects permanently to its
+slash form with its query intact. Client document routes load the entry, including dotted account names;
+missing assets/translations return 404 instead of HTML. Replace the entry's
+single portable base marker with the escaped app root. Keep responses no-store,
+check authorization before conditional asset responses, and keep app HTML free
+of mount-independent ETags. Render every deep link with the same canonical base.
+
+`TestPortalAppRoutes` covers inferred extraction and competing namespace
+ownership. `TestE2EEmbeddedApplications` uses real TLS login and Chrome against
+all three shipped bundles at root, `/auth`, `/xauth`, nested and lookalike mounts
+through both public serving entry points. Cover deep-link reload, APIs, lazy
+chunks, fonts, locale catalogs, Preferences, role denial, method/HEAD/ETag
+behavior, exact public manifests, missing files and disabled features. The
+profile session browser regression also exercises the shipped app's fresh-login
+return destination after credential revocation.
+
+```sh
+make test TEST_DIR='./pkg/authn/ui ./pkg/authn ./pkg/portalpath' TEST='EmbeddedApplications|PortalAppRoutes|PortalReservedRoute|PortalRouteContract|PortalPath' COVERAGE_DIR=.coverage/ui-apps
+```
+
+These browser pages and static bundles are outside OpenAPI operation scope.
+Review dispatch/source fingerprints and update mount reservations in the API
+server-variable guidance when their ownership changes; do not invent SPA APIs.

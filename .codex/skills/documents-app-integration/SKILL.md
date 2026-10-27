@@ -10,7 +10,9 @@ its AuthCrunch library checkout. Keep implementation in the task's authorized
 repository; reading this skill does not authorize edits to sibling checkouts.
 For an app-local AGENTS.md, add a route pointing to this skill at the actual
 library checkout location. Do not copy a machine-specific path into the app's
-source or pretend the compiled app already ships in AuthCrunch.
+source. The File Vault bundle now ships under `pkg/authn/ui/documents` and is
+served at `<portal>/documents/` when Documents is enabled; its React source
+remains in the separately maintained UI repository.
 
 Read the [crypto/wire contract](../authentication-portal-documents/references/protocol.md)
 and use the portable
@@ -46,7 +48,8 @@ agree; use the canonical mount accepted by the shared
 [portal path contract](../coding-directives/references/portal-routing.md#explicit-and-inferred-mount-delegation).
 Root is `/`; remove that one trailing slash when joining the API suffix so root
 uses `/api/documents` and `/tenant/auth` uses `/tenant/auth/api/documents`.
-Do not infer a different mount from the current React page, normalize an invalid
+The shipped app derives this trusted mount from its server-injected HTML base,
+not the current deep-link pathname. Do not infer a different mount, normalize an invalid
 mount, or probe alternate paths after a configuration failure. A mount mismatch
 at explicit portal delegation returns 500 and needs a host configuration fix;
 it is not an expired session or a reason to reset a vault. The database's portal,

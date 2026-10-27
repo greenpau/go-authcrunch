@@ -1,0 +1,1 @@
+import{h as e,m as t}from"./use-localization-CG6-xxTq.js";var n=e();function r({className:e,...r}){return(0,n.jsx)(`select`,{className:t(`h-9 max-w-full min-w-0 rounded-lg border bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring`,e),...r})}export{r as t};

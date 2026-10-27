@@ -8,17 +8,12 @@ const socket = new WebSocket(process.argv[2]);
 const pending = new Map();
 let sequence = 0;
 let rejectedProfile = false;
-let recoveryNavigation = false;
 
 socket.addEventListener("message", ({ data }) => {
   const message = JSON.parse(data);
   if (message.method === "Network.responseReceived") {
     const response = message.params.response;
     if (response.url === config.issuer + "/api/profile" && response.status === 401) rejectedProfile = true;
-  }
-  if (message.method === "Network.requestWillBeSent" &&
-      message.params.type === "Document" && message.params.request.url === config.issuer + "/api/refresh_token") {
-    recoveryNavigation = true;
   }
   const request = pending.get(message.id);
   if (!request) return;
@@ -61,10 +56,11 @@ async function evaluate(tab, fn, args) {
     await command("Page.navigate", { url: config.issuer + "/portal" }, tab);
     await waitFor(() => evaluate(tab, (issuer) => location.href === issuer + "/portal" && document.readyState === "complete", config.issuer));
     await command("Page.navigate", { url: config.issuer + "/profile/" }, tab);
-    await waitFor(() => evaluate(tab, (issuer) => location.href === issuer + "/login?fresh=1" &&
+    await waitFor(() => evaluate(tab, (issuer) => location.origin + location.pathname === issuer + "/login" && new URLSearchParams(location.search).get("fresh") === "1" &&
       document.readyState === "complete" && !!document.querySelector("#username"), config.issuer));
     assert.ok(rejectedProfile, "the shipped profile app did not observe the revoked session");
-    assert.ok(recoveryNavigation, "the shipped profile app did not follow its recovery route");
+    // API rejection goes straight to fresh login; the identity probe uses refresh.
+    assert.ok(await evaluate(tab, () => new URLSearchParams(location.search).get("redirect_url")?.endsWith("/profile/")), "fresh login lost the app return destination");
     const { cookies } = await command("Storage.getCookies", { browserContextId });
     assert.ok(!cookies.some((cookie) => cookie.name === "AUTHP_ACCESS_TOKEN"), "fresh login retained stale access");
     assert.equal(cookies.some((cookie) => cookie.name === "AUTHP_REFRESH_TOKEN"), config.cookies.some((cookie) => cookie.name === "AUTHP_REFRESH_TOKEN"), "fresh login discarded refresh before replacement");

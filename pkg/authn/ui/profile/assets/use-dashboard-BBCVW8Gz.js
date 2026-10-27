@@ -1,0 +1,1 @@
+import{t as e}from"./use-profile-resource-DyfWFKMD.js";var t=(e,t)=>e.entry(`fetch_user_dashboard_data`,{},t),n=()=>e(t);export{n as t};

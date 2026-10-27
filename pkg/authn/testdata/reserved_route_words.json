@@ -1,5 +1,9 @@
 {
-  "connected-accounts": {"kind":"namespace", "owner":"External account connections", "mount":"deny_segment"},
+  "connected-accounts": {
+    "kind": "namespace",
+    "owner": "External account connections",
+    "mount": "deny_segment"
+  },
   ".well-known": {
     "kind": "early_namespace",
     "owner": "Discovery: portal signing JWKS and OIDC metadata",
@@ -119,5 +123,15 @@
     "kind": "endpoint",
     "owner": "Portal identity and session probe",
     "mount": "deny_prefix"
+  },
+  "operator": {
+    "kind": "namespace",
+    "owner": "Security Manager browser application",
+    "mount": "deny_segment"
+  },
+  "documents": {
+    "kind": "namespace",
+    "owner": "File Vault browser application; JSON operations remain under api/documents",
+    "mount": "deny_segment"
   }
 }

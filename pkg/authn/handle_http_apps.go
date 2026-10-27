@@ -15,78 +15,100 @@
 package authn
 
 import (
+	"bytes"
 	"context"
-	"fmt"
+	"html/template"
 	"io"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/role"
 	"github.com/greenpau/go-authcrunch/pkg/authn/ui"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
-	"go.uber.org/zap"
 )
 
 func (p *Portal) handleHTTPApps(ctx context.Context, w http.ResponseWriter, r *http.Request, rr *requests.Request, usr *user.User, appName string) error {
 	p.disableClientCache(w)
-	p.injectRedirectURL(ctx, w, r, rr)
-	if usr == nil && !strings.HasSuffix(r.URL.Path, appName+"/manifest.json") {
-		p.logger.Debug("app asset download is unauthorized", zap.String("app_name", appName), zap.String("app_file_url_path", r.URL.Path))
-		return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if !p.portalAppEnabled(appName) {
+		return p.handleHTTPError(ctx, w, r, rr, http.StatusNotFound)
 	}
-
-	if err := p.authorizedRole(usr, []role.Kind{role.Admin, role.User}, rr.Response.Authenticated); err != nil {
-		if !strings.HasSuffix(r.URL.Path, appName+"/manifest.json") {
-			p.logger.Debug("app asset download is forbidden", zap.String("app_name", appName), zap.String("app_file_url_path", r.URL.Path))
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		return p.handleHTTPError(ctx, w, r, rr, http.StatusMethodNotAllowed)
+	}
+	assetPath := strings.TrimPrefix(r.URL.Path, rr.Upstream.BasePath)
+	appRoot := rr.Upstream.BasePath + appName
+	if path.Clean(r.URL.Path) != strings.TrimSuffix(r.URL.Path, "/") ||
+		(r.URL.EscapedPath() != appRoot && !strings.HasPrefix(r.URL.EscapedPath(), appRoot+"/")) {
+		return p.handleHTTPError(ctx, w, r, rr, http.StatusNotFound)
+	}
+	// Only the exact manifest is public. No suffix or neighboring path exemption.
+	public := assetPath == appName+"/manifest.json"
+	if !public {
+		if usr == nil {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusUnauthorized)
+		}
+		roles := []role.Kind{role.Admin, role.User}
+		if appName == "operator" {
+			roles = []role.Kind{role.Admin}
+		}
+		if err := p.authorizedRole(usr, roles, rr.Response.Authenticated); err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusForbidden)
 		}
 	}
-
-	var assetPath string
-	switch {
-	case appName == "profile":
-		assetPath = strings.TrimPrefix(r.URL.Path, rr.Upstream.BasePath)
-		if !strings.HasPrefix(assetPath, "profile/") {
-			assetPath = appName + "/" + assetPath
-		}
-	default:
-		p.logger.Debug("asset download for unsupported app", zap.String("app_name", appName), zap.String("app_file_url_path", r.URL.Path))
-		return p.handleHTTPRenderError(ctx, w, r, rr, fmt.Errorf("file not found"))
+	if assetPath == appName {
+		location := *r.URL
+		location.Path += "/"
+		w.Header().Set("Location", location.String())
+		w.WriteHeader(http.StatusPermanentRedirect)
+		return nil
 	}
-
-	p.logRequest(appName+" app assets", r, rr)
 	asset, err := ui.AppAssets.GetAsset(assetPath)
 	if err != nil {
-		if strings.HasSuffix(assetPath, "/") || strings.Count(assetPath, "/") >= 3 || strings.HasSuffix(assetPath, "/new") {
-			asset, err = ui.AppAssets.GetAsset(appName + "/")
-			if err != nil {
-				p.logger.Debug("app asset download not found", zap.String("app_name", appName), zap.String("app_file_url_path", r.URL.Path), zap.String("asset_path", assetPath))
-				return p.handleHTTPError(ctx, w, r, rr, http.StatusNotFound)
-			}
-		} else {
-			p.logger.Debug("app asset download not found", zap.String("app_name", appName), zap.String("app_file_url_path", r.URL.Path), zap.String("asset_path", assetPath))
+		child := strings.TrimPrefix(assetPath, appName+"/")
+		// Browser routes may end in dotted account names. File fetches must
+		// still fail rather than receiving the SPA as JavaScript or JSON.
+		documentRequest := strings.Contains(r.Header.Get("Accept"), "text/html")
+		if (path.Ext(child) != "" && !documentRequest) || strings.HasPrefix(child, "assets/") || strings.HasPrefix(child, "i18n/") {
+			return p.handleHTTPError(ctx, w, r, rr, http.StatusNotFound)
+		}
+		asset, err = ui.AppAssets.GetAsset(appName + "/")
+		if err != nil {
 			return p.handleHTTPError(ctx, w, r, rr, http.StatusNotFound)
 		}
 	}
-
-	w.Header().Set("Content-Type", asset.ContentType)
-	w.Header().Set("Etag", asset.Checksum)
-	w.Header().Set("Cache-Control", "max-age=7200")
-	if match := r.Header.Get("If-None-Match"); match != "" {
-		if strings.Contains(match, asset.Checksum) {
-			w.WriteHeader(http.StatusNotModified)
-			return nil
+	content := asset.Content
+	if asset.ContentType == "text/html" {
+		// All other assets are mount independent, including CSS font URLs and chunks.
+		baseTemplate, err := template.New("application-base").Parse(`<base href="{{.}}" />`)
+		if err != nil {
+			return p.handleHTTPRenderError(ctx, w, r, rr, err)
+		}
+		var base bytes.Buffer
+		if err := baseTemplate.Execute(&base, appRoot+"/"); err != nil {
+			return p.handleHTTPRenderError(ctx, w, r, rr, err)
+		}
+		content = strings.Replace(content, ui.ApplicationBaseTag, base.String(), 1)
+		w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+		w.Header().Set("X-Frame-Options", "DENY")
+	} else {
+		etag := `"` + asset.Checksum + `"`
+		w.Header().Set("Etag", etag)
+		for candidate := range strings.SplitSeq(r.Header.Get("If-None-Match"), ",") {
+			candidate = strings.TrimSpace(candidate)
+			if candidate == "*" || strings.TrimPrefix(candidate, "W/") == etag {
+				w.WriteHeader(http.StatusNotModified)
+				return nil
+			}
 		}
 	}
+	w.Header().Set("Content-Type", asset.ContentType)
 	w.WriteHeader(http.StatusOK)
-
-	if (strings.HasSuffix(assetPath, "/") || strings.HasSuffix(assetPath, "/index.html") || strings.Count(assetPath, "/") >= 3 || strings.HasSuffix(assetPath, "/new")) && rr.Upstream.BasePath != "/auth/" {
-		assetContent := strings.ReplaceAll(asset.Content, "/auth/"+appName, rr.Upstream.BasePath+appName)
-		io.WriteString(w, assetContent)
-		return nil
+	if r.Method != http.MethodHead {
+		_, _ = io.WriteString(w, content)
 	}
-
-	io.WriteString(w, asset.Content)
 	return nil
 }
