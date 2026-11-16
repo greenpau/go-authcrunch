@@ -109,7 +109,7 @@ For investigation, start with a selected package/test under `make test`. For a
 narrow command outside the report lifecycle, retain the same guard:
 
 ```sh
-COVERAGE_DIR=.coverage/debug python3 assets/scripts/test_guard.py run go test -race -count=1 ./pkg/example -run '^TestExample$'
+COVERAGE_DIR=.coverage/debug python3.14 assets/scripts/test_guard.py run go test -race -count=1 ./pkg/example -run '^TestExample$'
 ```
 
 Check active processes and the recorded peak before changing any budget. A

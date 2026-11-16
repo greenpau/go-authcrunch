@@ -99,7 +99,7 @@ func TestE2EDocumentsRevalidatesAfterBodyRead(t *testing.T) {
 		file := documentsDecode[documents.File](t, f.message(t, token, "file.allocate", map[string]any{"size": 32, "chunks": 1}, 200))
 		f.message(t, token, "file.manifest", map[string]any{"id": file.ID, "manifest": documents.Manifest{Metadata: base64.RawURLEncoding.EncodeToString(make([]byte, 32)), Envelope: documentsEnvelope(key)}}, 200)
 		documentsDelayedRequest(t, f, token, "chunk.put", map[string]any{"id": file.ID, "idx": 0, "ciphertext": base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{1}, 32))}, func() {
-			if err := f.store.RevokeUserSessions(t.Context(), key.UserID); err != nil {
+			if _, err := f.store.OverwriteUserRoles("alice", "alice@example.test", []string{"authp/user"}); err != nil {
 				t.Fatal("revocation was blocked by the slow body", err)
 			}
 		}, http.StatusUnauthorized)

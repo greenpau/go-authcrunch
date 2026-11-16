@@ -30,6 +30,7 @@ type profileIdentityTestStore struct {
 	denied bool
 }
 
+func (*profileIdentityTestStore) GetKind() string  { return "local" }
 func (*profileIdentityTestStore) GetName() string  { return "database" }
 func (*profileIdentityTestStore) GetRealm() string { return "local" }
 func (s *profileIdentityTestStore) RequestWithIdentity(_ operator.Type, rr *requests.Request) error {

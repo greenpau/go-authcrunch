@@ -138,7 +138,7 @@ The combined report never fabricates a tested manifest.
 ## Reproduction and validation
 
 ```sh
-python3 assets/scripts/ci_tests.py plan
+python3.14 assets/scripts/ci_tests.py plan
 make ci-quality
 make ci-test-shard CI_SHARD=portal-challenges
 make ci-test-shard CI_SHARD=portal-sessions
@@ -150,7 +150,7 @@ make ci-test-shard CI_SHARD=identity
 make ci-test-shard CI_SHARD=other-server
 make ci-test-shard CI_SHARD=other-providers
 make ci-test-shard CI_SHARD=other-core
-python3 assets/scripts/ci_tests.py merge
+python3.14 assets/scripts/ci_tests.py merge
 go tool cover -html=.coverage/combined/coverage.out -o .coverage/combined/source.html
 ```
 
@@ -166,7 +166,7 @@ then pass the workflow's explicit `TEST_*` settings. Do not apply its 7-GiB
 budget to an 8-GiB laptop. `make ci-check` is still a simpler local full gate.
 
 For shard runner or matrix changes, select
-`python3 -m unittest discover -s assets/scripts/tests -p ci_shards_test.py -v`
+`python3.14 -m unittest discover -s assets/scripts/tests -p ci_shards_test.py -v`
 and actionlint for workflow syntax. Include selection/release fixtures when
 their contracts change; use `make test-automation` for automation-wide impact.
 Honor user-requested test deferral and report hosted timing as unverified until

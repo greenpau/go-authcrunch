@@ -190,7 +190,7 @@ argument in the bundle's `run.json` command and the selected test names in
 or aggregate test count alone does not prove selection.
 
 Direct `go test` is appropriate for a narrow debugging iteration, compile-only
-check, or fuzzing; run it under `python3 assets/scripts/test_guard.py run go test ...`
+check, or fuzzing; run it under `python3.14 assets/scripts/test_guard.py run go test ...`
 to retain the resource guard. It is not the report lifecycle. Agents must
 serialize expensive validation, including builds and diagnostics, and avoid
 background duplicate suites. `make test-ui` discovers
@@ -532,7 +532,7 @@ and tag contract belongs to `release-and-versioning`. CLA automation remains
 separate.
 
 Automation changes run the affected fixtures, for example
-`python3 -m unittest discover -s assets/scripts/tests -p ci_shards_test.py -v`
+`python3.14 -m unittest discover -s assets/scripts/tests -p ci_shards_test.py -v`
 for CI sharding. Use `make test-automation` when automation-wide impact warrants
 the complete fixture suite. Its version tests exercise
 namespace rejection, synchronization drift, and exact artifact tag binding;

@@ -281,6 +281,192 @@ func TestDatabaseLockAndCommitFailure(t *testing.T) {
 	}
 }
 
+func TestDatabaseCancellationRetainsCallbackLock(t *testing.T) {
+	for _, mode := range []string{"canceled", "deadline"} {
+		t.Run(mode, func(t *testing.T) {
+			db, path := openTest(t)
+			other, err := Open(t.Context(), path, "1s", 71, map[string]string{"records": "CREATE TABLE records (id INTEGER PRIMARY KEY, value TEXT)"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer other.Close()
+			if mode == "deadline" {
+				db.timeout = 50 * time.Millisecond
+			}
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			entered, release := make(chan context.Context, 1), make(chan struct{})
+			done := make(chan struct{})
+			var operationErr error
+			go func() {
+				operationErr = db.Write(ctx, func(ctx context.Context, tx *sql.Tx) error {
+					if _, err := tx.ExecContext(ctx, "INSERT INTO records VALUES(1,'discard')"); err != nil {
+						return err
+					}
+					entered <- ctx
+					<-release
+					return nil
+				})
+				close(done)
+			}()
+			var resume sync.Once
+			defer func() { resume.Do(func() { close(release) }); <-done }()
+			select {
+			case budget := <-entered:
+				if mode == "canceled" {
+					cancel()
+				}
+				<-budget.Done()
+			case <-time.After(5 * time.Second):
+				t.Fatal("transaction never entered its callback")
+			}
+			contender, stop := context.WithTimeout(t.Context(), 100*time.Millisecond)
+			defer stop()
+			called := false
+			err = other.Write(contender, func(context.Context, *sql.Tx) error { called = true; return nil })
+			if !errors.Is(err, context.DeadlineExceeded) || called {
+				t.Error("cancellation released the transaction while its callback was still executing")
+			}
+			resume.Do(func() { close(release) })
+			<-done
+			want := context.Canceled
+			if mode == "deadline" {
+				want = context.DeadlineExceeded
+			}
+			if !errors.Is(operationErr, want) || errors.Is(operationErr, ErrCommitUncertain) {
+				t.Error("known pre-COMMIT rollback changed its error classification")
+			}
+			var count int
+			if err := other.Read(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+				return tx.QueryRowContext(ctx, "SELECT count(*) FROM records").Scan(&count)
+			}); err != nil || count != 0 {
+				t.Fatal("canceled callback persisted its staged mutation")
+			}
+			if err := db.Write(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+				_, err := tx.ExecContext(ctx, "INSERT INTO records VALUES(2,'retained')")
+				return err
+			}); err != nil {
+				t.Fatal("callback rollback leaked its connection or poisoned the handle", err)
+			}
+		})
+	}
+}
+
+func TestDatabaseQueuedOperationRejectsQuarantine(t *testing.T) {
+	for _, mode := range []string{"read", "write"} {
+		t.Run(mode, func(t *testing.T) {
+			db, path := openTest(t)
+			db.timeout = 5 * time.Second
+			other, err := Open(t.Context(), path, "1s", 71, map[string]string{"records": "CREATE TABLE records (id INTEGER PRIMARY KEY, value TEXT)"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer other.Close()
+			reader, err := other.db.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer reader.Rollback()
+			var count int
+			if err := reader.QueryRowContext(t.Context(), "SELECT count(*) FROM records").Scan(&count); err != nil {
+				t.Fatal(err)
+			}
+			entered, release, finished := make(chan struct{}), make(chan struct{}), make(chan struct{})
+			var firstErr error
+			go func() {
+				firstErr = db.Write(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+					if _, err := tx.ExecContext(ctx, "INSERT INTO records VALUES(1,'uncertain')"); err != nil {
+						return err
+					}
+					close(entered)
+					<-release
+					return nil
+				})
+				close(finished)
+			}()
+			var resume sync.Once
+			defer func() { resume.Do(func() { close(release) }); <-finished }()
+			select {
+			case <-entered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("first transaction never reached its callback")
+			}
+			waitCount := db.db.Stats().WaitCount
+			queued := make(chan struct{})
+			var queuedErr error
+			called := false
+			go func() {
+				operation := db.Read
+				if mode == "write" {
+					operation = db.Write
+				}
+				queuedErr = operation(t.Context(), func(context.Context, *sql.Tx) error { called = true; return nil })
+				close(queued)
+			}()
+			defer func() { resume.Do(func() { close(release) }); <-queued }()
+			// Observe database/sql's actual connection wait, not a timing guess.
+			deadline := time.NewTimer(time.Second)
+			defer deadline.Stop()
+			tick := time.NewTicker(time.Millisecond)
+			defer tick.Stop()
+			for db.db.Stats().WaitCount == waitCount {
+				select {
+				case <-deadline.C:
+					t.Fatal("second operation never queued for the connection")
+				case <-tick.C:
+				}
+			}
+			resume.Do(func() { close(release) })
+			<-finished
+			<-queued
+			if !errors.Is(firstErr, ErrCommitUncertain) {
+				t.Fatal("reader did not cause an actual COMMIT failure", firstErr)
+			}
+			if !errors.Is(queuedErr, ErrUnavailable) || called {
+				t.Fatal("a queued operation entered its callback after the handle was quarantined")
+			}
+		})
+	}
+}
+
+func TestDatabaseCanceledCallbackPreservesCommitUncertainty(t *testing.T) {
+	outer, _ := openTest(t)
+	inner, path := openTest(t)
+	other, err := Open(t.Context(), path, "1s", 71, map[string]string{"records": "CREATE TABLE records (id INTEGER PRIMARY KEY, value TEXT)"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Close()
+	reader, err := other.db.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Rollback()
+	var count int
+	if err := reader.QueryRowContext(t.Context(), "SELECT count(*) FROM records").Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	err = outer.Write(ctx, func(context.Context, *sql.Tx) error {
+		innerErr := inner.Write(t.Context(), func(ctx context.Context, tx *sql.Tx) error {
+			_, err := tx.ExecContext(ctx, "INSERT INTO records VALUES(1,'uncertain')")
+			return err
+		})
+		if !errors.Is(innerErr, ErrCommitUncertain) {
+			t.Error("reader did not cause an independent COMMIT failure", innerErr)
+		}
+		cancel()
+		return innerErr
+	})
+	if !errors.Is(err, ErrCommitUncertain) || !errors.Is(err, context.Canceled) {
+		t.Fatal("outer cancellation hid the independent transaction's reconciliation requirement", err)
+	}
+	if err := outer.Write(t.Context(), func(context.Context, *sql.Tx) error { return nil }); err != nil {
+		t.Fatal("inner uncertainty quarantined the healthy outer database", err)
+	}
+}
+
 func TestDatabaseCanceledMutationDoesNotPoison(t *testing.T) {
 	db, _ := openTest(t)
 	ctx, cancel := context.WithCancel(t.Context())

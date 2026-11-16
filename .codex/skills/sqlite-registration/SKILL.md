@@ -154,6 +154,12 @@ extraction, workflow/portal restart, invalid/duplicate/query-only codes, replay,
 native login and independent JWT verification. Run its isolated external-module
 driver. Core TLS coverage
 checks the legacy path and that a failed capability cannot fall through.
+Enrollment acceptance must read management roles as `[]*identity.Role` and
+assert the sole role's `String()` is `authp/user`, preserving its organization
+prefix. The management projection uses typed records; JWT claims retain
+role-name strings. Keep both assertions when
+the identity store's projection changes, and run this registration consumer
+alongside identity-store tests to catch cross-package assumptions.
 Root consumer coverage must serialize descriptors, use `NewServerWithOptions`,
 follow the rendered signup link at root and nested mounts, confirm after restart,
 validate the resulting JWT independently, and preserve caller ownership on root

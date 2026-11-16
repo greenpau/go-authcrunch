@@ -14,6 +14,10 @@ properties:
     description: UTC RFC 3339 timestamp, with fractional seconds when available (for example 2026-10-07T00:00:00Z).
       This is a date-time string, not Unix seconds.
     readOnly: true
+  code:
+    type: string
+    description: Stable reason for unsupported capability, invalid identity, storage failure or uncertain commit. Backend transaction/lock timeouts and cancellation use storage_unavailable with HTTP 503, including after initial identity admission. commit_uncertain takes precedence over a simultaneous timeout. Never parse backend error strings. Older error paths can omit this field.
+    enum: [unsupported_capability, identity_required, storage_unavailable, commit_uncertain, operation_failed]
   message:
     description: Usually human-readable text. Some WebAuthn preparation failures assign a Go error value
       directly, which serializes as an empty object {}; use HTTP status rather than parsing this field.

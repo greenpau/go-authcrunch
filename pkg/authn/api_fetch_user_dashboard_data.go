@@ -33,13 +33,13 @@ func (p *Portal) FetchUserDashboardData(
 	r *http.Request,
 	rr *requests.Request,
 	parsedUser *user.User,
-	resp map[string]interface{},
+	resp map[string]any,
 	usr *user.User,
 	backend ids.IdentityStore) error {
 
 	// Data Buckets
-	entry := make(map[string]interface{})
-	assetCount := make(map[string]interface{})
+	entry := make(map[string]any)
+	assetCount := make(map[string]any)
 
 	// General Info
 	err := backend.Request(operator.GetUser, rr)
@@ -51,74 +51,41 @@ func (p *Portal) FetchUserDashboardData(
 			zap.String("request_id", rr.ID),
 			zap.Error(err),
 		)
-		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
+		return profileBackendError(w, rr, resp, err, http.StatusInternalServerError)
 	}
 	user := rr.Response.Payload.(*identity.User)
-	entry["metadata"] = user.GetMetadata()
+	entry["metadata"] = profileMetadata(user)
 
-	// API Keys
-	rr.Key.Usage = "api"
-	rr.Key.IncludeAll = true
-	err = backend.Request(operator.GetAPIKeys, rr)
-	if err != nil {
-		resp["message"] = "failed to extract user api keys"
-		p.logger.Debug(
-			"failed to extract user api keys",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-			zap.Error(err),
-		)
-		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
+	// Query only implemented collections. Missing counts mean unsupported,
+	// never zero. Each supported query still rechecks the immutable proof.
+	caps := identity.StoreCapabilities{APIKeys: true, PublicKeys: true, MFA: true}
+	if declared, ok := profileStoreCapabilities(backend); ok {
+		caps = declared
+		entry["capabilities"] = caps
 	}
-	apiKeysBundle := rr.Response.Payload.(*identity.APIKeyBundle)
-	apiKeys := apiKeysBundle.Get()
-	assetCount["api_key"] = len(apiKeys)
-
-	// SSH Keys
-	rr.Key.Usage = "ssh"
-	rr.Key.IncludeAll = true
-	err = backend.Request(operator.GetPublicKeys, rr)
-	if err != nil {
-		resp["message"] = "failed to extract user ssh keys"
-		p.logger.Debug(
-			"failed to extract user api keys",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-			zap.Error(err),
-		)
-		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
+	if caps.APIKeys {
+		rr.Key.Usage, rr.Key.IncludeAll = "api", true
+		if err := backend.Request(operator.GetAPIKeys, rr); err != nil {
+			return profileBackendError(w, rr, resp, err, http.StatusInternalServerError)
+		}
+		assetCount["api_key"] = rr.Response.Payload.(*identity.APIKeyBundle).Size()
 	}
-	sshKeysBundle := rr.Response.Payload.(*identity.PublicKeyBundle)
-	sshKeys := sshKeysBundle.Get()
-	assetCount["ssh_key"] = len(sshKeys)
-
-	// GPG Keys
-	rr.Key.Usage = "gpg"
-	rr.Key.IncludeAll = true
-	err = backend.Request(operator.GetPublicKeys, rr)
-	if err != nil {
-		resp["message"] = "failed to extract user gpg keys"
-		p.logger.Debug(
-			"failed to extract user api keys",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-			zap.Error(err),
-		)
-		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
+	if caps.PublicKeys {
+		for _, usage := range []string{"ssh", "gpg"} {
+			rr.Key.Usage, rr.Key.IncludeAll = usage, true
+			if err := backend.Request(operator.GetPublicKeys, rr); err != nil {
+				return profileBackendError(w, rr, resp, err, http.StatusInternalServerError)
+			}
+			assetCount[usage+"_key"] = len(rr.Response.Payload.(*identity.PublicKeyBundle).Get())
+		}
 	}
-	gpgKeysBundle := rr.Response.Payload.(*identity.PublicKeyBundle)
-	gpgKeys := gpgKeysBundle.Get()
-	assetCount["gpg_key"] = len(gpgKeys)
-
-	// MFA and 2FA
-	rr.MfaToken.IncludeAll = true
-	if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
-		resp["message"] = "failed to extract user MFA/2FA"
-		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
+	if caps.MFA {
+		rr.MfaToken.IncludeAll = true
+		if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
+			return profileBackendError(w, rr, resp, err, http.StatusInternalServerError)
+		}
+		assetCount["mfa_2fa"] = len(rr.Response.Payload.(*identity.MfaTokenBundle).Get())
 	}
-	mfaTokensBundle := rr.Response.Payload.(*identity.MfaTokenBundle)
-	mfaTokens := mfaTokensBundle.Get()
-	assetCount["mfa_2fa"] = len(mfaTokens)
 
 	// User Roles
 
@@ -127,7 +94,11 @@ func (p *Portal) FetchUserDashboardData(
 	// Finalize
 
 	entry["asset_count"] = assetCount
-	entry["connected_accounts"] = []interface{}{}
+	// Retain the legacy reserved field only for the legacy store. It is not
+	// evidence that external-account self-service has been implemented.
+	if backend.GetKind() == "local" {
+		entry["connected_accounts"] = []any{}
+	}
 	resp["entry"] = entry
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }

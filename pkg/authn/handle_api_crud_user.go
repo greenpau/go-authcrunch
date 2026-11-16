@@ -17,10 +17,14 @@ package authn
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"slices"
 	"time"
 
 	"net/http"
 
+	"github.com/greenpau/go-authcrunch/internal/sqlitedb"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids/local"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
@@ -127,6 +131,9 @@ func (p *Portal) handleAPICrudUser(ctx context.Context, w http.ResponseWriter, r
 		if ids.GetRealm() != req.Realm {
 			continue
 		}
+		if provider, ok := ids.(identity.StoreCapabilityProvider); ok && !slices.Contains(provider.GetCapabilities().AdminOperations, req.Operation) {
+			return writeCapabilityError(w, rr, http.StatusNotImplemented, "unsupported_capability")
+		}
 		var err error
 
 		switch req.Operation {
@@ -145,7 +152,7 @@ func (p *Portal) handleAPICrudUser(ctx context.Context, w http.ResponseWriter, r
 			}
 		case "delete":
 			resp = make(map[string]any)
-			if err := ids.DeleteUser(username, emailAddress); err != nil {
+			if err = ids.DeleteUser(username, emailAddress); err != nil {
 				p.logger.Warn(
 					"failed to delete user",
 					zap.String("session_id", rr.Upstream.SessionID),
@@ -172,7 +179,7 @@ func (p *Portal) handleAPICrudUser(ctx context.Context, w http.ResponseWriter, r
 			resp["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)
 		case "disable":
 			resp = make(map[string]any)
-			if err := ids.DisableUser(username, emailAddress); err != nil {
+			if err = ids.DisableUser(username, emailAddress); err != nil {
 				p.logger.Warn(
 					"failed to disable user",
 					zap.String("session_id", rr.Upstream.SessionID),
@@ -199,7 +206,7 @@ func (p *Portal) handleAPICrudUser(ctx context.Context, w http.ResponseWriter, r
 			resp["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)
 		case "enable":
 			resp = make(map[string]any)
-			if err := ids.EnableUser(username, emailAddress); err != nil {
+			if err = ids.EnableUser(username, emailAddress); err != nil {
 				p.logger.Warn(
 					"failed to enable user",
 					zap.String("session_id", rr.Upstream.SessionID),
@@ -436,12 +443,22 @@ func (p *Portal) handleAPICrudUser(ctx context.Context, w http.ResponseWriter, r
 			)
 			return p.handleJSONError(ctx, w, http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
 		}
+		if err != nil && resp != nil && resp["status"] == "failure" {
+			// Preserve the legacy HTTP-200 failure envelope, but give clients a
+			// safe reconciliation signal without exposing backend error strings.
+			resp["error"], resp["code"] = "Operation failed", "operation_failed"
+			switch {
+			case errors.Is(err, sqlitedb.ErrCommitUncertain):
+				resp["error"], resp["code"] = "Mutation outcome uncertain; read current state before retrying", "commit_uncertain"
+			case errors.Is(err, sqlitedb.ErrUnavailable), errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
+				resp["error"], resp["code"] = "Storage unavailable", "storage_unavailable"
+			}
+		}
 		break
 	}
 
 	if resp == nil {
-		resp := make(map[string]any)
-		resp["error"] = "not found"
+		return p.handleJSONError(ctx, w, http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
 	respBytes, err := json.Marshal(resp)

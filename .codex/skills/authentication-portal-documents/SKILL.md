@@ -52,9 +52,32 @@ earlier token with 401. The store must implement `WithRefreshIdentity`; operatio
 inside that callback so credential revocation and identity changes cannot race
 the database operation. Body reads happen before the identity lock. Responses
 are published only after both identity callback and document transaction return.
+These are separate database transactions: a Documents write may commit before
+the outer identity transaction reports failure. Withhold HTTP success and
+reconcile through reads after fresh identity verification; never assume rollback
+of the inner database or automatically replay allocation/reset.
+If the requested mutation completed before any outer identity failure, report
+503 with `code: commit_uncertain`, including outer cancellation or deadline
+expiry. Preserve an uncertain inner transaction error through outer cancellation
+as well. Ordinary failure before mutation remains `storage_unavailable` where
+appropriate. The SQLite identity lock must remain held until the callback
+returns even when its shorter operation budget expires; the containing HTTP
+request can still be live. `TestE2ESQLiteDocumentsExpiredCallbackLock` covers a
+delayed DELETE, blocked concurrent revocation, withheld success, reconciliation
+of a committed deletion or a reader-blocked inner COMMIT, quarantine/reopen only
+for the failed Documents handle, fresh login and successful subsequent revocation.
+Identity quarantine must reject pending requests before their callbacks run.
+Such rejection returns `storage_unavailable` and leaves Documents unchanged;
+it is distinct from failure after an independent Documents mutation completed.
+`TestE2ESQLiteDocumentsQueuedQuarantine` pauses identity admission, forces a real
+account COMMIT failure, and verifies the queued DELETE is denied without entering
+its callback. After draining and reopening, the old session is rejected, a fresh
+login still fetches the file, and an authorized deletion succeeds.
 
-Current support is local authenticated identity stores with transactional
-verification (the local JSON backend is exercised end to end). LDAP and upstream
+Current support includes local JSON and SQLite account stores with transactional
+verification, both exercised through real TLS and browser crypto. The login
+method must equal the selected store’s actual kind; a realm named `local` must
+not cause a SQLite store to impersonate a local JSON store. LDAP and upstream
 OAuth/SAML are not silently mapped from display claims. Ordinary access-only JSON,
 API-key and native body-refresh credentials do not establish the stored browser
 session needed here. Do not weaken this boundary to admit a new client.
@@ -177,7 +200,7 @@ public origin and mount, with a random persistent portal ID. Changing those
 settings requires an explicit migration design; do not silently open old data
 under a new cryptographic context. Keep identity-store names and realm identifiers
 stable as well: the immutable source reservation rejects renames until an explicit migration.
-The owner ID itself stays the local database UUID; do not remap by username.
+The owner ID itself stays the identity database UUID; do not remap by username.
 
 Drain requests before `Portal.Close`; ciphertext survives closure. SQLite uses
 private rollback-journal transactions, strict schema/application validation and
@@ -285,6 +308,10 @@ Binary contract tests cover all first-byte public-point prefixes, noncanonical
 base64url lengths/unused bits, and payload size boundaries. TLS tests reject
 invalid point prefixes and off-curve points even with matching fingerprints,
 and verify valid enrollment, manifests and sharing still work afterward.
+`documents_sqlite_e2e_test.go` runs the shared sixteen-operation, body-boundary,
+reset, session-replacement and Web Crypto journeys against real SQLite accounts.
+It also covers an independent connection revoking roles, fresh epochs after
+reopening and the same UUID under a foreign backend source.
 `documents_concurrency_e2e_test.go` pauses real TLS request bodies after HTTP
 100 Continue, then revokes credentials or replaces a recipient key. Revocation
 must finish while the body is withheld. The resumed request must fail without
@@ -322,3 +349,9 @@ make test-ui
 make openapi-test
 make ci-check
 ```
+
+Transactional HTTP 503 errors carry `code: storage_unavailable` or
+`code: commit_uncertain`. The latter takes precedence over joined authorization
+errors and requires read reconciliation before retrying: a document write can
+commit before the outer identity transaction fails. Ordinary denied-resource
+responses remain generic and disclose no account or document existence.

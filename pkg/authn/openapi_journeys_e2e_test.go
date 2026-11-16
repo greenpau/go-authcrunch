@@ -92,6 +92,22 @@ func TestE2EOpenAPIContractNativeJourneys(t *testing.T) {
 		name string
 		run  func(*testing.T)
 	}{
+		{"legacy_profile_capabilities", TestE2EProfileLegacyStoreDashboard},
+		{"declared_profile_capabilities", TestE2EProfileDeclaredCapabilities},
+		{"password_only_profile_capabilities", TestE2EProfilePasswordOnlyCapabilities},
+		{"sqlite_profile_verifier_failure", TestE2ESQLiteProfileInvalidStoredPassword},
+		{"sqlite_profile_timeout", TestE2ESQLiteProfileStorageTimeout},
+		{"sqlite_profile", TestE2ESQLiteProfileAndAdministration},
+		{"sqlite_admin_lifecycle", TestE2ESQLiteAdminLifecycle},
+		{"sqlite_capabilities", TestE2ESQLiteCapabilitiesDisabledAndUnavailable},
+		{"sqlite_commit_failure", TestE2ESQLiteProfileCommitFailure},
+		{"sqlite_documents_uncertainty", TestE2ESQLiteDocumentsOuterCommitUncertainty},
+		{"sqlite_documents_callback_expiry", TestE2ESQLiteDocumentsExpiredCallbackLock},
+		{"sqlite_documents_queued_quarantine", TestE2ESQLiteDocumentsQueuedQuarantine},
+		{"sqlite_documents", func(t *testing.T) {
+			f, _ := newSQLiteDocumentsE2E(t, "/auth")
+			runDocumentsAuthorizationPersistenceAndIdentity(t, f)
+		}},
 		{"documents", TestE2EDocumentsAuthorizationPersistenceAndIdentity},
 		{"documents_rejections", TestE2EDocumentsRequestBoundariesAndReset},
 		{"documents_reset_confirmation", TestE2EDocumentsResetConfirmationBinding},
@@ -117,7 +133,7 @@ func TestE2EOpenAPIContractNativeJourneys(t *testing.T) {
 	}
 	openAPIJourneyMu.Lock()
 	defer openAPIJourneyMu.Unlock()
-	for _, operation := range []string{"POST /login", "GET /oidc/authorize", "POST /oidc/token", "GET /oidc/userinfo", "POST /oidc/revoke", "POST /cross-device/start", "POST /cross-device/poll", "POST /api/refresh_token", "POST /api/logout"} {
+	for _, operation := range []string{"GET /api/capabilities", "POST /api/profile", "POST /api/server/user", "POST /login", "GET /oidc/authorize", "POST /oidc/token", "GET /oidc/userinfo", "POST /oidc/revoke", "POST /cross-device/start", "POST /cross-device/poll", "POST /api/refresh_token", "POST /api/logout"} {
 		if openAPIJourneyCoverage[operation] == 0 {
 			t.Errorf("native journey did not validate %s", operation)
 		}

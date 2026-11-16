@@ -49,6 +49,11 @@ objects returned to consumers must not alias newly adopted live records.
 `RequestWithIdentity` permits only explicitly listed self-profile operations.
 Require canonical username/email, immutable user ID, credential version and
 backend epoch, enabled account and unlocked state inside the transaction.
+Run a non-nil server-owned `Request.ValidateIdentity` callback under the same
+locks after account validation, before any operation. It checks current session
+membership and must not reenter storage. The TLS test
+`TestE2EProfileRechecksSessionAtTransaction` replaces the browser login after
+admission and proves a delayed password mutation still fails.
 Execute on an isolated in-memory target; persist only a successful mutation,
 and publish detached live state. The unbound generic Request remains a trusted
 programmatic/admin API, not a browser authorization mechanism.

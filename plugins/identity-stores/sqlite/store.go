@@ -26,6 +26,7 @@ import (
 	"errors"
 	"net/mail"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -59,6 +60,8 @@ var ErrUnavailable = sqlitedb.ErrUnavailable
 var ErrCommitUncertain = sqlitedb.ErrCommitUncertain
 
 const dummyHash = "$2a$10$4xaU6KMqOfcdoZ5DhtIvKuePgy62eGAvZYYwGM/f5/fwB9ZXEAgtG"
+
+const maxRoleDataSize = 8192
 
 // Account contains trusted account attributes, without credentials or runtime state.
 type Account struct {
@@ -120,6 +123,13 @@ func normalizeAccount(input *Account) (Account, error) {
 		if !sqlitedb.ValidText(role, 128) {
 			return Account{}, ErrInvalid
 		}
+	}
+	// The reader bounds the serialized collection. JSON escaping can expand
+	// otherwise valid role strings beyond that limit; reject before persistence
+	// so a successful create or role change can never make the account unreadable.
+	data, err := json.Marshal(a.Roles)
+	if err != nil || len(data) > maxRoleDataSize {
+		return Account{}, ErrInvalid
 	}
 	return a, nil
 }
@@ -249,7 +259,7 @@ func (s *Store) lookup(ctx context.Context, tx *sql.Tx, selector string, byID bo
 	if err != nil {
 		return r, err
 	}
-	if len(data) > 8192 || json.Unmarshal(data, &r.account.Roles) != nil {
+	if len(data) > maxRoleDataSize || json.Unmarshal(data, &r.account.Roles) != nil {
 		return r, ErrUnavailable
 	}
 	if _, err := normalizeAccount(&r.account); err != nil {
@@ -441,8 +451,14 @@ func (s *Store) setEnabled(username, email string, enabled bool) error {
 func (s *Store) FetchUserData(username, email string) (map[string]any, error) {
 	var out map[string]any
 	err := s.mutate(context.Background(), username, email, func(_ context.Context, _ *sql.Tx, a accountRecord) error {
-		out = accountMap(a.id, a.account)
-		out["disabled"] = !a.enabled
+		u := profileUser(a)
+		out = map[string]any{"id": u.ID, "username": u.Username, "email_address": u.EmailAddress,
+			"roles": u.Roles, "disabled": u.Disabled, "credential_version": u.CredentialVersion,
+			"kind": "sqlite", "credential_counts": map[string]int{"password": 1},
+			"capabilities": s.GetCapabilities()}
+		if u.Name != nil {
+			out["name"] = u.Name
+		}
 		return nil
 	})
 	if err != nil {
@@ -452,13 +468,17 @@ func (s *Store) FetchUserData(username, email string) (map[string]any, error) {
 }
 
 // GetUsersMetadata lists bounded non-secret accounts in the selected realm.
-func (s *Store) GetUsersMetadata(_ string) ([]map[string]any, error) {
+func (s *Store) GetUsersMetadata(query string) ([]map[string]any, error) {
 	if s == nil || s.db == nil {
 		return nil, ErrUnavailable
 	}
-	var result []map[string]any
+	// This is a complete bounded collection, not an implicitly truncated page.
+	if query != "" && query != "all" {
+		return nil, ErrUnsupported
+	}
+	result := make([]map[string]any, 0)
 	err := s.db.Read(context.Background(), func(ctx context.Context, tx *sql.Tx) error {
-		rows, err := tx.QueryContext(ctx, "SELECT id,username,email,name,enabled FROM accounts WHERE realm=? ORDER BY username LIMIT 10001", s.config.Realm)
+		rows, err := tx.QueryContext(ctx, "SELECT id,username,email,name,enabled,roles FROM accounts WHERE realm=? ORDER BY username LIMIT 10001", s.config.Realm)
 		if err != nil {
 			return err
 		}
@@ -466,10 +486,15 @@ func (s *Store) GetUsersMetadata(_ string) ([]map[string]any, error) {
 		for rows.Next() {
 			var id, username, email, name string
 			var enabled bool
-			if err := rows.Scan(&id, &username, &email, &name, &enabled); err != nil {
+			var roleData []byte
+			if err := rows.Scan(&id, &username, &email, &name, &enabled, &roleData); err != nil {
 				return err
 			}
-			result = append(result, map[string]any{"id": id, "username": username, "email": email, "name": name, "disabled": !enabled})
+			var roles []string
+			if len(roleData) > maxRoleDataSize || json.Unmarshal(roleData, &roles) != nil {
+				return ErrUnavailable
+			}
+			result = append(result, map[string]any{"id": id, "username": username, "email": email, "name": name, "disabled": !enabled, "roles": roles})
 			if len(result) > 10000 {
 				return ErrUnavailable
 			}
@@ -487,7 +512,7 @@ func (s *Store) GetMetadata(_ string) (map[string]any, error) {
 	if err := s.Configure(); err != nil {
 		return nil, err
 	}
-	return map[string]any{"kind": "sqlite", "realm": s.config.Realm, "password_only": true}, nil
+	return map[string]any{"kind": "sqlite", "realm": s.config.Realm, "password_only": true, "capabilities": s.GetCapabilities(), "max_users": 10000, "query_supported": false}, nil
 }
 
 // GetName returns the configured portal selection name.
@@ -578,9 +603,37 @@ func (s *Store) OverwriteUserRoles(username, email string, roles []string) (map[
 	return out, nil
 }
 
-// AddUserRoles is unsupported; callers must supply a complete replacement.
-func (s *Store) AddUserRoles(string, string, []string) (map[string]any, error) {
-	return nil, ErrUnsupported
+// AddUserRoles atomically merges distinct roles with the current record.
+// A retry that adds no roles is a no-op and does not revoke new login evidence.
+func (s *Store) AddUserRoles(username, email string, roles []string) (map[string]any, error) {
+	if len(roles) == 0 || len(roles) > 32 {
+		return nil, ErrInvalid
+	}
+	var out map[string]any
+	err := s.mutate(context.Background(), username, email, func(ctx context.Context, tx *sql.Tx, a accountRecord) error {
+		merged := slices.Clone(a.account.Roles)
+		for _, role := range roles {
+			if !slices.Contains(merged, role) {
+				merged = append(merged, role)
+			}
+		}
+		a.account.Roles = merged
+		normalized, err := normalizeAccount(&a.account)
+		if err != nil {
+			return err
+		}
+		data, _ := json.Marshal(normalized.Roles)
+		// The conditional update preserves the version when the set did not change.
+		if _, err := tx.ExecContext(ctx, "UPDATE accounts SET roles=?,version=version+1 WHERE id=? AND roles<>?", data, a.id, data); err != nil {
+			return err
+		}
+		out = accountMap(a.id, normalized)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // OverwriteUserAuthChallengeRules rejects unsupported account-specific factors.

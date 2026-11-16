@@ -47,7 +47,6 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn/transformer"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/ids"
-	"github.com/greenpau/go-authcrunch/pkg/ids/local"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	cfgutil "github.com/greenpau/go-authcrunch/pkg/util/cfg"
 )
@@ -59,12 +58,17 @@ type documentsE2E struct {
 	declaredMount  string
 	mu             sync.RWMutex
 	portal         *authn.Portal
-	store          *local.IdentityStore
+	store          ids.IdentityStore
 	newPortal      func() *authn.Portal
 }
 
 func TestE2EDocumentsRejectsReplacedSessionToken(t *testing.T) {
 	f := newDocumentsE2E(t, "/auth", true)
+	runDocumentsRejectsReplacedSessionToken(t, f)
+}
+
+func runDocumentsRejectsReplacedSessionToken(t *testing.T, f *documentsE2E) {
+	t.Helper()
 	client := *f.client
 	var err error
 	client.Jar, err = cookiejar.New(nil)
@@ -123,7 +127,13 @@ func newDocumentsE2E(t *testing.T, base string, enabled bool, customize ...func(
 	if err := store.Configure(); err != nil {
 		t.Fatal(err)
 	}
-	f := &documentsE2E{base: base, store: store.(*local.IdentityStore), database: filepath.Join(dir, "documents.db")}
+	return newDocumentsRuntime(t, base, enabled, store, filepath.Join(dir, "documents.db"), customize...)
+}
+
+func newDocumentsRuntime(t *testing.T, base string, enabled bool, store ids.IdentityStore, database string, customize ...func(*authn.PortalConfig)) *documentsE2E {
+	t.Helper()
+	f := &documentsE2E{base: base, store: store, database: database}
+
 	f.server = httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/_documents_test/":
@@ -371,6 +381,11 @@ func (f *documentsE2E) ready(t *testing.T, token string, key documents.Key) docu
 }
 func TestE2EDocumentsAuthorizationPersistenceAndIdentity(t *testing.T) {
 	f := newDocumentsE2E(t, "/tenant/xauth", true)
+	runDocumentsAuthorizationPersistenceAndIdentity(t, f)
+}
+
+func runDocumentsAuthorizationPersistenceAndIdentity(t *testing.T, f *documentsE2E) {
+	t.Helper()
 	aliceToken, bobToken := f.login(t, "alice"), f.login(t, "bob")
 	alice, bob := f.enroll(t, aliceToken), f.enroll(t, bobToken)
 	if alice.UserID == bob.UserID {
@@ -432,7 +447,7 @@ func TestE2EDocumentsAuthorizationPersistenceAndIdentity(t *testing.T) {
 	if err := f.store.Request(operator.IdentifyUser, lookup); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.store.RevokeUserSessions(t.Context(), lookup.Authentication.UserID); err != nil {
+	if _, err := f.store.OverwriteUserRoles("alice", "alice@example.test", []string{"authp/user"}); err != nil {
 		t.Fatal(err)
 	}
 	f.message(t, aliceToken, "file.fetch", map[string]any{"id": file.ID}, 401)
@@ -442,7 +457,7 @@ func TestE2EDocumentsAuthorizationPersistenceAndIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.message(t, aliceToken, "file.fetch", map[string]any{"id": file.ID}, 401)
-	if err := f.store.Request(operator.AddUser, &requests.Request{User: requests.User{Username: "alice", Email: "alice@example.test", Password: tests.TestPwd1Hash(t), Roles: []string{"authp/user"}}}); err != nil {
+	if err := f.store.Request(operator.AddUser, &requests.Request{User: requests.User{Username: "alice", Email: "alice@example.test", Password: tests.TestPwd1, Roles: []string{"authp/user"}}}); err != nil {
 		t.Fatal(err)
 	}
 	recreated := f.login(t, "alice")
@@ -485,6 +500,11 @@ func TestE2EDocumentsPublicPointEncoding(t *testing.T) {
 
 func TestE2EDocumentsRequestBoundariesAndReset(t *testing.T) {
 	f := newDocumentsE2E(t, "/auth", true)
+	runDocumentsRequestBoundariesAndReset(t, f)
+}
+
+func runDocumentsRequestBoundariesAndReset(t *testing.T, f *documentsE2E) {
+	t.Helper()
 	token := f.login(t, "alice")
 	key := f.enroll(t, token)
 	registration, err := json.Marshal(map[string]any{"key": key})
@@ -725,7 +745,7 @@ func TestE2EDocumentsRejectsCollidingIdentityStore(t *testing.T) {
 	original := f.store
 	f.mu.Lock()
 	f.portal.Close()
-	f.store = other.(*local.IdentityStore)
+	f.store = other
 	f.portal = f.newPortal()
 	f.mu.Unlock()
 	token = f.login(t, "alice")
@@ -745,6 +765,11 @@ func TestE2EDocumentsRejectsCollidingIdentityStore(t *testing.T) {
 
 func TestE2EDocumentsResetConfirmationBinding(t *testing.T) {
 	f := newDocumentsE2E(t, "/auth", true)
+	runDocumentsResetConfirmationBinding(t, f)
+}
+
+func runDocumentsResetConfirmationBinding(t *testing.T, f *documentsE2E) {
+	t.Helper()
 	aliceToken, bobToken := f.login(t, "alice"), f.login(t, "bob")
 	alice, bob := f.enroll(t, aliceToken), f.enroll(t, bobToken)
 	bobFile := f.ready(t, bobToken, bob)

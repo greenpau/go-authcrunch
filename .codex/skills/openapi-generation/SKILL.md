@@ -44,6 +44,10 @@ ordering, revocation, expiry and consent even when the JSON shape stays stable.
 
 `assets/openapi/reviewed-sources.yaml` fingerprints local contract inputs.
 Generation, ordinary Go tests and CI reject added/changed/removed inputs.
+The inventory also includes the SQLite account store and its reusable parser:
+identity-bound Profile, safe admin DTOs, capability discovery and Documents
+admission depend on its proof, transaction and metadata contracts. Maintain the
+CLI isolated-checkout inventory and drift tests for this owner.
 The inventory also includes the SQLite OAuth login store, registration workflow
 and their private SQLite helper, plus messaging transports and the SQLite outbox:
 durable acceptance and delivery failures affect registration, and persistence

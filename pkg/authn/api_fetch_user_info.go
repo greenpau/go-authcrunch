@@ -52,10 +52,10 @@ func (p *Portal) FetchUserInfo(
 			zap.String("request_id", rr.ID),
 			zap.Error(err),
 		)
-		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
+		return profileBackendError(w, rr, resp, err, http.StatusInternalServerError)
 	}
 	user := rr.Response.Payload.(*identity.User)
-	entry["metadata"] = user.GetMetadata()
+	entry["metadata"] = profileMetadata(user)
 
 	// User Roles
 

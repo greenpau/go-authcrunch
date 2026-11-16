@@ -8,5 +8,9 @@ properties:
     type: integer
   message:
     type: string
+  code:
+    type: string
+    enum: [storage_unavailable, commit_uncertain]
+    description: Present for transactional 503 failures. An uncertain outcome can include a committed document mutation followed by any identity-store failure, including cancellation or deadline expiry. An uncertain inner transaction also remains uncertain after outer cancellation; reconcile through reads after fresh identity verification before considering a retry.
 description: Generic HTTP status and reason phrase. Does not expose account identifiers, database paths,
   SQL, or ciphertext.

@@ -62,12 +62,20 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 		return p.handleJSONErrorWithLog(ctx, w, r, rr, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 	}
 
+	// Library callers may omit API configuration entirely. Capability discovery
+	// and independently gated routes remain reachable; other APIs stay disabled.
+	api := p.config.API
+	if api == nil {
+		api = &APIConfig{}
+	}
 	switch {
+	case r.URL.Path == rr.Upstream.BasePath+"api/capabilities" && r.URL.RawPath == "":
+		return p.handleAPICapabilities(ctx, w, r, rr, usr)
 	case strings.HasSuffix(r.URL.Path, privateKeysPath):
 		return p.handleAPIFetchPrivateKeys(ctx, w, r, rr, usr)
 	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/system"):
 		return p.handleAPISystem(ctx, w, r, rr, usr)
-	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/realms"):
+	case api.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/realms"):
 		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
 			p.logger.Debug(
 				"User is not authorized accessing API",
@@ -79,7 +87,7 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
 		}
 		return p.handleAPIListRealms(ctx, w, r, rr, usr)
-	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/users"):
+	case api.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/users"):
 		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
 			p.logger.Debug(
 				"User is not authorized accessing API",
@@ -91,7 +99,7 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
 		}
 		return p.handleAPIListUsers(ctx, w, r, rr, usr)
-	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/user"):
+	case api.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/user"):
 		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
 			p.logger.Debug(
 				"User is not authorized accessing API",
@@ -103,7 +111,7 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
 		}
 		return p.handleAPICrudUser(ctx, w, r, rr, usr)
-	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/info"):
+	case api.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/info"):
 		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
 			p.logger.Debug(
 				"User is not authorized accessing API",
@@ -115,7 +123,7 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
 		}
 		return p.handleAPIRealmInfo(ctx, w, r, rr, usr)
-	case p.config.API.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/reload"):
+	case api.AdminEnabled && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/server/reload"):
 		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
 			p.logger.Debug(
 				"User is not authorized accessing API",
@@ -127,7 +135,7 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
 		}
 		return p.handleAPIReloadRealm(ctx, w, r, rr, usr)
-	case p.config.API.AdminEnabled && r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/api/server/metadata"):
+	case api.AdminEnabled && r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/api/server/metadata"):
 		if err := p.authorizedRole(usr, []role.Kind{role.Admin}, rr.Response.Authenticated); err != nil {
 			p.logger.Debug(
 				"User is not authorized accessing API",
@@ -139,7 +147,7 @@ func (p *Portal) handleAPI(ctx context.Context, w http.ResponseWriter, r *http.R
 			return p.handleJSONError(ctx, w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
 		}
 		return p.handleAPIMetadata(ctx, w, r, rr, usr)
-	case p.config.API.ProfileEnabled && r.Method == "POST" && strings.Contains(r.URL.Path, "/api/profile"):
+	case api.ProfileEnabled && r.Method == "POST" && strings.Contains(r.URL.Path, "/api/profile"):
 		if err := p.authorizedRole(usr, []role.Kind{role.Admin, role.User}, rr.Response.Authenticated); err != nil {
 			p.logger.Debug(
 				"User is not authorized accessing API",

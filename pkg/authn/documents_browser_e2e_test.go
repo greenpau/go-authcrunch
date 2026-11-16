@@ -28,6 +28,11 @@ import (
 
 func TestE2EDocumentsBrowserEncryption(t *testing.T) {
 	f := newDocumentsE2E(t, "/auth", true)
+	runDocumentsBrowserEncryption(t, f)
+}
+
+func runDocumentsBrowserEncryption(t *testing.T, f *documentsE2E) {
+	t.Helper()
 	tokens := map[string]string{"alice": f.login(t, "alice"), "bob": f.login(t, "bob"), "charlie": f.login(t, "charlie")}
 	encoded, err := json.Marshal(tokens)
 	if err != nil {

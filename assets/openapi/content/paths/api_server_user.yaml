@@ -18,7 +18,7 @@ post:
     null or non-string email values return HTTP 400.
     Add/reset returns a generated password. Application failures may be HTTP 200 with status=failure.
     Unknown operation names return 400; backend failures are generally status=failure with HTTP 200; info
-    lookup failures use HTTP 500. Unknown realms return JSON null with HTTP 200. Unlike the profile replacement
+    lookup failures use HTTP 500. Unknown realms return HTTP 404. Unsupported declared operations return 501 with code unsupported_capability. SQLite supports atomic additive/replacement roles but not stored challenge-rule replacement. Unlike the profile replacement
     operation, admin overwrite_auth_challenges requires a nonempty array.
 
 
@@ -37,7 +37,7 @@ post:
     lookup indexes while retaining the account in user listings; info and ordinary mutations cannot find
     that disabled account until it is enabled or the database is reloaded. Creation syntax is distinct
     from registration. A provided user.password is ignored by add/reset_password: save the generated response
-    password. Role mutation is not atomic on failure; retrieve info after an error to verify current state.
+    password. Legacy local role mutation is not atomic on failure; retrieve info after an error to verify current state.
     Successful security changes advance credential_version; existing stateless access JWTs are not themselves
     rewritten.'
   security:
@@ -62,6 +62,13 @@ post:
       $ref: ../components/responses/PortalError.yaml
     '403':
       $ref: ../components/responses/PortalError.yaml
+    '404':
+      $ref: ../components/responses/PortalError.yaml
+    '501':
+      description: Account store does not implement the operation.
+      content:
+        application/json:
+          schema: {$ref: ../components/schemas/CapabilityError.yaml}
     '413':
       $ref: ../components/responses/PortalError.yaml
     '500':

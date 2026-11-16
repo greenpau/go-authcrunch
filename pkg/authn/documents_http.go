@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/greenpau/go-authcrunch/internal/sqlitedb"
 	"github.com/greenpau/go-authcrunch/pkg/authn/documents"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/role"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
@@ -116,6 +117,9 @@ func parseDocumentsPayload(command documentsCommand, body []byte) (documentsComm
 
 func documentsStatus(err error) int {
 	switch {
+	case errors.Is(err, sqlitedb.ErrCommitUncertain), errors.Is(err, sqlitedb.ErrUnavailable):
+		// A joined authorization error must not hide a potentially committed write.
+		return http.StatusServiceUnavailable
 	case errors.Is(err, documents.ErrInvalid):
 		return http.StatusBadRequest
 	case errors.Is(err, documents.ErrNotFound):
@@ -265,7 +269,7 @@ func (p *Portal) handleAPIDocuments(ctx context.Context, w http.ResponseWriter, 
 	}
 	store := p.getIdentityStoreByRealm(usr.Authenticator.Realm)
 	bound, ok := store.(refreshIdentityStore)
-	if !ok || store.GetName() != usr.Authenticator.Name || usr.Authenticator.Method != "local" {
+	if !ok || store.GetName() != usr.Authenticator.Name || usr.Authenticator.Method != store.GetKind() {
 		return fail(http.StatusForbidden)
 	}
 	// Read the bounded body before entering the identity transaction. A slow
@@ -303,6 +307,7 @@ func (p *Portal) handleAPIDocuments(ctx context.Context, w http.ResponseWriter, 
 		return fail(http.StatusForbidden)
 	}
 	var result any
+	completedMutation := false
 	err = bound.WithRefreshIdentity(ctx, usr.LoginEvidence, func(current identity.RefreshIdentity) error {
 		if current.Username != usr.LoginUsername {
 			return identity.ErrRefreshIdentityDenied
@@ -315,10 +320,24 @@ func (p *Portal) handleAPIDocuments(ctx context.Context, w http.ResponseWriter, 
 		}
 		var err error
 		result, err = p.executeDocuments(ctx, command, userID)
+		completedMutation = err == nil && method != http.MethodGet
 		return err
 	})
 	if err != nil {
-		return fail(documentsStatus(err))
+		if completedMutation {
+			// The Documents transaction committed independently. An outer
+			// identity timeout/rollback cannot undo it or make replay safe.
+			err = errors.Join(sqlitedb.ErrCommitUncertain, err)
+		}
+		status := documentsStatus(err)
+		if status == http.StatusServiceUnavailable {
+			code := "storage_unavailable"
+			if errors.Is(err, sqlitedb.ErrCommitUncertain) {
+				code = "commit_uncertain"
+			}
+			return writeDocumentsJSON(w, rr, status, map[string]any{"status": status, "message": http.StatusText(status), "code": code})
+		}
+		return fail(status)
 	}
 	return writeDocumentsJSON(w, rr, http.StatusOK, result)
 }

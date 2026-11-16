@@ -592,6 +592,8 @@ func TestTagCompliance(t *testing.T) {
 				DisableTagMismatch: true,
 			},
 		},
+		{name: "test identity.StoreCapabilities struct", entry: &identity.StoreCapabilities{}, opts: &Options{DisableTagOnEmpty: true}},
+		{name: "test authn.FeatureAvailability struct", entry: &authn.FeatureAvailability{}, opts: &Options{DisableTagOnEmpty: true}},
 		{
 			name:  "test identity.UserMetadata struct",
 			entry: &identity.UserMetadata{},

@@ -12,7 +12,7 @@ post:
 
     The local store ignores query and returns every account, including disabled accounts, without pagination
     or a guaranteed sort order. An unknown realm returns count=0 and users=[]. Each roles list reflects
-    stored roles, before portal transforms.
+    stored roles, before portal transforms. SQLite returns a complete username-sorted list, including disabled accounts, with a 10,000-account bound. It accepts only empty or all queries. Unsupported queries or exceeded bounds fail with HTTP 500, never a truncated success. Empty SQLite realms return users=[].
 
 
     The admin decoder consumes one JSON value and ignores unknown fields/trailing data; it does not independently
@@ -46,6 +46,7 @@ post:
     '500':
       $ref: ../components/responses/PortalError.yaml
   x-source-files:
+  - plugins/identity-stores/sqlite/store.go
   - pkg/authn/handle_api_list_users.go
   - pkg/authn/respond_api.go
   - pkg/authn/api_origin.go

@@ -1,34 +1,21 @@
 type: object
-description: Illustrative fetch_debug entry. The database object is hard-coded demonstration data, not
-  this deployment’s storage settings.
+description: Safe fetch_debug entry identifying the linked library and selected store. No database path, host or credentials are disclosed.
 properties:
   version:
     type: string
     description: Linked identity-library version.
   database:
     type: object
-    description: Demonstration database metadata.
+    description: Configured backend identifiers.
     properties:
       name:
         type: string
-        description: Example database name.
-        const: localdb
-      host:
-        type: string
-        description: Example host.
-        const: localhost
-      port:
-        type: integer
-        description: Example TCP port.
-        const: 5432
+        description: Configured store name.
       engine:
         type: string
-        description: Example database engine.
-        const: postgresql
+        description: Authentic store kind, such as local or sqlite.
     required:
     - name
-    - host
-    - port
     - engine
 required:
 - version

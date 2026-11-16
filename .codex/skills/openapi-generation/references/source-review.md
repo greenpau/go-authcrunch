@@ -7,7 +7,7 @@ handlers, serializers, validators and configuration. All evidence paths are
 relative to this checkout. The reviewed source inventory fingerprints root
 configuration/runtime, `pkg/httpserver`, `cmd/authdb`, authentication/authorization,
 wire models, identity stores/providers, OIDC, keys, registry, challenges, tagging,
-random encodings, `pkg/portalpath`, the SQLite ticket HTTP provider and utility
+random encodings, `pkg/portalpath`, the SQLite account and ticket HTTP providers and utility
 validators. It detects newly added handlers and
 ignores tests. Review external dependency changes separately.
 Redirect policy, URL construction/sanitization, forwarded-address helpers and
@@ -34,8 +34,8 @@ it inherits the same document server as portal federation and the other APIs.
 | Refresh/session/logout | `pkg/authn/handle_api_refresh_token.go`, `token_refresh_*.go`, `pkg/authn/cookie/*.go` | Body/cookie transport, exact HTTPS origin, CSRF header, preconditions, replay, capacity and invalidation |
 | Claims/beacon | `pkg/authn/handle_json_whoami.go`, `handle_json_beacon.go`, `handle_http_whoami.go`, `pkg/util/request_id.go` | Exact Accept negotiation, HTML redirects versus JSON denial, custom/transformed claims, probe precedence, raw `OK` with JSON media type |
 | Public signing keys | `pkg/authn/handle_http_jwks.go`, `pkg/kms/*` | Public GET/HEAD, first eligible signer, HMAC-only absence, no secrets/export dependency, empty errors |
-| Profile | `pkg/authn/handle_api_profile.go`, `api_*.go`, `profile_auth_challenges.go`, `pkg/identity/*` | Stored local browser session and canonical identity, kind discriminator, credential ownership, factor mutations and invalidation |
-| Documents | `pkg/authn/documents*.go`, `pkg/authn/documents/*`, `pkg/authn/documents/client/crypto.mjs` | GET/PUT/POST/DELETE resource paths; path/query parameters and direct JSON write fields; exact local database user IDs; browser-encrypted vault/content, chunk transactions, sharing and key reset |
+| Profile/capabilities | `pkg/authn/handle_api_profile.go`, `handle_api_capabilities.go`, `api_*.go`, `profile_auth_challenges.go`, `pkg/identity/*`, `plugins/identity-stores/sqlite/*` | Exact stored login and canonical identity, backend support versus configuration/permission, kind discriminator, partial counts, credential ownership and transaction-time session validation |
+| Documents | `pkg/authn/documents*.go`, `pkg/authn/documents/*`, `pkg/authn/documents/client/crypto.mjs` | GET/PUT/POST/DELETE resource paths; path/query parameters and direct JSON write fields; exact immutable local/SQLite account IDs; browser-encrypted vault/content, chunk transactions, sharing and key reset |
 | Administration | `pkg/authn/handle_api_{list_realms,list_users,realm_info,reload_realm,crud_user,metadata,private_keys}.go`, `pkg/identity/*` | Feature flags, administrator role, per-operation JSON, status within HTTP 200, key export formats and independent public JWKS |
 | System | `pkg/authn/handle_api_system.go`, `pkg/system/*` | AuthCrunch encrypted wire content and footer key ID, encrypted authenticated success, JSON error envelopes on failure |
 | Portal OpenID Provider | `pkg/oidc/*`, local `caddyfile_oauth_application.go`, `caddyfile_authn_oidc.go` | Discovery versus portal JWKS, Authorization Code/PKCE, client auth, consent, opaque access tokens, rotating OP refresh, revoke, registered redirect trust |
@@ -73,7 +73,7 @@ for final field names and omissions.
 - Realm/user metadata and profile entries vary by operation/backend. Keep open
   portions explicit instead of inventing exhaustive DTOs. Admin mutation HTTP
   200 can represent application failure; unknown realms have handler-specific
-  empty, null or 404 responses.
+  empty or 404 responses (account CRUD returns 404).
 - `/api/server/metadata` writes JSON with a text media type; `/beacon` emits
   non-JSON `OK` with a JSON media type. JWKS errors can have no body. Document
   and test those wire behaviors instead of silently normalizing them.

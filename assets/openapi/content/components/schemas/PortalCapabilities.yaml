@@ -1,0 +1,37 @@
+type: object
+description: Authenticated capability snapshot scoped to the exact stored login and its selected backend. No storage paths, credentials, account enumeration or resource existence is disclosed. Does not replace authorization or promise that an operation will commit.
+additionalProperties: false
+required: [backend, store, profile, admin, documents, oidc, jwks, private_key_export]
+properties:
+  backend:
+    type: object
+    required: [kind, name, realm]
+    additionalProperties: false
+    properties:
+      kind:
+        type: string
+        description: Authentic login kind, such as local, sqlite or oauth2; never relabeled for compatibility.
+      name:
+        type: string
+        description: Selected backend name.
+      realm:
+        type: string
+        description: Selected backend realm.
+  store:
+    $ref: StoreCapabilities.yaml
+  profile:
+    $ref: FeatureAvailability.yaml
+    description: Profile support requires at least one declared Profile operation family and the selected store's identity-bound operation interface. Information reads are not required when another family, such as password changes, is implemented. Metadata alone does not establish usable support.
+  admin:
+    $ref: FeatureAvailability.yaml
+  documents:
+    $ref: FeatureAvailability.yaml
+  oidc:
+    $ref: FeatureAvailability.yaml
+    description: Global provider enablement, current backend adapter support and configured realm eligibility. SQLite remains unsupported even if another local realm has a provider.
+  jwks:
+    $ref: FeatureAvailability.yaml
+  private_key_export:
+    $ref: FeatureAvailability.yaml
+x-source-files:
+- pkg/authn/handle_api_capabilities.go

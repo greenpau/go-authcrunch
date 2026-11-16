@@ -161,7 +161,7 @@ subsequent profile operations with the same recovery navigation.
 | 409 | Fetch could not resolve the current saved policy in this context. Offer correction/reset where a current session remains valid; portal configuration may need administrator attention. |
 | 415 | Send `application/json`; text/plain JSON is not supported. |
 | 500 | Backend read/write failed; show an error. The bound transaction rolls back failed writes. |
-| 501 | The profile account uses an unsupported, non-local authentication backend. |
+| 501 | The backend does not implement stored authentication flows (including SQLite). |
 
 Do not infer a successful write from a timeout or automatically replay it:
 the server may have committed before the response was lost. A fresh login

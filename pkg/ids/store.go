@@ -52,6 +52,8 @@ type IdentityStore interface {
 
 // IdentityRequestStore is an optional identity-store capability for profile
 // operations bound to the immutable authentication evidence in the request.
+// Implementations must call a non-nil Request.ValidateIdentity after checking
+// evidence inside the operation's transaction, before reading or mutating data.
 type IdentityRequestStore interface {
 	RequestWithIdentity(operator.Type, *requests.Request) error
 }

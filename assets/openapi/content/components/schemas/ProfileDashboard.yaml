@@ -12,7 +12,7 @@ properties:
       roles after transforms.
   asset_count:
     type: object
-    description: Counts returned by each credential store query.
+    description: Counts for supported credential collections only. Missing counts mean unsupported, not zero. SQLite currently returns an empty object; consult capabilities before offering credential controls.
     properties:
       api_key:
         type: integer
@@ -31,21 +31,18 @@ properties:
         type: integer
         description: MFA records including disabled records.
         minimum: 0
-    required:
-    - api_key
-    - ssh_key
-    - gpg_key
-    - mfa_2fa
+  capabilities:
+    $ref: StoreCapabilities.yaml
+    description: Present only when the backend declares capability metadata. Older identity-bound stores retain their existing collection queries without a fabricated declaration.
   connected_accounts:
     type: array
     items: {}
-    description: Reserved field; the selected implementation always returns an empty array.
+    description: Reserved field; the local backend returns an empty array. SQLite omits it; this placeholder never establishes connection support.
     maxItems: 0
 required:
 - metadata
 - roles
 - asset_count
-- connected_accounts
 x-source-files:
 - pkg/authn/api_fetch_user_dashboard_data.go
 - pkg/identity/database.go

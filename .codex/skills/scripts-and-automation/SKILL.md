@@ -11,6 +11,19 @@ The root Makefile is the public automation surface. Helper scripts live under
 `assets/scripts/`. Apply `testing-and-ci` for change-scoped test selection,
 execution limits, and report evidence. Select affected targets or fixture files
 for local validation; reserve `make ci-check` for justified full-gate work.
+
+Make prefers `python3.14` when installed and otherwise uses `python3`. An explicit
+`PYTHON` environment or command-line override takes precedence and is exported
+to child workflows. Check the actual interpreter with `python3.14 --version`;
+the unversioned `python3` command can still resolve to an older system runtime.
+When installed, use `python3.14 assets/scripts/<script>.py` for direct invocations.
+Python subprocesses use `sys.executable`; scripts that start Make preserve an
+explicit `PYTHON`, defaulting to their own interpreter. Do not rediscover Python
+through PATH inside a selected workflow. The interpreter-selection fixture
+checks default/fallback/override behavior through real Make and unittest;
+change-selection and CI-shard E2E tests also trap unintended rediscovery while
+running real Go/tested consumers.
+
 Use [release-and-versioning](../release-and-versioning/SKILL.md) to maintain the
 fixed `1.<minor>.<patch>` version namespace, synchronize versions, validate CI
 artifact identity, and publish requested patch/minor releases.
@@ -125,7 +138,8 @@ temporary checkouts and verifies that source and test-file warnings still fail.
 Read `go.mod` for the Go language minimum and the checked-in CI/release
 workflows for compiler, Node and Python selections. Qualify production Go
 builds with a supported patched compiler independently of the language
-minimum. Use the Python minimum required by the repository scripts. `go.mod`
+minimum. Select Python as described above while preserving documented script
+compatibility requirements. `go.mod`
 and `go.sum` pin `tested`, `versioned`, and `golint`; never replace the pinned
 lifecycle with global tools installed at `@latest`. `make install-test-tools`
 resolves `go tool tested` without modifying module manifests or global
@@ -171,7 +185,7 @@ Generation requires Python 3.9+ (override Make's `PYTHON` when needed) and
 `gofmt` on PATH. It uses only the Python standard library and this checkout;
 no sibling repository, autopep8, or global versioned binary is needed. Direct
 invocation resolves the repository from the script path, regardless of the
-working directory. Run `python3 assets/scripts/generate_acl.py --check` to
+working directory. Run `python3.14 assets/scripts/generate_acl.py --check` to
 detect missing or stale files without writing (exit 1 for drift, 2 for tool or
 filesystem failures). Generation renders and formats all four files before
 staging replacements, so rendering/formatting/staging failures preserve existing
@@ -193,7 +207,7 @@ guard applies only to custom list comparisons. The
 [ACL owner](../authorization-policy-acl/SKILL.md) defines claim projection,
 type validation, public parser APIs, and independent runtime coverage.
 
-Run `python3 -m unittest discover -s assets/scripts/tests -p generate_acl_test.py -v` and
+Run `python3.14 -m unittest discover -s assets/scripts/tests -p generate_acl_test.py -v` and
 `make test TEST_DIR='./pkg/acl' COVERAGE_DIR='.coverage/acl'` after changes.
 `assets/scripts/tests/generate_acl_test.py` exercises the real Make target in an
 isolated checkout with spaces in its path, reconstructs all four deleted files,
@@ -225,7 +239,7 @@ files, removes stale assets, and rolls back replacement failures. It never
 builds or writes the source checkout. Rebuild the embedding binary afterward.
 `apps.go` embeds the three directories; `NewAppAssetLibrary` inventories all
 assets, including split chunks, fonts and translations, without a generated map.
-Run `python3 -m unittest discover -s assets/scripts/tests -p ui_apps_test.py -v`
+Run `python3.14 -m unittest discover -s assets/scripts/tests -p ui_apps_test.py -v`
 for the real Make/import workflow and rejection/preservation checks.
 
 Every entry uses the literal HTML base marker `__AUTHCRUNCH_APP_BASE_PATH__`;

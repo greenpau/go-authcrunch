@@ -15,7 +15,10 @@
 package authn_test
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
+	"net/http/cookiejar"
 	"strings"
 	"testing"
 
@@ -23,8 +26,158 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/authn"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 )
+
+// Preserve the authenticated operation contracts of an older injected store,
+// while intentionally omitting the newly optional capability metadata method.
+type legacyProfileE2EStore struct {
+	ids.IdentityStore
+	ids.IdentityRequestStore
+}
+
+func (s *legacyProfileE2EStore) WithRefreshIdentity(ctx context.Context, proof requests.AuthenticationEvidence, apply func(identity.RefreshIdentity) error) error {
+	return s.IdentityStore.(interface {
+		WithRefreshIdentity(context.Context, requests.AuthenticationEvidence, func(identity.RefreshIdentity) error) error
+	}).WithRefreshIdentity(ctx, proof, apply)
+}
+
+// Metadata can survive a host adapter even when its operation interface does
+// not. The portal must inspect both before advertising usable profile support.
+type metadataProfileE2EStore struct {
+	ids.IdentityStore
+	passwordOnly bool
+}
+
+func (s *metadataProfileE2EStore) GetCapabilities() identity.StoreCapabilities {
+	if s.passwordOnly {
+		return identity.StoreCapabilities{PasswordChange: true}
+	}
+	return identity.StoreCapabilities{ProfileRead: true}
+}
+
+func (s *metadataProfileE2EStore) WithRefreshIdentity(ctx context.Context, proof requests.AuthenticationEvidence, apply func(identity.RefreshIdentity) error) error {
+	return s.IdentityStore.(interface {
+		WithRefreshIdentity(context.Context, requests.AuthenticationEvidence, func(identity.RefreshIdentity) error) error
+	}).WithRefreshIdentity(ctx, proof, apply)
+}
+
+type boundMetadataProfileE2EStore struct {
+	*metadataProfileE2EStore
+	ids.IdentityRequestStore
+}
+
+func TestE2EProfilePasswordOnlyCapabilities(t *testing.T) {
+	f := newDocumentsE2E(t, "/auth", false, func(c *authn.PortalConfig) { c.API.ProfileEnabled = true })
+	f.mu.Lock()
+	f.portal.Close()
+	f.store = &boundMetadataProfileE2EStore{
+		metadataProfileE2EStore: &metadataProfileE2EStore{IdentityStore: f.store, passwordOnly: true},
+		IdentityRequestStore:    f.store.(ids.IdentityRequestStore),
+	}
+	f.portal = f.newPortal()
+	f.mu.Unlock()
+	token := f.login(t, "alice")
+	caps := sqlitePortalRequest(t, f, token, "GET", "/api/capabilities", nil, http.StatusOK)
+	profile := caps["profile"].(map[string]any)
+	if profile["supported"] != true || profile["allowed"] != true || profile["reason"] != "available" {
+		t.Error("working password operation was advertised as unsupported")
+	}
+	sqlitePortalRequest(t, f, token, "POST", "/api/profile", map[string]string{"kind": "fetch_user_info"}, http.StatusNotImplemented)
+	sqlitePortalRequest(t, f, token, "POST", "/api/profile", map[string]string{
+		"kind": "update_user_password", "old_password": tests.TestPwd1, "new_password": tests.TestPwd2,
+	}, http.StatusOK)
+	client := *f.client
+	client.Jar, _ = cookiejar.New(nil)
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	browser := &oidcE2EFixture{server: f.server, client: &client, issuer: f.server.URL + "/auth"}
+	webAuthnEnrollmentLogin(t, browser, "alice", tests.TestPwd2)
+	fresh := loginIdentityCookie(browser, "AUTHP_ACCESS_TOKEN")
+	if fresh == "" || fresh == token {
+		t.Fatal("changed password did not establish a fresh real login")
+	}
+	sqlitePortalRequest(t, f, fresh, "GET", "/api/capabilities", nil, http.StatusOK)
+}
+
+func TestE2EProfileDeclaredCapabilities(t *testing.T) {
+	for _, name := range []string{"metadata_only", "bound_operations"} {
+		t.Run(name, func(t *testing.T) {
+			bound := name == "bound_operations"
+			f := newDocumentsE2E(t, "/auth", false, func(c *authn.PortalConfig) { c.API.ProfileEnabled = true })
+			f.mu.Lock()
+			f.portal.Close()
+			metadata := &metadataProfileE2EStore{IdentityStore: f.store}
+			if bound {
+				f.store = &boundMetadataProfileE2EStore{metadataProfileE2EStore: metadata, IdentityRequestStore: f.store.(ids.IdentityRequestStore)}
+			} else {
+				f.store = metadata
+			}
+			f.portal = f.newPortal()
+			f.mu.Unlock()
+			token := f.login(t, "alice")
+			caps := sqlitePortalRequest(t, f, token, "GET", "/api/capabilities", nil, http.StatusOK)
+			profile := caps["profile"].(map[string]any)
+			if profile["supported"] != bound || profile["allowed"] != bound {
+				t.Error("metadata alone was treated as bound profile operations")
+			}
+			want := http.StatusNotImplemented
+			if bound {
+				want = http.StatusOK
+			}
+			response := sqlitePortalRequest(t, f, token, "POST", "/api/profile", map[string]string{"kind": "fetch_user_dashboard_data"}, want)
+			if !bound {
+				if profile["reason"] != "unsupported_capability" || response["code"] != "unsupported_capability" {
+					t.Error("discovery and the profile refusal disagree")
+				}
+				return
+			}
+			entry := response["entry"].(map[string]any)
+			if len(entry["asset_count"].(map[string]any)) != 0 {
+				t.Fatal("partial provider advertised undeclared collections")
+			}
+			for _, declaration := range []map[string]any{caps["store"].(map[string]any), entry["capabilities"].(map[string]any)} {
+				if operations, ok := declaration["admin_operations"].([]any); !ok || len(operations) != 0 {
+					t.Error("missing admin operations must serialize as an empty array")
+				}
+			}
+			sqlitePortalRequest(t, f, token, "POST", "/api/profile", map[string]string{"kind": "fetch_user_info"}, http.StatusOK)
+			sqlitePortalRequest(t, f, token, "POST", "/api/profile", map[string]string{"kind": "fetch_user_api_keys"}, http.StatusNotImplemented)
+		})
+	}
+}
+
+func TestE2EProfileLegacyStoreDashboard(t *testing.T) {
+	f := newDocumentsE2E(t, "/auth", false, func(config *authn.PortalConfig) { config.API.ProfileEnabled = true })
+	f.mu.Lock()
+	f.portal.Close()
+	f.store = &legacyProfileE2EStore{IdentityStore: f.store, IdentityRequestStore: f.store.(ids.IdentityRequestStore)}
+	f.portal = f.newPortal()
+	f.mu.Unlock()
+	token := f.login(t, "alice")
+	sqlitePortalRequest(t, f, token, "POST", "/api/profile", map[string]string{"kind": "fetch_user_future_credentials"}, http.StatusBadRequest)
+	sqlitePortalRequest(t, f, token, "POST", "/api/profile", map[string]any{
+		"kind": "add_user_api_key", "title": "LegacyKey", "description": "legacy store dashboard", "content": strings.Repeat("Abcd1234", 8),
+	}, http.StatusOK)
+	result := sqlitePortalRequest(t, f, token, "POST", "/api/profile", map[string]string{"kind": "fetch_user_dashboard_data"}, http.StatusOK)
+	entry := result["entry"].(map[string]any)
+	counts := entry["asset_count"].(map[string]any)
+	for name, want := range map[string]float64{"api_key": 1, "ssh_key": 0, "gpg_key": 0, "mfa_2fa": 0} {
+		if got, ok := counts[name]; !ok || got != want {
+			t.Errorf("legacy dashboard count %s = %v, want %v", name, got, want)
+		}
+	}
+	if _, declared := entry["capabilities"]; declared {
+		t.Error("legacy store was given a fabricated capability declaration")
+	}
+	// The old profile interface remains usable without claiming support in the
+	// new discovery response when the store has no declared capability metadata.
+	response := sqlitePortalRequest(t, f, token, "GET", "/api/capabilities", nil, http.StatusOK)
+	data, err := json.Marshal(response)
+	if err != nil || strings.Contains(string(data), "LegacyKey") {
+		t.Fatal("capability response exposed credential inventory")
+	}
+}
 
 func TestE2EProfileRejectsReplacedSessionToken(t *testing.T) {
 	f, store, _ := newLoginIdentityConfiguredE2E(t, false, false, false, "", func(cfg *authn.PortalConfig) {

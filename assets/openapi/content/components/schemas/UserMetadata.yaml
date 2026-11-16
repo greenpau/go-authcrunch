@@ -27,22 +27,23 @@ properties:
     description: Account revision counter; zero can be omitted.
   created:
     type: string
-    description: Account creation time. RFC 3339 date-time, with fractional seconds when present. An unset
-      Go time serializes as 0001-01-01T00:00:00Z, not null.
+    description: Account creation time. RFC 3339 date-time, with fractional seconds when present. Profile omits unavailable times. Legacy local admin listings can retain 0001-01-01T00:00:00Z.
     format: date-time
   last_modified:
     type: string
     description: Last account metadata change. RFC 3339 date-time, with fractional seconds when present.
-      An unset Go time serializes as 0001-01-01T00:00:00Z, not null.
+      Profile omits unavailable times; legacy local admin listings can retain 0001-01-01T00:00:00Z.
     format: date-time
   roles:
     type: array
     items:
       type: string
       description: Stored role name, including any organization prefix.
-    description: Added by the local admin user list; omitted by profile metadata. These are stored roles,
+    description: Added by local and SQLite admin user lists; omitted by profile metadata. These are stored roles,
       before portal transforms.
 description: Account metadata projection. name and email are display strings; this projection excludes
   stored credential records.
 x-source-files:
 - pkg/identity/user.go
+- pkg/authn/profile_capabilities.go
+- plugins/identity-stores/sqlite/store.go

@@ -167,7 +167,8 @@ def run(selected, output):
                          'COVERAGE_DIR=' + str(output / 'go')])
     for command in commands:
         print('Running: ' + ' '.join(command), flush=True)
-        result = subprocess.run(command, cwd=ROOT, check=False)
+        result = subprocess.run(command, cwd=ROOT, check=False,
+                                env=dict(os.environ, PYTHON=os.environ.get('PYTHON', sys.executable)))
         if result.returncode:
             return result.returncode if result.returncode > 0 else 1
     return 0

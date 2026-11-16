@@ -1,6 +1,6 @@
 ---
 name: authentication-portal-profile
-description: Maintain authenticated local profile APIs, user authentication-flow preferences and UI integration, canonical account selection, atomic identity-bound operations, browser origin checks, and credential-management TLS tests.
+description: Maintain authenticated identity-bound profile APIs, user authentication-flow preferences and UI integration, canonical account selection, atomic identity-bound operations, browser origin checks, and credential-management TLS tests.
 ---
 
 # Authentication Portal Profile
@@ -14,7 +14,7 @@ the implemented challenge-rule parser used by the flow-selection operations.
 
 ## Canonical identity and mutations
 
-`pkg/authn/handle_api_profile.go` dispatches local self-service operations after
+`pkg/authn/handle_api_profile.go` dispatches identity-bound self-service operations after
 JWT authorization and exact-token lookup of the server-cached login through
 `SessionCache.GetForToken`. Matching `jti` alone must not allow an earlier JWT
 to borrow a later account's canonical identity or credential-management proof.
@@ -24,22 +24,32 @@ operation carries a snapshot of canonical username/email and immutable login
 evidence. Never select a profile account from transformed token `sub` or `email`,
 or accept identity evidence from the request body.
 
-Require matching backend name/realm, local authentication, canonical account
+Require matching backend name/realm and actual authentication kind, canonical account
 fields, immutable user ID and backend epoch. Perform the initial bound GetUser
 check even for ceremony endpoints that do not otherwise touch the backend.
-Every later read or mutation must still use the bound wrapper: an earlier
-successful check cannot authorize an unguarded write after revocation.
+Every later read or mutation must still use the bound wrapper. The server-only
+`Request.ValidateIdentity` callback rechecks exact-token membership inside each
+backend transaction, including after waiting for a lock; it cannot reenter the
+store. Supplementary callback checks never replace account-evidence validation.
+An earlier successful check cannot authorize an unguarded write after revocation.
 Unsupported stores and stale/missing identity evidence fail closed.
 
 The local adapter delegates to `Database.RequestWithIdentity`. Follow
 [local database transactions](../local-identity-database/SKILL.md) for its fresh
 snapshot, operation allowlist, locking, rollback and detached response contract.
+SQLite implements information/password operations with its own immediate
+transaction and immutable evidence checks; the
+[SQLite store contract](../sqlite-identity-store/SKILL.md) owns its persistence.
+Read [store capabilities](references/store-capabilities.md) for the authenticated
+capability endpoint, partial dashboard, safe administrative projection and stable
+errors. Unsupported collections must not appear as empty inventories.
+
 The generic trusted `IdentityStore.Request` API remains a separate provisioning
 boundary; do not substitute it for authenticated self-service.
 
 Identity-bound password changes accept plaintext and reject reserved hash-import
-prefixes before mutation. Keep this check at `Database.RequestWithIdentity` so
-every local self-service caller receives it; trusted provisioning still supports
+prefixes before mutation. Keep this check in each store’s `RequestWithIdentity` so
+every self-service caller receives it; trusted local provisioning still supports
 imports. Follow the [password owner](../local-password-authentication/SKILL.md)
 for the shared predicate, work-factor trust boundary and regression coverage.
 
@@ -56,7 +66,7 @@ Reject foreign, null, empty or duplicate Origin, and cross-site/same-site fetch
 metadata; same-site does not mean same-origin. Native clients without browser
 headers remain supported. The embedding server owns forwarded-header
 normalization. Profile bodies require application/json and remain bounded at
-1 MiB; text/plain JSON must not become a browser simple-request mutation path.
+1 MiB (413 on overflow); recheck exact-token membership after reading the body; text/plain JSON must not become a browser simple-request mutation path.
 Refresh endpoints retain their stricter feature-owned origin/transport checks.
 
 Password, MFA and role mutations that advance the credential generation invalidate the login evidence. A cached access
@@ -79,6 +89,10 @@ protocol failures. `profile_session_client_test.cjs` covers these retry and time
 boundaries through `make test-ui`; the real Chrome journey remains required.
 
 ## Acceptance and validation
+
+SQLite TLS coverage is in `profile_sqlite_e2e_test.go`, including changed
+credentials, safe DTOs, partial counts, unsupported operations, disabled features
+and real commit failures. Preserve legacy local journeys alongside it.
 
 Validation belongs in `profile_identity_test.go`, `api_origin_test.go`,
 `profile_identity_e2e_test.go`, `identity_alias_e2e_test.go`, and the identity

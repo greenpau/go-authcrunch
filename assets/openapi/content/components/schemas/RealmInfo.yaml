@@ -2,6 +2,25 @@ type: object
 required:
 - timestamp
 properties:
+  kind:
+    type: string
+    description: SQLite reports its actual kind.
+  realm:
+    type: string
+    description: Configured realm identifier.
+  password_only:
+    type: boolean
+    description: SQLite currently provides password authentication only.
+  capabilities:
+    $ref: StoreCapabilities.yaml
+  max_users:
+    type: integer
+    const: 10000
+    description: SQLite complete-list capacity, not pagination size.
+  query_supported:
+    type: boolean
+    const: false
+    description: SQLite user listing supports only empty or all queries.
   path:
     type: string
     description: Server-side database location exposed by the selected store; this is not a client URL.
@@ -134,3 +153,4 @@ x-source-files:
 - pkg/authn/handle_api_realm_info.go
 - pkg/identity/database.go
 - pkg/identity/user.go
+- plugins/identity-stores/sqlite/store.go

@@ -1,4 +1,4 @@
 interface:
   display_name: "SQLite Identity Store"
-  short_description: "Maintain SQLite password accounts and portal integration"
-  default_prompt: "Use $sqlite-identity-store to maintain SQLite account storage and portal login evidence."
+  short_description: "SQLite accounts, profile transactions, and capability metadata"
+  default_prompt: "Use $sqlite-identity-store to maintain SQLite account storage, identity-bound profile operations, safe capabilities, and portal login evidence."

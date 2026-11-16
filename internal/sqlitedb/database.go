@@ -269,10 +269,31 @@ func (s *Database) run(ctx context.Context, write bool, apply func(context.Conte
 	if !s.healthy() {
 		return ErrUnavailable
 	}
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return ErrUnavailable
+	}
+	defer conn.Close()
+	// database/sql otherwise rolls back a transaction asynchronously when its
+	// BeginTx context expires, releasing identity locks while apply still runs.
+	// Bound acquisition and callback SQL by ctx, but own the transaction lifetime
+	// until the callback returns. In particular, independent database work inside
+	// an identity callback must not race a revocation after an early rollback.
+	transactionContext := context.WithoutCancel(ctx)
 	var tx *sql.Tx
 	for {
-		var err error
-		tx, err = s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: !write && !s.exclusive})
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		// The connection wait or a BEGIN retry may outlive another operation
+		// that quarantines this handle. Reject it before starting new work.
+		if s.closed.Load() {
+			return ErrUnavailable
+		}
+		tx, err = conn.BeginTx(transactionContext, &sql.TxOptions{ReadOnly: !write && !s.exclusive})
 		if err == nil {
 			break
 		}
@@ -292,6 +313,12 @@ func (s *Database) run(ctx context.Context, write bool, apply func(context.Conte
 		}
 	}
 	defer tx.Rollback()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s.closed.Load() || !s.healthy() {
+		return ErrUnavailable
+	}
 	if err := apply(ctx, tx); err != nil {
 		return safeError(ctx, err)
 	}
@@ -325,6 +352,11 @@ func (s *Database) run(ctx context.Context, write bool, apply func(context.Conte
 }
 func safeError(ctx context.Context, err error) error {
 	if ctx.Err() != nil {
+		if errors.Is(err, ErrCommitUncertain) {
+			// A separately committed callback transaction cannot be rolled
+			// back by canceling this transaction. Retain its retry boundary.
+			return errors.Join(ErrCommitUncertain, ctx.Err())
+		}
 		return ctx.Err()
 	}
 	var failure *driver.Error

@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -28,7 +29,7 @@ class CIShardsTests(unittest.TestCase):
                     if not key.startswith(('GIT_', 'GITHUB_', 'TEST_', 'TESTED_', 'CHANGE_', 'CI_'))
                     and key not in ('MAKEFLAGS', 'MFLAGS', 'MAKELEVEL', 'COVERAGE_DIR', 'GOFLAGS',
                                     'GOWORK', 'MINIMUM_COVERAGE')}
-        self.env.update(PYTHONDONTWRITEBYTECODE='1', GOWORK='off',
+        self.env.update(PYTHONDONTWRITEBYTECODE='1', PYTHON=sys.executable, GOWORK='off',
                         COVERAGE_DIR='reports with spaces', TEST='^MustNotExcludeTests$',
                         TEST_DIR='./missing', GIT_COMMIT='fixture', GIT_BRANCH='main')
         shutil.copyfile(ROOT / 'Makefile', self.root / 'Makefile')
@@ -67,7 +68,7 @@ class CIShardsTests(unittest.TestCase):
         return result
 
     def cli(self, *args, **kwargs):
-        return self.command('python3', 'assets/scripts/ci_tests.py', *args, **kwargs)
+        return self.command(sys.executable, 'assets/scripts/ci_tests.py', *args, **kwargs)
 
     def test_e2e_complete_disjoint_shards_reports_and_failed_rerun(self):
         expected = {
@@ -142,10 +143,19 @@ func FuzzSessionSeeds(f *testing.F) {
         for shard in SHARDS:
             if shard == 'portal-core':
                 # Direct invocation from outside the checkout must place the plan
-                # beside the reports produced by the nested Make invocation.
-                self.command('python3', str(self.root / 'assets/scripts/ci_tests.py'),
+                # beside the reports and preserve the selected interpreter.
+                binaries = self.root / '.python-bin'
+                binaries.mkdir()
+                for name in ('python3', 'python3.14'):
+                    trap = binaries / name
+                    trap.write_text('#!/bin/sh\necho "unexpected Python rediscovery" >&2\nexit 89\n')
+                    trap.chmod(0o755)
+                direct_env = dict(self.env, TEST_PACKAGE_PARALLELISM='2',
+                                  PATH=str(binaries) + os.pathsep + self.env['PATH'])
+                direct_env.pop('PYTHON')
+                self.command(sys.executable, str(self.root / 'assets/scripts/ci_tests.py'),
                              'run', shard, cwd=self.root.parent,
-                             env=dict(self.env, TEST_PACKAGE_PARALLELISM='2'))
+                             env=direct_env)
             else:
                 self.command('make', 'ci-test-shard', 'CI_SHARD=' + shard,
                              'TEST_PACKAGE_PARALLELISM=2')

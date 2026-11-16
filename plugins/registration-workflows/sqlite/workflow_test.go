@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/greenpau/go-authcrunch/pkg/identity"
 	"github.com/greenpau/go-authcrunch/pkg/messaging"
 	accounts "github.com/greenpau/go-authcrunch/plugins/identity-stores/sqlite"
 	notifications "github.com/greenpau/go-authcrunch/plugins/messaging/sqlite"
@@ -93,7 +94,8 @@ func TestRegistrationSingleUseAndLockout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if roles := account["roles"].([]string); len(roles) != 1 || roles[0] != "authp/user" {
+	roles, ok := account["roles"].([]*identity.Role)
+	if !ok || len(roles) != 1 || roles[0] == nil || roles[0].String() != "authp/user" {
 		t.Fatal("untrusted role")
 	}
 	if _, err := w.GetRegistrationEntry(id); !errors.Is(err, ErrDenied) {

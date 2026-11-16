@@ -1,8 +1,24 @@
 type: object
-description: Full local backend account record for admin operation=info. Unlike the user list/profile
+description: Account record for admin operation=info. SQLite returns a safe projection with kind=sqlite, structured roles/name/email, credential_version and password count; it omits verifier collections and unavailable timestamps. Local stores return their legacy full record. Unlike the user list/profile
   metadata projection, it can contain password hashes, API-key hashes and MFA secrets. Optional fields
   reflect stored data; no wrapper timestamp or status is added to this result.
 properties:
+  kind:
+    type: string
+    const: sqlite
+    description: Present on the SQLite safe projection; absent on legacy local records.
+  capabilities:
+    $ref: StoreCapabilities.yaml
+  credential_counts:
+    type: object
+    additionalProperties: false
+    required: [password]
+    properties:
+      password:
+        type: integer
+        const: 1
+        description: SQLite stores exactly one password verifier; the verifier is never returned here.
+    description: Supported counts only. Missing credential collections are unsupported, not empty.
   id:
     type: string
     description: Persistent backend account identifier; local stores use a UUID.
@@ -140,6 +156,22 @@ properties:
 required:
 - id
 additionalProperties: true
+if:
+  required: [kind]
+  properties:
+    kind: {const: sqlite}
+then:
+  required: [username, email_address, roles, disabled, credential_version, credential_counts, capabilities]
+  not:
+    anyOf:
+    - required: [passwords]
+    - required: [api_keys]
+    - required: [public_keys]
+    - required: [mfa_tokens]
+    - required: [auth_challenge_rules]
+    - required: [external_accounts]
+    - required: [created]
+    - required: [last_modified]
 x-source-files:
 - pkg/authn/handle_api_crud_user.go
 - pkg/ids/local/authenticator.go
@@ -149,3 +181,5 @@ x-source-files:
 - pkg/identity/profile.go
 - pkg/identity/role.go
 - pkg/identity/lockout.go
+- plugins/identity-stores/sqlite/profile.go
+- plugins/identity-stores/sqlite/store.go

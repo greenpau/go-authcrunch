@@ -5,12 +5,12 @@ package authn_test
 
 import (
 	"encoding/json"
-	"github.com/greenpau/go-authcrunch/internal/tests"
 	"net/http"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/greenpau/go-authcrunch/internal/tests"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -58,7 +58,7 @@ func testOpenAPIAdminContracts(t *testing.T, validate func(*testing.T, string, s
 		post("/api/server/users", admin, `{"realm":"local","padding":"`+strings.Repeat("x", 1<<20)+`"}`, 413)
 		post("/api/server/users", admin, `{"realm":"local"}`, 200, http.Header{"Content-Type": {"text/plain"}})
 		post("/api/profile", member, `{"kind":"fetch_user_info"} {}`, 400)
-		post("/api/profile", member, `{"kind":"fetch_user_info"}`+strings.Repeat(" ", (1<<20)+1), 400)
+		post("/api/profile", member, `{"kind":"fetch_user_info"}`+strings.Repeat(" ", (1<<20)+1), 413)
 		post("/api/profile", member, `{"kind":"fetch_user_info"}`, 415, http.Header{"Content-Type": {"text/plain"}})
 		post("/api/profile", member, `{"kind":"fetch_user_info"}`, 200, http.Header{"Content-Type": {"application/json; charset=utf-8"}})
 		post("/api/profile", member, `{"kind":"unknown","kind":"fetch_user_info","ignored":true}`, 200)
@@ -117,9 +117,7 @@ func testOpenAPIAdminContracts(t *testing.T, validate func(*testing.T, string, s
 		if missing["count"] != float64(0) || len(missing["users"].([]any)) != 0 {
 			t.Fatal("unknown realm listing changed")
 		}
-		if result := post("/api/server/user", admin, `{"realm":"missing","operation":"info","user":{"username":"x","email":"x"}}`, 200); result != nil {
-			t.Fatal("unknown realm CRUD should return null")
-		}
+		post("/api/server/user", admin, `{"realm":"missing","operation":"info","user":{"username":"x","email":"x"}}`, 404)
 		post("/api/server/reload", admin, `{"realm":"missing"}`, 200)
 		user("overwrite_roles", map[string]any{"roles": []string{}}, 400)
 		assertStatus(user("overwrite_roles", map[string]any{"roles": []string{"partial/first", "\u2003"}}, 200), "failure")

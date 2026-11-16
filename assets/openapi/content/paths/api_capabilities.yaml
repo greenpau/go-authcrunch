@@ -1,0 +1,66 @@
+get:
+  operationId: portalCapabilities
+  tags: [Profile]
+  summary: Inspect available account features
+  description: >-
+    Requires a validated access token matching the exact cached login and a portal user/admin role.
+    Available independently of Profile/Admin/Documents enablement, including when API configuration is omitted. Omission leaves other API flags disabled. Transactional stores revalidate the
+    account generation, enabled state, canonical selectors and runtime epoch before responding.
+    No query parameters or body are accepted. Only GET is supported (other methods return 405 with Allow GET).
+    Flags report the current account store, not every configured realm. Realm administration capabilities
+    for other stores belong to the admin realm-info endpoint. Unconfigured OP discovery remains disabled;
+    SQLite OP issuance is not implemented. Public signing-key eligibility is separate from private export
+    opt-in and permission. Inspecting capabilities never exports private keys. A vault's enrollment state
+    is obtained separately through admitted Documents requests.
+  security:
+  - PortalBearer: []
+  - PortalCookie: []
+  responses:
+    '200':
+      description: Nonsecret capability snapshot for the current login.
+      headers:
+        Cache-Control:
+          description: Capabilities and authorization can change; never cache this response.
+          schema: {type: string, const: no-store}
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/PortalCapabilities.yaml
+    '400':
+      description: Invalid request shape.
+      content:
+        application/json:
+          schema: {$ref: ../components/schemas/CapabilityError.yaml}
+    '401':
+      description: Missing, expired, replaced or revoked login evidence.
+      content:
+        application/json:
+          schema:
+            anyOf:
+            - $ref: ../components/schemas/CapabilityError.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+    '403':
+      description: Role or browser-origin denial.
+      content:
+        application/json:
+          schema:
+            anyOf:
+            - $ref: ../components/schemas/CapabilityError.yaml
+            - $ref: ../components/schemas/PortalError.yaml
+    '405':
+      description: Method must be GET.
+      headers:
+        Allow:
+          schema: {type: string, const: GET}
+          description: Supported method.
+      content:
+        application/json:
+          schema: {$ref: ../components/schemas/CapabilityError.yaml}
+    '503':
+      description: Current identity or key metadata cannot be verified. Do not automatically replay mutations after uncertainty.
+      content:
+        application/json:
+          schema: {$ref: ../components/schemas/CapabilityError.yaml}
+  x-source-files:
+  - pkg/authn/handle_api_capabilities.go
+  - pkg/authn/respond_api.go

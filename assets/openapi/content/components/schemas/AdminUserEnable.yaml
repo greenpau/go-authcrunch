@@ -6,8 +6,7 @@ required:
 properties:
   realm:
     type: string
-    description: Exact enabled identity-store realm. Unknown realms currently return JSON null; they do
-      not create a new store.
+    description: Exact enabled identity-store realm. Unknown realms return HTTP 404; they do not create a new store.
     minLength: 1
   operation:
     type: string

@@ -165,7 +165,7 @@ func TestRepositoryFieldConstraints(t *testing.T) {
 		{"WebAuthn timeout not seconds", "ProfileWebAuthnVerification/properties/timeout", 60, false},
 		{"WebAuthn unsigned counter", "ProfileAuthenticatorRecord/allOf/1/properties/signature_counter", -1, false},
 		{"admin failure needs detail", "AdminUserMutation", map[string]any{"status": "failure", "timestamp": "2026-10-07T00:00:00Z"}, false},
-		{"unknown admin realm is null", "AdminUserResult", nil, true},
+		{"admin result rejects null", "AdminUserResult", nil, false},
 		{"OIDC address preserves postal zeros", "IdentityAddress/properties/postal_code", "00123", true},
 		{"OIDC postal code is not numeric", "IdentityAddress/properties/postal_code", 123, false},
 		{"System endpoint rejects plaintext JSON", "SystemEncryptedMessage", `{"kind":"basic_auth_request"}`, false},
@@ -376,4 +376,50 @@ func TestRepositorySchemaExamplesAndEvidence(t *testing.T) {
 		}
 	}
 	walk(object(object(doc["components"])["schemas"]), "/components/schemas")
+}
+
+// The discriminated safe projection must not silently regress to a secret-bearing
+// legacy record, while legacy local responses remain schema-compatible.
+func TestRepositorySQLiteAdminProjection(t *testing.T) {
+	compiler, err := SchemaCompiler(repositoryDocument(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	schema, err := SchemaAt(compiler, "/components/schemas/AdminUserRecord")
+	if err != nil {
+		t.Fatal(err)
+	}
+	projection := func() map[string]any {
+		value, err := jsonValue(map[string]any{
+			"kind": "sqlite", "id": "11111111-1111-4111-8111-111111111111", "username": "alice",
+			"email_address": map[string]string{"address": "alice@example.test"}, "roles": []identity.Role{{Organization: "authp", Name: "user"}},
+			"disabled": false, "credential_version": 1, "credential_counts": map[string]int{"password": 1},
+			"capabilities": identity.StoreCapabilities{ProfileRead: true, PasswordChange: true, Documents: true, AdminOperations: []string{"info"}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return value.(map[string]any)
+	}
+	if err := schema.Validate(projection()); err != nil {
+		t.Fatal("safe SQLite projection rejected", err)
+	}
+	for _, field := range []string{"passwords", "api_keys", "mfa_tokens", "public_keys", "external_accounts", "auth_challenge_rules"} {
+		value := projection()
+		value[field] = []any{}
+		if schema.Validate(value) == nil {
+			t.Fatal("SQLite schema admitted unsupported credential field", field)
+		}
+	}
+	value := projection()
+	value["roles"] = []any{"authp/user"}
+	if schema.Validate(value) == nil {
+		t.Fatal("SQLite schema accepted scalar role records")
+	}
+	value = projection()
+	delete(value, "kind")
+	value["passwords"] = []any{}
+	if err := schema.Validate(value); err != nil {
+		t.Fatal("legacy local projection rejected", err)
+	}
 }

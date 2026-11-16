@@ -13,4 +13,4 @@ properties:
     type: string
     description: Backend-specific selector. The selected local store ignores this field for both user
       listing and realm metadata, returning all local records; it provides no filtering or pagination.
-      Omission, an empty string and all have identical local behavior.
+      Omission, an empty string and all have identical local behavior. SQLite user listing supports only omission, empty or all; other queries return HTTP 500 without a partial list. SQLite realm metadata ignores query.

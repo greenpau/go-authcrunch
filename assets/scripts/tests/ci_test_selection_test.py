@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -62,7 +63,7 @@ class CITestSelectionTests(unittest.TestCase):
             event_path = Path(self.temp.name) / 'event.json'
             event_path.write_text(json.dumps(payload))
             env['GITHUB_EVENT_PATH'] = str(event_path)
-        result = subprocess.run(['python3', 'assets/scripts/select_ci_tests.py', *extra], cwd=self.root,
+        result = subprocess.run([sys.executable, 'assets/scripts/select_ci_tests.py', *extra], cwd=self.root,
                                 env=env, text=True, capture_output=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
         lines = output.read_text().splitlines()

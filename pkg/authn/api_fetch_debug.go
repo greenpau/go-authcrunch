@@ -31,16 +31,14 @@ func (p *Portal) FetchDebug(
 	r *http.Request,
 	rr *requests.Request,
 	parsedUser *user.User,
-	resp map[string]interface{},
+	resp map[string]any,
 	usr *user.User,
 	backend ids.IdentityStore) error {
 
-	entry := make(map[string]interface{})
-	database := map[string]interface{}{
-		"name":   "localdb",
-		"host":   "localhost",
-		"port":   5432,
-		"engine": "postgresql",
+	entry := make(map[string]any)
+	database := map[string]any{
+		"name":   backend.GetName(),
+		"engine": backend.GetKind(),
 	}
 	entry["version"] = identity.GetVersion()
 	entry["database"] = database

@@ -69,6 +69,11 @@ func (db *Database) requestWithIdentityUnlocked(op operator.Type, r *requests.Re
 	}
 
 	initialRevision := target.Revision
+	if r.ValidateIdentity != nil {
+		if err := r.ValidateIdentity(); err != nil {
+			return err
+		}
+	}
 	if err := requestIdentityOperation(target, op, r); err != nil {
 		return err
 	}

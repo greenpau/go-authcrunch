@@ -1,0 +1,17 @@
+type: object
+required: [status, code, message]
+properties:
+  status:
+    type: integer
+    minimum: 400
+    maximum: 599
+    description: HTTP status.
+  code:
+    type: string
+    enum: [identity_required, forbidden, unsupported_capability, storage_unavailable, commit_uncertain, invalid_request, operation_failed]
+    description: Stable nonsecret reason. commit_uncertain requires read reconciliation and prohibits automatic mutation replay.
+  message:
+    type: string
+    description: Generic human-readable status; do not parse as an API contract.
+x-source-files:
+- pkg/authn/handle_api_capabilities.go

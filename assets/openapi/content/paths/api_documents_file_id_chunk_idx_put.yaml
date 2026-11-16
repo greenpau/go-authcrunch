@@ -12,7 +12,7 @@ put:
 
 
     Disabled by default; requires explicit APIConfig.DocumentsEnabled plus validated storage settings. Admin/Profile
-    flags and storage settings alone do not enable Documents. Require an allowed local identity-store realm,
+    flags and storage settings alone do not enable Documents. Require an allowed identity-store realm with transactional verification (local or SQLite),
     portal user/admin role, valid portal access token AND current stored browser login evidence. Ordinary access-only
     JSON login, API-key, LDAP and unmapped OAuth/SAML sessions do not establish this authority. Ownership is
     the exact local database user id. Each operation runs inside transactional current-identity verification;

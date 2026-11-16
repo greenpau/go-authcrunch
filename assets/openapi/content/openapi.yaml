@@ -239,6 +239,8 @@ paths:
     $ref: ./paths/cross-device_poll.yaml
   /cross-device/cancel:
     $ref: ./paths/cross-device_cancel.yaml
+  /api/capabilities:
+    $ref: ./paths/api_capabilities.yaml
   /api/profile:
     $ref: ./paths/api_profile.yaml
   /api/documents/bootstrap:
@@ -530,6 +532,14 @@ components:
       $ref: ./components/schemas/IdentityProfile.yaml
     IdentityPasswordRecord:
       $ref: ./components/schemas/IdentityPasswordRecord.yaml
+    StoreCapabilities:
+      $ref: ./components/schemas/StoreCapabilities.yaml
+    FeatureAvailability:
+      $ref: ./components/schemas/FeatureAvailability.yaml
+    PortalCapabilities:
+      $ref: ./components/schemas/PortalCapabilities.yaml
+    CapabilityError:
+      $ref: ./components/schemas/CapabilityError.yaml
     AdminUserRecord:
       $ref: ./components/schemas/AdminUserRecord.yaml
     AdminUserMutation:

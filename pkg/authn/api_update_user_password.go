@@ -16,7 +16,6 @@ package authn
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -41,7 +40,10 @@ func (p *Portal) UpdateUserPassword(
 	if v, exists := bodyData["old_password"]; exists {
 		switch exp := v.(type) {
 		case string:
-			rr.User.OldPassword = strings.TrimSpace(exp)
+			rr.User.OldPassword = exp
+			if backend.GetKind() == "local" {
+				rr.User.OldPassword = strings.TrimSpace(exp)
+			}
 		default:
 			resp["message"] = "Profile API did find key old_password in the request payload, but it is malformed"
 			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
@@ -54,7 +56,10 @@ func (p *Portal) UpdateUserPassword(
 	if v, exists := bodyData["new_password"]; exists {
 		switch exp := v.(type) {
 		case string:
-			rr.User.Password = strings.TrimSpace(exp)
+			rr.User.Password = exp
+			if backend.GetKind() == "local" {
+				rr.User.Password = strings.TrimSpace(exp)
+			}
 		default:
 			resp["message"] = "Profile API did find key new_password in the request payload, but it is malformed"
 			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
@@ -65,9 +70,7 @@ func (p *Portal) UpdateUserPassword(
 	}
 
 	if err := backend.Request(operator.ChangePassword, rr); err != nil {
-		var errMsg string = fmt.Sprintf("the Profile API failed to change user password in identity store: %v", err)
-		resp["message"] = errMsg
-		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		return profileBackendError(w, rr, resp, err, http.StatusBadRequest)
 	}
 
 	resp["entry"] = "Updated"

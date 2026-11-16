@@ -10,7 +10,11 @@ properties:
       establish the resulting state.'
   error:
     type: string
-    description: Backend error detail when the action failed; present independently of the HTTP status.
+    description: Safe failure message; present independently of HTTP status. Never parse raw backend errors.
+  code:
+    type: string
+    enum: [operation_failed, storage_unavailable, commit_uncertain]
+    description: Stable failure classification. Backend transaction/lock timeouts and cancellation use storage_unavailable. Reconcile an uncertain write through reads before retrying; commit_uncertain takes precedence over a simultaneous timeout.
   timestamp:
     type: string
     format: date-time

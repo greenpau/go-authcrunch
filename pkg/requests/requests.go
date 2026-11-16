@@ -28,6 +28,12 @@ type Request struct {
 	ExternalIdentity ExternalIdentity `json:"-" xml:"-" yaml:"-"`
 	// Authentication is backend-produced evidence, never decoded from a client.
 	Authentication AuthenticationEvidence `json:"-" xml:"-" yaml:"-"`
+	// ValidateIdentity is an optional server-owned session check for authenticated
+	// self-service. IdentityRequestStore implementations call it after validating
+	// account evidence, while holding the operation's transaction lock. It must
+	// not reenter the identity store or publish results. Never decode it from wire
+	// input; it supplements, and cannot replace, backend evidence validation.
+	ValidateIdentity func() error `json:"-" xml:"-" yaml:"-"`
 
 	ID       string      `json:"id,omitempty" xml:"id,omitempty" yaml:"id,omitempty"`
 	Upstream Upstream    `json:"upstream,omitempty" xml:"upstream,omitempty" yaml:"upstream,omitempty"`

@@ -30,6 +30,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -639,6 +640,54 @@ func TestE2EPortalJWKSAuthorization(t *testing.T) {
 			// a real TLS portal, so directives must survive consumer persistence.
 			f := newJWKSE2EPortal(t, db, "/xauth", config.API)
 			admin, member := f.login(t, "keyadmin"), f.login(t, "keymember")
+			if tc.directives == nil {
+				for _, token := range []string{admin, ""} {
+					for _, path := range []string{"/api/capabilities/", "/api/%63apabilities", "/api/unknown", "/api/server/metadata"} {
+						f.request(t, "GET", path, token, http.StatusBadRequest)
+					}
+					f.request(t, "POST", "/api/profile", token, http.StatusBadRequest)
+				}
+			}
+			for _, principal := range []struct {
+				token, username string
+				admin           bool
+			}{{admin, "keyadmin", true}, {member, "keymember", false}} {
+				// Access-only native JWTs deliberately lack the cached profile
+				// session. Use an actual form login for capability inspection.
+				f.request(t, "GET", "/api/capabilities", principal.token, 401)
+				browserClient := *f.client
+				browserClient.Jar, _ = cookiejar.New(nil)
+				browser := &oidcE2EFixture{server: f.server, client: &browserClient, issuer: f.server.URL + f.base}
+				webAuthnEnrollmentLogin(t, browser, principal.username, tests.TestPwd1)
+				browserToken := loginIdentityCookie(browser, "AUTHP_ACCESS_TOKEN")
+				if browserToken == "" {
+					t.Fatal("capability form login omitted its access cookie")
+				}
+				_, body := f.request(t, "GET", "/api/capabilities", browserToken, 200)
+				var capabilities struct {
+					JWKS, PrivateKeyExport authn.FeatureAvailability
+				}
+				// Wire names are deliberately explicit; private export never follows
+				// public discovery or Admin API enablement alone.
+				var wire map[string]json.RawMessage
+				if json.Unmarshal(body, &wire) != nil || json.Unmarshal(wire["jwks"], &capabilities.JWKS) != nil || json.Unmarshal(wire["private_key_export"], &capabilities.PrivateKeyExport) != nil {
+					t.Fatal("invalid key capability response")
+				}
+				if !capabilities.JWKS.Allowed || !capabilities.PrivateKeyExport.Supported || capabilities.PrivateKeyExport.Enabled != tc.export || capabilities.PrivateKeyExport.Allowed != (tc.export && principal.admin) {
+					t.Fatal("key capability disagrees with configuration and role")
+				}
+				reason := "disabled"
+				if tc.export {
+					reason = "forbidden"
+					if principal.admin {
+						reason = "available"
+					}
+				}
+				if capabilities.PrivateKeyExport.Reason != reason {
+					t.Fatal("private export reason conflated permission and configuration")
+				}
+				assertE2ENoPrivateKeys(t, body)
+			}
 			if tc.directives != nil {
 				status, deniedStatus := 400, 400
 				if tc.adminEnabled {

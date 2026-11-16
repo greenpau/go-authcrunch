@@ -1,0 +1,20 @@
+type: object
+description: Configuration, implementation support, and permission for the current login. Informational only; APIs authorize each request independently.
+additionalProperties: false
+required: [enabled, supported, allowed, reason]
+properties:
+  enabled:
+    type: boolean
+    description: Feature activated in this portal; public JWKS is always enabled.
+  supported:
+    type: boolean
+    description: Current backend or key selection implements this feature. Does not imply permission or resource enrollment.
+  allowed:
+    type: boolean
+    description: True only when enabled, supported and permitted for this login.
+  reason:
+    type: string
+    enum: [available, disabled, forbidden, unsupported_capability, no_eligible_keys]
+    description: Stable availability reason. Disabled takes precedence, then permission, then support. no_eligible_keys distinguishes an HMAC signer from a disabled export switch.
+x-source-files:
+- pkg/authn/handle_api_capabilities.go

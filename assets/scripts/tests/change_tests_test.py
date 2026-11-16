@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -30,7 +31,7 @@ class ChangeTests(unittest.TestCase):
         self.env.update(GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull,
                         GIT_AUTHOR_NAME='Change Fixture', GIT_AUTHOR_EMAIL='fixture@example.invalid',
                         GIT_COMMITTER_NAME='Change Fixture', GIT_COMMITTER_EMAIL='fixture@example.invalid',
-                        PYTHONDONTWRITEBYTECODE='1')
+                        PYTHONDONTWRITEBYTECODE='1', PYTHON=sys.executable)
         self.write('Makefile', (ROOT / 'Makefile').read_text())
         for name in ('change_tests.py', 'test_guard.py'):
             self.write('assets/scripts/' + name, (ROOT / 'assets/scripts' / name).read_text())
@@ -207,6 +208,26 @@ class ChangeTests(unittest.TestCase):
         self.make('COVERAGE_DIR=.coverage/failure', success=False)
         failed = json.loads((self.root / '.coverage/failure/changes/go/run.json').read_text())
         self.assertNotEqual(failed['exit_code'], 0)
+
+    def test_e2e_direct_script_keeps_selected_interpreter(self):
+        self.write('pkg/lib/lib.go', 'package lib\nfunc Value() int { return 42 }\n// edit\n')
+        binaries = self.root / '.coverage/python-bin'
+        binaries.mkdir(parents=True)
+        for name in ('python3', 'python3.14'):
+            trap = binaries / name
+            trap.write_text('#!/bin/sh\necho "unexpected Python rediscovery" >&2\nexit 89\n')
+            trap.chmod(0o755)
+        env = dict(self.env, PATH=str(binaries) + os.pathsep + self.env['PATH'],
+                   COVERAGE_DIR='.coverage/direct')
+        env.pop('PYTHON')
+        result = subprocess.run([sys.executable, 'assets/scripts/change_tests.py'],
+                                cwd=self.root, env=env, text=True, capture_output=True, timeout=120)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        summary = json.loads((self.root / '.coverage/direct/changes/go/summary.json').read_text())
+        self.assertEqual(summary['outcome'], 'passed')
+        names = {test['name'] for package in summary['packages'] for test in package.get('tests', [])}
+        self.assertIn('TestE2EConsumer', names)
+        self.assertIn('TestE2EExternalConsumer', names)
 
     def test_e2e_automation_only_runs_automation_and_propagates_failure(self):
         # Real unittest discovery through the public Make entry point.

@@ -192,9 +192,9 @@ func TestIdentityValidationAndFailureEvidence(t *testing.T) {
 	if _, exists := metadata["password"]; exists {
 		t.Fatal("credential leak")
 	}
-	metadata["roles"].([]string)[0] = "changed"
+	metadata["roles"].([]*identity.Role)[0].Name = "changed"
 	fresh, err := s.FetchUserData("alice", a.Email)
-	if err != nil || fresh["roles"].([]string)[0] != "viewer" {
+	if err != nil || fresh["roles"].([]*identity.Role)[0].Name != "viewer" {
 		t.Fatal("aliased roles", err)
 	}
 	rows, err := s.GetUsersMetadata("")
@@ -271,7 +271,7 @@ func TestIdentityManagementAndSupportedOperations(t *testing.T) {
 	if err != nil || metadata["kind"] != "sqlite" {
 		t.Fatal(err)
 	}
-	if _, err := s.AddUserRoles("alice", "alice@example.test", []string{"extra"}); !errors.Is(err, ErrUnsupported) {
+	if _, err := s.AddUserRoles("alice", "alice@example.test", []string{"extra"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := New(t.Context(), nil); err == nil {

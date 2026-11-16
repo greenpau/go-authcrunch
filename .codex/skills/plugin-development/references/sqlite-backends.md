@@ -40,6 +40,14 @@ commit-time lock upgrade or read query to fail with BUSY. Reads and writes
 serialize across clients. Contention remains bounded at admission; a
 timeout before admission does not invoke the callback or quarantine the handle.
 Keep `Open` and `OpenMigrated` on their established immediate-write behavior.
+Connection acquisition and BEGIN retries use the operation deadline. Once BEGIN
+succeeds, the helper owns the transaction until its callback returns: do not pass
+the cancelable operation context to `BeginTx`, whose asynchronous rollback would
+release identity locks while an external callback still executes. Callback SQL
+continues to receive the bounded operation context. Callbacks must respect its
+errors and return promptly; cancellation cannot forcibly stop arbitrary callback
+code. Test explicit cancellation and budget expiry with a real competing writer,
+then verify rollback and reuse of the healthy connection.
 The [SQLite transaction contract](https://www.sqlite.org/lang_transaction.html)
 describes the read/write locking distinction.
 Callbacks use bound SQL values, must not reenter the database, and must not
@@ -55,6 +63,18 @@ the handle as `ErrCommitUncertain`; drain, reconcile through a fresh handle, and
 only then decide whether retry is safe. Cancellation before driver commit rolls
 back. Cancellation observed after successful commit withholds results as
 uncertain without poisoning the healthy handle.
+Recheck quarantine after acquiring a pooled connection, before every BEGIN
+attempt, and before entering the callback. An operation that passed its initial
+check before waiting must not invoke a callback after another operation's COMMIT
+failure. That callback could commit work in an independent database even if the
+outer operation eventually rejects it. Also recheck filesystem health before
+callback admission. `TestDatabaseQueuedOperationRejectsQuarantine` observes a
+real connection-pool wait and uses an independent reader to force COMMIT failure;
+both queued reads and writes must reject without running their callbacks.
+An independently committed transaction inside a callback cannot be undone by
+rolling back the outer transaction. Preserve `ErrCommitUncertain` from that
+callback even when the outer context is canceled; do not downgrade it to an
+ordinary timeout or quarantine an otherwise healthy outer database.
 
 Hosts own Close and drain request users first. No automatic background workers,
 cleanup, migrations, recovery retries, encryption keys, or global registries are

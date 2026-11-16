@@ -6,8 +6,7 @@ required:
 properties:
   realm:
     type: string
-    description: Exact enabled identity-store realm. Unknown realms currently return JSON null; they do
-      not create a new store.
+    description: Exact enabled identity-store realm. Unknown realms return HTTP 404; they do not create a new store.
     minLength: 1
   operation:
     type: string
@@ -23,7 +22,7 @@ properties:
     properties:
       username:
         type: string
-        description: Local account username is preserved exactly, including whitespace and case; uniqueness
+        description: SQLite canonicalizes username/email to lowercase, requires a 3–64-byte ASCII handle beginning with a letter/digit, and rejects nobody. Local account username is preserved exactly, including whitespace and case; uniqueness
           is case-insensitive. Local creation enforces the configured UTF-8 byte-length policy (default
           3–50), not the registration form handle pattern.
         minLength: 1
@@ -31,7 +30,7 @@ properties:
         $ref: LocalAccountEmail.yaml
       name:
         type: string
-        description: Nonempty display-name input; Unicode whitespace is trimmed by the backend. Whitespace-only
+        description: Nonempty display-name input. SQLite preserves a nonempty, trimmed UTF-8 alias up to 256 bytes with no control characters; the following parsing rules apply to local records. Unicode whitespace is trimmed by the local backend. Whitespace-only
           input creates no name record. Exactly two comma/space-separated components are parsed as Last,
           First / First Last; other forms are stored as an alias. See IdentityName for the returned structure.
         minLength: 1
@@ -40,11 +39,11 @@ properties:
         items:
           $ref: LocalRoleInput.yaml
         minItems: 1
-        description: At least one role string is required. LocalRoleInput describes successful local validation.
+        description: SQLite requires 1–32 roles, each nonempty trimmed UTF-8 up to 128 bytes without controls, preserving case and slash spelling. The complete stored SQLite roles array, including JSON escaping, must fit within 8192 bytes; additions validate the merged result before any mutation. At least one role string is required. LocalRoleInput describes successful local validation.
           The decoder ignores non-string array members, but clients should send only strings. Duplicate
           normalized roles are ignored, preserving first occurrence order.
     description: Account selector and operation inputs. username and email must identify the same local
-      account for existing-account actions. No supplied password is used; the local store generates a
+      account for existing-account actions. No supplied password is used; the selected store generates a
       new plaintext password and returns it only on success.
 x-source-files:
 - pkg/authn/handle_api_crud_user.go
@@ -52,3 +51,4 @@ x-source-files:
 - pkg/identity/database.go
 - pkg/identity/role.go
 - pkg/identity/user.go
+- plugins/identity-stores/sqlite/store.go

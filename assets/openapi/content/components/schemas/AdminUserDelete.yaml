@@ -6,8 +6,7 @@ required:
 properties:
   realm:
     type: string
-    description: Exact enabled identity-store realm. Unknown realms currently return JSON null; they do
-      not create a new store.
+    description: Exact enabled identity-store realm. Unknown realms return HTTP 404; they do not create a new store.
     minLength: 1
   operation:
     type: string
@@ -20,12 +19,12 @@ properties:
     properties:
       username:
         type: string
-        description: Existing local account username. Lookup is case-insensitive but does not trim whitespace,
+        description: Existing account username. SQLite requires its 3–64-byte canonical ASCII handle; lookup is case-insensitive but does not trim whitespace. For local stores it is also case-insensitive,
           and rejects fewer than two UTF-8 bytes. Must select the same account as email when one is required.
         minLength: 1
       email:
         type: string
-        description: Existing local account email selector. Case-insensitive lookup without whitespace
+        description: Existing account email selector. SQLite requires both username and email; the following alias rules apply to local records. Case-insensitive lookup without whitespace
           trimming; fewer than six UTF-8 bytes fail even if the address passed creation syntax. Any indexed
           address may select the account, but username and email must resolve to the same account.
           Omit or send an empty string only for an automatically provisioned account with no local

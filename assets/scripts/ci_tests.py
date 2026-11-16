@@ -123,7 +123,8 @@ def run(shard):
     # Explicit Make arguments override inherited filters, including MAKEFLAGS.
     result = subprocess.run(['make', 'test', 'TEST=' + pattern,
                              'TEST_DIR=' + ' '.join(plan[shard]),
-                             'MINIMUM_COVERAGE=1', 'COVERAGE_DIR=' + str(output)], cwd=ROOT)
+                             'MINIMUM_COVERAGE=1', 'COVERAGE_DIR=' + str(output)], cwd=ROOT,
+                            env=dict(os.environ, PYTHON=os.environ.get('PYTHON', sys.executable)))
     selection['complete'] = result.returncode == 0
     selection_path.write_text(json.dumps(selection, indent=2) + '\n')
     return result.returncode if result.returncode >= 0 else 1

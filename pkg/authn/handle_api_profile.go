@@ -17,6 +17,7 @@ package authn
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -26,6 +27,8 @@ import (
 
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/operator"
 	"github.com/greenpau/go-authcrunch/pkg/authn/enums/role"
+	"github.com/greenpau/go-authcrunch/pkg/identity"
+	"github.com/greenpau/go-authcrunch/pkg/ids"
 	"github.com/greenpau/go-authcrunch/pkg/requests"
 	"github.com/greenpau/go-authcrunch/pkg/user"
 	addrutil "github.com/greenpau/go-authcrunch/pkg/util/addr"
@@ -83,7 +86,7 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 			zap.Any("error", err),
 			zap.String("source_address", addrutil.GetSourceAddress(r)),
 		)
-		resp["message"] = "Profile API failed to locate JTI session"
+		resp["message"], resp["code"] = "Profile API requires a current login", "identity_required"
 		return handleAPIProfileResponse(w, rr, http.StatusUnauthorized, resp)
 	}
 
@@ -105,6 +108,9 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 	body, err := readProfileAPIRequestBody(w, r)
 	if err != nil {
 		resp["message"] = "Profile API failed to parse request body"
+		if _, oversized := errors.AsType[*http.MaxBytesError](err); oversized {
+			return handleAPIProfileResponse(w, rr, http.StatusRequestEntityTooLarge, resp)
+		}
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 	var bodyData map[string]interface{}
@@ -160,27 +166,14 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 
-	// Determine supported authentication methods.
-
-	switch usr.Authenticator.Method {
-	case "local":
-	default:
-		resp["message"] = fmt.Sprintf("%s is not supported with profile API", usr.Authenticator.Method)
+	backend := p.getIdentityStoreByRealm(usr.Authenticator.Realm)
+	if backend == nil || usr.Authenticator.Method != backend.GetKind() {
+		resp["message"], resp["code"] = "Profile operations are unsupported for this login", "unsupported_capability"
 		return handleAPIProfileResponse(w, rr, http.StatusNotImplemented, resp)
 	}
-
-	backend := p.getIdentityStoreByRealm(usr.Authenticator.Realm)
-	if backend == nil {
-		p.logger.Warn(
-			"backend not found",
-			zap.String("session_id", rr.Upstream.SessionID),
-			zap.String("request_id", rr.ID),
-			zap.String("realm", usr.Authenticator.Realm),
-			zap.String("jti", usr.Claims.ID),
-			zap.String("source_address", addrutil.GetSourceAddress(r)),
-		)
-		resp["message"] = fmt.Sprintf("backend for %s realm not found", usr.Authenticator.Realm)
-		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+	if _, ok := backend.(ids.IdentityRequestStore); !ok {
+		resp["message"], resp["code"] = "Profile operations are unsupported for this account store", "unsupported_capability"
+		return handleAPIProfileResponse(w, rr, http.StatusNotImplemented, resp)
 	}
 
 	p.logger.Debug(
@@ -193,16 +186,32 @@ func (p *Portal) handleAPIProfile(ctx context.Context, w http.ResponseWriter, r 
 		zap.String("source_address", addrutil.GetSourceAddress(r)),
 	)
 
-	// Profile credentials belong to the original local login identity. A
+	// Profile credentials belong to the original identity-store login. A
 	// transformed subject/email is output data, never a backend lookup key.
-	bound, err := newProfileIdentityStore(backend, usr)
-	if err != nil {
-		resp["message"] = "Profile API requires a current local login"
+	// The body may have arrived slowly while this browser selected another
+	// account. Do not let the earlier cache lookup lend that token new authority.
+	if _, err := p.sessions.GetForToken(parsedUser.Claims.ID, parsedUser.Token); err != nil {
+		resp["message"], resp["code"] = "Profile API requires a current login", "identity_required"
 		return handleAPIProfileResponse(w, rr, http.StatusUnauthorized, resp)
 	}
-	if err := bound.Request(operator.GetUser, rr); err != nil {
-		resp["message"] = "Profile API requires a current local login"
+	bound, err := newProfileIdentityStore(backend, usr)
+	if err != nil {
+		resp["message"], resp["code"] = "Profile API requires a current login", "identity_required"
 		return handleAPIProfileResponse(w, rr, http.StatusUnauthorized, resp)
+	}
+	sessionID, token := parsedUser.Claims.ID, parsedUser.Token
+	bound.validateIdentity = func() error {
+		if _, err := p.sessions.GetForToken(sessionID, token); err != nil {
+			return identity.ErrIdentityRequestDenied
+		}
+		return nil
+	}
+	if err := bound.Request(operator.GetUser, rr); err != nil {
+		return profileBackendError(w, rr, resp, err, http.StatusServiceUnavailable)
+	}
+	if provider, ok := backend.(identity.StoreCapabilityProvider); ok && !profileOperationSupported(provider.GetCapabilities(), reqKind) {
+		resp["message"], resp["code"] = "This account store does not support the requested operation", "unsupported_capability"
+		return handleAPIProfileResponse(w, rr, http.StatusNotImplemented, resp)
 	}
 	backend = bound
 

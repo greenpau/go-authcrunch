@@ -1,0 +1,40 @@
+type: object
+description: Backend implementation support, independent of feature enablement and authorization. False means unsupported, never an empty collection.
+additionalProperties: false
+required: [profile_read, password_change, api_keys, public_keys, mfa, authentication_flows, connections, documents, admin_operations]
+properties:
+  profile_read:
+    type: boolean
+    description: Own-account information, diagnostics and partial dashboard.
+  password_change:
+    type: boolean
+    description: Identity-bound plaintext password replacement.
+  api_keys:
+    type: boolean
+    description: Profile API-key enrollment, reads, diagnostics and revocation.
+  public_keys:
+    type: boolean
+    description: Profile SSH/GPG key operations.
+  mfa:
+    type: boolean
+    description: Profile TOTP/WebAuthn operations.
+  authentication_flows:
+    type: boolean
+    description: Profile login-policy read and replacement.
+  connections:
+    type: boolean
+    description: Self-service connected-account inventory and attachment.
+  documents:
+    type: boolean
+    description: Transactional identity suitable for Documents admission; configuration and session checks still apply.
+  admin_operations:
+    type: array
+    description: Implemented operation names for this store at /api/server/user. Empty when none are declared; the portal normalizes an omitted provider slice to an empty JSON array, never null.
+    uniqueItems: true
+    items:
+      type: string
+      enum: [info, add, delete, disable, enable, reset_password, overwrite_roles, add_roles, overwrite_auth_challenges]
+x-source-files:
+- pkg/identity/store_capabilities.go
+- pkg/ids/local/capabilities.go
+- plugins/identity-stores/sqlite/profile.go

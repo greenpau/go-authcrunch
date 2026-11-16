@@ -6,7 +6,8 @@ GIT_COMMIT := $(shell git describe --dirty --always)
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 BUILD_USER := $(shell whoami)
 BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-PYTHON ?= python3
+PYTHON ?= $(shell command -v python3.14 >/dev/null 2>&1 && echo python3.14 || echo python3)
+export PYTHON
 OPENAPI_ADDR ?= 127.0.0.1:8080
 TEST ?= .
 TEST_DIR ?= ./...
