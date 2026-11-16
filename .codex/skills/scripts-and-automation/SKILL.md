@@ -57,7 +57,8 @@ boundary for these workflows.
 | `make ui-apps` | Import a portable three-app UI export into embedded assets |
 | `make test-ui` | Node spec-reported login and refresh client tests (`*_client_test.cjs`) |
 | `make test-automation` | Verbose Python automation/version/release fixture tests |
-| `make test-codeql` | Real CodeQL fixture scan verifying scoped query exceptions and retained alerts; requires CodeQL CLI |
+| `make test-codeql` | Real Go CodeQL fixture scan verifying scoped query exceptions and retained alerts; requires CodeQL CLI |
+| `make test-codeql-javascript` | Real JavaScript CodeQL fixture scan verifying the exact Documents test-driver exception and retained findings |
 | `make brand-assets` / `make brand-assets-check` | Regenerate SVG branding and shared colors from the palette, or check drift without writes |
 | `make generate-acl` | Regenerate the four ACL condition/rule source and test files from the local Python generator |
 | `make ci-check` | Complete sequential quality gates and full Go tests |

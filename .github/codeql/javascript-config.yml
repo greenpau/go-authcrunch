@@ -1,0 +1,10 @@
+name: AuthCrunch JavaScript security analysis
+
+queries:
+  - uses: ./.github/codeql/javascript-queries
+
+query-filters:
+  # Retain the replacement with the same rule ID and all other default queries.
+  - exclude:
+      id: js/regex-injection
+      query path: Security/CWE-730/RegExpInjection.ql

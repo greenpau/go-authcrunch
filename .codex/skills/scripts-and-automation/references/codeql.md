@@ -4,8 +4,9 @@
 
 `.github/workflows/codeql.yml` is the advanced setup workflow for Go,
 JavaScript/TypeScript, Python and Actions. Keep those languages when changing
-the Go exceptions. Only the Go initialization loads
-`.github/codeql/codeql-config.yml`; the other languages use the standard suite.
+the Go exceptions. Go initialization loads `.github/codeql/codeql-config.yml`;
+JavaScript/TypeScript loads `.github/codeql/javascript-config.yml`. Python and
+Actions use the standard suite.
 Go builds with the repository CI toolchain and `go build` rather than test,
 release or maintenance targets.
 
@@ -89,6 +90,53 @@ to directories, other queries or global severity levels. Check query resolution
 after upstream pack updates; an upstream path change should fail the fixture,
 not silently broaden the filter. Keep `queries/codeql-pack.lock.yml` under
 version control.
+
+## JavaScript test-driver exception
+
+The JavaScript configuration retains the default suite and adds
+`.github/codeql/javascript-queries`. It replaces only `js/regex-injection` at
+`Security/CWE-730/RegExpInjection.ql`, matching both ID and upstream query path.
+`RegExpInjectionWithDocumentsFixture.ql` keeps the upstream flow model, rule ID,
+severity, path evidence and message, excepting sinks in exactly
+`pkg/authn/ui/testdata/documents_browser_e2e.cjs`. The
+[test-fixture policy](../../threat-hunting/references/test-fixtures.md) owns the
+trust rationale and limits. Retain the JavaScript pack lock file.
+
+Do not exclude the file from extraction, all of `testdata`, or the rule by ID
+alone. Neighboring files, production files, names extending the exempt filename,
+and nested paths with the same suffix must remain reportable. Data originating
+in the exempt file is still tainted at sinks in other files. Other queries must
+continue inspecting the exempt file itself.
+
+```sh
+CODEQL=/absolute/path/to/codeql bash assets/scripts/run_codeql_javascript_scan.sh
+CODEQL=/absolute/path/to/codeql make test-codeql-javascript
+```
+
+The JavaScript scan helper installs locked dependencies, downloads the standard
+pack, extracts without executing the application, and writes a fresh database
+and SARIF/CSV under `.coverage/codeql/javascript-scan.*`. `CODEQL_OUTPUT_DIR`
+selects another fresh output directory. For full local repository scans, use a
+clean source snapshot so ignored scratch fixtures cannot contaminate extraction.
+Like the Go helper, analysis uses two threads and requests 5922 MiB; retain a
+bounded aggregate guard large enough for that request on a suitable host.
+
+`test-codeql-javascript` copies the actual Documents browser driver into an
+isolated source tree, adds synthetic positive/negative controls there, and runs
+the real helper. It compares the complete upstream default suite on the same
+database: exactly the driver's regex finding disappears, all default rule IDs
+remain, and all other findings are identical. Controls cover adjacent and
+production files, filename/path lookalikes, a cross-file flow from the exempt
+driver, and code injection in that same driver. Synthetic unsafe code exists
+only in the scanner fixture; it is never executed or added to portal assets.
+Evidence stays under `.coverage/codeql/javascript-exception-e2e-*`.
+
+CI initializes JavaScript with its dedicated configuration and runs this
+regression after analysis and before SARIF upload, using the CLI path returned
+by that language's initialization. Missing tooling or failed verification must
+fail the job. Go's separate exception verification remains required. Run the
+`assets/scripts/tests/codeql_test.py` automation fixtures for helper/workflow
+changes and validate workflow syntax with actionlint.
 
 ## GitHub activation
 

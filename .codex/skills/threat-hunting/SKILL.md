@@ -212,6 +212,10 @@ For each suspected issue, reach one of these outcomes before reporting:
 | **False positive** | Source-backed reasoning provided |
 | **Unknown** | Exact missing evidence listed |
 
+For findings in test-only sources, read the
+[test-fixture exception policy](references/test-fixtures.md). Verify the caller
+and deployment boundary before treating a `testdata` path as an accepted sink.
+
 When `govulncheck` reports reachable standard-library vulnerabilities, classify
 them as **release/toolchain notes** for go-authcrunch unless the finding is
 caused by repository code that can be fixed independently of the final build

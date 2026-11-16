@@ -131,6 +131,10 @@ openapi-browser-test:
 test-codeql:
 	@$(PYTHON) .github/codeql/test_scan.py
 
+.PHONY: test-codeql-javascript
+test-codeql-javascript:
+	@$(PYTHON) .github/codeql/test_javascript_scan.py
+
 brand-assets:
 	@$(PYTHON) assets/scripts/update_brand_assets.py
 

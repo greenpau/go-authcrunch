@@ -67,8 +67,15 @@ jobs:
           languages: go
           build-mode: manual
           config-file: ./.github/codeql/codeql-config.yml
+      - name: Initialize JavaScript analysis
+        id: init-javascript
+        if: matrix.language == 'javascript-typescript'
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          languages: javascript-typescript
+          config-file: ./.github/codeql/javascript-config.yml
       - name: Initialize other language analysis
-        if: matrix.language != 'go'
+        if: matrix.language != 'go' && matrix.language != 'javascript-typescript'
         uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:
           languages: ${{ matrix.language }}
@@ -86,6 +93,11 @@ jobs:
         env:
           CODEQL: ${{ steps.init-go.outputs.codeql-path }}
         run: make test-codeql
+      - name: Verify JavaScript query exceptions
+        if: matrix.language == 'javascript-typescript'
+        env:
+          CODEQL: ${{ steps.init-javascript.outputs.codeql-path }}
+        run: make test-codeql-javascript
       - name: Upload verified analysis
         uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:

@@ -1,0 +1,4 @@
+name: authcrunch/javascript-queries
+version: 0.0.0
+dependencies:
+  codeql/javascript-all: ^3.0.0
