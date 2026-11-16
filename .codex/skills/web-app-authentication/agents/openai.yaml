@@ -1,0 +1,4 @@
+interface:
+  display_name: "Web App Authentication"
+  short_description: "Design AuthCrunch authentication for browser apps"
+  default_prompt: "Use $web-app-authentication to design and implement authentication, session renewal, and logout for a new web app using the current AuthCrunch contracts."

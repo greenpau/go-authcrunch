@@ -42,6 +42,10 @@ changes, including corrected paths or examples after a refactor.
 
 ## Implementation workflows
 
+- Use [web-app-authentication](../web-app-authentication/SKILL.md) to integrate
+  AuthCrunch into a new browser app, select the session topology, define verified
+  app identity and authorization, and implement renewal, recovery and logout;
+  follow its React route for provider and API-client generation.
 - Use [authentication-portal-documents](../authentication-portal-documents/SKILL.md) to
   maintain encrypted document storage, chunk transfers, recipient key envelopes,
   immutable account ownership and the external Documents React integration.

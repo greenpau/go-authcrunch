@@ -14,6 +14,13 @@ server's security functionality, including authentication portal, authorization 
 
 Please browse to [docs.authcrunch.com](https://docs.authcrunch.com/).
 
+For a new browser application, start with [web app authentication](.codex/skills/web-app-authentication/SKILL.md)
+to select the session protocol and server boundary, then [React authentication](.codex/skills/react-authentication/SKILL.md)
+for verified bootstrap, automatic renewal, cross-tab coordination, account-safe
+API requests and logout. These are implementation skills for generating consumer
+integrations, not a React SDK. Agents can invoke `$web-app-authentication` or
+`$react-authentication` from this checkout; application edits remain separately scoped.
+
 See [portal refresh sessions](.codex/skills/refresh-token-implementation/references/configuration-and-clients.md) for opt-in rotating refresh
 credentials, configuration, client integration, and lifecycle behavior.
 

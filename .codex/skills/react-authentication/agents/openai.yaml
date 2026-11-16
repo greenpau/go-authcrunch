@@ -1,0 +1,4 @@
+interface:
+  display_name: "React Authentication"
+  short_description: "Build React sessions with safe automatic renewal"
+  default_prompt: "Use $react-authentication to implement a React authentication provider, coordinated cookie renewal, account-safe API requests, and session recovery without unnecessary sign-in prompts."

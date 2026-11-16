@@ -46,7 +46,9 @@ Use [coding-directives](.codex/skills/coding-directives/SKILL.md) to create,
 modify, or review repository code; choose package boundaries, config and
 validation patterns, constructors, errors, logging, serialization tags, security
 handling, or test structure; or decide how a new feature fits existing AuthCrunch
-packages. Follow its routes to the implementation skill that owns the feature.
+packages, or integrate AuthCrunch authentication and renewable sessions into a
+browser application. Follow its routes to the implementation skill that owns the
+feature, including the web-app and React integration workflows.
 
 Every configuration surface must have a dedicated, reusable `parser` package.
 Follow the `coding-directives` configuration parser contract for package shape,
