@@ -91,6 +91,8 @@ func (provider samlE2ESessionProvider) GetSession(_ http.ResponseWriter, _ *http
 
 type samlE2EFixture struct {
 	databasePath string
+	signingKey   *rsa.PrivateKey
+	signingCert  *x509.Certificate
 	portal       *httptest.Server
 	portalURL    string
 	idp          *httptest.Server
@@ -277,7 +279,7 @@ func newSAMLE2EFixtureWithSubject(t *testing.T, format string, configure ...func
 		t.Fatal(err)
 	}
 	client := &http.Client{Transport: transport, Jar: jar, Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return &samlE2EFixture{databasePath: databasePath, portal: portalServer, portalURL: portalURL, idp: idpServer, client: client}
+	return &samlE2EFixture{databasePath: databasePath, signingKey: key, signingCert: cert, portal: portalServer, portalURL: portalURL, idp: idpServer, client: client}
 }
 
 func mustSAMLE2EURL(t *testing.T, raw string) url.URL {

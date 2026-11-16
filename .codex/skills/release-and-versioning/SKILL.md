@@ -91,6 +91,10 @@ workflow pins. Record `go version` for validation and `go version -m` for the
 packaged executable. Use [threat-hunting](../threat-hunting/SKILL.md) to classify
 stdlib versus library findings and assess scanner precision for stripped binaries.
 Do not raise the module's minimum Go version solely to clear a local stdlib scan.
+Update the reusable quality/shard, CodeQL and publication toolchain pins together,
+including toolchain-specific module/build cache keys. Qualify the patched compiler
+with the complete quality gate and native/browser tests; inspect final executable
+build metadata before handing the published module version to downstream owners.
 
 ## Release Execution
 

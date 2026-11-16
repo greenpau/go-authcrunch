@@ -70,6 +70,15 @@ AllowIDPInitiated=false. Keep exact destination/recipient, issuer, audience,
 signature, time and subject-confirmation checks. Callback selection comes from
 the actual mounted request, never a caller-supplied RelayState URL.
 
+Use the maintained `crewjam/saml` dependency with namespace-qualified assertion
+identifiers. A trusted signature does not make a missing assertion issuer or a
+foreign/unqualified `NameID` a valid identity. Keep the namespace unit regression
+and `TestE2ESAMLAssertionIdentityValidation`: the TLS fixture independently
+verifies each altered response's trusted signature, requires denial without
+credentials, and completes a fresh valid login after rejection. Reassess this
+boundary when updating the SAML/XML signature dependencies; do not suppress a
+dependency advisory in place of verifying its underlying behavior.
+
 `IdpSignCertLocation` is the authoritative signing pin. Remove all metadata
 signing-capable descriptors (use signing or omitted) across every IdP SSO
 partition; preserve explicit encryption descriptors. Metadata must not widen
