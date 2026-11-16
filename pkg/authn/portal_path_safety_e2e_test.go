@@ -18,6 +18,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/greenpau/go-authcrunch/internal/tests"
@@ -41,15 +42,17 @@ func TestE2EPortalAmbiguousPathPrefixes(t *testing.T) {
 	if loginIdentityCookie(f, "AUTHP_ACCESS_TOKEN") == "" {
 		t.Fatal("real login did not establish access credentials")
 	}
-	for _, prefix := range []string{"//outside.example", "/%2Foutside.example", "/%2foutside.example", `/\outside.example`, "/%5Coutside.example", "/%5coutside.example"} {
-		for _, endpoint := range []string{"/login", "/profile", "/portal", "/api/profile", "/basic/login/local", "/.well-known/openid-configuration", "/.well-known/jwks.json", "/oidc/authorize", "/unknown"} {
+	// Bare admission markers are syntax guards, not route names. Exercise them
+	// without an authority-like segment or endpoint as well as with real routes.
+	for _, prefix := range []string{"//", "/%2F", `/\`, "/%5C", "//outside.example", "/%2Foutside.example", "/%2foutside.example", `/\outside.example`, "/%5Coutside.example", "/%5coutside.example"} {
+		for _, endpoint := range []string{"", "/login", "/profile", "/portal", "/api/profile", "/basic/login/local", "/.well-known/openid-configuration", "/.well-known/jwks.json", "/oidc/authorize", "/unknown"} {
 			for _, authenticated := range []bool{false, true} {
 				t.Run(prefix+endpoint+map[bool]string{false: "/anonymous", true: "/authenticated"}[authenticated], func(t *testing.T) {
 					req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, f.server.URL+prefix+endpoint, nil)
 					if err != nil {
 						t.Fatal(err)
 					}
-					if prefix == `/\outside.example` {
+					if strings.ContainsRune(prefix, '\\') {
 						// Opaque preserves the literal backslash in RequestURI; the
 						// normal URL encoder would turn this case into another %5C.
 						req.URL.Opaque = prefix + endpoint

@@ -173,8 +173,12 @@ callbacks have separate dispatch contracts.
   declarations in the full-path extraction/dispatch owners, folding literal
   concatenations and paths appended to the trailing-slash `Upstream.BasePath`.
   Configuration fields named `BasePath` do not imply that trailing-slash
-  convention. It checks
-  the assembled path's first word; a child fragment does not acquire top-level
+  convention. Exact `//` and `/\` literals are request-admission syntax markers,
+  not route words. Exclude only those complete markers; longer paths with those
+  prefixes, assembled routes and neighboring comma-separated markers still need
+  ownership checks. Do not register empty or backslash words in the catalogue
+  to accommodate syntax guards. It checks the assembled path's first word;
+  a child fragment does not acquire top-level
   ownership. New unregistered words fail even without an OpenAPI entry. Moving
   an owner requires updating the scan boundary. Feature-local child switches
   are intentionally excluded. Dynamically assembled paths, identifier aliases
@@ -183,8 +187,11 @@ callbacks have separate dispatch contracts.
 - `TestPortalReservedRouteSourceGuard` feeds proposed source edits through that
   same checker. Keep rejection cases for unregistered roots and endpoint-to-
   namespace changes alongside acceptance cases for child actions, resource
-  data, concatenated markers, and local child switches. When extending the
-  checker, prove both rejection and continued acceptance of valid ownership.
+  data, exact admission markers, concatenated markers, and local child switches.
+  The real TLS `TestE2EPortalAmbiguousPathPrefixes` must still reject bare and
+  longer ambiguous targets, including encoded aliases and actual login cookies.
+  When extending the checker, prove both rejection and continued acceptance of
+  valid ownership.
 - `TestPortalRouteContract` reads authored OpenAPI paths, enforces reserved roles,
   and checks mount extraction at root, `/auth`, `/xauth`, nested and escaped mounts.
   It also generates permitted lookalike mounts from every catalogue entry:
@@ -210,6 +217,12 @@ namespace lookalikes, unknown children, overlapping terminal names, relevant
 methods and content negotiation, and feature-disabled behavior. Assert the
 selected behavior, mount, redirect and cookie scope; status alone can hide a
 wrong handler. Never weaken these assertions simply to admit a new route.
+
+When changing request-path validation, extraction or dispatch, include
+`TestPortalReservedRouteWords`, `TestPortalReservedRouteSourceGuard` and
+`TestPortalRouteContract` alongside the affected TLS/browser journeys in focused
+validation. Changes to syntax checks can affect the source scan even when no
+route is added. Run the owning CI shard when reproducing a hosted failure.
 
 Update the authored OpenAPI contract or explain why a route is outside its
 scope, and follow its source-review gate. Fingerprint refresh is not proof of

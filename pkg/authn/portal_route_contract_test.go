@@ -121,6 +121,11 @@ func portalRouteSourceViolations(positions *token.FileSet, file *ast.File, funct
 			if !strings.HasPrefix(marker, "/") || marker == "/" {
 				continue
 			}
+			// Exact separator-only admission markers do not declare routes.
+			// Longer paths and other comma-separated markers still need owners.
+			if marker == "//" || marker == `/\` {
+				continue
+			}
 			word, _, _ := strings.Cut(strings.TrimPrefix(marker, "/"), "/")
 			entry, ok := words[word]
 			if !ok {
