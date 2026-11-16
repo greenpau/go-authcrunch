@@ -25,18 +25,17 @@ import (
 )
 
 func extractBasePathPrefix(path string) string {
-	if path == "" || path == "/" {
+	if path == "" || path == "/" || strings.HasPrefix(path, "//") || strings.HasPrefix(path, `/\`) {
 		return "/"
 	}
-	basePath := path
-	if path[0] == '/' {
-		basePath = path[1:]
-	}
+	basePath := strings.TrimPrefix(path, "/")
 	i := strings.IndexByte(basePath, '/')
-	if i == -1 {
-		return "/" + basePath + "/"
+	if i >= 0 {
+		basePath = basePath[:i]
 	}
-	return "/" + basePath[:i] + "/"
+	// URL.Path is already decoded. Escape the inferred segment exactly once,
+	// including literal percent signs, before using it in navigation or assets.
+	return (&url.URL{Path: "/" + basePath + "/"}).EscapedPath()
 }
 
 func extractBaseURLPath(_ context.Context, r *http.Request, rr *requests.Request, s string) {

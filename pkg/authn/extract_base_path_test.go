@@ -81,3 +81,20 @@ func TestCrossDeviceMountNamespaces(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractBasePathPrefixURLSafety(t *testing.T) {
+	for _, tc := range []struct{ path, want string }{
+		{"", "/"}, {"/", "/"}, {"/auth", "/auth/"}, {"auth/child", "/auth/"},
+		{"//outside.example/path", "/"}, {`/\outside.example/path`, "/"},
+		{"/tenant name/child", "/tenant%20name/"},
+		{"/tenant%20name/child", "/tenant%2520name/"},
+		{"/tenant?name/child", "/tenant%3Fname/"},
+		{"/tenant#name/child", "/tenant%23name/"},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			if got := extractBasePathPrefix(tc.path); got != tc.want {
+				t.Fatalf("base path %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

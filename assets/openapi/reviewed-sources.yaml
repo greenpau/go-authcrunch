@@ -92,7 +92,7 @@ files:
     pkg/authn/documents_http.go: 12bbc4c13125eedf812e21fae4af4b2d39b0dfc247af836304a4df1305e829fa
     pkg/authn/enums/operator/operator.go: baade7cce4c965d2fb7e67d8cc27b7a39da231bef0a42455e7ad189331f2d576
     pkg/authn/enums/role/role.go: 7780fa2dfbbb8fbc1cd50c99a6839a88b64b1f34bad5b2f708f671e42ee45fc1
-    pkg/authn/extract_base_path.go: a5045cd6a3dfc7cc78fd508d231b1d0ae5b468f74cdc87796df1ab6b534a8e5d
+    pkg/authn/extract_base_path.go: f1420ac0af83a0421599feeac5a59cb2986cfb44fc42af68bafa7892a6324d76
     pkg/authn/gatekeeper.go: 2b6e8aafd96198fa6139bcd6df27732204b3910a139d0c44e873425be996acad
     pkg/authn/handle_api_admin.go: b86fd22d5eddeb8424698f1e2b80417225b4145f5a1e9606e2e53bc08d0894c4
     pkg/authn/handle_api_capabilities.go: fc55837c54ecd535a2e59b59ea792ca33aba33c980a5d4ee2249a55f7f546ff2
@@ -116,7 +116,7 @@ files:
     pkg/authn/handle_http_apps_sso.go: 1c7239fa4bf201a7d93b68b93f7ed7f46ecb1ecf3e55d388429ff20ec281b77c
     pkg/authn/handle_http_barcode.go: d4edecd20670268ea1fe808b499cb08366828e681d1c3a5992a9d2608ef52727
     pkg/authn/handle_http_jwks.go: 2756e892a9814706daf921840e0976399d748ae492099488f8e75c08646ae9b2
-    pkg/authn/handle_http_login.go: 09f937bc81a0d5f44dc8bbe930fe8735663ab1fc54c5f862bafb03051df10c95
+    pkg/authn/handle_http_login.go: 35e4d82b94bc801584d04b6b824a9e920bcd30825be6a305cb1d8d7261b5fe06
     pkg/authn/handle_http_logout.go: 0789fffec9fb5fe1744a40006e1b25a5053cfc92ad235a067cb533b7f5a8568d
     pkg/authn/handle_http_portal.go: 3af9950ad922695ef3363ee7e9ef7e5b2d7cf041902214e60559457e1de228a4
     pkg/authn/handle_http_recover.go: 7e6e67dabc77df0d89834e17c83ccb762088c7d3c605df9aead2135f05d58e8f
@@ -155,7 +155,7 @@ files:
     pkg/authn/respond_json.go: 7e2f654801e337f6597d647e9fc0bd374b3dda1ea7bcfa6e92fe3301f2af5edd
     pkg/authn/respond_qrcode.go: b7a4842de4572629ccfde8f342e5d5b2db11ce4571708f252255ad39c51b451e
     pkg/authn/sandbox_user.go: 21a84ee260344cf4a40ec335f876b7443f61c379f4b68d61c3d4dc77388e908d
-    pkg/authn/serve_http.go: f29d06b229ae74d036aed449b35fdf048d3e3731a08ec8107a0b56ea3f057478
+    pkg/authn/serve_http.go: 9423cda100d942a7a1a51809cf7e3e745f64670b9fdfdd65b3744fba52629514
     pkg/authn/token_issuer.go: b37527aefc274191fe502c255c752bd817d3e7ab40ec588be253cb2a6d9c4dff
     pkg/authn/token_refresh/managed.go: 241ed2d6b218876e9f4038cbc770b3da3072865e6867cb809739f03f8f521775
     pkg/authn/token_refresh/manager.go: cb1d7bdf45d1ec339305e8c7d243a2e24764dfa3e6202a9e190a93c464b6b2c8

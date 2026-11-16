@@ -119,6 +119,10 @@ mounts does not globally change callers that omit them. The standalone HTTP
 server delegates through `ServeHTTPAt`; its additional request-path checks and
 bare-mount temporary redirect remain intact.
 
+For the common decoded request-prefix rejection and safe fallback escaping used
+by legacy inference, read the [inferred portal mount boundary](../../threat-hunting/references/redirects.md#inferred-portal-mounts).
+These admission checks precede endpoint dispatch, including discovery.
+
 ## Why mount extraction matters
 
 `pkg/authn/serve_http.go` selects protocol/API/JSON/browser dispatch;

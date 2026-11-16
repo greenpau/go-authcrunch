@@ -408,11 +408,15 @@ func (p *Portal) authorizeLoginUser(ctx context.Context, r *http.Request, rr *re
 		return nil, err
 	}
 	if err := p.signAccessUser(ctx, usr); err != nil {
-		fields := []zap.Field{zap.String("session_id", rr.Upstream.SessionID), zap.String("request_id", rr.ID), zap.Error(err)}
+		logger := p.logger
 		if p.accessSigner == nil {
-			fields = append(fields, zap.Any("user", m))
+			// Keep the accepted legacy user diagnostic as an explicit field on
+			// this event only. Selected signers retain their narrower contract.
+			logger = logger.With(zap.Any("user", m))
 		}
-		p.logger.Warn("user token signing failed", fields...)
+		logger.Warn("user token signing failed",
+			zap.String("session_id", rr.Upstream.SessionID),
+			zap.String("request_id", rr.ID), zap.Error(err))
 		rr.Response.Code = http.StatusInternalServerError
 		return nil, err
 	}

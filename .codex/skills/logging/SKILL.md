@@ -51,6 +51,18 @@ different fields and boundaries; do not merge them into this event contract.
 Explicit Debug diagnostics and other accepted structured diagnostics retain
 their separate [logging policy](../threat-hunting/references/debug-logging.md).
 
+The `user token signing failed` WARN retains session/request correlation and a
+typed error. Legacy signing additionally retains the accepted structured `user`
+claims diagnostic; selected access signers omit that payload. Attach conditional
+claims with an event-local logger clone, leaving the shared portal logger
+unchanged. Keep accepted fields explicit at their Zap sink rather than hiding
+them in an aggregate field slice; do not broaden scanner exceptions to silence
+that representation. `TestLegacyAccessSigningFailureDiagnostics` and
+`TestE2EBasicLoginSigningDiagnostics` cover real password verification, injected
+signing failures, successful TLS Basic login, credential-free ordinary log
+output, and absence of claims on subsequent unrelated events. Signing failures
+must not issue access credentials or success navigation.
+
 Request and session IDs are correlation, not authenticated provenance. The
 session ID is the portal correlation cookie value or a generated value, distinct
 from sandbox secrets and refresh-family identity. Jar-free checkpoint requests

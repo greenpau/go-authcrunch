@@ -51,6 +51,16 @@ func (p *Portal) serveHTTP(ctx context.Context, w http.ResponseWriter, r *http.R
 		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 		return nil
 	}
+	// Inferred mounts must remain origin-relative in every downstream consumer.
+	// Check the decoded path so encoded slash/backslash aliases cannot become
+	// network-path references in redirects, forms, or application base URLs.
+	if strings.HasPrefix(r.URL.Path, "//") || strings.HasPrefix(r.URL.Path, `/\`) {
+		rr.Response.Authenticated = false
+		rr.Response.Code = http.StatusBadRequest
+		p.disableClientCache(w)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return nil
+	}
 	if p.oidc != nil && p.oidc.HandleHTTP(w, r) {
 		return nil
 	}

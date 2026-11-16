@@ -6,6 +6,33 @@ encoded query value on a configured destination. Trace the URL's scheme and
 authority separately from its path, query, and fragment. Verify both valid
 configured redirects and adversarial inputs through the public HTTP workflow.
 
+## Inferred portal mounts
+
+Legacy `ServeHTTP` infers mounts from request paths. Reject a decoded leading
+`//` or `/\` with a generic, no-store HTTP 400 before endpoint dispatch,
+including discovery, without navigation or cookies. Test literal and
+percent-encoded separators: checking only the wire spelling misses aliases.
+Availability admission still runs first. Explicit `ServeHTTPAt` mount admission
+precedes this guard and retains its stricter 404/500 boundary contract.
+
+The fallback first-segment extractor escapes decoded path bytes exactly once
+before producing an origin-relative mount. Preserve spaces and literal percent
+signs without letting query/fragment characters change URL components. This is
+not a replacement for the canonical configured-mount validator, return URL
+allowlists, or downstream application path checks. Do not infer an exploitable
+open redirect from mount extraction alone; trace the destination through those
+consumers and browser URL resolution.
+
+Keep `TestExtractBasePathPrefixURLSafety` and the real TLS
+`TestE2EPortalAmbiguousPathPrefixes` regressions, with anonymous requests and
+credentials obtained by real login. Supply credentials explicitly when testing
+paths outside cookie scope. Retain positive controls for ordinary login/profile,
+discovery, explicit mounts and the browser journeys for escaped application
+mounts and trusted login destinations.
+Assert the client preserves each adversarial request target. Go's ordinary URL
+encoder escapes a literal backslash; the TLS fixture uses `URL.Opaque` for that
+case so the literal and percent-encoded targets both reach the server.
+
 ## Portal login and external providers
 
 `Portal.injectRedirectURL` handles the user's post-login destination. It checks
